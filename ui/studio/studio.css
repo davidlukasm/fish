@@ -264,8 +264,6 @@
 .aid-command-work{fill:none;stroke:#e8c46a;stroke-width:2.4;stroke-linejoin:round}
 .aid-gate-track{stroke:#5d8790;stroke-width:2;stroke-dasharray:3 4;fill:none}
 .aid-sense-axis{fill:none;stroke:var(--aid-sketch-line);stroke-width:1}
-.aid-lift-sink{stroke:#e5929699;stroke-width:1.5;stroke-dasharray:4 3;fill:none}
-.aid-lift-line{stroke:#8fc7e8;stroke-width:2.5;fill:none}
 .aid-pull-bar{fill:#c98a7c;stroke:#e6b2a6;stroke-width:1}
 .aid-pull-bar.reserve{fill:none;stroke-dasharray:3 2}
 .aid-pull-free{fill:none;stroke:#5d8790;stroke-width:1;stroke-dasharray:2 3}
@@ -677,11 +675,6 @@
 .aid-gut-tube{fill:none;stroke:var(--aid-gut);stroke-opacity:.55;stroke-linecap:round;stroke-linejoin:round}
 .aid-gut-stretch{fill:none;stroke:#b29bdc;stroke-width:3;stroke-dasharray:3 5;cursor:pointer}
 .aid-gut-cell{fill:var(--aid-senses);stroke:var(--aid-ink);stroke-width:1;cursor:pointer}
-.aid-bladder{display:block;width:100%;height:auto;touch-action:none}
-.aid-bladder-sac{fill:#bfe3f022;stroke:var(--aid-flow);stroke-width:1.6}
-.aid-bladder-gland{fill:#d98a7a;stroke:var(--aid-ink);stroke-width:1;cursor:pointer}
-.aid-bladder-roof{fill:none;stroke:var(--aid-senses);stroke-width:4;stroke-linecap:round;cursor:pointer}
-.aid-sac-part.selected .aid-bladder-gland,.aid-sac-part.selected .aid-bladder-roof{stroke:var(--aid-handle)}
 .aid-gut-feeler{fill:none;stroke:var(--aid-senses);stroke-width:1.2;stroke-linecap:round}
 .aid-use-axis{fill:none;stroke:var(--aid-sketch-line);stroke-width:1}
 .aid-use-curve{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
@@ -1308,4 +1301,25 @@
 .aid-live-zone{fill:currentColor;opacity:.22}
 .aid-live [data-food=all]{color:#e9e2c6}
 .aid-live-course{fill:none;stroke:#f4efd8;stroke-width:2;stroke-linejoin:round}
+.aid-bladder-kind{display:block;margin:3px 4px 4px;color:#eef4ec;font-size:13px}
+.aid-bladder-surface,.aid-bladder-plant{fill:none;stroke-linecap:round}
+.aid-bladder-surface{stroke:#cfeaf0;stroke-width:1.6}
+.aid-bladder-ground{fill:#b8a77b}
+.aid-bladder-plant{stroke:#6fbf73;stroke-width:2.4}
+.aid-live-bladder .aid-bladder-sac{fill:#203e4a;stroke:#9cc8f0;stroke-width:1.2}
+.aid-bladder-air{fill:#9cc8f0;opacity:.87}
+.aid-bladder-command{fill:#f4efd84d;stroke:#f4efd86b}
+.aid-bladder-filling{fill:#9cc8f073;stroke:#9cc8f0;stroke-width:1.3}
+.aid-bladder-rise{fill:#9cc8f0;opacity:.14}
+.aid-bladder-hover{fill:none;stroke:#e9e2c6;stroke-width:1.8}
+.aid-bladder-hover.dashed{stroke-dasharray:5 4}
+.aid-bladder-crossing{fill:#e9e2c6}
+.aid-live .aid-bladder-depth-grip{fill:var(--key);stroke:#315a57;stroke-width:1.2}
+.aid-live .aid-bladder-depth-grip.on{stroke:var(--aid-handle);stroke-width:2.4}
+.aid-bladder-depth-trace{fill:none;stroke:#9cc8f0;stroke-width:1.25;pointer-events:none}
+.aid-bladder-response{fill:none;stroke:var(--key);stroke-width:1.35;cursor:pointer}
+.aid-bladder-response.on{stroke-width:1.85}
+.aid-bladder-response-fill{fill:var(--key);opacity:.17;pointer-events:none}
+.aid-bladder-group-mark{fill:#9cc8f0;opacity:.7;cursor:pointer}
+.aid-bladder-group-selected{stroke:#9cc8f0}
 .aid-live-muscleway{fill:none;stroke:#c98f55;stroke-width:3;stroke-linecap:round;opacity:.6}

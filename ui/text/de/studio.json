@@ -1774,6 +1774,26 @@
     "auto2": "von Anfang an, immer aktiv"
   },
   "live": {
+    "bladder": {
+      "hover": "Schwebt bei {p} Füllung",
+      "tooSmall": "Kann nicht schweben",
+      "egg": "Im Ei",
+      "rest": "{p} des Ruhebedarfs",
+      "filling": "Füllen und Leeren",
+      "depth": "Tiefensinn",
+      "signal": "Tiefe und Meldung ans Gehirn",
+      "life": "Lebenszyklus",
+      "steps": "Schritte",
+      "fill": "füllen",
+      "empty": "leeren",
+      "full": "voll",
+      "emptyState": "leer",
+      "rises": "steigt",
+      "sinks": "sinkt",
+      "deep": "tief",
+      "shallow": "flach",
+      "level": "Füllung"
+    },
     "tail": {
       "force": "Kraft",
       "enduring": "ausdauernd",
