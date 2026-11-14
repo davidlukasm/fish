@@ -937,7 +937,11 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
         v.baseline += r.baseline;
         v.sensitivity += r.sensitivity;
         v.half += r.half;
-        v.affinity += r.affinity[groups[group[i]].receptors[effect].substance];
+        const int substance = groups[group[i]].receptors[effect].substance;
+        if (substance == field::CELL_MATURITY)
+          v.affinity += r.cell_maturity;
+        else if (!r.cell_maturity)
+          v.affinity += r.affinity[substance];
       }
     }
     if (seen[n.group])
