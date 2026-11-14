@@ -257,7 +257,7 @@ liveKind('bladder', (studio, organId) => {
           count = active.reduce((sum, group) => sum + group.count, 0);
     if (!count)
       return;
-    const had = model.capacity, groupsAtDrag = groups;
+    const had = model.capacity;
     film.size = el('rect', {x : fishX + radius - 4, width : 8, height : 12, rx : 2}, live);
     drag(svg, film.size, p => {
       const least = count / MAX_COPIES;
@@ -267,7 +267,7 @@ liveKind('bladder', (studio, organId) => {
       const bound = wanted > had ? MAX_COPIES : 1;
       const share = wanted === had ? 0 : (wanted - had) / ((bound === 1 ? least : count) - had);
       let next = studio.state.document;
-      for (const group of groupsAtDrag)
+      for (const group of active)
         next = updateCenter(next, group.id,
                             {copies : Math.round(group.perNode + (bound - group.perNode) * share)});
       draft(next);

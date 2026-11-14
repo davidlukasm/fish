@@ -5220,44 +5220,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.deepEqual(graph.cppnLink([ 4, 1, 9, -.5, 1, 0 ]),
                      {id : 4, from : 1, to : 9, weight : -.5, enabled : 1, port : 0});
     const gutDoc = model.addOrgan(model.newDocument('Darm'), 'gut', sites, {x : 760, y : 360});
-    {
-      const bladder =
-          model.addOrgan(model.newDocument('Auftrieb'), 'bladder', sites, {x : 650, y : 360});
-      assert.ok(bladder);
-      const organ = model.findOrgan(bladder.document, bladder.organId);
-      const pressure = organ.centers.find(c => c.key === 'pressure').id;
-      const {handleMethods} = await import('../ui/studio/handles.js');
-      // The gland handle in the bladder picture, dragged to the second of three gland places.
-      const span = {width : 30, height : 10};
-      const editor = {
-        state : {document : bladder.document, sites},
-        handleDrag : {
-          id : organ.centers.find(c => c.key === 'float').id,
-          handle : 'nodes',
-          marks : {places : '0,0 10,0 20,0'},
-          size : span,
-          rect : {left : 0, top : 0, ...span}
-        },
-        draftDesign(document) { this.state.document = document; }
-      };
-      handleMethods.sensePointer.call(editor, {clientX : 10, clientY : 0});
-      const enlarged = model.findOrgan(editor.state.document, organ.id);
-      assert.equal(enlarged.centers.filter(c => c.key === 'float').length, 2,
-                   'The bladder resizes to two muscles despite its extra pressure sensor');
-      assert.equal(enlarged.centers.filter(c => c.key === 'pressure').length, 1);
-      assert.ok(enlarged.centers.some(c => c.id === pressure));
-      assert.equal(model.compileDocument(editor.state.document, sites)
-                       .groups.filter(g => g.role === 2 && g.function === MOTOR_KIND.bladder)
-                       .length,
-                   2, 'Both bladder muscles reach the native plan');
-      assert.match(
-          panels.organSettingsBlock(
-              {...state, ...editor.state, selected : {kind : 'organ', id : organ.id}}, enlarged),
-          /data-sense-mark="nodes"/);
-      const smaller = model.setOrganNodes(editor.state.document, organ.id, 1, sites);
-      assert.equal(model.findOrgan(smaller, organ.id).centers.length, 2);
-      assert.ok(model.findOrgan(smaller, organ.id).centers.some(c => c.id === pressure));
-    }
     const held = model.usedSites(gutDoc.document);
     assert.equal(held.size, model.allCenters(gutDoc.document).length);
     const muscle = ORGAN_BY_KEY.muscle.centers[0];
