@@ -722,7 +722,8 @@ export const handleMethods = {
     const position = cameraCoordinates(event, this.bodyMap(), this.state.camera);
     const patch = probePatch(drag.control, position, faintest);
     const smellFlow = drag.control === 'flow' && probe.kind === 'smell';
-    this.state.senseProbe = smellFlow ? {...probe, flow : patch} : {...probe, ...patch};
+    this.state.senseProbe =
+        smellFlow ? {...probe, flow : patch} : {...probe, ...patch, manual : true};
     this.keepInView(probeHandle(
         smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, faintest));
     this.refreshProbes();

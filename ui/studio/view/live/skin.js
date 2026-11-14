@@ -1,6 +1,7 @@
 // What the live inspectors of the skin senses share: the band of a sense's life under its own
 // picture, an egg with its embryo, and a fish seen from above.
-import {groupReport, lifePhase, setLifePhase} from '../../model/document.js';
+import {lifePhase, setLifePhase} from '../../model/document.js';
+import {skinProbeBearing} from '../../model/probe.js';
 import {clamp, drag, el} from './kit.js';
 import {keyGrip} from './sense.js';
 
@@ -100,27 +101,8 @@ export const sectorOf = (angle, count = SECTORS) =>
 // Where a group of skin cells lies, in degrees: the plan's report of its cells' directions
 // (anatomy.felt: direction and half width of each cell, in radians); null before the plan has
 // answered.
-export function knownPlace(studio, cell) {
-  const felt = !studio.state.stale &&
-               groupReport(studio.state.document, studio.state.anatomy, 'felt', cell.id);
-  if (!felt?.length)
-    return null;
-  return Math.atan2(felt.reduce((sum, [ aim ]) => sum + Math.sin(aim), 0),
-                    felt.reduce((sum, [ aim ]) => sum + Math.cos(aim), 0)) *
-         180 / Math.PI;
-}
-// Until then, the flank.
-export const placeOf = (studio, cell) => knownPlace(studio, cell) ?? 90;
-// The fish panel's probe for this organ starts on the organ's side, wherever its cells lie
-// (model/probe.js). Once the plan knows their place, a probe nobody has moved yet is put there,
-// so that the first look shows what the organ does.
-export function aimProbe(studio, organId, kind, cell) {
-  const probe = studio.state.senseProbe, place = knownPlace(studio, cell);
-  if (probe?.organ !== organId || probe.kind !== kind || probe.aimed || place === null)
-    return;
-  studio.state.senseProbe = {...probe, bearing : place, aimed : true};
-  studio.requestDesign();
-}
+export const placeOf = (studio, cell) =>
+    skinProbeBearing(studio.state.document, studio.state.anatomy, cell.id) ?? 90;
 // The weights of skin cells on the sectors: a wedge round their place, half as wide as `half`
 // degrees, brought to a sum of one (body_plan.cc, contact_weights).
 export function wedge(place, half, count = SECTORS) {

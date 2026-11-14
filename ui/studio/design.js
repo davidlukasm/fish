@@ -153,7 +153,8 @@ export const designMethods = {
     const organ = organOf(doc, id);
     if (!organ)
       return;
-    const sense = probeFor(organ, this.state.senseProbe, this.state.anatomy);
+    const anatomy = this.shownDesign === doc ? this.state.anatomy : null;
+    const sense = probeFor(organ, this.state.senseProbe, anatomy, doc);
     if (sense && sense !== this.state.senseProbe) {
       if (sense.kind === 'smell' && sense.organ !== this.state.senseProbe?.organ) {
         const faintest = this.state.anatomy?.lightDimmest, flow = probeFlow(sense);
@@ -313,7 +314,7 @@ export const designMethods = {
   refreshProbeControls() {
     this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
     this.redrawBlocks('gutProbeControls', findOrgan, organ => gutProbeControls(this.state, organ));
-    if (this.state.senseProbe?.kind === 'taste')
+    if ([ 'taste', 'touch', 'wound', 'flow' ].includes(this.state.senseProbe?.kind))
       mountLive(this.root, this);
   },
   drawSight() {
