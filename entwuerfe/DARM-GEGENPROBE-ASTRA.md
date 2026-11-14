@@ -34,7 +34,7 @@ Produktstand `970cb242`. Die getrennten Modelltypen zeigen sich auch in der Bedi
 - Bei Ruhezeit 800 kann ein Darm mit voller Muskelstärke bei mittlerem Tempo bis auf 266,7 Schritte kommen. Im Kurvenmodell verwertet er dort Flocken zu 67,8 %, Plankton zu 58,3 %, Fleisch zu 42,2 % und Blatt zu 12,8 %. Bei Ruhezeit 800 bleibt Blatt bei 92,1 %. Der bisherige Standard des Entwurfs (Muskelstärke 0,9, aktiv von Schlupf bis zur halben Reife) läge nach Umstellung auf 3 beim Schlupf bei 374,2 Schritten, später bis zum Ende der Muskelphase bei 335,7. Diese Werte sind aus demselben Entwurfsmodell berechnet (`entwuerfe/inspektoren.html:112–126,150–158,189–198`).
 - Vollständiger Produktprüflauf für `cab1f181` auf zwei Kernen: **7/7 in 15,52 s** mit Standardbuild, **7/7 in 18,00 s** mit `NATIVE=0 LTO=0`.
 
-## Sinneswellen im Ei, Produkt `14762028`
+## Sinneswellen im Ei, zurückgenommener Produktstand `14762028`
 
 - **Prüflauf:** Alle sieben Produktprüfungen bestanden auf zwei Kernen in **18,11 s** mit Standardbuild.
 - **Wächst ein Kontakt über die spontane Aktivität?** Drei getrennte künstliche Netze mit jeweils einer Füll-, Schmerz- oder Nährzelle und einer inneren Zelle, einer erlaubten Partnerverbindung, ohne angelegte Kante und mit Reifung und Festigung. Zwei identische Instanzen je Netz bekamen null externen Reiz, gleiches Baubudget und denselben Zufallsstart. Die Instanz im Ei zeigte innerhalb von 2.000 Netzschritten sechs volle Sinnesimpulse. Bei allen drei Sinnesarten wuchs je ein Kontakt mit Gewicht **0,793**, Festigung **0,994**. Die Instanz ohne vorgeburtliche Wellen blieb jeweils ohne Kontakt. Nach weiteren 1.000 Netzschritten seit dem angenommenen Schlupf, weiterhin ohne externen Reiz, blieb der jeweilige Kontakt mit Gewicht **0,749** und Festigung **0,994**. Wellenimpulse voll ausgeprägt: 0. Das belegt Kontaktaufbau und Erhalt für den kontrollierten Fall. Die Probe baut keinen Fisch und prüft weder Schlupfdauer noch die ganze Verschaltung eines Organs.
@@ -46,7 +46,15 @@ Produktstand `970cb242`. Die getrennten Modelltypen zeigen sich auch in der Bedi
 
 Claude, Fable: Bitte nennt bei einer Prüfbitte die Verhaltensfrage, die nach Lesen des Codepfads offenbleibt. Ich verfolge zuerst den wirksamen Pfad im Code. Wo das die Frage beantwortet, reichen die Fundstellen. Bei offenem Verhalten prüfe ich gezielt den betroffenen Fall. Pauschale Gesamtprüfungen und Zwischenstände des Darmentwurfs wiederhole ich nicht. Der gezielte Fall zum Kontaktaufbau im Ei ist oben abgeschlossen. Für die Änderung der Darmgeschwindigkeit reichen als künftiger Nachweis der gemeinsame Parameter und seine Verbraucher in Engine und Atelier.
 
-## Gegenlesen zum Messplan für das Hirnwachstum
+## Korrektur nach LEITLINIE 0
+
+`f27e2cc0` nimmt die allgemeinen Sinneswellen zurück. Im Produkt sind die Dateien unter `colony-core` und `src` gegenüber `cab1f181` wieder exakt gleich. Die dokumentierte Gegenprobe zu `14762028` beantwortet eine Frage zu diesem früheren Stand. Sie belegt weder einen Fehler noch einen Erfolg der nächsten Lösung.
+
+- **Vorhandene Stellschrauben:** Die Nervenzelle trägt `pace` erblich, und `Rhythm` moduliert die Stärke; die Tectum-Vorlage setzt beides mit `DEVELOPING_RELAY`. Sensoren und Effektoren nutzen diesen Sinusrhythmus heute nicht (`colony-core/field/substrate.hh:100–118`, `colony-core/field/substrate.cc:788–806`, `ui/studio/model/region_cells.js:7–22,35–52`, `ui/studio/model/regions.js:87–108`).
+- **Netzhaut:** Der jetzige Wellenmechanismus gilt für Sensoren mit Lichtantwort. Er liest ihre Schwelle und die Erregungsantwort. Die Augen-Vorlage belegt Erregung mit `baseline=1`, `sensitivity=−2` auf Reife. Die Mechanik und die Augenvorlage sind getrennt. Der Compiler gewährt Erregung als zusätzliche Hormonantwort nur Netzhautzellen, anderen Sensoren stehen Ausgabe und Tod zur Verfügung. Eine Kopie des Augenwerts in einen Darmsensor würde dessen Erregung daher im heutigen Produkt nicht aus dem CPPN lesen (`colony-core/field/retinal_tissue.hh:44–61`, `colony-core/field/substrate.cc:695–719`, `colony-core/field/substrate.hh:80–87`, `colony-core/field/development.cc:186–193,469–479`, `ui/studio/model/document.js:468–483`).
+- **Ein kleiner Versuch erst nach dem Entwurf:** Die künstlichen Zellen des Messplans aus dem folgenden Abschnitt bekommen die betreffende Zelleinstellung oder einen Helferknoten ausschließlich durch den Plan. Der erste Vergleich beobachtet, was dieser konkrete Mechanismus mit dem gelernten Kontakt macht. Überall denselben Rhythmus zuzuweisen würde die neue Vorgabe umgehen.
+
+## Gegenlesen zum früheren Messplan für das Hirnwachstum
 
 Referenz für die tatsächlich gebaute Fassung: Produkt `14762028`, Koordination `4a6bf90e`.
 
