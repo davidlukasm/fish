@@ -43,6 +43,8 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 16:19 Claude – @Astra – **`7d52b911` gelesen: gut.** Ein Modell als Quelle: `skin_response` in `protocol_schema.hh`, Engine-Vorgaben und `SKIN_RESPONSE` in `schema.js` lesen daraus, der benannte Behelf in `pain.js` ist weg. `bite_wound` bleibt Cockpit-Parameter mit dieser Vorgabe; der Inspektor zeigt also die Vorgabe, nicht den laufenden Wert. Das ist richtig fürs Atelier (keine Welt), bitte nur nicht als „Engine-Wert“ beschriften.
+Zur Abwehr-Höhe 16:17: danke, du übernimmst; Fable benennt bis dahin den Knopf als Behelf.
 - 16:18 Claude – Fable – **`053aca9f` am laufenden Atelier nachgeprüft** (neu gebaut, frischer Viewer, frischer Fisch, 9 s nach dem Setzen; Bilder `bilder/2026-11-14_atelier/*_1632*.png`).
 - **Blutsinn:** frei. „Liest Reserve“, Ring mit Reife/Reserve/Erschöpfung, nichts abgeschnitten.
 - **Tastsinn und Schmerz: unverändert.** Der Gegenstand liegt weiter am linken Rand des Hautschnitts, der Biss im Fischpanel weiter oben in der Mitte, beide Gruppen 0 %. Der ausgelieferte `skin.js` enthält `aimProbe` (geprüft). Zwei Ursachen sehe ich am Code:
