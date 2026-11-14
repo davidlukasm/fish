@@ -38,3 +38,20 @@ Nichts davon ist von David abgenommen. Das hier ist die Liste dessen, was gegen 
 1. Nichts Neues bauen, bis A1–A6 je Organ eine Antwort haben.
 2. Reihenfolge: zuerst A2 und A4 (Sätze und Modellwörter entfernen, das ist reines Streichen und verletzt nichts), dann A1/A5 je Organ aus der ORGAN-Seite (Leben eigen, Ei-Verdrahtung), dann A3 (Kosten aus dem Planbericht), dann B je Organ.
 3. Jede Änderung beginnt mit dieser Datei und der Pflichtlektüre, neu geöffnet.
+
+## E. Neue Durchsicht „alles von vorne“ (nach David 18:13), je Organ
+Pflichtlektüre in dieser Runde neu geöffnet: `LEITLINIE.md`, `AUFTRAG-1311.md`, `AUFTRAG-1411.md`, `FEEDBACK-1311.md`, `FEEDBACK-2115-ERKLAERT.md`, `DARM-UEBERGABE-FABLE.md`, `DARM-FEEDBACK-0516.md` (18:15 erneut), `DARM-ABNAHME.md`, `ORGANOPTIONEN.md`, `CODE-REVIEW-FABLE.md`, Bilder `gut_darm-neben-schwanz.png`, `kontrast_darm-neben-gleichgewicht.png`, `entwurf_01_lebenszyklus-der-zelle.png`.
+
+### Für alle Panels (gemeinsame Teile)
+- **„Beispielwerte“** steht oben in jedem Panel. Das Wort „Beispiel“ ist verboten (AUFTRAG-1311 §3, LEITLINIE 4).
+- **„links | gleich | rechts“** als Segmentknöpfe oben bei paarigen Organen: Segmentknöpfe sind Teil des verworfenen Musters (KOORD 13.11. 18:06). Bitte prüfen, ob die Seitenwahl im Fischbild selbst gehen kann.
+- **„Kontakte im Bauplan“** mit Schieber „Elektrische Höchststärke“ bei Muskeln (A4).
+
+### Darm (`bilder/2026-11-14_atelier/darm_durchsicht_1820_*.png`)
+- Gut: Kopfzeile „Allesfresser · 11,4 % des Ruhebedarfs“; Magen und Schlingen als Hauptbild mit „satt“; Ertrag mit Fenster des Muskels; „Sättigungsgefühl“, „Bauchweh“ mit „an Schmerz gewöhnt“, „Reizschwelle für Bauchweh nach Futterart“; „Belohnungssignal“ ohne lange Zeitachse.
+- **Verstoß:** Der „Lebenszyklus“ beginnt beim Ei-Symbol, die Futterbänder liegen über die ganze Breite. David 21:15: „Das Ei wird gezeigt, obwohl der Fisch da nichts frisst.“ (FEEDBACK-2115 Darm/Lebensbild, LEITLINIE 3 „Was nicht gilt, wird nicht gezeigt“).
+- **Prüfen:** DARM-FEEDBACK-0516 Pkt. 1–2 (jung/erwachsen mit Fischsymbolen, führendes Futter je Tempo): Am rechten Rand stehen Fleisch/Plankton/Flocken als Namen; ob das „Futter, das beim Tempo dieses Alters am meisten bringt“ ist, habe ich nicht am Code nachgesehen.
+
+### Schwanz (`bilder/2026-11-14_atelier/schwanz_durchsicht_1820_*.png`)
+- Gut: „Schwanzschläger · 2,4 % des Ruhebedarfs“, Muskel mit Faserbändern, Faserleiste ausdauernd–kräftig, Kraft mit Erschöpfung und „Befehl aus“, Geschwindigkeit „im Wasser / tief im Sand“. Das ist Davids Beispiel.
+- **Prüfen:** Unter dem Lebenszyklus die Funktions-Knopfreihe „Vortrieb / Lenken / Ansaugen / Zubeißen“. Sie wählt echte verschiedene Muskelarten, ist aber eine Knopfreihe (LEITLINIE 3). Der bekannte Fehler „mittiger Muskel → Lenken“ hängt dort.
