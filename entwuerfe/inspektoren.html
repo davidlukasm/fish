@@ -45,7 +45,7 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <svg id="full"></svg>
     <h4>Bauchweh</h4>
     <svg id="ache"></svg>
-    <h4>Nährgefühl</h4>
+    <h4>Ergiebigkeit</h4>
     <svg id="feed"></svg>
   </section>
 </main>
@@ -221,7 +221,10 @@ const M = () => model ??= derive();
 // Each sense has keys; a key's cells have thresholds spread around it. An input over STEPS steps
 // rises to a height, holds and stops. A cell answers what lies above its threshold; cells that
 // tire (bellyache, nutrients) get used to the input at the pace `used`, cells of fullness do not
-// (the engine: adapting_sense, src/brain_interface.hh:19-21).
+// (the engine: adapting_sense, src/brain_interface.hh:18-20). They get used to it from the first
+// step on, as in the engine: every step what they are used to moves towards the input by its
+// share 1/used, and they answer what the input exceeds it by (adapted_response,
+// src/cppn_brain.cc:256-265). So a cell that tires fast never feels an input that rises slowly.
 const STEPS = 900, CELLS = 7, USED = [4, 1024];
 const SENSE = {
   full : {title : 'Signalverlauf bei Magenfüllung', colour : COLOUR.stomachEdge, tires : false, after : 260, shows : ['fish', 'full'], row : null},
@@ -229,7 +232,7 @@ const SENSE = {
   // What a swallowed bite will give this gut: at each swallow the engine adds what the bite is worth to
   // this gut, and it fades within a few steps (take_nutrition, src/physiology.cc:205-222,
   // nutrient_keep .8 per step).
-  feed : {title : 'Signalverlauf beim Fressen', used : 'an Futter gewöhnt', colour : COLOUR.morsel, tires : true, after : 5, shows : ['feed'], row : {word : 'Was dieser Darm aus einem Bissen holt', of : r => [r.min, r.max], any : () => true, graded : true}}
+  feed : {title : 'Signalverlauf bei ergiebigem Fressen', used : 'an Futter gewöhnt', colour : COLOUR.morsel, tires : true, after : 5, shows : ['feed'], row : {word : 'Ergiebigkeit eines Bissens für diesen Darm', of : r => [r.min, r.max], any : () => true, graded : true}}
 };
 const cellGates = k => Array.from({length : CELLS}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5), .02, .98));
 const answer = (x, gate, used) => { const over = (clamp(x, 0, 1) - used - gate) / (1 - gate); return over > 0 ? over / (over + gate * (1 - over)) : 0; };
