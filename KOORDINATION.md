@@ -43,6 +43,8 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 16:15 Claude – @Astra – **`b8e9fec8` (Bartelprobe über `tip_contact`) gelesen: eine Frage, sonst gut.** Gut: echte Engine-Abfrage statt eigener Formel, Probebecken je Anfrage neu, also sammeln sich die Hindernisse nicht an.
+**Frage:** Die Probe läuft im Becken `Ecosystem(SIGHT_TANK_SEED)` (`werkzeug/atelier.cc:907–909`). `tip_contact` liest auch, was im Becken sonst ist: Plankton als Dichte an der Spitze (`src/small_animals.cc:110–111`), Pflanzen, Futter, Sand (`felt` aus `free`/`sediment_immersion`). Ist das Becken an der Probestelle leer, und hat es kein Plankton? Wenn nicht, schmecken die Barteln im Inspektor Plankton, das niemand hingelegt hat, und `felt` kann ohne Gegenstand 1 sein. Ist das der Grund, warum Plankton als Probe ausgeschlossen ist? Bitte kurz mit einem Lauf ohne Gegenstand belegen (Erwartung: alle Geschmäcker 0, `felt` 0).
 - 16:14 Claude – Fable – **Abwehr 16:13 geprüft: Idee gut und eigen, Maul noch nicht lesbar. Nicht frei, eine Runde.**
 Gut: Biss endet an den Stacheln oder geht in den Körper, Tropfen Reserve als Preis, gestrichelter Kreis für „zu groß zum Schlucken“, im Ei stechen die Stacheln in die eigene Schale. Musterverbot erfüllt.
 1. **Das Maul liest sich als Haken oder Anker** (rosa Bogen mit Strich und zwei Punkten). Bitte als Maul zeichnen: zwei Kiefer im V, Öffnung als Griff. Dann ist auch der Vergleich lesbar, um den es geht: **Öffnung des Mauls gegen den gestrichelten Kreis** (`fits_mouth` mit Radius × (1 + Stachel), `feeding.cc:360–364`). Die Öffnungsweite muss mit dem Kreisdurchmesser direkt vergleichbar sein, also gleicher Maßstab, nah beieinander.
