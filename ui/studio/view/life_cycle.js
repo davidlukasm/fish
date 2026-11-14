@@ -82,8 +82,6 @@ function contextAt(state, axis, level) {
       out.reserve = level;
     else if (index === BLOOD_SUBSTANCE.fatigue)
       out.fatigue = level;
-    else if (index === BLOOD_SUBSTANCE.cell_maturity)
-      out.cellMaturity = level;
     else
       out.hormones[index] = level;
   };
@@ -170,24 +168,17 @@ function menu(state, center, key, receptor) {
               : item('data-life-new', substanceDot(state, free) + '<span class="soft">' +
                                           escapeText(word('newSubstance')) + '</span>')) +
          '<hr>' +
-         // The cell's own maturity is no blood: it is always there to read, but not for a cell
-         // that is yet to form, which has no age.
-         [ BLOOD_SUBSTANCE.reserve, BLOOD_SUBSTANCE.fatigue, BLOOD_SUBSTANCE.cell_maturity ]
-             .filter(i => i === BLOOD_SUBSTANCE.cell_maturity
-                              ? key !== 'birth'
-                              : i < (state.capabilities?.regulators ?? 0))
+         [ BLOOD_SUBSTANCE.reserve, BLOOD_SUBSTANCE.fatigue ]
+             .filter(i => i < (state.capabilities?.regulators ?? 0))
              .map(i => item('data-life-source="' + i + '"',
                             substanceDot(state, i) + '<span>' +
                                 escapeText(substanceName(state, i)) + '</span>',
                             source === String(i)))
              .join('') +
-         // A receptor on its own cell's maturity reads nothing beside it: no mix to offer.
-         (receptor.substance === BLOOD_SUBSTANCE.cell_maturity
-              ? ''
-              : item('data-life-source="mix"',
-                     substanceDot(state, receptor.substance, true) + '<span>' +
-                         escapeText(word('mix')) + '</span>',
-                     source.startsWith('mix:'))) +
+         item('data-life-source="mix"',
+              substanceDot(state, receptor.substance, true) + '<span>' + escapeText(word('mix')) +
+                  '</span>',
+              source.startsWith('mix:')) +
          '<hr><button type="button" data-open-tool="hormone" data-center-id="' +
          escapeText(center.id) + '"><span class="soft">' + escapeText(word('toHormones')) +
          '</span></button></div>';
