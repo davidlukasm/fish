@@ -225,7 +225,7 @@ export function paintFeeding(f, c, blend, only = null) {
     if (radius >= FEEDING.gill_min_radius)
       for (const side of [0, 1]) {
         const sign = side ? 1 : -1,
-              gill = fishBezier(fishGillShape(a, side, flow), FEEDING.gill_at),
+              gill = fishBezier(fishGillShape(a, side, a.gillPose), FEEDING.gill_at),
               u = (phase + side * FEEDING.gill_phase) % 1;
         ctx.globalAlpha = FEEDING.gill_alpha * flow * Math.sin(Math.PI * u);
         ctx.strokeStyle = FEEDING.gill;

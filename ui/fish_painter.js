@@ -414,7 +414,7 @@ function paintFishFeatures(ctx, p, r, anatomy, opacity = 1, light = 1) {
     ctx.strokeStyle = tint(-FEATURES.gill_shade);
     ctx.lineWidth = Math.max(FEATURES.gill_min_width, r * FEATURES.gill_width);
     for (const side of [0, 1]) {
-      const q = fishGillShape(anatomy, side, anatomy.swallowPose || 0);
+      const q = fishGillShape(anatomy, side, anatomy.gillPose);
       ctx.beginPath();
       ctx.moveTo(q[0][0] * r, q[0][1] * r);
       ctx.bezierCurveTo(q[1][0] * r, q[1][1] * r, q[2][0] * r, q[2][1] * r, q[3][0] * r,
@@ -841,8 +841,8 @@ export function corpseFish(p) {
     q[FISH.contour] = v[V.contour];
     for (const column of ['energy', 'reserve_capacity', 'egg_yolk', 'egg_capacity', 'sperm_store',
                           'sperm_capacity', 'mass', 'tail', 'mouth_pose', 'bite_pose',
-                          'suction_pose', 'defense', 'health', 'aggression', 'mean_aggression',
-                          'mouth_aperture', 'gut_fill', 'gut_energy'])
+                          'suction_pose', 'gill_pose', 'defense', 'health', 'aggression',
+                          'mean_aggression', 'mouth_aperture', 'gut_fill', 'gut_energy'])
       q[FISH[column]] = state[S[column]];
     q[FISH.fin_pose] = [ state[S.fin_tail], state[S.fin_left], state[S.fin_right] ];
     q[FISH.tissue] = state[S.reserve_capacity] * BODY_UNIT.body_tissue / BODY_UNIT.adult_reserve;

@@ -138,6 +138,7 @@ function fishTemplate(p) {
     q[FISH.egg_yolk] = q[FISH.sperm_store] = 0;
     q[FISH.energy] = q[FISH.reserve_capacity] = BODY_UNIT.adult_reserve;
     q[FISH.mouth_pose] = q[FISH.defense] = q[FISH.bite_pose] = q[FISH.suction_pose] = 0;
+    q[FISH.gill_pose] = 0;
     q[FISH.fin_pose] = Array(FINS).fill(0);
     // The template is one physical body-radius; world-space mouth measurements must match it.
     q[FISH.radius] = 1;

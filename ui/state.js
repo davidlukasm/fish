@@ -158,7 +158,7 @@ export function blendFish(p, blend = frameBlend()) {
                    FISH.defense, FISH.aggression, FISH.impulse_left, FISH.impulse_right, FISH.tail,
                    FISH.egg_yolk, FISH.mass, FISH.radius, FISH.adult_age, FISH.impulse_tail_left,
                    FISH.impulse_tail_right, FISH.motor_factor, FISH.bite_pose, FISH.suction_pose,
-                   FISH.tissue]) {
+                   FISH.gill_pose, FISH.tissue]) {
     const end = p[i] ?? 0;
     v[i] = (old[i] ?? end) + (end - (old[i] ?? end)) * blend;
   }

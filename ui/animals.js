@@ -673,7 +673,7 @@ export class AnimalRenderer extends TankBatch {
                 : (p[FISH.feeding_action_age] || 0) / FEEDING_EFFECT_STEPS.full,
             ...[FIN.pelvic_left, FIN.pelvic_right].map(
                 k => Math.max(0, Math.min(1, p[FISH.fin_pose]?.[k] || 0))),
-            0,
+            facePose.gillPose,
             0
           ],
           at);
@@ -870,7 +870,7 @@ void main(){int id=gl_VertexID;vec2 p;uv=vec2(0);bool visible=true;material=MATE
  vec4 corners[6]=vec4[6](vec4(-1,-1,0,0),vec4(1,-1,0,0),vec4(1,1,0,0),vec4(-1,-1,0,0),vec4(1,1,0,0),vec4(-1,1,0,0));
  if(state.y<EGG_FISH){p=corners[id%QUAD].xy;material=MATERIAL_EGG;visible=id<QUAD;}
  else if(lod==0){vec4 box=read(HEADER_BOUNDS);vec2 q=corners[id%QUAD].xy;p=mix(box.xy,box.zw,(q+1.)*.5);visible=id<QUAD;material=MATERIAL_SILHOUETTE;}
- else{vec4 mesh=read(HEADER_LEVELS);int count=int(lod==1?mesh.y:mesh.w),start=int(lod==1?mesh.x:mesh.z);visible=id<count;vec4 a=read(start+id*VERTEX_TEXELS),b=read(start+id*VERTEX_TEXELS+1),c=read(start+id*VERTEX_TEXELS+2);material=int(b.z+.5);int drive=int(b.w+.5);float t=drive==DRIVE_TAIL?abs(muscles.x):drive==DRIVE_LEFT_FIN?muscles.y:drive==DRIVE_RIGHT_FIN?muscles.z:drive==DRIVE_SPINE?muscles.w:drive==DRIVE_PELVIC_LEFT?fins.x:drive==DRIVE_PELVIC_RIGHT?fins.y:drive==DRIVE_MOUTH?face.y:drive==DRIVE_GILL?face.z:0.;p=mix(a.xy,a.zw,t);if(drive==DRIVE_TAIL)p.y*=extra.z;if(drive==DRIVE_MOUTH){float pump=face.z/(.05+face.y+face.z);p=mix(a.xy,mix(a.zw,c.xy,pump),face.x);}uv=b.xy;if(material==MATERIAL_EYE){float pixels=max(abs(p.x-c.z),abs(p.y-c.w))*pose.w*scale;p=c.zw+(p-c.zw)*max(1.,min(3.,1.8/max(.1,pixels)));}if(drive==DRIVE_TOOTH){float pump=face.z/(.05+face.y+face.z),base=mix(c.z,c.w,pump);vec2 full=mix(a.zw,c.xy,pump);float toothPixels=abs(full.y-base)*pose.w*scale;full.y=base+(full.y-base)*max(1.,min(2.,1.2/max(.1,toothPixels)));p=vec2(mix(a.x,full.x,face.x),base*face.x+(full.y-base)*min(1.,face.x/.22));uv.y=face.x;}}
+ else{vec4 mesh=read(HEADER_LEVELS);int count=int(lod==1?mesh.y:mesh.w),start=int(lod==1?mesh.x:mesh.z);visible=id<count;vec4 a=read(start+id*VERTEX_TEXELS),b=read(start+id*VERTEX_TEXELS+1),c=read(start+id*VERTEX_TEXELS+2);material=int(b.z+.5);int drive=int(b.w+.5);float t=drive==DRIVE_TAIL?abs(muscles.x):drive==DRIVE_LEFT_FIN?muscles.y:drive==DRIVE_RIGHT_FIN?muscles.z:drive==DRIVE_SPINE?muscles.w:drive==DRIVE_PELVIC_LEFT?fins.x:drive==DRIVE_PELVIC_RIGHT?fins.y:drive==DRIVE_MOUTH?face.y:drive==DRIVE_GILL?fins.z:0.;p=mix(a.xy,a.zw,t);if(drive==DRIVE_TAIL)p.y*=extra.z;if(drive==DRIVE_MOUTH){float pump=face.z/(.05+face.y+face.z);p=mix(a.xy,mix(a.zw,c.xy,pump),face.x);}uv=b.xy;if(material==MATERIAL_EYE){float pixels=max(abs(p.x-c.z),abs(p.y-c.w))*pose.w*scale;p=c.zw+(p-c.zw)*max(1.,min(3.,1.8/max(.1,pixels)));}if(drive==DRIVE_TOOTH){float pump=face.z/(.05+face.y+face.z),base=mix(c.z,c.w,pump);vec2 full=mix(a.zw,c.xy,pump);float toothPixels=abs(full.y-base)*pose.w*scale;full.y=base+(full.y-base)*max(1.,min(2.,1.2/max(.1,toothPixels)));p=vec2(mix(a.x,full.x,face.x),base*face.x+(full.y-base)*min(1.,face.x/.22));uv.y=face.x;}}
  screenSize=pose.w*scale;anatomy=read(HEADER_MOUTH);hatchClip=vec3(read(HEADER_ORIGIN).xy,extra.w);local=p;profile0=read(HEADER_WIDTHS);profile1=read(HEADER_WIDTHS+1);outline=read(HEADER_OUTLINE);pigment=read(HEADER_PATTERN);accent=read(material==MATERIAL_EYE?(uv.x>${
         glsl(
             SCENE.eye_uv /

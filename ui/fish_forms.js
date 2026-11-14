@@ -129,7 +129,8 @@ export function fishFeedingPose(p) {
   return {
     mouthOpening : p[FISH.mouth_pose] || 0,
     bitePose : p[FISH.bite_pose] || 0,
-    swallowPose : p[FISH.suction_pose] || 0
+    swallowPose : p[FISH.suction_pose] || 0,
+    gillPose : p[FISH.gill_pose] || 0
   };
 }
 
@@ -272,6 +273,9 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
         (o?.[FISH.suction_pose] ?? p[FISH.suction_pose] ?? 0) +
             ((p[FISH.suction_pose] ?? 0) - (o?.[FISH.suction_pose] ?? p[FISH.suction_pose] ?? 0)) *
                 blend,
+    gillPose :
+        (o?.[FISH.gill_pose] ?? p[FISH.gill_pose] ?? 0) +
+            ((p[FISH.gill_pose] ?? 0) - (o?.[FISH.gill_pose] ?? p[FISH.gill_pose] ?? 0)) * blend,
     typicalAggression : p[FISH.mean_aggression] || 0,
     aggression : p[FISH.aggression] || 0,
     jaw,
