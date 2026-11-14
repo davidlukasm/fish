@@ -6,13 +6,15 @@
 //   hatching on it reports at once.
 // NOT read: the cell's rhythm in the egg.
 // The fish from above, looking to the left. Before its cell the rings: each one reach further,
-// each half as bright as the one before. The thing is the fish panel's test object at its
-// distance; the reach is set on the fish. The grip on the dashed ring sets the threshold: there
-// the cell answers half.
-// ASSUMED for the picture: a bright thing straight before the cell.
+// each half as bright as the one before. The curve is the report for a bright thing straight
+// before a cell. The thing is the fish panel's test object at its distance, the dot under it
+// what the organ's cells report of it in the engine (the strongest of them); the reach is set on
+// the fish. The grip on the dashed ring sets the threshold: there the cell answers half. ASSUMED
+// for the picture: a bright thing straight before the cell.
 import {t} from '../../../strings.js';
 import {unitOfPlan} from '../../../tuning.js';
 import {findOrgan, updateField} from '../../model/document.js';
+import {organCells} from '../vision.js';
 import {clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {answer, BOUNDED, IRRITANT} from './sense.js';
 import {eggShape, fishAbove, LIFE, lifeBand, lifePlaces} from './skin.js';
@@ -93,7 +95,10 @@ liveKind('near', (studio, organId) => {
     // cell reports of it.
     const probe = studio.state.sightProbe;
     if (probe && probe.distance <= far) {
-      const report = answer(signal(probe.distance), gate, 0), tx = X(probe.distance);
+      // What the cells really report of it, the strongest of them: nothing where the thing
+      // lies outside their fan.
+      const report = Math.max(0, ...organCells(studio.state, organ).map(cell => cell.answer)),
+            tx = X(probe.distance);
       el('path', {d : `M${tx} ${cy + 9} V${Y(report)}`, class : 'aid-live-hatch'}, live);
       el('circle', {cx : tx, cy : Y(report), r : 3, class : 'aid-live-posture'}, live);
       el('circle', {cx : tx, cy, r : 7, class : 'aid-live-near-thing'}, live);
