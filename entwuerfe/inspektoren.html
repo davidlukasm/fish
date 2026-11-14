@@ -2367,7 +2367,7 @@ function fishAbove(parent, x, y, s) {
 // where it comes from, pulled close for an eddy that reaches only a few sectors, far for a
 // current that is the same all round.
 // ASSUMED for the picture: how an eddy thins out over the sectors (a bell, SPREAD degrees wide).
-const ROSE = {height : 214, cx : 150, cy : 106, body : 34, petal : 26, water : 76, knob : [86, 100], spread : [24, 500]};
+const ROSE = {height : 180, cx : 150, cy : 90, body : 30, petal : 22, water : 64, knob : [74, 84], spread : [24, 500]};
 const FLOW_PARTS = ['flowrose', 'flow', 'flowlife'];
 const flowReach = (probe, k) => { const wide = ROSE.spread[0] * Math.pow(ROSE.spread[1] / ROSE.spread[0], 1 - probe.near); return Math.exp(-((turnTo(sectorAngle(k) - probe.bearing) / wide) ** 2) / 2); };
 // What the cells get of the current: the sectors' weights x how much of it reaches each, x how
@@ -2378,7 +2378,7 @@ function flowShare() {
 }
 const roseAt = (angle, r) => [ROSE.cx - r * Math.cos(rad(angle)), ROSE.cy - r * Math.sin(rad(angle))];
 function drawRose() {
-  const cell = S.flow, {svg, live} = picture('flowrose', ROSE.height, fixed => fishAbove(fixed, ROSE.cx - 3, ROSE.cy, .78)), w = skinWeights(cell.field), most = Math.max(...w), colour = SENSE.flow.colour, step = 360 / SKIN.sectors;
+  const cell = S.flow, {svg, live} = picture('flowrose', ROSE.height, fixed => fishAbove(fixed, ROSE.cx - 3, ROSE.cy, .68)), w = skinWeights(cell.field), most = Math.max(...w), colour = SENSE.flow.colour, step = 360 / SKIN.sectors;
   const against = Math.max(0, Math.cos(rad(cell.probe.bearing - SKIN.place)));
   el('circle', {cx : ROSE.cx, cy : ROSE.cy, r : ROSE.body, fill : 'none', stroke : COLOUR.trackEdge}, live);
   w.forEach((v, k) => {
