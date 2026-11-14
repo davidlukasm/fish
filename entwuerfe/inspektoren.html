@@ -1818,11 +1818,12 @@ const drawEggFull = () => drawPressure('eggfull', EM().filling, EGG_PARTS, YOLK)
 //   in the egg: the store is a secretion; a stroke of the laying cells spends it on the shell,
 //              which grows thinner by secretion / shell radius, and outside it shows as a
 //              cloud that fertilises nothing. The embryo can hatch once the shell is below
-//              0.95 and its tail or fins push harder than 0.2 + 4 x shell.
+//              0.95 and its tail or fins push hard enough; it also needs to be developed, with
+//              tissue and reserve (mature_body), which this picture does not show.
 // ASSUMED for the picture: the body's size is its maturity; the fish has reserve to spare; the
-// laying cells beat once, at the step the knob sets; a shell radius of SPERM.shell; a cloud keeps its amount and spreads evenly, so it reaches as far
+// laying cells beat once, at the step the knob sets; a cloud keeps its amount and spreads evenly, so it reaches as far
 // as the root of its amount (how the engine's cloud spreads and fades was not read).
-const SPERM = {perCell : 10, most : 40, rate : .2, least : 2, cells : 12, hatch : .5, shell : 24, thin : .95, force : [.2, 4], reach : 14, fade : 260,
+const SPERM = {perCell : 10, most : 40, rate : .2, least : 2, cells : 12, hatch : .5, thin : .95, reach : 14, fade : 260, plant : 34,
                F : {height : 144, fishX : 92, fishY : 60, ground : 122, vent : 156, eggs : [182, 290]},
                C : {L : 64, R : 290, c0 : 16, c1 : 46, top : 78, base : 148, height : 172},
                LIFE : {L : 44, R : 264, top : 18, base : 88, icons : 106, height : 120, beside : 16, whole : .015, least : .08}};
@@ -1834,18 +1835,21 @@ const spermRoom = (r = SP.input.maturity, cells = SP.cells + SP.laying) => sperm
 // One trial: the store step by step, the clouds given off, and in the egg the shell.
 function deriveSperm() {
   const inp = SP.input, room = spermRoom(), inEgg = inp.maturity < SPERM.hatch, store = [], filling = [], shell = [], clouds = []; let s = 0, sh = 1;
+  // The shell's radius is the egg's: 4 x root(yolk / 300), never counted below 1 (egg_radius,
+  // physiology.hh:107-110; reproduction.cc:279). The yolk is that of the egg organ's egg here.
+  const shellRadius = Math.max(1, 4 * Math.sqrt((EM().laid[0]?.yolk ?? EGG.full * eggRoom(1)) / 300));
   for (let st = 0; st <= STEPS; st++) {
     store.push(s); filling.push(room > 0 ? s / room : 0); shell.push(sh);
     if (room <= 0) continue;
     if (st === inp.lay && (inEgg ? s > 0 : s >= SPERM.least)) {
-      if (inEgg) sh = Math.max(0, sh - s / SPERM.shell);
+      if (inEgg) sh = Math.max(0, sh - s / shellRadius);
       clouds.push({step : st, amount : s, fertile : !inEgg}); s = 0; continue;
     }
     s = Math.min(room, s + inp.fill * SPERM.rate * inp.maturity);
   }
   const reach = clouds.length ? SPERM.reach * Math.sqrt(clouds[0].amount) : 0, {eggs, vent} = SPERM.F, eggX = eggs[0] + (eggs[1] - eggs[0]) * inp.egg;
   // What the pressure cells read is the sperm store; the egg's secretion is not in it.
-  return {room, inEgg, store, filling, felt : inEgg ? filling.map(() => 0) : filling, shell, clouds, reach, eggX, reached : !inEgg && reach >= eggX - vent, thin : shell.at(-1), needs : SPERM.force[0] + SPERM.force[1] * shell.at(-1)};
+  return {room, inEgg, store, filling, felt : inEgg ? filling.map(() => 0) : filling, shell, clouds, reach, eggX, reached : !inEgg && reach >= eggX - vent, thin : shell.at(-1)};
 }
 let spermModel = null;
 const SM = () => spermModel ??= deriveSperm();
@@ -1858,7 +1862,7 @@ function drawSperm() {
   const {svg, under, live} = picture('sperm', SPERM.F.height, buildSperm), {fishX, fishY, ground, vent, eggs} = SPERM.F, m = SM(), inp = SP.input;
   document.getElementById('sperm-kind').textContent = m.inEgg ? (m.thin < SPERM.thin ? 'Dünnt die Schale aus' : 'Schale bleibt dick') : !m.clouds.length ? 'Gibt nichts ab' : m.reached ? 'Befruchtet das Ei' : 'Wolke zu dünn';
   // Without a stroke the shell stays whole, and behind a whole shell no fish hatches, however strong.
-  if (m.inEgg) txt(live, 4, 10, m.thin < SPERM.thin ? `Schale ${Math.round(100 * m.thin)} % · schlüpft ab Kraft ${comma(m.needs)}` : 'schlüpft nicht', {style : 'font-size:10px'});
+  if (m.inEgg) txt(live, 4, 10, m.thin < SPERM.thin ? `Schale ${Math.round(100 * m.thin)} % nach Abgabe` : 'schlüpft nicht', {style : 'font-size:10px'});
   else if (m.clouds.length) txt(live, 4, 10, `${comma(m.clouds[0].amount)} Samen je Wolke`, {style : 'font-size:10px'});
   const frame = el('clipPath', {id : 'spermframe'}, under);
   el('rect', {x : 0, y : 14, width : 300, height : SPERM.F.height - 14}, frame);
@@ -1890,7 +1894,7 @@ function drawSperm() {
   // cloud, which the cloud dims.
   const plant = x => el('path', {d : `M${x} ${ground} q-4 -20 2 -34 M${x + 6} ${ground} q6 -16 0 -28 M${x + 12} ${ground} q8 -12 6 -22`, stroke : '#8fd16a', 'stroke-width' : 2.2, fill : 'none', 'stroke-linecap' : 'round'}, live);
   // One plant stands behind the cloud, one clear of it to compare.
-  plant(6); spermFilm.plant = plant(vent + 34);
+  plant(6); spermFilm.plant = plant(vent + SPERM.plant);
   spermFilm.egg = el('g', {}, live);
   el('path', {d : `M${m.eggX} ${ground + 2} v6`, stroke : COLOUR.line, opacity : .6}, live);
   drag(svg, el('circle', {cx : m.eggX, cy : ground + 13, r : 5.5, fill : COLOUR.line}, live), p => { inp.egg = clamp((p.x - eggs[0]) / (eggs[1] - eggs[0]), 0, 1); draw(SPERM_PARTS); }, 'spermegg', 'knob');
@@ -1964,12 +1968,14 @@ function showSperm() {
   let dim = 0, done = false;
   for (const c of m.clouds) {
     const age = play.step - c.step;
-    if (age < 0 || age > SPERM.fade) continue;
+    if (age < 0) continue;
+    const arrives = 90 * Math.min(1, (m.eggX - vent) / Math.max(1, SPERM.reach * Math.sqrt(c.amount)));
+    done ||= c.fertile && SPERM.reach * Math.sqrt(c.amount) >= m.eggX - vent && age > arrives;
+    if (age > SPERM.fade) continue;
     const grown = Math.min(1, age / 90), reach = SPERM.reach * Math.sqrt(c.amount), radius = 6 + reach * grown, dense = (1 - age / SPERM.fade) * (c.fertile ? 1 : .5);
     if (m.inEgg) el('ellipse', {cx : 150, cy : fishY + 6, rx : 70 + 16 * grown, ry : 50 + 12 * grown, fill : 'none', stroke : MILT, 'stroke-width' : 2 + .5 * Math.sqrt(c.amount), opacity : (.6 * dense).toFixed(2)}, spermFilm.clouds);
     else el('circle', {cx : vent, cy : fishY + 16, r : radius, fill : MILT, opacity : (.28 * dense).toFixed(2)}, spermFilm.clouds);
-    dim = Math.max(dim, dense * Math.min(1, c.amount / 12));
-    done ||= c.fertile && age > 90 * Math.min(1, (m.eggX - vent) / Math.max(1, reach)) && reach >= m.eggX - vent;
+    if (radius >= SPERM.plant) dim = Math.max(dim, dense * Math.min(1, c.amount / 12));
   }
   if (spermFilm.shell) spermFilm.shell.setAttribute('stroke-width', (1 + 7 * between(m.shell, play.step)).toFixed(1));
   if (m.inEgg) return;
