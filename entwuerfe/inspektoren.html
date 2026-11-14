@@ -279,7 +279,7 @@ const S = {
   // Pigment. Each type of cells swallows the light round a hue (0-360) with a width, and has cells (how much it swallows) and its span of life; time: how many steps recolouring takes; command: how far the brain has the pigment spread (0-1); ground: what lies behind the fish (0 deep water - 1 sand).
   pigment : {keys : [{hue : 240, width : .3, cells : 5}, {hue : 20, width : .2, cells : 3, from : .6}], chosen : 0, time : 60, command : 1, ground : .35},
   // The defence: cells (their capacity: the resting height), field (the width of what they guard), up (how far the brain has them raised, 0-1 of the most); mouth: the predator tried (bearing: where it bites from, gape: how wide its mouth opens, in body radii).
-  spine : {keys : [{}], cells : 6, field : .35, up : .4, mouth : {bearing : 60, gape : 1.25}},
+  spine : {keys : [{}], cells : 6, field : .35, up : .4, mouth : {bearing : 60, gape : 1.2}},
   // The blood sense. Each type of cells has a place among the substances (x, y: the substances lie on the unit circle) and a width; levels: what is in the blood now, the input tried.
   blood : {keys : [{gate : .3, x : .707, y : -.707, width : .05}, {gate : .25, x : .2, y : .9, width : .1}], chosen : 0, levels : [.15, .7, .1, 0, .3, 0, .6, .45, .2]},
   // Pain in the skin. input: the bite (rise: when, height: how much of the fish's health it takes); probe: where the wound is, as an angle from the cells' place; all: harm all through the body (hunger, illness, age) instead of a bite.
@@ -2738,7 +2738,7 @@ function drawBloodLife() {
 //   in the egg, raising them against the tight shell harms the fish itself.
 // The mouth is the input: its knob is dragged round the fish for where it bites from, the knob at
 // its jaw opens it. The round knob at a spine's tip raises the spines (the brain's command).
-const SPINE = {height : 226, cx : 150, cy : 112, s : 1.9, rx : 52, ry : 21, body : 36, long : 26, rest : [.3, 5], most : .85, mouth : 96, gape : [.6, 2.2], cells : [1, 16], cost : .5};
+const SPINE = {height : 236, cx : 150, cy : 118, s : 1.9, rx : 52, ry : 21, body : 30, long : 26, rest : [.3, 5], most : .85, mouth : 96, gape : [.5, 2.1], cells : [1, 16]};
 const SPINE_PARTS = ['spines', 'spinelife'];
 const spineRest = cells => SPINE.rest[0] * cells / (cells + SPINE.rest[1]);
 const spineHeight = () => Math.max(spineRest(S.spine.cells), SPINE.most * S.spine.up);
@@ -2750,40 +2750,46 @@ function drawSpines() {
   const rim = (angle, out = 0) => [cx - 4 - (rx + out) * Math.cos(rad(angle)), cy - (ry + out) * Math.sin(rad(angle))], angleOf = p => deg(Math.atan2((cy - p.y) / (ry + 30), (cx - 4 - p.x) / (rx + 30)));
   // The spines: three to a sector, as long as the guard there; what stands at rest light, what
   // the brain has raised beyond it in the cells' colour.
-  let tip = null;
   guard.forEach((g, k) => { if (g <= 0) return; for (const part of [-1, 0, 1]) {
     const a = sectorAngle(k) + part * 360 / SKIN.sectors / 3, [x0, y0] = rim(a), [x1, y1] = rim(a, SPINE.long * still[k]), [x2, y2] = rim(a, SPINE.long * g);
     if (g > still[k]) el('path', {d : `M${x1} ${y1} L${x2} ${y2}`, stroke : keyColour(0), 'stroke-width' : 1.8, 'stroke-linecap' : 'round'}, live);
     el('path', {d : `M${x0} ${y0} L${x1} ${y1}`, stroke : COLOUR.line, 'stroke-width' : 1.8, 'stroke-linecap' : 'round'}, live);
-    if (part === 0 && Math.abs(turnTo(sectorAngle(k) - SKIN.place)) < 12) tip = [x2, y2, a];
   } });
-  // The mouth: two jaws opening towards the fish; it bites from where it stands.
-  const [mx, my] = [cx - 4 - SPINE.mouth * Math.cos(rad(mouth.bearing)), cy - SPINE.mouth * Math.sin(rad(mouth.bearing))], ux = (cx - 4 - mx) / SPINE.mouth, uy = (cy - my) / SPINE.mouth, half = SPINE.body * mouth.gape / 2;
-  const jaw = side => [mx + ux * 30 - side * uy * half, my + uy * 30 + side * ux * half];
-  // Whole in the mouth: only if the mouth opens as wide as the fish with its spines is big.
-  const big = 1 + height, fits = mouth.gape >= big;
-  el('circle', {cx : cx - 4, cy, r : SPINE.body * big / 2 + 14, fill : 'none', stroke : fits ? COLOUR.sore : COLOUR.icon, 'stroke-dasharray' : '3 4', opacity : .8}, live);
-  for (const side of [-1, 1]) { const [jx, jy] = jaw(side); el('path', {d : `M${mx - ux * 6} ${my - uy * 6} Q${mx - side * uy * half * .9} ${my + side * ux * half * .9} ${jx} ${jy}`, stroke : COLOUR.sore, 'stroke-width' : 3, fill : 'none', 'stroke-linecap' : 'round'}, live); }
+  // How big the fish is for a mouth: a circle, its radius x (1 + the spines' height). The mouth:
+  // two jaws in a V that open towards the fish; their tips stand at the circle, as far apart as
+  // the mouth opens, in the circle's measure: it swallows the fish whole only if they clear it.
+  const big = SPINE.body * (1 + height), fits = mouth.gape >= 1 + height, ux = Math.cos(rad(mouth.bearing)), uy = Math.sin(rad(mouth.bearing));
+  const from = out => [cx - 4 - out * ux, cy - out * uy], [mx, my] = from(big + 46), [tx, ty] = from(big + 5), half = SPINE.body * mouth.gape, jaw = side => [tx + side * uy * half, ty - side * ux * half];
+  el('circle', {cx : cx - 4, cy, r : big, fill : 'none', stroke : fits ? COLOUR.sore : COLOUR.icon, 'stroke-dasharray' : '3 4', opacity : .85}, live);
+  for (const side of [-1, 1]) { const [jx, jy] = jaw(side); el('path', {d : `M${mx} ${my} L${jx} ${jy}`, stroke : COLOUR.sore, 'stroke-width' : 3.5, 'stroke-linecap' : 'round'}, live); }
   // The bite: what the spines there hold off stops at them (light), the rest goes into the body.
-  const held = guard[sectorOf(mouth.bearing)], [bx, by] = rim(mouth.bearing, SPINE.long * held + 3), [ix, iy] = rim(mouth.bearing, -16 * (1 - held));
-  el('path', {d : `M${mx + ux * 14} ${my + uy * 14} L${bx} ${by}`, stroke : COLOUR.sore, 'stroke-width' : 5, 'stroke-linecap' : 'round', opacity : .9}, live);
+  const held = guard[sectorOf(mouth.bearing)], [bx, by] = rim(mouth.bearing, SPINE.long * held + 3), [ix, iy] = rim(mouth.bearing, -16 * (1 - held)), [sx, sy] = from(big + 30);
+  el('path', {d : `M${sx} ${sy} L${bx} ${by}`, stroke : COLOUR.sore, 'stroke-width' : 5, 'stroke-linecap' : 'round', opacity : .9}, live);
   if (held < 1) el('path', {d : `M${bx} ${by} L${ix} ${iy}`, stroke : COLOUR.sore, 'stroke-width' : 5 * (1 - held), 'stroke-linecap' : 'round', opacity : .9}, live);
   if (held > 0) {
     el('path', {d : `M${bx - uy * 9} ${by + ux * 9} L${bx + uy * 9} ${by - ux * 9}`, stroke : COLOUR.line, 'stroke-width' : 1.5 + 4 * held, 'stroke-linecap' : 'round'}, live);
     // What holding it off costs: a drop of the reserve, as big as the harm held off.
     const [dx, dy] = [bx - uy * 20, by + ux * 20];
-    el('path', {d : `M${dx} ${dy - 6} q5 6 0 9 q-5 -3 0 -9 Z`, fill : COLOUR.yolk ?? '#f1e3a4', transform : `translate(${dx} ${dy}) scale(${(.5 + 1.3 * held).toFixed(2)}) translate(${-dx} ${-dy})`}, live);
+    el('path', {d : `M${dx} ${dy - 6} q5 6 0 9 q-5 -3 0 -9 Z`, fill : '#f1e3a4', transform : `translate(${dx} ${dy}) scale(${(.5 + 1.3 * held).toFixed(2)}) translate(${-dx} ${-dy})`}, live);
   }
-  // The grips: the field's width at its edge, the cells at the cells' place on the rim.
-  const [wx, wy] = rim(SKIN.place + Math.min(skinWidth(cell.field), 179), -7);
+  // The settings: the field's width where the spines end; the cells at the tip of the middle
+  // spine as it stands at rest (more cells, a higher rest).
+  const [wx, wy] = rim(SKIN.place + Math.min(skinWidth(cell.field), 179), 5);
   drag(svg, el('circle', {cx : wx, cy : wy, r : 4.5}, live), p => { cell.field = clamp((Math.abs(turnTo(angleOf(p) - SKIN.place)) - SKIN.width[0]) / SKIN.width[1], 0, 1); draw(SPINE_PARTS); }, 'spinefield');
-  const [px, py] = rim(SKIN.place, -9 - 10 * (cell.cells - SPINE.cells[0]) / (SPINE.cells[1] - SPINE.cells[0]));
-  drag(svg, el('rect', {x : px - 5, y : py - 4, width : 10, height : 8, rx : 2}, live), p => { cell.cells = Math.round(clamp(SPINE.cells[0] + (cy - ry - 9 - p.y) * -1 / 10 * (SPINE.cells[1] - SPINE.cells[0]), SPINE.cells[0], SPINE.cells[1])); draw(SPINE_PARTS); }, 'spinecells');
-  // The inputs: raising the spines at a spine's tip; the mouth's place and its opening.
-  if (tip) drag(svg, el('circle', {cx : tip[0], cy : tip[1], r : 5, fill : keyColour(0)}, live), p => { const out = Math.hypot((p.x - cx + 4) / rx, (p.y - cy) / ry) - 1; cell.up = clamp(out * ry / SPINE.long / Math.max(.05, SKIN.sectors * Math.max(...skinWeights(cell.field))) / SPINE.most, 0, 1); draw(SPINE_PARTS); }, 'spineup', 'knob');
-  drag(svg, el('circle', {cx : mx - ux * 6, cy : my - uy * 6, r : 5.5, fill : COLOUR.sore}, live), p => { mouth.bearing = deg(Math.atan2(cy - p.y, cx - 4 - p.x)); draw(SPINE_PARTS); }, 'spinemouth', 'knob');
+  const mid = sectorOf(SKIN.place), outOf = p => Math.hypot((p.x - cx + 4) / rx, (p.y - cy) / ry) * ry - ry, share = Math.max(.05, SKIN.sectors * skinWeights(cell.field)[mid]);
+  const [px, py] = rim(sectorAngle(mid), SPINE.long * still[mid]);
+  drag(svg, el('rect', {x : px - 4.5, y : py - 4.5, width : 9, height : 9, rx : 2.5}, live), p => {
+    // The cells whose rest height reaches the pointer.
+    const want = clamp(outOf(p) / SPINE.long / share, 0, SPINE.rest[0] * .999); cell.cells = Math.round(clamp(SPINE.rest[1] * want / (SPINE.rest[0] - want), SPINE.cells[0], SPINE.cells[1])); draw(SPINE_PARTS); }, 'spinecells');
+  // The inputs: the brain raises the spines (the knob beyond the middle spine's tip); the mouth
+  // is dragged round the fish at its hinge and opened at a jaw's tip.
+  // STOPGAP: the knob reaches the most any spines can stand (0.85); what these cells' twitches
+  // reach is the engine's to report.
+  const [rx2, ry2] = rim(sectorAngle(mid), SPINE.long * guard[mid] + 9);
+  drag(svg, el('circle', {cx : rx2, cy : ry2, r : 5, fill : keyColour(0)}, live), p => { cell.up = clamp((outOf(p) - 9) / SPINE.long / share / SPINE.most, 0, 1); draw(SPINE_PARTS); }, 'spineup', 'knob');
+  drag(svg, el('circle', {cx : mx, cy : my, r : 5.5, fill : COLOUR.sore}, live), p => { mouth.bearing = deg(Math.atan2(cy - p.y, cx - 4 - p.x)); draw(SPINE_PARTS); }, 'spinemouth', 'knob');
   const [gx, gy] = jaw(1);
-  drag(svg, el('circle', {cx : gx, cy : gy, r : 4.5, fill : COLOUR.sore}, live), p => { const off = Math.abs((p.x - mx) * -uy + (p.y - my) * ux); mouth.gape = clamp(2 * off / SPINE.body, SPINE.gape[0], SPINE.gape[1]); draw(SPINE_PARTS); }, 'spinegape', 'knob');
+  drag(svg, el('circle', {cx : gx, cy : gy, r : 4.5, fill : COLOUR.sore}, live), p => { mouth.gape = clamp(Math.abs((p.x - tx) * uy - (p.y - ty) * ux) / SPINE.body, SPINE.gape[0], SPINE.gape[1]); draw(SPINE_PARTS); }, 'spinegape', 'knob');
 }
 // Its life: in the egg raised spines harm the fish itself against the shell; outside they guard.
 function drawSpineLife() {
