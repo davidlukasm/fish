@@ -7,13 +7,7 @@ import {REGION_PICTURE, regionHandle, regionPatch} from './view/region_controls.
 import {updateRegion} from './model/regions.js';
 import {RHYTHM_TAU} from './model/region_cells.js';
 import {hasColourTuning, nominalSpectrum} from './model/retina.js';
-import {
-  effectorPatch,
-  FIN_ANGLE_TRAIT,
-  GILL_TRAIT,
-  GUT_TRAIT,
-  spinePatch
-} from './view/effectors.js';
+import {effectorPatch, FIN_ANGLE_TRAIT, GILL_TRAIT, spinePatch} from './view/effectors.js';
 import {clamp} from '../units.js';
 import {kindLimit, kindNodes} from './model/organs.js';
 import {lateralPatch} from './view/lateral.js';
@@ -29,7 +23,6 @@ import {
   setBends,
   setFinAngle,
   setGillRakers,
-  setGutLength,
   setMuscleTrait,
   setMuscleSprint,
   setNodeCopies,
@@ -638,8 +631,7 @@ export const handleMethods = {
   },
   muscleTrait(code, trait, value, organId) {
     const doc = this.state.document;
-    return trait === GUT_TRAIT         ? setGutLength(doc, value)
-           : trait === GILL_TRAIT      ? setGillRakers(doc, organId, value)
+    return trait === GILL_TRAIT        ? setGillRakers(doc, organId, value)
            : trait === FIN_ANGLE_TRAIT ? setFinAngle(doc, organId, value, this.state.sites)
                                        : setMuscleTrait(doc, code, trait, value, this.state.sites);
   },

@@ -2,7 +2,6 @@ import {musclePatch, musclePictures} from './muscle_effect.js';
 import {glandPatch} from './gland_effect.js';
 import {commandPatch} from './command_line.js';
 import {pigmentPatch} from './pigments.js';
-import {gutSensePictures} from './gut_sense.js';
 import {
   ANATOMY,
   ATELIER_LIMITS,
@@ -12,7 +11,6 @@ import {
   SIDE_FIN
 } from '../../schema.js';
 import {
-  gutTurns,
   jawReach,
   lipWidth,
   rakerPassage,
@@ -29,7 +27,6 @@ import {
   finAngle,
   finStroke,
   gillRakers,
-  gutLength,
   muscleTrait
 } from '../model/document.js';
 import {sideIndex, sideOf} from '../model/layout.js';
@@ -40,14 +37,11 @@ import {clamp, degrees, radians, wrapAngle} from '../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
 import {organCommand} from './preview.js';
 import {handleWord} from './sense_marks.js';
-import {gutMealRows} from './gut_meal.js';
 import {ecologyIconSvg, FOOD_COLORS} from '../../feeding_view.js';
 import {FOOD_SLOT} from '../../nutrition_model.js';
 
 const label = (key, values) => t('studio.muscle.' + key, values);
-// The gut, the gills and the gut muscle are no muscle organs; their handles carry their own codes.
-export const GUT_TRAIT = 'gut_length', GUT_CODE = -1, GILL_TRAIT = 'gill_rakers', GILL_CODE = -2,
-             GUT_MUSCLE_CODE = -3, FIN_ANGLE_TRAIT = 'fin_angle';
+export const GILL_TRAIT = 'gill_rakers', GILL_CODE = -2, FIN_ANGLE_TRAIT = 'fin_angle';
 const FRAME = Object.freeze({width : 300, height : 170, middle : 85});
 const HANDLE = Object.freeze({radius : 5.5});
 const handle = (name, x, y, title, shown = '') =>
@@ -292,10 +286,6 @@ const TRAIT_HANDLES = Object.freeze({
   [MOTOR_KIND.turn] : Object.fromEntries(
       Object.values(FIN_STROKE)
           .map(stroke => ['trait:q1:' + stroke, {key : FIN_ANGLE_TRAIT, at : angleAt(stroke)}])),
-  [GUT_CODE] : {
-    'trait:q1' : {key : GUT_TRAIT, at : x => (x - GUT.from - 110) / (GUT.to - GUT.from - 110)},
-    'chart:gut' : {key : GUT_TRAIT, at : chartShare}
-  },
   [GILL_CODE] : {
     'trait:q1' : {key : GILL_TRAIT, at : (x, y) => (GILL.bottom - y) / (GILL.bottom - GILL.top)}
   },
@@ -416,11 +406,6 @@ export function spineField(state, organ) {
          escapeText(label('spines.spreadHandle')) + '</title></circle>' +
          '</svg>' + musclePicture(state, organ, MOTOR_KIND.defense, sideOf(organ)) + '</div>';
 }
-const GUT = Object.freeze(
-    {from : 24, to : 276, middle : 85, amplitude : 30, tube : 14, steps : 96, cell : 3.2});
-// What the gut gets out of plants and meat over all its lengths, as two curves: the axes span the
-// plot (left, right, top, base), the scale words sit `tick` beside them, the curves end in their
-// food's icon; the dots and their shares mark the gut's own length, which is dragged here as well.
 const USE_CHART = Object.freeze({
   width : 300,
   height : 144,
@@ -443,60 +428,8 @@ const USE_CHART = Object.freeze({
   // A factor's plot reaches this much above its largest value.
   room : 1.15
 });
-// The gut: its length (handle at its end) and its sense cells, the food cells on the inner wall,
-// the stretch cells on the outer wall. The chosen kind shows its feelers, as long as the cells are
-// sensitive, and, where they get used to a lasting stimulus, the adaptation arc round its first
-// cell. Below it, the use curve shows what plants and meat yield over all lengths. `held` is a
-// dragged sensitivity.
-export function gutGraphic(state, organ, selected, held = null) {
-  const G = GUT, code = GUT_CODE;
-  const length = gutLength(state.document);
-  const turns = gutTurns(length ?? BODY_UNIT.trait_middle);
-  const end = G.from + 110 + (G.to - G.from - 110) * (length ?? BODY_UNIT.trait_middle);
-  const along = k => G.from + (end - G.from) * k / G.steps,
-        across = k => G.middle + G.amplitude * Math.sin(2 * Math.PI * turns * k / G.steps);
-  const points =
-      Array.from({length : G.steps + 1}, (_, k) => fixed(along(k)) + ' ' + fixed(across(k)));
-  const find = key => organ.centers.find(c => c.key === key);
-  const part = (center, body) =>
-      center ? '<g class="aid-sac-part' + (selected?.id === center.id ? ' selected' : '') +
-                   '" data-select-center="' + escapeText(center.id) + '">' + body + '</g>'
-             : '';
-  const food = find('food'), fullness = find('fullness'), ache = find('ache');
-  // Cell places along one wall: -1 inner (food, then pain), +1 outer (stretch).
-  const wall = side => Array.from({length : ATELIER_LIMITS.max_copies}, (_, i) => {
-    const k = Math.round((i + .5) / ATELIER_LIMITS.max_copies * G.steps);
-    return {x : along(k), y : across(k) + side * (G.tube / 2 + G.cell)};
-  });
-  // The cells sit as dots along the wall; what they report shows in the pictures below.
-  const plain = (center, side, skip = 0) =>
-      center ? wall(side)
-                   .slice(skip, skip + center.copies)
-                   .map(p => '<circle class="aid-gut-cell" cx="' + fixed(p.x) + '" cy="' +
-                             fixed(p.y) + '" r="' + G.cell + '"/>')
-                   .join('')
-             : '';
-  return effectorBlock(
-      organ, code, 1, label('gut.title'),
-      '<path class="aid-gut-tube" d="M' + points.join(' L') + '" stroke-width="' + G.tube + '"/>' +
-          part(fullness, '<path class="aid-gut-stretch" d="M' + points.join(' L') + '"><title>' +
-                             escapeText(label('gut.stretch')) + '</title></path>' +
-                             plain(fullness, 1)) +
-          part(food, plain(food, -1)) + part(ache, plain(ache, -1, food?.copies ?? 0)) +
-          handle('trait:q1', end, across(G.steps), label('gut.handle'), label('diet.gut.axis')),
-      dietCurves(state, organ, 'gut') + gutSensePictures(state, organ, held));
-}
-// What a trait of the mouth or gut does over its whole range, as curves: the gut's length against
-// how much of plants and meat it gets out, the teeth's form against what a bite cuts or grinds, the
-// jaw's length against how wide it opens and how hard it bites. A share runs from 0 to 100 %, a
-// factor from 0 to a little above its largest value with ×1 marked. The organ's own value is the
-// line with a dot and its value on each curve; it is dragged there as well.
+// The tooth and jaw curves share a scale with the handle for the current trait.
 const DIET_CURVES = Object.freeze({
-  gut : {
-    code : GUT_CODE,
-    curves : [ [ 'plant', FOOD_SLOT.plant ], [ 'meat', FOOD_SLOT.fish ] ],
-    at : state => gutLength(state.document)
-  },
   teeth : {
     code : MOTOR_KIND.aggression,
     curves : [ [ 'grind', FOOD_SLOT.plant ], [ 'cut', FOOD_SLOT.fish ] ],
@@ -708,11 +641,6 @@ export function gillGraphic(state, organ) {
              label('gills.handle'), label('gills.word'));
   return effectorBlock(organ, GILL_CODE, 1, label('gills.title'), graphic,
                        musclePicture(state, organ, GILL_CODE, 1));
-}
-// The gut muscle: one meal through the gut at rest and driven (gut_meal.js), its muscle below.
-export function gutMuscleGraphic(state, organ) {
-  return effectorBlock(organ, GUT_MUSCLE_CODE, 1, label('gutmuscle.title'), gutMealRows(state),
-                       musclePicture(state, organ, GUT_MUSCLE_CODE, 1));
 }
 export function effectorGraphic(state, organ) {
   const code = organFunction(organ, state.sites);

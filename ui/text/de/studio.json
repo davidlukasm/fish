@@ -954,25 +954,6 @@
       "kept": "hält {share} des Planktons",
       "ground": "siebt {share} aus dem Bodengrund"
     },
-    "gutmuscle": {
-      "title": "Darmmuskel",
-      "meal": "eine Blattmahlzeit über {n} Schritte",
-      "hungryRest": "hungrig, in Ruhe",
-      "hungryDriven": "hungrig, voll angetrieben",
-      "fullDriven": "satt, voll angetrieben (in Ruhe bliebe sie liegen)",
-      "taken": "{p} aufgenommen",
-      "lost": "{p} ausgeschieden",
-      "empty": "leer nach {n} Schritten",
-      "cells": "mehr Zellen: schneller und teurer"
-    },
-    "gut": {
-      "title": "Darm",
-      "short": "kurz · Fleisch",
-      "long": "lang · Pflanzen",
-      "handle": "Ziehen: Länge des Darms",
-      "sensitivityHandle": "Ziehen: längere Fühler spüren schon wenig",
-      "stretch": "Dehnungszellen in der Darmwand melden, wie voll der Darm ist"
-    },
     "spines": {
       "title": "Schutz rundum",
       "spreadHandle": "Ziehen: wie weit sich die Stacheln jedes Knotens verteilen",
@@ -980,15 +961,6 @@
       "raised": "aufgerichtet"
     },
     "diet": {
-      "gut": {
-        "title": "Verwertung",
-        "handle": "Ziehen: Länge des Darms",
-        "low": "kurz",
-        "high": "lang",
-        "plant": "Pflanzen",
-        "meat": "Fleisch",
-        "axis": "Darmlänge"
-      },
       "teeth": {
         "title": "Biss je Beute",
         "handle": "Ziehen: spitze oder stumpfe Zähne",

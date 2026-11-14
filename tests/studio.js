@@ -5333,11 +5333,9 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const cluster = brainPlaces.organLocation(model.findOrgan(circuit.document, circuit.organId),
                                               sites, circuit.document);
     assert.ok(Math.hypot(cluster.x - onLobe.x, cluster.y - onLobe.y) < 60, 'A region stays there');
-    const effectorsView = await import('../ui/studio/view/effectors.js');
-    const lone = model.findOrgan(gutDoc.document, gutDoc.organId);
-    assert.match(effectorsView.gutGraphic({document : gutDoc.document, sites}, lone),
-                 /aid-graphic-handle[^>]*data-effector-handle="trait:q1"/,
-                 'A gut without its throat still offers its length');
+    const gutSelection = {kind : 'organ', id : gutDoc.organId};
+    assert.match(panels.inspector({...state, document : gutDoc.document, selected : gutSelection}),
+                 /data-live="gut"/, 'A gut without its throat mounts its live inspector');
     const homeTarget = views.placementTarget(model.newDocument(''), 'gut', {x : 300, y : 330});
     assert.equal(homeTarget.snap, Infinity, 'An inner organ goes to its home from any distance');
     const freeTarget = views.placementTarget(model.newDocument(''), 'eye', {x : 300, y : 290});

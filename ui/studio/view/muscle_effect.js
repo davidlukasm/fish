@@ -72,7 +72,7 @@ const svg = (frame, organ, code, side, attributes, label, body) =>
 
 function pullPicture(state, organ, code, side, most, attributes) {
   const P = PULL, nodes = kindNodes(organ), reserve = sprintNodes(organ);
-  const gut = organ.type === 'gutmuscle', axis = gut ? word('cells') : effect(code);
+  const axis = effect(code);
   const places = clamp(nodes.length + P.room, P.least, Math.max(most, P.least));
   const slot = (P.right - P.left) / places, regular = nodes.length - reserve;
   const height = copies => (P.base - P.top) * copies / ATELIER_LIMITS.max_copies;
@@ -107,10 +107,8 @@ function pullPicture(state, organ, code, side, most, attributes) {
   return svg(P, organ, code, side, attributes, axis,
              '<path class="aid-sense-axis" d="M' + P.left + ' ' + P.top + ' V' + P.base + ' H' +
                  P.right + '"/>' + upright(P.title, (P.top + P.base) / 2, axis) + free + bars +
-                 (gut ? text('aid-handle-word', P.left, P.groups, word('gutmuscle.cells'))
-                      : groupWord(0, regular, 'always')) +
-                 groupWord(regular, nodes.length, 'strongOnly') +
-                 grip('strength', top, word(gut ? 'cellsHandle' : 'strengthHandle'), P) +
+                 groupWord(0, regular, 'always') + groupWord(regular, nodes.length, 'strongOnly') +
+                 grip('strength', top, word('strengthHandle'), P) +
                  handleWord(top, word('strengthWord', {n : first.copies}), 'above') +
                  (organ.type === 'muscle'
                       ? grip('sprint', split, word('sprintHandle'), P,
