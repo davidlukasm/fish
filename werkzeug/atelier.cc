@@ -1001,7 +1001,8 @@ std::string diet_report() {
     out << ']';
   };
   using namespace fishsim;
-  out << "{\"gut\":{";
+  out << "{\"nutrientShare\":" << PhysiologyParameters::nutrient_share
+      << ",\"nutrientKeep\":" << PhysiologyParameters::nutrient_keep << ",\"gut\":{";
   const PhysiologyParameters physiology;
   // What a resting gut of each length takes up of leaves and of flesh.
   const auto yield = [&](int food) {
