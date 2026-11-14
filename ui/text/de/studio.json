@@ -1861,7 +1861,8 @@
       "empty": "leer",
       "least": "Mindestdotter laut Bauplan",
       "steps": "Schritte",
-      "perEgg": "Dotter je Ei"
+      "perEgg": "Dotter je Ei",
+      "sets": "löst aus"
     },
     "sperm": {
       "trial": "Füllen und Abgeben",
@@ -1882,7 +1883,8 @@
       "steps": "Schritte",
       "shellWord": "Schale",
       "secretion": "Schlupfsekret",
-      "sperm": "Samen"
+      "sperm": "Samen",
+      "sets": "löst aus"
     }
   }
 }

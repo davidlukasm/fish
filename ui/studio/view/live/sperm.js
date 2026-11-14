@@ -35,7 +35,9 @@ const word = (key, values) => t('studio.live.sperm.' + key, values);
 const FULL = ATELIER_LIMITS.max_copies, STEPS = 900, ROUND_MS = 12000, HATCH = .5;
 // reach: picture units a cloud reaches for the root of one unit of sperm; fade: steps until it
 // is gone; grow: steps until it has spread; plant: how far behind the vent the plant stands.
-const CLOUD = Object.freeze({reach : 14, fade : 260, grow : 90, plant : 34, thick : 12});
+// travel: how far the cells' grip moves from the thinnest to the fullest cells.
+const CLOUD =
+    Object.freeze({reach : 14, fade : 260, grow : 90, plant : 34, thick : 12, travel : 24});
 const SCENE = Object.freeze({
   height : 144,
   fishX : 92,
@@ -93,7 +95,9 @@ liveKind('sperm', (studio, organId) => {
     shell : null,
     line : null
   };
-  let state = studio.state, m = null, step = 0;
+  // native: the drives and the store of the last plan its report belonged to; pull: where a
+  // grip was taken.
+  let state = studio.state, m = null, step = 0, native = null, pull = null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -111,6 +115,17 @@ liveKind('sperm', (studio, organId) => {
     const cells = list => list.reduce((sum, c) => sum + c.copies, 0), phase = lifePhase(filling[0]);
     // The egg this plan's egg organ lays, for the shell's radius: its room from the report.
     const yolk = state.anatomy?.budget?.yolk?.store;
+    // What the cells give at a full command, and the room, come from the plan's report. While
+    // a grip is dragged they follow the cells' copies from the last plan the report belonged to.
+    const report = state.anatomy?.gonads?.sperm, exact = studio.shownDesign === state.document;
+    if (exact && Number.isFinite(report?.fillDrive))
+      native = {
+        fill : report.fillDrive,
+        release : report.releaseDrive,
+        fillCells : cells(filling),
+        layCells : cells(laying)
+      };
+    const scaled = (drive, now, then) => then > 0 ? drive * now / then : 0;
     return {
       filling,
       laying,
@@ -120,10 +135,14 @@ liveKind('sperm', (studio, organId) => {
       layCopies : laying[0]?.copies ?? 0,
       largest : base.most,
       perCell : base.perCell,
-      room : Math.min(base.most, base.perCell * (cells(filling) + cells(laying))),
+      room : exact && Number.isFinite(report?.store)
+                 ? report.store
+                 : Math.min(base.most, base.perCell * (cells(filling) + cells(laying))),
       rate : base.fill,
       least : base.spawnLeast,
-      lays : cells(laying) / FULL >= G.release,
+      fillDrive : native ? scaled(native.fill, cells(filling), native.fillCells) : 0,
+      releaseDrive : native ? scaled(native.release, cells(laying), native.layCells) : 0,
+      threshold : G.release,
       // 4 x root(yolk / 300), never counted below 1 (egg_radius, reproduction.cc).
       shellRadius : Math.max(1, Number.isFinite(yolk) && yolk > 0 ? 4 * Math.sqrt(yolk / 300) : 1),
       from : phase.start ?? 0,
@@ -132,9 +151,10 @@ liveKind('sperm', (studio, organId) => {
   }
   const works = r => r >= m.from && (m.until >= 1 || r < m.until);
   const roomAt = (r = input.maturity) => works(r) ? r * m.room : 0;
+  const lays = () => m.releaseDrive >= m.threshold;
   // One trial: the store step by step, the cloud given off, and in the egg the shell.
   function run() {
-    const room = roomAt(), inEgg = input.maturity < HATCH, drive = input.fill * m.fillCells / FULL,
+    const room = roomAt(), inEgg = input.maturity < HATCH, drive = input.fill * m.fillDrive,
           each = drive / (1 + drive) * m.rate * input.maturity, store = [], shell = [], clouds = [];
     let s = 0, sh = 1;
     for (let st = 0; st <= STEPS; st++) {
@@ -142,7 +162,7 @@ liveKind('sperm', (studio, organId) => {
       shell.push(sh);
       if (room <= 0)
         continue;
-      if (m.lays && st === input.lay && (inEgg ? s > 0 : s >= m.least)) {
+      if (lays() && st === input.lay && (inEgg ? s > 0 : s >= m.least)) {
         if (inEgg)
           sh = Math.max(0, sh - s / m.shellRadius);
         clouds.push({step : st, amount : s, fertile : !inEgg});
@@ -173,7 +193,7 @@ liveKind('sperm', (studio, organId) => {
     const {svg, under, live} = picture(scene, SCENE.height, buildScene),
                        {fishX, fishY, ground, vent, eggs, sac} = SCENE, t0 = m.trial;
     kind.textContent = word(t0.inEgg            ? (t0.thin < 1 ? 'thins' : 'thick')
-                            : !t0.clouds.length ? (m.lays ? 'none' : 'weak')
+                            : !t0.clouds.length ? (lays() ? 'none' : 'weak')
                             : t0.reached        ? 'reaches'
                                                 : 'thin');
     if (t0.inEgg)
@@ -236,16 +256,26 @@ liveKind('sperm', (studio, organId) => {
     drag(svg,
          el('rect', {
            x : gx - 5.5,
-           y : gy0 - 10 * m.copies / FULL - 4,
+           y : gy0 - CLOUD.travel * m.copies / FULL - 4,
            width : 11,
            height : 8,
            rx : 2,
            class : 'aid-live-miltgrip'
          },
             live),
-         p => draft(setNodeCopies(studio.state.document, organId,
-                                  Math.round(clamp((gy0 - p.y) / 10 * FULL, 1, FULL)))),
-         'cells', 'grip', settle);
+         p => {
+           // The grip moves from where it was taken, wherever on it the pointer came down.
+           pull ??= {y : p.y, copies : m.copies};
+           const copies =
+               Math.round(clamp(pull.copies + (pull.y - p.y) / CLOUD.travel * FULL, 1, FULL));
+           if (copies !== m.copies)
+             draft(setNodeCopies(studio.state.document, organId, copies));
+         },
+         'cells', 'grip',
+         () => {
+           pull = null;
+           settle();
+         });
     const pairsTo = count => {
       const doc = setOrganNodes(studio.state.document, organId, count, studio.state.sites);
       if (!doc)
@@ -295,14 +325,18 @@ liveKind('sperm', (studio, organId) => {
       class : 'aid-live-course'
     },
        live);
-    // The laying cells' one stroke.
+    // The laying cells' one stroke at a full command, as long as it is strong; it sets off
+    // where it reaches the dashed line, half-way down the row.
+    const strength = mid + (c1 - mid) * clamp(m.releaseDrive / (2 * m.threshold));
     el('path', {
-      d : `M${X(input.lay)} ${mid} V${c1}`,
+      d : `M${X(input.lay)} ${mid} V${strength}`,
       class : 'aid-live-course',
       'stroke-width' : 3,
-      opacity : m.lays ? .7 : .25
+      opacity : lays() ? .7 : .3
     },
        live);
+    el('path', {d : `M${L} ${(mid + c1) / 2} H${R}`, class : 'aid-live-input'}, live);
+    txt(live, R - 3, c1 + 10, word('sets'), {'text-anchor' : 'end', class : 'aid-live-small'});
     el('rect', {x : L, y : top, width : R - L, height : base - top, class : 'aid-live-track'},
        live);
     el('path', {
@@ -346,7 +380,7 @@ liveKind('sperm', (studio, organId) => {
           again();
         },
         'fill', 'knob');
-    drag(svg, el('circle', {cx : X(input.lay), cy : c1, r : 5.5}, live), p => {
+    drag(svg, el('circle', {cx : X(input.lay), cy : strength, r : 5.5}, live), p => {
       input.lay = clamp(Math.round((p.x - L) / (R - L) * STEPS), 0, STEPS);
       again();
     }, 'lay', 'knob');

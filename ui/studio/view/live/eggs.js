@@ -32,7 +32,10 @@ import {chip, clamp, drag, el, fishIcon, liveKind, path, picture, txt} from './k
 
 const word = (key, values) => t('studio.live.eggs.' + key, values);
 const FULL = ATELIER_LIMITS.max_copies, STEPS = 900, ROUND_MS = 12000, HATCH = .5;
-const BELLY = Object.freeze({height : 132, fishX : 118, fishY : 62, ground : 120, sac : -34});
+// zoom: the fish against its drawing, so that it fills the panel's width; travel: how far the
+// cells' grip moves from the thinnest to the fullest cells.
+const BELLY = Object.freeze(
+    {height : 156, fishX : 118, fishY : 70, ground : 142, sac : -44, zoom : 1.3, travel : 24});
 const TRIAL =
     Object.freeze({L : 64, R : 290, c0 : 16, c1 : 46, top : 78, base : 148, height : 172});
 const LIFE = Object.freeze({
@@ -74,7 +77,8 @@ liveKind('eggs', (studio, organId) => {
   // What is tried on the organ: not part of the fish.
   const input = {fill : .3, lay : 200, maturity : 1};
   const film = {yolk : null, eggs : null, sac : null, line : null};
-  let state = studio.state, m = null, step = 0;
+  // native: the drives of the last plan its report belonged to; pull: where a grip was taken.
+  let state = studio.state, m = null, step = 0, native = null, pull = null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -101,6 +105,17 @@ liveKind('eggs', (studio, organId) => {
           left = 1 - DIGESTION.belly * gut;
     const all = cells(filling) + cells(laying),
           roomOf = n => left * Math.min(base.most, base.perCell * n);
+    // What the cells give at a full command comes from the plan's report. While a grip is
+    // dragged it follows the cells' copies from the last plan the report belonged to.
+    const drives = state.anatomy?.gonads?.eggs;
+    if (studio.shownDesign === state.document && Number.isFinite(drives?.fillDrive))
+      native = {
+        fill : drives.fillDrive,
+        release : drives.releaseDrive,
+        fillCells : cells(filling),
+        layCells : cells(laying)
+      };
+    const scaled = (drive, now, then) => then > 0 ? drive * now / then : 0;
     return {
       filling,
       laying,
@@ -119,8 +134,10 @@ liveKind('eggs', (studio, organId) => {
                                                                                : null,
       rate : base.fill,
       spawn : base.spawnShare,
+      fillDrive : native ? scaled(native.fill, cells(filling), native.fillCells) : 0,
       // The laying cells beat only when their strength reaches the engine's threshold.
-      lays : cells(laying) / FULL >= G.release,
+      releaseDrive : native ? scaled(native.release, cells(laying), native.layCells) : 0,
+      threshold : G.release,
       from : phase.start ?? 0,
       until : phase.end ?? 1,
       most : nodeLimit(eggs, state.sites)
@@ -128,16 +145,17 @@ liveKind('eggs', (studio, organId) => {
   }
   const works = r => r >= Math.max(m.from, HATCH) && (m.until >= 1 || r < m.until);
   const roomAt = (r = input.maturity) => works(r) ? r * m.room : 0;
+  const lays = () => m.releaseDrive >= m.threshold;
   // One trial: the yolk step by step, and the eggs laid in it.
   function run() {
-    const room = roomAt(), drive = input.fill * m.fillCells / FULL,
+    const room = roomAt(), drive = input.fill * m.fillDrive,
           each = drive / (1 + drive) * m.rate * input.maturity, yolk = [], laid = [];
     let y = 0;
     for (let st = 0; st <= STEPS; st++) {
       yolk.push(y);
       if (room <= 0)
         continue;
-      if (m.lays && st >= input.lay && y >= m.spawn * room) {
+      if (lays() && st >= input.lay && y >= m.spawn * room) {
         laid.push({step : st, yolk : y, enough : m.minimum === null || y >= m.minimum});
         y = 0;
         continue;
@@ -159,7 +177,9 @@ liveKind('eggs', (studio, organId) => {
 
   function buildBelly(fixed) {
     const {fishX, fishY, ground} = BELLY,
-                         g = el('g', {transform : `translate(${fishX} ${fishY})`}, fixed);
+                         g = el('g',
+                                {transform : `translate(${fishX} ${fishY}) scale(${BELLY.zoom})`},
+                                fixed);
     el('path', {d : FISH, class : 'aid-live-body'}, g);
     el('circle', {cx : -62, cy : -6, r : 3.4, class : 'aid-live-eye'}, g);
     el('path', {d : `M0 ${ground} H300`, class : 'aid-live-sand'}, fixed);
@@ -169,14 +189,14 @@ liveKind('eggs', (studio, organId) => {
   function drawBelly() {
     const {svg, live} = picture(belly, BELLY.height, buildBelly), {fishX, fishY, sac} = BELLY,
                 t0 = m.trial;
-    kind.textContent = !t0.laid.length ? word(t0.room > 0 ? (m.lays ? 'none' : 'weak') : 'noRoom')
+    kind.textContent = !t0.laid.length ? word(t0.room > 0 ? (lays() ? 'none' : 'weak') : 'noRoom')
                        : t0.laid.every(e => !e.enough) ? word('nutrient')
                        : t0.every                      ? word('every', {n : t0.every})
                                                        : word('one');
     if (t0.laid.length)
       txt(live, 4, 10, word('yolk', {n : Math.round(t0.laid[0].yolk)}), {class : 'aid-live-small'});
-    const coils = 2 + Math.round(4 * m.gut), gx0 = fishX - 38, gx1 = fishX + 52,
-          gy = fishY - 8 - 6 * m.gut, amp = 3 + 7 * m.gut;
+    const z = BELLY.zoom, coils = 2 + Math.round(4 * m.gut), gx0 = fishX - 38 * z,
+          gx1 = fishX + 52 * z, gy = fishY - (8 + 6 * m.gut) * z, amp = (3 + 7 * m.gut) * z;
     el('path', {
       d : path(Array.from(
           {length : 61},
@@ -193,11 +213,12 @@ liveKind('eggs', (studio, organId) => {
       }).addEventListener('click', () => studio.select('organ', gutOrgan.id, null, false));
     // The room the gut leaves at this maturity (dotted), and the organ in it. The share is of
     // the largest room there is, at the shortest gut.
-    const most = m.largest / m.left, x0 = fishX + sac, cy = fishY + 17 - 3 * m.gut,
-          [ widest, highest ] = sizeOf(input.maturity * m.largest / most),
-          [ long, high ] = sizeOf(t0.room / most), cx = x0 + long / 2;
+    const most = m.largest / m.left, x0 = fishX + sac, cy = fishY + (17 - 3 * m.gut) * z,
+          [ widest, highest ] = sizeOf(input.maturity * m.largest / most).map(v => v * z),
+          [ long, high ] = sizeOf(t0.room / most).map(v => v * z), cx = x0 + long / 2;
     el('ellipse',
-       {cx : x0 + widest / 2, cy, rx : widest / 2, ry : highest, class : 'aid-live-bellyroom'}, live);
+       {cx : x0 + widest / 2, cy, rx : widest / 2, ry : highest, class : 'aid-live-bellyroom'},
+       live);
     film.sac = {long, high};
     el('ellipse', {
       cx,
@@ -237,16 +258,26 @@ liveKind('eggs', (studio, organId) => {
     drag(svg,
          el('rect', {
            x : x0 + border / 2 - 5.5,
-           y : gy0 - 10 * m.copies / FULL - 4,
+           y : gy0 - BELLY.travel * m.copies / FULL - 4,
            width : 11,
            height : 8,
            rx : 2,
            class : 'aid-live-yolkgrip'
          },
             live),
-         p => draft(setNodeCopies(studio.state.document, organId,
-                                  Math.round(clamp((gy0 - p.y) / 10 * FULL, 1, FULL)))),
-         'cells', 'grip', settle);
+         p => {
+           // The grip moves from where it was taken, wherever on it the pointer came down.
+           pull ??= {y : p.y, copies : m.copies};
+           const copies =
+               Math.round(clamp(pull.copies + (pull.y - p.y) / BELLY.travel * FULL, 1, FULL));
+           if (copies !== m.copies)
+             draft(setNodeCopies(studio.state.document, organId, copies));
+         },
+         'cells', 'grip',
+         () => {
+           pull = null;
+           settle();
+         });
     const pairsTo = count => {
       const doc = setOrganNodes(studio.state.document, organId, count, studio.state.sites);
       if (!doc)
@@ -282,12 +313,17 @@ liveKind('eggs', (studio, organId) => {
       class : 'aid-live-course'
     },
        live);
+    // The laying cells' stroke at a full command, against the strength it needs to set off:
+    // the dashed line, half-way down the row.
+    const strength = mid + (c1 - mid) * clamp(m.releaseDrive / (2 * m.threshold));
     el('path', {
-      d : `M${X(input.lay)} ${mid} V${c1} H${R} V${mid} Z`,
+      d : `M${X(input.lay)} ${mid} V${strength} H${R} V${mid} Z`,
       class : 'aid-live-course',
-      opacity : m.lays ? 1 : .3
+      opacity : lays() ? 1 : .35
     },
        live);
+    el('path', {d : `M${L} ${(mid + c1) / 2} H${R}`, class : 'aid-live-input'}, live);
+    txt(live, R - 3, c1 + 10, word('sets'), {'text-anchor' : 'end', class : 'aid-live-small'});
     el('rect', {x : L, y : top, width : R - L, height : base - top, class : 'aid-live-track'},
        live);
     el('path', {
@@ -323,7 +359,7 @@ liveKind('eggs', (studio, organId) => {
           again();
         },
         'fill', 'knob');
-    drag(svg, el('circle', {cx : X(input.lay), cy : c1, r : 5.5}, live), p => {
+    drag(svg, el('circle', {cx : X(input.lay), cy : strength, r : 5.5}, live), p => {
       input.lay = clamp(Math.round((p.x - L) / (R - L) * STEPS), 0, STEPS);
       again();
     }, 'lay', 'knob');
@@ -423,6 +459,7 @@ liveKind('eggs', (studio, organId) => {
       return;
     m.canGrow = roomFor(eggs, m.filling.length);
     m.trial = run();
+    film.eggs?.replaceChildren();
     drawBelly();
     drawTrial();
     drawLife();
