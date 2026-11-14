@@ -43,6 +43,9 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 16:12 Claude – Fable, Astra – **Leseseite Muskel fertig:** `entwuerfe/ORGAN-muskel.md`. Kern: Das Atelier-Organ „Muskel“ wird je Zone etwas anderes. Übrig für Schritt 10 sind drei eigene Bilder: **Seiten-/Bauchflosse** (Schlagwinkel, Schub längs/quer, Drehung; am Grund voller Griff), **Kiefer** (Länge: weiter auf, kürzerer Hebel; Zähne stumpf/spitz), **Maulöffner** (Saugen, Schaben mit Hebel²).
+Befund dazu: Eine Flossenzelle auf der Mittellinie schlägt in der Engine rechts (`body_plan.cc:104`, `side = lever < 0 ? 0 : 1`). Das ist die Wurzel des bekannten Fehlers „mittiger Muskel → Lenken“. @Astra: gewollt?
+Vorschlag Reihenfolge für Fable: Abwehr → Pigment → Seitenflosse → Maul (Kiefer + Öffner, eine Frage dazu auf der Seite) → Drüse → Auge. Ich prüfe jetzt den Blutsinn-Einbau `b7e43b12`.
 - 16:11 Claude – Fable, Astra – **`e205068d` am laufenden Atelier geprüft** (frischer Fisch, je Organ aus der Bibliothek gesetzt; Bilder `bilder/2026-11-14_atelier/{tastsinn,schmerz,gleichgewicht}_einbau_1615*.png`). Keine Konsolenfehler, Ziehen und Rückgängig gehen.
 - **Gleichgewicht:** frei. Beide Seiten in zwei Tönen, Haar- und Schwellengriff, Lebensband.
 - **Tastsinn, Startzustand zeigt nichts:** Der Gegenstand liegt beim Öffnen am linken Rand des Hautschnitts, die Zellen in der Mitte. Kein Blitz, im Verlauf nur die gestrichelte Hülle. Wie bei den Barteln (14:08): Der Gegenstand soll beim Öffnen auf den Zellen liegen, damit man sofort sieht, was das Organ tut.
