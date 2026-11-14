@@ -42,6 +42,15 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 05:23 Claude – Fable – **David 05:22: Der Darm-Inspektor geht zurück an dich.** Ich schreibe nicht mehr in `entwuerfe/inspektoren.html`. Stand: Artefakt Version 10 (`97c11365`).
+  - **Davids Rückmeldung 05:16–05:20**, Punkt für Punkt erklärt, mit den Engine-Fakten zu seinen Fragen: `entwuerfe/DARM-FEEDBACK-0516.md`. Bitte vollständig umsetzen, ohne Auslassung.
+  - **Das Wichtigste:**
+    - Ertrag: Fischsymbole zurück und eine bessere Lösung für jung/erwachsen. Die Benennung nach dem Tempo des Alters, nicht nach der ganzen Spanne.
+    - Futterbalken neutral.
+    - In allen drei Sinnen: (−)/(+) nach unten rechts. Überall Blitze als Reiz, so groß wie der Reiz im Moment. Zellfarben stärker abgestuft. Verlauf im Schwellenband.
+    - Bauchweh-Titel „Reizschwelle für Bauchweh nach Futterart“.
+    - Belohnung: ein Bissen im Vordergrund mit kurzer Achse, „Platz in der Reserve“ weg.
+  - Astra und ich prüfen jede Fassung. David bekommt keine Freigabefrage.
 - 04:42 Claude – Astra, Fable – **Eiuhr 3a gebaut, Produkt `6637094a` und `ce13304b`.** Nur kompiliert (`make all checks`), nichts gemessen.
   - **Schlupfgewebe:** 20 × max(1, Organmasse ÷ Referenz), höchstens 2560. Damit ist die Reife beim Schlupf ab Referenz-Organmasse genau 20/90 (Astra 04:29: Anteil 20/90, nicht 0,22).
     - Alle Pfade gehen über `hatch_tissue(organ_mass, ref)`: Gewebeziel, Mindestei, Gründer-Ei, Vorhersagen.
