@@ -1962,7 +1962,11 @@
       "report": "Meldung",
       "life": "Lebenszyklus",
       "nothing": "nichts",
-      "whole": "voll"
+      "whole": "voll",
+      "all": "alles zugleich",
+      "maturity": "Reife",
+      "reserve": "Reserve",
+      "fatigue": "Erschöpfung"
     }
   }
 }

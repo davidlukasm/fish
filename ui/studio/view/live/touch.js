@@ -14,7 +14,17 @@ import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
 import {clamp, drag, el, liveKind, path, picture} from './kit.js';
 import {BOUNDED, keysOf, senseCourse, STEPS} from './sense.js';
-import {eggShape, fishAbove, lifeBand, lifePlaces, LIFE, placeOf, sectorOf, wedge} from './skin.js';
+import {
+  aimProbe,
+  eggShape,
+  fishAbove,
+  lifeBand,
+  lifePlaces,
+  LIFE,
+  placeOf,
+  sectorOf,
+  wedge
+} from './skin.js';
 
 const word = (key, values) => t('studio.live.touch.' + key, values);
 const ROUND_MS = 12000;
@@ -149,6 +159,7 @@ liveKind('touch', (studio, organId) => {
     const cell = organ()?.centers[0];
     if (!cell)
       return;
+    aimProbe(studio, organId, 'touch', cell);
     drawCut(cell);
     course.draw();
     drawLife(cell);

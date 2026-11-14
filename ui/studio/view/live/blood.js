@@ -54,6 +54,14 @@ const BODY_COLOURS = Object.freeze({
   [BLOOD_SUBSTANCE.fatigue] : '#c7a7b9'
 });
 const colourOf = index => BODY_COLOURS[index] ?? substanceColor(index);
+// A type that takes of every substance at least this share of what it takes most of reads all.
+const ALIKE = .8;
+// The body's own three have short names here: the ring has little room beside them.
+const BODY_WORDS = Object.freeze({
+  [BLOOD_SUBSTANCE.maturity] : 'maturity',
+  [BLOOD_SUBSTANCE.reserve] : 'reserve',
+  [BLOOD_SUBSTANCE.fatigue] : 'fatigue'
+});
 
 liveKind('blood', (studio, organId) => {
   const root = document.createElement('div');
@@ -80,6 +88,8 @@ liveKind('blood', (studio, organId) => {
   const settle = () => studio.drafted && studio.settleGraphic();
   const change = doc => doc && studio.changeDocument(doc, studio.state.selected);
   const again = () => show();
+  const nameOf = index =>
+      BODY_WORDS[index] ? word(BODY_WORDS[index]) : substanceName(studio.state, index);
   // Where a level is set in the preview's blood (trials.js, setPreviewContext).
   const levelKey = index => index === BLOOD_SUBSTANCE.maturity ? 'maturity' : String(index);
   // The wheel as the circulation: each substance a stretch of the ring, as thick as its level in
@@ -121,7 +131,7 @@ liveKind('blood', (studio, organId) => {
       },
          live);
       const [nx, ny] = on(turn, RING.ring + RING.thick + 13);
-      txt(live, nx + (body ? 4 : 0), ny + 4, substanceName(studio.state, j), {
+      txt(live, nx + (body ? 4 : 0), ny + 4, nameOf(j), {
         'text-anchor' : body ? 'start' : 'middle',
         style : 'fill:' + colour,
         class : 'aid-live-scent-name'
@@ -286,8 +296,15 @@ liveKind('blood', (studio, organId) => {
           takes = cells.map(
               cell => levels.map((_, j) => wheelAffinity(wheel, cell.q1, cell.q2, cell.qwidth, j)));
     own.chosen = Math.min(own.chosen, cells.length - 1);
-    const best =
-        cells.map((_, i) => substanceName(studio.state, takes[i].indexOf(Math.max(...takes[i]))));
+    // What each type reads: the substance that carries most of its report now; where the blood
+    // gives it nothing, the one it takes most of, or all, if it takes all nearly alike.
+    const best = cells.map((_, i) => {
+      const parts = takes[i].map((a, j) => a * levels[j]), carried = Math.max(...parts) > 0;
+      if (!carried && Math.min(...takes[i]) > ALIKE * Math.max(...takes[i]))
+        return word('all');
+      const by = carried ? parts : takes[i];
+      return nameOf(by.indexOf(Math.max(...by)));
+    });
     kind.textContent = word('reads', {list : [...new Set(best) ].join(', ')});
     drawRing(wheel, cells, levels, takes);
     drawRows(cells, levels, takes);
