@@ -32,7 +32,7 @@ const word = (key, values) => t('studio.live.gut.' + key, values);
 // The foods, in the pictures' order, by their names in the engine's report.
 const FOODS = Object.freeze([ 'plant', 'algae', 'flock', 'plankton', 'meat' ]);
 // The stays the pictures show, and how finely.
-const STAY = Object.freeze({short : 50, long : 800, samples : 140});
+const STAY = Object.freeze({short : 50, long : 800, samples : 140, least : 25, strip : 14});
 // Three or more foods within this share of the best: the gut is built for everything.
 const DIET_SHARE = .95;
 const ROUND_MS = 12000, STEPS = 900;
@@ -108,8 +108,13 @@ function gutWay(share) {
 
 const Y = Object.freeze({L : 30, R : 282, top : 22, base : 124, row : 150, height : 164});
 const BARS = Object.freeze({x0 : 70, x1 : 236, row : 21, top : 20});
-const xOfStay = stay => Y.L + (Y.R - Y.L) * Math.log(clamp(stay, STAY.short, STAY.long) / STAY.short) / Math.log(STAY.long / STAY.short);
-const stayOfX = x => STAY.short * Math.pow(STAY.long / STAY.short, clamp((x - Y.L) / (Y.R - Y.L)));
+// The curves begin at STAY.short. A short gut driven hard holds its meal less long than that:
+// such stays have a narrow strip left of the axis, down to STAY.least, so that their marks and
+// grips stay apart and can be set.
+const xOfStay = stay => stay < STAY.short ? Y.L - STAY.strip * clamp((STAY.short - stay) / (STAY.short - STAY.least))
+                                          : Y.L + (Y.R - Y.L) * Math.log(Math.min(stay, STAY.long) / STAY.short) / Math.log(STAY.long / STAY.short);
+const stayOfX = x => x < Y.L ? STAY.short - (STAY.short - STAY.least) * clamp((Y.L - x) / STAY.strip)
+                             : STAY.short * Math.pow(STAY.long / STAY.short, clamp((x - Y.L) / (Y.R - Y.L)));
 const AXIS = Array.from({length : STAY.samples + 1}, (_, k) => STAY.short * Math.pow(STAY.long / STAY.short, k / STAY.samples));
 
 // What the engine says about digestion, read once per report: every food's yield and ache along
@@ -411,10 +416,11 @@ liveKind('gut', (studio) => {
     if (!m.muscle || !row || !(most > 0))
       return;
     // The strength wanted: first fuller cells, then more of them (as many as the gut wall has
-    // places), all with the fibres the muscle has.
+    // places), all with the fibres the muscle has. Back again, the cells stay and grow thinner.
     const wanted = shareFor(row, m.rest / Math.min(stayOfX(p.x), m.rest)) * most, one = cellStrength({...m.muscle.centers[0], copies : 1}, gut),
           full = ATELIER_LIMITS.max_copies, places = kindLimit(m.muscle, studio.state.sites);
-    const cells = clamp(2 * Math.ceil(wanted / (one * full) / 2), 2, Math.max(2, places));
+    // Cells are only ever added here: taking one away would take its wires with it.
+    const cells = clamp(2 * Math.ceil(wanted / (one * full) / 2), m.muscle.centers.length, Math.max(m.muscle.centers.length, places));
     const sized = cells === m.muscle.centers.length ? studio.state.document : setOrganNodes(studio.state.document, m.muscle.id, cells, studio.state.sites) ?? studio.state.document;
     draft(setNodeCopies(sized, m.muscle.id, clamp(Math.round(wanted / (one * cells)), 1, full)));
   }
