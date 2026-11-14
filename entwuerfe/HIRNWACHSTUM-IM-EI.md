@@ -74,11 +74,11 @@ Alles andere geht schon mit vorhandenen Mitteln: Zeitpunkt über Bildung und Tod
 
 ## 6. Darmorgan: wie es seine Bahnen vor dem Schlupf verdrahtet und härtet (Claude, 02:15, Vorschlag)
 
-**Heute:**
-- Füll-, Bauchweh- und Nährzellen speisen direkt die Relais `intake` und `satiety` der Region Körperzustand (`state_region.js:25`).
-- Diese Relais schwingen im Ei (`DEVELOPING_RELAY`).
-- Die Sinneszellen schweigen dort, bis auf die Nährzellen, die das Wachstum melden. Ihre Kontakte wachsen also nicht.
-- Gehärtet wird nichts.
+**Heute** (berichtigt nach David 02:13):
+- Der Darm hat drei Ausgänge, `intake` (Nährzellen), `fullness` und `ache` (`organs.js:168-170`).
+- Wohin sie laufen, bestimmen die Leitungen, die der Gestalter zieht. Es gibt keine feste Verdrahtung.
+- Die Region Körperzustand bietet zwar Eingänge `intake` und `satiety` mit Rhythmus im Ei (`state_region.js:25`, `DEVELOPING_RELAY`), aber nur, wenn jemand sie verbindet.
+- Unabhängig vom Ziel gilt: Die Sinneszellen schweigen im Ei, nur die Nährzellen melden das Wachstum. Ihre Kontakte wachsen dort nicht, und der Darm härtet nichts.
 
 **Vorschlag für die Vorlage des Darmorgans:**
 1. **Spontan im Ei:** Füll-, Bauchweh- und Nährzellen bekommen eine Rhythmusantwort auf Reife (Engine `8579edf5`).
@@ -89,7 +89,7 @@ Alles andere geht schon mit vorhandenen Mitteln: Zeitpunkt über Bildung und Tod
    - Ihre Festigungsantwort auf Reife steigt zum Schlupf: Was im Ei gelernt wurde, wird mindestens halb gefestigt und bleibt, auch wenn Füllung und Bauchweh danach selten kommen.
    - Danach lernt die Bahn weiter, zum Beispiel über Sattheit (System Festigung).
    - **Wider:** eine Zwischenstufe mehr. Das Signal kommt einen Schritt später in der Region an und kostet Zellen.
-   - **Alternative ohne Zwischenstufe:** Das Organ hängt der Region eine Festigungsantwort an ihre Relais `intake` und `satiety`. Dann härtet aber die Region, nicht der Darm.
+   - **Alternative ohne Zwischenstufe:** Die Zielzellen, an die der Gestalter den Darm anschließt, bekommen eine Festigungsantwort. Dann härtet aber das Ziel, nicht der Darm, und es hängt an jeder einzelnen Verdrahtung.
 3. **Darmmuskel:** zuckt im Ei auf Befehl. Die Füllzellen spüren das heute nicht. Ob sie die eigenen Wellen der Darmwand spüren sollen, wie Dehnungszellen echter Fische vor dem ersten Fressen, wäre eine Engine-Frage für später.
 4. **Zahlen:** Halbwerte nicht schätzen. Astra misst am gebauten Darmorgan, wie viele Kontakte bis zum Schlupf wachsen und wie viele 2000 Schritte danach noch stehen.
 
