@@ -2110,7 +2110,9 @@ function drawScentMap(id = 'scentmap', cell = S.smell, NOSE_PARTS = ['scentmap',
     // grip takes the one inside the map, the (×) the other, never nearer the type's place than
     // clear of its grip.
     const half = Math.min(scentHalf(k.width), 170), over = k.lat + half > 90, outer = mapPoint(k.lat - half, k.lon), inner = mapPoint(over ? 180 - k.lat - half : k.lat + half, over ? k.lon + 180 : k.lon),
-          inside = pt => Math.hypot(pt[0] - cx, pt[1] - cy) <= R + .5, edge = inside(outer) ? outer : inner, other = edge === outer ? inner : outer, far = Math.hypot(other[0] - x, other[1] - y), away = far >= 17 ? other : far > .5 ? [x + (other[0] - x) * 17 / far, y + (other[1] - y) * 17 / far] : [x, y + 17];
+          inside = pt => Math.hypot(pt[0] - cx, pt[1] - cy) <= R + .5, edge = inside(outer) ? outer : inner, other = edge === outer ? inner : outer, far = Math.hypot(other[0] - x, other[1] - y), onScent = SCENTS.some(([, lat, lon]) => lat === k.lat && lon === k.lon),
+          // On a scent its name stands beside the place: there the (×) goes above or below it.
+          away = far >= 26 ? other : onScent || far <= .5 ? [x, y + (y <= cy ? -17 : 17)] : [x + (other[0] - x) * 17 / far, y + (other[1] - y) * 17 / far];
     drag(svg, el('circle', {cx : edge[0], cy : edge[1], r : 4.5}, live), p => {
       // The width whose half angle is the pointer's angle from the type's place.
       const wanted = angleBetween(onSphere(k.lat, k.lon), (({lat, lon}) => onSphere(lat, lon))(mapPlace(p)));
