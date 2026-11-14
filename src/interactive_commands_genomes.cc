@@ -105,7 +105,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
       for (int i = 0; i < count; ++i) {
         Genome g = source;
         g.mutate(world.rng, strength, true, world.evo.rates);
-        auto energy = funded_egg_energy(g, world.physiology().neural_cost, world.evo.yolk);
+        auto energy = funded_egg_energy(g, world.physiology(), world.evo.yolk);
         if (!energy)
           continue;
         if (world.spawn(

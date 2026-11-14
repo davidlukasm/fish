@@ -182,6 +182,7 @@ void PopulationCheckpoint::read_mouth(std::istream &in, Body &b) {
     scalar(in, b.embryo.pending, 0, PLAUSIBLE_AMOUNT);
     scalar(in, b.embryo.pressure, 0, PLAUSIBLE_AMOUNT);
     scalar(in, b.embryo.spent, 0, PLAUSIBLE_AMOUNT);
+    scalar(in, b.embryo.yolk_sac, 0, PLAUSIBLE_AMOUNT);
     for (auto &v : b.embryo.touch)
       scalar(in, v, 0, 1);
     for (auto &v : b.embryo.flow)

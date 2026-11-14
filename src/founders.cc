@@ -31,7 +31,7 @@ void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
   field.place_initial_food();
   auto roots = Genome::immigrants(founders, rng);
   for (const auto &root : roots) {
-    if (!funded_egg_energy(root, physiology_.neural_cost, evo.yolk))
+    if (!funded_egg_energy(root, physiology_, evo.yolk))
       throw std::runtime_error(
           "Gewählte Startlinie kann mit diesen Einstellungen nicht versorgt werden.");
   }
@@ -68,8 +68,7 @@ void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
   std::vector<Occupied> occupied;
   std::set<std::uint64_t> plant_starters;
   for (const auto &p : fish)
-    occupied.push_back(
-        {{p.body.x, p.body.y}, predicted_hatch_radius(p.body, p.genome, physiology_.neural_cost)});
+    occupied.push_back({{p.body.x, p.body.y}, predicted_hatch_radius(p.body, p.genome)});
   for (int n = 0; n < rounds && !cancelled; ++n) {
     const int active = std::min(lines, count - n * lines);
     std::vector<Genome> group;
@@ -79,15 +78,14 @@ void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
     double required = 0;
     for (int line = 0; line < active; ++line) {
       group.push_back(roots[line]);
-      auto energy = funded_egg_energy(group.back(), physiology_.neural_cost, evo.yolk);
+      auto energy = funded_egg_energy(group.back(), physiology_, evo.yolk);
       if (!energy)
         throw std::runtime_error("Start-Founder kann nicht versorgt werden");
       Body embryo;
       embryo.energy = *energy;
       embryo.prepare(group.back());
       const double radius =
-          std::max(collision_radius(embryo),
-                   predicted_hatch_radius(embryo, group.back(), physiology_.neural_cost));
+          std::max(collision_radius(embryo), predicted_hatch_radius(embryo, group.back()));
       // Share the available clouds among lineages, then spread each lineage's fish across its
       // clouds. A small selection must not concentrate the whole population at a few sources.
       const int clouds =

@@ -72,7 +72,7 @@ std::string fish_record(const Individual &p, const Ecosystem &world, const Rende
     row.set(F::fin_peak_tail + std::size_t(k), m.fin_stroke_peak[k]);
   }
   row.set(F::morphology_asset, asset);
-  row.set(F::hatch_radius, predicted_hatch_radius(b, p.genome, world.physiology().neural_cost));
+  row.set(F::hatch_radius, predicted_hatch_radius(b, p.genome));
   row.set(F::birth_tissue, b.birth_tissue);
   row.set(F::hatch_step, b.hatched ? double(world.ticks) - b.age + b.hatch_age : -1);
   row.set(F::species, p.species);

@@ -305,9 +305,8 @@ void InteractiveSession::write_brain_activity(std::ostream &out, const Individua
   out << ",\"egg_laying\":" << (b.reproduction().egg_laying ? "true" : "false")
       << ",\"egg_nearby\":" << nearby_eggs << ",\"egg_nutrient\":"
       << (b.reproduction().egg_yolk > 0 &&
-                  b.reproduction().egg_yolk <
-                      world.evo.nutrient_egg_threshold *
-                          funding(g, world.physiology().neural_cost, HATCH_TISSUE)
+                  b.reproduction().egg_yolk < world.evo.nutrient_egg_threshold *
+                                                  funding(g, world.physiology(), HATCH_TISSUE)
               ? "true"
               : "false");
   out << ",\"gonad_filling\":" << gonad_filling(b) << ",\"gut_fill\":" << b.gut_fill

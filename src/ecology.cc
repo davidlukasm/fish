@@ -68,19 +68,20 @@ int Individual::niche() const {
                         double(observations_.window_pauses) /
                             std::max(1, observations_.window_steps));
 }
-double funding(const Genome &g, double scale, double yolk) {
-  return development_energy(g, scale, yolk);
+double funding(const Genome &g, const PhysiologyParameters &p, double yolk) {
+  return development_energy(g, p, yolk);
 }
-std::optional<double> funded_egg_energy(const Genome &g, double scale, double yolk) {
+std::optional<double> funded_egg_energy(const Genome &g, const PhysiologyParameters &p,
+                                        double yolk) {
   if (!viable_entrant(g))
     return std::nullopt;
-  const double energy = funding(g, scale, yolk);
+  const double energy = funding(g, p, yolk);
   if (!std::isfinite(energy) || energy > ENERGY_MAX)
     return std::nullopt;
   Body egg;
   egg.hatched = false;
   egg.energy = energy;
-  const auto reserve = predicted_hatch_reserve(egg, g, scale);
+  const auto reserve = predicted_hatch_reserve(egg, g, p.neural_cost);
   if (!reserve || *reserve <= tolerance::negligible)
     return std::nullopt;
   return energy;
@@ -436,7 +437,7 @@ int Ecosystem::import(const std::vector<Genome> &genomes, double x, double y, in
       g.mutate(rng, evo.mutation, true, evo.rates);
     else if (!g.blueprint)
       g.compile();
-    auto energy = funded_egg_energy(g, physiology_.neural_cost, evo.yolk);
+    auto energy = funded_egg_energy(g, physiology_, evo.yolk);
     if (!energy)
       continue;
     const double radius = i ? placement::egg_spacing * std::sqrt(double(i)) : 0,
@@ -469,7 +470,7 @@ void Ecosystem::restore_life(Individual &p) {
     b.peak_tissue = std::max(b.peak_tissue, b.tissue);
     b.energy = std::max(b.energy, RESTORE_RESERVE * reserve_capacity(b));
   } else {
-    b.energy = std::max(b.energy, development_energy(p.genome, physiology_.neural_cost, evo.yolk));
+    b.energy = std::max(b.energy, development_energy(p.genome, physiology_, evo.yolk));
   }
   b.energy = std::min(energy_limit(), std::max(1., b.energy));
   b.identity = p.id;

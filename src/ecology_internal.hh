@@ -3,9 +3,9 @@
 namespace fishsim {
 std::optional<Individual> fill_natural_egg(Ecosystem &, Individual &, std::size_t occupied);
 void fill_sperm(Ecosystem &, Individual &);
-double funding(const Genome &, double scale = 1, double yolk = 180);
+double funding(const Genome &, const PhysiologyParameters &, double yolk);
 bool viable_entrant(const Genome &);
-std::optional<double> funded_egg_energy(const Genome &, double scale, double yolk);
+std::optional<double> funded_egg_energy(const Genome &, const PhysiologyParameters &, double yolk);
 std::size_t connection_storage(const Ecosystem &, const Genome *additional = nullptr);
 int developing_eggs(const Ecosystem &);
 int planning_brains(const Ecosystem &);

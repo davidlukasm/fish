@@ -52,7 +52,7 @@ std::optional<Incubation> incubation_probe(const Genome &g) {
   tank.evo.mutation = 0;
   tank.food_burst.strength = 0;
   tank.set_parameter("energy_supply", 0);
-  const double yolk = fishsim::development_energy(g, tank.physiology().neural_cost, tank.evo.yolk);
+  const double yolk = fishsim::development_energy(g, tank.physiology(), tank.evo.yolk);
   if (!tank.spawn(g, fishsim::SIZE / 2, fishsim::SIZE / 2, fishsim::fish_origin::founder, 0, 0,
                   yolk))
     return std::nullopt;
