@@ -258,7 +258,8 @@ liveKind('barbels', (studio, organId) => {
     const kinds = organTypes(barbels), cells = kinds.map(type => type.centers[0]);
     own.chosen = Math.min(own.chosen, cells.length - 1);
     const scent = senseProbe?.kind === 'taste' ? senseProbe.scent : 0;
-    own.probe = scent === STONE ? {...scentTuning(0), stone : true} : scentTuning(scent);
+    own.probe =
+        scent === STONE ? {...scentTuning(0), stone : true} : {...scentTuning(scent), scent};
     kind.textContent = word('tasting', {list : bestScents(cells)});
     const contacts = anatomy?.barbelProbe ?? [];
     drawHead(barbels, cells[own.chosen], contacts);
@@ -267,7 +268,6 @@ liveKind('barbels', (studio, organId) => {
       own,
       cells,
       stone : true,
-      fixedSample : true,
       words : {sample : word('sample'), stone : word('stone')},
       most : MOST,
       place : (i, tuning) => updateCenter(studio.state.document, cells[i].id, tuning),

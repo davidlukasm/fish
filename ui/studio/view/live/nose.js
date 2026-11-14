@@ -5,8 +5,11 @@
 // scent x what the cell takes of it; above its threshold it reports, and it gets used to a scent
 // that stays. In the egg both sides get the same; the difference between left and right grows
 // after hatching.
-// Not in the pictures: the nostrils, the water's flow and where a scent comes from.
+// The fish panel supplies the scent and current. The curve holds that stimulus steady to show
+// what the cells learn to ignore.
 import {t} from '../../../strings.js';
+import {scentAffinities, scentTuning} from '../../../tuning.js';
+import {sideIndex} from '../../model/layout.js';
 import {
   addOrganType,
   findOrgan,
@@ -18,7 +21,7 @@ import {
 } from '../../model/document.js';
 import {label} from '../kit.js';
 import {el, liveKind} from './kit.js';
-import {bestScents, sampleColour, sampleShare, scentMap} from './scentmap.js';
+import {bestScents, sampleColour, scentMap} from './scentmap.js';
 import {INTENSITY, keysOf, senseCourse, STEPS, typeLife} from './sense.js';
 
 const word = (key, values) => t('studio.live.nose.' + key, values);
@@ -43,8 +46,8 @@ liveKind('nose', (studio, organId) => {
   const smell = svgOf();
   heading(word('life'));
   const life = svgOf();
-  // What is tried on the nose and which of its types is chosen: not part of the fish.
-  const own = {chosen : 0, input : {rise : 80, height : .8, stop : 560}, probe : null};
+  const own = {chosen : 0, probe : null};
+  let concentrations = [], total = 0;
   let step = 0;
   const organ = () => findOrgan(studio.state.document, organId);
   const types = () => organTypes(organ());
@@ -75,7 +78,11 @@ liveKind('nose', (studio, organId) => {
     words : {course : word('course'), used : word('used'), steps : word('steps')},
     scale : INTENSITY,
     keys : () => keysOf(types(), INTENSITY),
-    share : k => sampleShare(k.cell, own.probe),
+    held : () => total,
+    share : ({cell}) => {
+      const affinity = scentAffinities(cell.q1, cell.q2, cell.qwidth);
+      return total > 0 ? concentrations.reduce((sum, v, k) => sum + v * affinity[k], 0) / total : 0;
+    },
     colour : () => sampleColour(own.probe),
     fewer : k => remove(k.type),
     more : gate => add({threshold : INTENSITY.threshold(gate)}),
@@ -91,7 +98,11 @@ liveKind('nose', (studio, organId) => {
     const kinds = types(), cells = kinds.map(type => type.centers[0]),
           caps = studio.state.capabilities;
     own.chosen = Math.min(own.chosen, cells.length - 1);
-    own.probe ??= {q1 : cells[0].q1, q2 : cells[0].q2};
+    const {senseProbe, anatomy} = studio.state;
+    const at = senseProbe?.kind === 'smell' ? senseProbe.scent : 0;
+    own.probe = {...scentTuning(at), scent : at};
+    concentrations = anatomy?.noseProbe?.[sideIndex(nose.side)] ?? [];
+    total = concentrations.reduce((sum, value) => sum + value, 0);
     kind.textContent = word('smells', {list : bestScents(cells)});
     scentMap(map, {
       name : 'nose',

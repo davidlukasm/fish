@@ -2,10 +2,7 @@
 // the round map of all scents (tuning.js, scent_latitudes and scent_longitudes), the bigger the
 // more the organ's cells take of them; each type of cells as the patch in which it takes at least
 // half of a scent, with a grip at its place and one on the patch's edge for its width; and the
-// sample tried on the cells as a cross, pushed about freely.
-// What a cell takes of a scent is the engine's (tuning.js, scentAffinities). The sample between
-// two scents is the picture's assumption: a mix of the scents near it (the engine knows only the
-// eight).
+// scent or stone chosen in the fish panel as a cross.
 import {scentColors, scentNames} from '../../../brain_model.js';
 import {TUNING} from '../../../schema.js';
 import {scentAffinities, scentTuning, tuningHalfOffset} from '../../../tuning.js';
@@ -21,7 +18,6 @@ const MAP = Object.freeze({
   samples : 72,
   margin : 62,
   snap : 12,
-  mix : 15,
   clear : 17,
   widest : .8
 });
@@ -48,28 +44,8 @@ const snapped = p => scents().find(s => {
   const [x, y] = pointOf(vector(s));
   return Math.hypot(x - p.x, y - p.y) <= MAP.snap;
 }) ?? tuningAt(p);
-// What the sample holds of each scent: all of one where it lies on it, else a mix of those near.
-// A sample of stone holds no scent at all.
-export function sampleMix(probe) {
-  if (probe.stone)
-    return scents().map(() => 0);
-  const at = vector(probe), raw = scents().map(s => {
-    const a = between(at, vector(s));
-    return a < .5 ? 1e6 : Math.exp(-((a / MAP.mix) ** 2));
-  }),
-        sum = raw.reduce((x, y) => x + y, 0);
-  return raw.map(v => sum > 0 ? v / sum : 0);
-}
 const shares = cell => scentAffinities(cell.q1, cell.q2, cell.qwidth);
-// What a type's cells take of the sample.
-export const sampleShare = (cell, probe) => {
-  const taken = shares(cell);
-  return sampleMix(probe).reduce((sum, m, k) => sum + m * taken[k], 0);
-};
-export const sampleColour = probe => {
-  const mix = sampleMix(probe);
-  return probe.stone ? null : scentColors?.[mix.indexOf(Math.max(...mix))] ?? null;
-};
+export const sampleColour = probe => probe.stone ? null : scentColors?.[probe.scent] ?? null;
 // The scents the types take most of, each named once.
 export const bestScents = cells => [...new Set(cells.map(cell => {
                                      const taken = shares(cell);
@@ -94,7 +70,6 @@ export function scentMap(svg, {
   draft,
   settle,
   redraw,
-  fixedSample = false
 }) {
   const {live} = picture(svg, MAP.height), {cx, cy, R, ball, samples, clear} = MAP,
         taken = cells.map(shares), all = scents(),
@@ -163,16 +138,7 @@ export function scentMap(svg, {
   const [sx, sy] = probe.stone ? STONE : pointOf(vector(probe)), cross = el('g', {}, live);
   el('circle', {cx : sx, cy : sy, r : 11, fill : 'transparent'}, cross);
   el('path', {d : `M${sx - 8} ${sy - 8} l16 16 m0 -16 l-16 16`, class : 'aid-live-sample'}, cross);
-  if (fixedSample)
-    cross.setAttribute('pointer-events', 'none');
-  else {
-    drag(svg, cross, p => {
-      own.probe = snapped(p);
-      redraw();
-    }, name + 'sample', 'knob');
-    cross.classList.remove('aid-live-knob');
-    cross.classList.add('aid-live-samplegrip');
-  }
+  cross.setAttribute('pointer-events', 'none');
   // The types' grips: at their place; the chosen one's width on its patch's edge, and its (×).
   cells.forEach((cell, i) => {
     const on = i === own.chosen, [ x, y ] = pointOf(vector(cell));

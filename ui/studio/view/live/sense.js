@@ -171,7 +171,8 @@ export const keyGrip = (i, on) => 'aid-live-keygrip k' + i + (on ? ' on' : '');
 // cells still feel as they tire and, filled, what they send.
 // `own`: which key is chosen and the input tried (rise, height, stop), kept by the inspector;
 // `keys()`: the keys now; `share(k)`: what a key's cells meet of the input, if not all of it;
-// `colour()`: the input's colour, if it changes; `fewer(k)`, `more(gate)`: the keys' pair of
+// `held()`: a constant stimulus from the fish panel, in native units. `colour()`: the input's
+// colour, if it changes; `fewer(k)`, `more(gate)`: the keys' pair of
 // buttons; `most`: how many keys there may be; `scale`: the stimulus's scale; `heals`: the input is
 // a wound that closes by this much each step (one knob: when and how deep); `mark`: a height
 // named on the input's scale. Returns draw(), and
@@ -188,6 +189,7 @@ export function senseCourse(svg, {
   words,
   keys : keysNow,
   share = null,
+  held = null,
   colour = null,
   fewer,
   more,
@@ -281,15 +283,18 @@ export function senseCourse(svg, {
     if (colour)
       live.style.color = colour();
     // A wound's course: nothing, then all at once, then closing by `heals` each step.
+    const concentration = held?.();
     const offered =
-        heals
+        held ? Array(STEPS + 1).fill(scale.pos(concentration))
+        : heals
             ? Array.from({length : STEPS + 1},
                          (_, st) =>
                              st < inp.rise ? 0 : Math.max(0, inp.height - (st - inp.rise) * heals))
             : stimulusOf(inp, after);
     // What each key's cells meet of the input: all of it, or the share their sense gives them.
     play.offered = offered;
-    const met = keys.map(k => offered.map(v => scale.val(v) * (share ? share(k) : 1))),
+    const met = keys.map(k => offered.map(v => (held ? concentration : scale.val(v)) *
+                                               (share ? share(k) : 1))),
           stim = play.stim = met[own.chosen].map(scale.pos);
     const IY = v => I1 - (I1 - I0) * clamp(v), vOf = y => clamp((I1 - y) / (I1 - I0));
     const X = st => L + (R - L) * st / STEPS,
@@ -446,9 +451,11 @@ export function senseCourse(svg, {
                redraw();
              },
              name + part, 'knob');
-    knob(inp.rise, 'rise', st => { inp.rise = clamp(st, 1, heals ? STEPS - 10 : inp.stop - 1); });
-    if (!heals)
-      knob(inp.stop, 'stop', st => { inp.stop = clamp(st, inp.rise + 1, STEPS - 10); });
+    if (!held) {
+      knob(inp.rise, 'rise', st => { inp.rise = clamp(st, 1, heals ? STEPS - 10 : inp.stop - 1); });
+      if (!heals)
+        knob(inp.stop, 'stop', st => { inp.stop = clamp(st, inp.rise + 1, STEPS - 10); });
+    }
     if (most > 1) {
       chip(live, LX - 9, I1 + 10, '−', () => fewer(keys[own.chosen]), keys.length > 1, 6);
       chip(live, LX + 9, I1 + 10, '+', () => more(newGate()), keys.length < most, 6);

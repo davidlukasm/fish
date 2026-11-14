@@ -1359,8 +1359,6 @@
 .aid-live-picture text.aid-live-scent-name{font-size:10.5px;paint-order:stroke;stroke:var(--aid-chip);stroke-width:3px;stroke-linejoin:round}
 .aid-live-sample{fill:none;stroke:#ff5a4d;stroke-width:2.6;stroke-linecap:round}
 .aid-live-sample.small{stroke-width:2}
-.aid-live-samplegrip{cursor:grab}
-.aid-live-samplegrip.dragging{cursor:grabbing}
 .aid-live-stone{fill:#8d9aa0}
 path.aid-live-stone{opacity:.6}
 path.aid-live-stone.on{opacity:1}

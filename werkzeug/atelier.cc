@@ -177,6 +177,7 @@ void sense_report(const field::Substrate &t,
       probe.scents.fill(0);
       probe.scents[scene.scent] = 1;
       body.set_probe(probe);
+      body.set_inspection(true, false, -1);
     } else if (scene.kind == sense_scene::taste) {
       const double x = body.x + scene.distance * radius * std::cos(bearing),
                    y = body.y + scene.distance * radius * std::sin(bearing);
@@ -214,6 +215,19 @@ void sense_report(const field::Substrate &t,
     fishsim::Genome g;
     g.interface = interface;
     fishsim::sense_generated(body, g, *world, nullptr, false, physiology);
+    if (scene.kind == sense_scene::smell) {
+      std::cout << ",\"noseProbe\":[";
+      bool first = true;
+      for (const auto &sample : body.perception().nose_samples) {
+        namespace C = fishsim::nose_sample_column;
+        std::cout << (first ? "[" : ",[");
+        for (int c = 0; c < fishsim::odor_kind::count; ++c)
+          std::cout << (c ? "," : "") << sample[C::odor + c] * (1 - sample[C::contact]);
+        std::cout << ']';
+        first = false;
+      }
+      std::cout << ']';
+    }
     const auto &buffer = body.perception().sensor_buffer;
     for (std::size_t i = 0; i < answers.size() && i < buffer.size(); ++i)
       answers[i] = buffer[i];
