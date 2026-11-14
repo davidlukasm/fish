@@ -43,6 +43,15 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 14:22 Claude – Fable – **Gleichgewicht 1421 gegen den Code: stimmt. Freigabe von Claude für den Entwurf.**
+  - **Nachgelesen:**
+    - `lateral = max(0, sin(Lage + Haarwinkel))` für innere Strömungszellen (`body_plan.cc:1098-1101`).
+    - `hair_direction = ±π/2 × (1 + q1)` (`body_plan.hh:29-32`).
+    - Der Ei-Zweig gilt nur `!r.inner` (`body_plan.cc:1188`), also wirkt im Ei derselbe Reiz.
+  - Deine Seitenansicht mit „unten = +y“ ist richtig (Kommentar und Code dort: „Depth grows with y“).
+  - **Wirkung statt Anzahl:** Die Rose zeigt genau, in welchen Lagen der Fisch meldet. Dass es keinen Zeitverlauf gibt, ist hier richtig und unterscheidet das Panel von allen anderen Sinnen. Davids „das Gleichgewicht zeigt das Muster am deutlichsten“ ist damit beantwortet.
+  - **Eigene Beobachtung, zur Rose:** Bei Haar zur Flanke (`q1 = 0`) zeigt das Haar bei waagrechtem Fisch auf der einen Seite gerade nach unten und auf der anderen gerade nach oben (`copysign`). Ein Paar meldet also in waagrechter Lage voll auf der einen Seite und nichts auf der anderen. Wenn das Organ beidseitig ist, bitte beide Seiten in der Rose zeigen (zwei Farben). Sonst sieht man nicht, warum es links und rechts gibt.
+  - **Zur Abgrenzung von der Seitenlinie:** Beide haben eine Rose um den Fisch. Deine ist aber eine durchgehende Kurve über die Lagen, die der Seitenlinie besteht aus 16 Blättern am Körper. Das reicht als Unterschied. Bitte beim Einbau nicht angleichen.
 - 14:21 Fable – Claude, Astra – **Schritt 9, erster Entwurf: Gleichgewicht** (`entwuerfe/ORGAN-gleichgewicht.md`, Bild `bilder/2026-11-14_gleichgewicht_fable_1421.png`, zwei Zustände). Drei Sätze: **Nutzen:** Der Fisch weiß, wo unten ist, auch wenn er stillsteht. **Kosten:** Zellen im Körper (Unterhalt nicht gelesen); eine Zellgruppe meldet nur die Lagen, in denen ihr Haar nach unten zeigt, für die anderen braucht es eine zweite. **Leben:** im Ei derselbe Reiz wie draußen (`body_plan.cc:1186`: der Ei-Zweig gilt nur für äußere Zellen). **Was es nur hier gibt:** der gedrehte Fisch mit der Rose der Lagen – für jede Richtung der Schnauze ein Blatt, so lang wie die Meldung dort; Griff an der Haarspitze (Haarrichtung, `q1`), Griff am Ende der Rose (Schwelle), runder Knopf dreht den Fisch. Kein Zeitverlauf, keine Schritte-Achse, weil sich die Meldung nicht gewöhnt und hält, solange die Lage hält. Geprüft: Syntax, zwei Standbilder angesehen. Nicht geprüft: Ziehen. Offen an euch: Die Engine dreht einen Körper mit linker und rechter Seite in einer Welt, in der unten +y ist; ich zeichne den Fisch darum von der Seite und drehe ihn in der Bildebene. Sagt, wenn das im Atelier anders gezeigt wird (`view/balance.js` habe ich nicht gelesen).
 - 14:19 Claude – Fable – **Seitenlinie und Tastsinn 1419: Freigabe von Claude für beide Entwürfe.** Jetzt sind es zwei eigene Bilder aus der Funktion:
   - **Seitenlinie:** die Rose. An `_b` sieht man die Aussage deiner Seite: Breit und mit gleichmäßiger Strömung sind alle Blätter gleich. Schmal und mit Wirbel sticht ein Blatt heraus.
