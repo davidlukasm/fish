@@ -235,17 +235,22 @@ const SENSE = {
   ache : {title : 'Signalverlauf bei Bauchweh', used : 'an Schmerz gewöhnt', colour : COLOUR.sore, tires : true, steps : 900, after : 120, shows : ['ache'],
           row : {word : 'Reizschwelle für Bauchweh nach Futterart', of : r => r.ache, any : c => c.aches.some(a => a > 0)}},
   // The reward for eating (David 14.11.): at each swallow the engine adds what the bite will give
-  // this gut at its present pace, and what is there fades to BITE_KEEP of itself each step
+  // this gut at its present pace to a flow, and that flow fades to BITE_KEEP of itself each step
   // (take_nutrition, src/physiology.cc; nutrient_keep, src/physiology_parameters.hh).
   feed : {title : 'Signalverlauf bei einem Bissen', used : 'an Belohnung gewöhnt', colour : COLOUR.morsel, tires : true, steps : 60, bite : true, shows : ['feed'],
-          row : {word : 'Reizschwelle für Belohnung nach Futterart', of : r => [r.min, r.max], any : () => true}}
+          row : {word : 'Reizschwelle für Belohnung nach Futterart', of : r => [reward(BITE_WORTH * r.min), reward(BITE_WORTH * r.max)], any : () => true}}
 };
-const BITE_KEEP = .8;
+// What the reward's cells feel is the flow against the resting need, flow / (flow + need)
+// (nutrient_signal, src/physiology.hh); only the flow fades. BITE_WORTH: ASSUMPTION OF THIS PAGE
+// for the food row: a bite that would be worth this many resting needs if all of it were used,
+// swallowed by a fish with room for it.
+const BITE_KEEP = .8, BITE_WORTH = 3.3;
+const reward = flow => flow / (flow + 1), flowFor = felt => felt / Math.max(.001, 1 - felt);
 const cellGates = k => Array.from({length : CELLS}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5), .02, .98));
 const answer = (x, gate, used) => { const over = (clamp(x, 0, 1) - used - gate) / (1 - gate); return over > 0 ? over / (over + gate * (1 - over)) : 0; };
 function stimulus(id) {
   const i = S[id].input, o = SENSE[id], top = i.height * clamp(i.stop / Math.max(1, i.rise), 0, 1);
-  return Array.from({length : o.steps + 1}, (_, st) => o.bite ? (st < i.rise ? 0 : i.height * Math.pow(BITE_KEEP, st - i.rise))
+  return Array.from({length : o.steps + 1}, (_, st) => o.bite ? (st < i.rise ? 0 : reward(flowFor(Math.min(i.height, .98)) * Math.pow(BITE_KEEP, st - i.rise)))
                                                   : st <= i.stop ? i.height * clamp(st / Math.max(1, i.rise), 0, 1) : top * Math.exp(-(st - i.stop) / o.after));
 }
 // What a key's cells send under an input, step by step, and what they have got used to by then.
@@ -456,7 +461,7 @@ function drawFish() {
 // what the gut is built for then; their right end is the gut at rest, moved for both by the round
 // grip on the dashed line (the gut's length).
 const Y = {L : 30, R : 282, top : 22, base : 124, rows : {young : 150, grown : 168}, height : 178};
-const AGE_SIZE = {young : .4, grown : .75};
+const AGE_SIZE = {young : .55, grown : .9};
 const xOfStay = t => Y.L + (Y.R - Y.L) * Math.log(clamp(t, SHORT, LONG) / SHORT) / Math.log(LONG / SHORT);
 const stayOfX = x => SHORT * Math.pow(LONG / SHORT, clamp((x - Y.L) / (Y.R - Y.L), 0, 1));
 function buildYield(fixed) {
@@ -497,12 +502,12 @@ function drawYield() {
   el('rect', {x : xLow, y : top, width : x1 - xLow, height : rows.grown + 6 - top, fill : COLOUR.handle, opacity : .1}, under);
   el('path', {d : `M${x1} ${top - 6} V${rows.grown}`, stroke : COLOUR.handle, 'stroke-width' : 1.4, 'stroke-dasharray' : '4 3'}, live);
   for (const age of ['young', 'grown']) {
-    const y = rows[age], x0 = xOfStay(m.fastest[age]), diet = m.diets[age], inside = x0 < L + 78;
+    const y = rows[age], x0 = xOfStay(m.fastest[age]), diet = m.diets[age], inside = x0 < L + 92;
     el('path', {d : `M${x0} ${y} H${x1}`, stroke : COLOUR.muscle, 'stroke-width' : 6, 'stroke-linecap' : 'round'}, live);
     // Beside the grip: the fish of that age, in the colour of what its gut is built for, and the
     // word for it.
-    const size = AGE_SIZE[age], wide = 19 * size, at = inside ? x0 + 9 : x0 - 9 - wide;
-    fishIcon(live, at + 14 * size, y + (inside ? -9 : 0), size, diet.colour);
+    const size = AGE_SIZE[age], wide = 31 * size, at = inside ? x0 + 12 : x0 - 12 - wide;
+    fishIcon(live, at + 12 * size, y + (inside ? -9 : 0), size, diet.colour);
     txt(live, inside ? at + wide + 4 : at - 4, y + (inside ? -6 : 4), diet.word, {'text-anchor' : inside ? 'start' : 'end', style : `fill:${diet.colour};font-size:10px`});
     drag(svg, el('rect', {x : x0 - 5, y : y - 7, width : 10, height : 14, rx : 3}, live), p => { S[age] = strengthFor(M().rest / Math.min(stayOfX(p.x), M().rest)); draw(SHOW_GUT); }, 'fastest' + age);
   }
@@ -549,8 +554,10 @@ function drawBars() {
 const SENSE_BOX = {L : 92, R : 292, LX : 44, I0 : 150, I1 : 254, row : 34, rowL : 6, rowR : 294, rowGap : 10};
 // A fish seen from the side, for the ages: small for the hatchling, large for the grown fish.
 function fishIcon(parent, x, cy, s, colour) {
-  const w = 14 * s, t = 6 * s;
-  el('path', {d : `M${x - w} ${cy} Q${x} ${cy - t * 1.6} ${x + w} ${cy} Q${x} ${cy + t * 1.6} ${x - w} ${cy} Z M${x + w} ${cy} l${5 * s} ${-4 * s} v${8 * s} Z`, fill : colour, stroke : colour, 'stroke-width' : 1, 'stroke-linejoin' : 'round'}, parent);
+  const w = 12 * s, t = 5.5 * s;
+  // Body, a forked tail set off from it, and an eye.
+  el('path', {d : `M${x - w} ${cy} Q${x - w / 3} ${cy - t * 1.7} ${x + w} ${cy} Q${x - w / 3} ${cy + t * 1.7} ${x - w} ${cy} Z M${x + w - s} ${cy} l${8 * s} ${-6 * s} l${-2.5 * s} ${6 * s} l${2.5 * s} ${6 * s} Z`, fill : colour}, parent);
+  el('circle', {cx : x - w * .55, cy : cy - t * .25, r : Math.max(.7, 1.1 * s), fill : COLOUR.track}, parent);
 }
 function spreadGrip(svg, parent, x, top, bottom, move, name) {
   el('path', {d : `M${x} ${top} V${Math.max(bottom, top + 4)}`, stroke : COLOUR.handle, 'stroke-width' : 2}, parent);
