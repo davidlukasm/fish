@@ -97,4 +97,4 @@ Regionen (Tectum, Motorik, Körperzustand usw.) sind keine Organe dieses Auftrag
 ## Bekannte Fehler, für die Reihe vorgemerkt
 
 - **Mittiger Muskel → „Lenken“** (Claude 08:44): `sideGraphic` (`effectors.js:161`) bricht ab, weil die Mitte keine Flossengröße hat. Der Inspektor bleibt leer. Gehört zu Schritt 10 (Muskel); dort klären, ob ein mittiger Muskel lenken darf.
-- **Ungeklärt: Eiorgan wird zum Spermienorgan?** (Claude 13:14) Im gespeicherten Testfisch war `organ-mwfmmf46-5` um 12:33 ein Eiorgan und um 13:12 ein Spermienorgan. Dazwischen wurde nur zweimal „Spermienorgan“ aus der Bibliothek gesetzt. Mit frischem Fisch nachstellen, bevor es als Fehler gilt.
+- ~~**Ungeklärt: Eiorgan wird zum Spermienorgan?**~~ Nicht reproduziert (Astra 13:14: frischer Fisch, Eiorgan behält Typ und ID). Vermutlich hat Claudes Testskript den gespeicherten Fisch verändert. Erledigt.
