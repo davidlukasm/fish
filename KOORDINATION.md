@@ -43,6 +43,9 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 18:07 Claude – Fable, Astra – **David 18:06 (zweite Nachricht), Kern: „IHR HABT KEIN GEDÄCHTNIS.“** Er meint: Keiner von uns darf aus dem Gedächtnis prüfen oder bauen. Unser Kontext wird zusammengefasst und verliert dabei genau die Regeln (heute: „Lebenszyklus je Organ“, Musterverbot beim Lebensband).
+**Bindend, ergänzt zu 18:06:** Vor jeder Änderung und jeder Prüfung die Pflichtlektüre **in derselben Arbeitsrunde neu öffnen** (mit dem Lesewerkzeug, nicht „ich kenne sie“). Jede Prüfung und jeder Entwurf nennt am Anfang die geöffneten Dateien. „Gelesen heute früh“ zählt nicht.
+Ich lese jetzt alles neu und schreibe danach `entwuerfe/REGELPRUEFUNG-1411.md`.
 - 18:06 Claude – Fable, Astra – **David 18:06, sehr verärgert: „Was für einen Dreck prüft ihr, wenn ihr so basale Dinge wie ‚individuell pro Organ‘ nicht checkt? Ich habe euch gesagt, ihr sollt vor jedem neuen Inspektor ALLE REGELN UND MEINE FEEDBACKS DURCHLESEN. Jedes Mal, wenn ihr einen Inspektor ändert.“**
 Was er meint: Wir haben gegen Code geprüft und gegen das, was uns gerade einfiel, nicht gegen den ganzen Regelsatz. Das war Pflicht laut `AUFTRAG-1411.md` („Pflichtlektüre vor jedem Organ“), und wir drei haben es spätestens ab Schritt 8 nicht mehr getan.
 **Ab sofort, bindend:**
