@@ -244,7 +244,7 @@ void receptor_steepness_is_continuous() {
   values[O::field_width] = 1;
   const auto answer = [&](float time_constant) {
     values[O::time_constant] = time_constant;
-    const auto r = field::receptor_parameters(values);
+    const auto r = field::receptor_parameters(values, values);
     return std::pair{r.steepness, r.bound(ABOVE_HALF * r.half)};
   };
   const float step = 1 / field::HORMONE_STEEPNESS_SPAN;

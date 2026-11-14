@@ -406,32 +406,38 @@ inline float receptor_deviation(const Receptor &wanted, const field::HormoneRece
   // Receptor variation can make a cell sensitive even when the planned mean is zero.
   if (!wanted.active || std::abs(actual.sensitivity) < 1e-6f)
     return deviation;
-  const double angle = field::substance_angle(wanted.substance);
-  const auto interval = [](double mean, double width) {
-    return std::array<double, 2>{std::clamp(mean - width, -1., 1.),
-                                 std::clamp(mean + width, -1., 1.)};
-  };
-  const auto x = interval(std::cos(angle), 2 * wanted.spread_receptors),
-             y = interval(std::sin(angle), 2 * wanted.spread_receptors);
-  const double sigma_min = field::HORMONE_SIGMA_MIN +
-                           (field::HORMONE_SIGMA_MAX - field::HORMONE_SIGMA_MIN) *
-                               std::clamp(wanted.width - wanted.spread_receptors, 0.f, 1.f),
-               sigma_max = field::HORMONE_SIGMA_MIN +
-                           (field::HORMONE_SIGMA_MAX - field::HORMONE_SIGMA_MIN) *
-                               std::clamp(wanted.width + wanted.spread_receptors, 0.f, 1.f);
-  for (int k = 0; k < field::BLOOD_SUBSTANCES; ++k) {
-    const double a = field::substance_angle(k);
-    const double px = std::cos(a), py = std::sin(a);
-    const double near_x = outside(float(px), float(x[0]), float(x[1])),
-                 near_y = outside(float(py), float(y[0]), float(y[1])),
-                 far_x = std::max(std::abs(px - x[0]), std::abs(px - x[1])),
-                 far_y = std::max(std::abs(py - y[0]), std::abs(py - y[1]));
-    deviation = std::max(
-        deviation,
-        outside(
-            actual.affinity[k],
-            float(std::exp(-(far_x * far_x + far_y * far_y) / (2 * sigma_min * sigma_min))),
-            float(std::exp(-(near_x * near_x + near_y * near_y) / (2 * sigma_max * sigma_max)))));
+  const bool own = wanted.substance == field::CELL_MATURITY;
+  if (own != actual.cell_maturity)
+    return 1;
+  // A receptor on its own cell's maturity reads no blood: its affinities do not matter.
+  if (!own) {
+    const double angle = field::substance_angle(wanted.substance);
+    const auto interval = [](double mean, double width) {
+      return std::array<double, 2>{std::clamp(mean - width, -1., 1.),
+                                   std::clamp(mean + width, -1., 1.)};
+    };
+    const auto x = interval(std::cos(angle), 2 * wanted.spread_receptors),
+               y = interval(std::sin(angle), 2 * wanted.spread_receptors);
+    const double sigma_min = field::HORMONE_SIGMA_MIN +
+                             (field::HORMONE_SIGMA_MAX - field::HORMONE_SIGMA_MIN) *
+                                 std::clamp(wanted.width - wanted.spread_receptors, 0.f, 1.f),
+                 sigma_max = field::HORMONE_SIGMA_MIN +
+                             (field::HORMONE_SIGMA_MAX - field::HORMONE_SIGMA_MIN) *
+                                 std::clamp(wanted.width + wanted.spread_receptors, 0.f, 1.f);
+    for (int k = 0; k < field::BLOOD_SUBSTANCES; ++k) {
+      const double a = field::substance_angle(k);
+      const double px = std::cos(a), py = std::sin(a);
+      const double near_x = outside(float(px), float(x[0]), float(x[1])),
+                   near_y = outside(float(py), float(y[0]), float(y[1])),
+                   far_x = std::max(std::abs(px - x[0]), std::abs(px - x[1])),
+                   far_y = std::max(std::abs(py - y[0]), std::abs(py - y[1]));
+      deviation = std::max(
+          deviation,
+          outside(
+              actual.affinity[k],
+              float(std::exp(-(far_x * far_x + far_y * far_y) / (2 * sigma_min * sigma_min))),
+              float(std::exp(-(near_x * near_x + near_y * near_y) / (2 * sigma_max * sigma_max)))));
+    }
   }
   const float half_difference = float(std::log(actual.half / wanted.half) /
                                       std::log(field::HORMONE_HALF_MAX / field::HORMONE_HALF_MIN));

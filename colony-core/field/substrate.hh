@@ -309,6 +309,9 @@ public:
     return dead_.at(i) ? CellLife::Dead : born_.at(i) ? CellLife::Active : CellLife::Precursor;
   }
   float development_progress(std::size_t i) const { return progress_.at(i); }
+  double cell_maturity(std::size_t i) const {
+    return std::min(1., age_.at(i) / CELL_MATURITY_STEPS);
+  }
   std::size_t active_count() const { return active_.size(); }
   std::uint64_t cell_revision() const { return tissue_revision_; }
   std::uint64_t organ_revision() const { return organ_revision_; }

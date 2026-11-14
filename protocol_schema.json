@@ -2134,7 +2134,8 @@
     "blood_substance": {
       "maturity": 6,
       "reserve": 7,
-      "fatigue": 8
+      "fatigue": 8,
+      "cell_maturity": 9
     },
     "route": {
       "page": "/",

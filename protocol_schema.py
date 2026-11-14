@@ -1300,6 +1300,7 @@ class BloodSubstance:
     MATURITY = 6
     RESERVE = 7
     FATIGUE = 8
+    CELL_MATURITY = 9
 
 class Route:
     PAGE = '/'

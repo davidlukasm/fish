@@ -33,9 +33,11 @@ inline TraitValues draw_traits(const TraitValues &mean, std::uint64_t seed, std:
   }
   return drawn;
 }
-inline HormoneReceptor receptor_parameters(const TraitValues &v) {
+// The mode is read from the planned mean, so that receptor variation never switches it.
+inline HormoneReceptor receptor_parameters(const TraitValues &v, const TraitValues &mean) {
   namespace O = cppn::output;
   HormoneReceptor r;
+  r.cell_maturity = mean[O::sender1] > .5f;
   r.affinity = hormone_affinity<BLOOD_SUBSTANCES>(v[O::quality1], v[O::quality2],
                                                   (v[O::quality_width] + 1) * .5f);
   r.baseline = v[O::capacity];

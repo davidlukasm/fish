@@ -1967,6 +1967,7 @@ namespace blood_substance {
 inline constexpr int maturity = 6;
 inline constexpr int reserve = 7;
 inline constexpr int fatigue = 8;
+inline constexpr int cell_maturity = 9;
 }
 namespace route {
 inline constexpr const char *page = "/";

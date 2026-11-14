@@ -22,6 +22,10 @@ constexpr int HORMONES = 6;
 // energy reserve and the exhaustion of its fast muscle fibres.
 constexpr int MATURITY_SUBSTANCE = HORMONES, RESERVE_SUBSTANCE = HORMONES + 1,
               FATIGUE_SUBSTANCE = HORMONES + 2, BLOOD_SUBSTANCES = HORMONES + 3;
+// A receptor may read, instead of the blood, how far its own cell has matured: its age since it
+// formed over CELL_MATURITY_STEPS. It is not on the wheel; the receptor's half sets the age.
+constexpr int CELL_MATURITY = BLOOD_SUBSTANCES;
+constexpr double CELL_MATURITY_STEPS = 4096;
 // Each substance's place on the wheel, in turns from the right, counterclockwise. Blueprints
 // compile their receptors to these places and genomes carry them, so a place moves only with every
 // shipped genome rebuilt. The hormones share three quarters of the wheel evenly, from the right
@@ -79,12 +83,15 @@ struct HormoneReceptor {
   float baseline = 0, sensitivity = 0, half = .05;
   // The answer rises with the concentration to the power 2^steepness.
   float steepness = 0;
+  bool cell_maturity = false;
   float bound(double c) const {
     const double x = std::pow(c / half, std::exp2(steepness));
     return float(x / (1 + x));
   }
-  float response(const Hormones &h, double maturity, double reserve, double fatigue) const {
-    const double c = blood_stimulus(affinity, h, maturity, reserve, fatigue);
+  float response(const Hormones &h, double maturity, double reserve, double fatigue,
+                 double own_maturity = 0) const {
+    const double c =
+        cell_maturity ? own_maturity : blood_stimulus(affinity, h, maturity, reserve, fatigue);
     return std::clamp(baseline + sensitivity * bound(c), -1.f, 1.f);
   }
   float occupancy(const Hormones &h) const {

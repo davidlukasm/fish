@@ -1014,7 +1014,8 @@ export const GENOME_IMPORT =
     Object.freeze({"max_bytes" : 4194304, "timeout_ms" : 30000, "develop_ms" : 25000});
 export const RENDER_GROUP = Object.freeze({"key_bits" : 48});
 export const HORMONES = Object.freeze({"levels" : 6, "signs" : 2});
-export const BLOOD_SUBSTANCE = Object.freeze({"maturity" : 6, "reserve" : 7, "fatigue" : 8});
+export const BLOOD_SUBSTANCE =
+    Object.freeze({"maturity" : 6, "reserve" : 7, "fatigue" : 8, "cell_maturity" : 9});
 export const ROUTE = Object.freeze({
   "page" : "/",
   "assets" : "/ui/",

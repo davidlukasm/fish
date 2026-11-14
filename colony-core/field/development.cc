@@ -185,12 +185,14 @@ public:
               c.teaching_limit = (teaching[cppn::output::synapse_strength] + 1) * .5f;
               c.development_receptor = receptor_parameters(
                   draw_traits((*traits)[cursor].growth, seed,
-                              splitmix(c.id ^ RECEPTOR_STREAM ^ GROWTH_RECEPTOR), true));
+                              splitmix(c.id ^ RECEPTOR_STREAM ^ GROWTH_RECEPTOR), true),
+                  (*traits)[cursor].growth);
               for (int effect = 0; effect < HORMONE_EFFECTS; ++effect)
                 if (hormone_effect_present(c, effect))
                   c.hormone_receptors[effect] = receptor_parameters(
                       draw_traits((*traits)[cursor].receptors[effect], seed,
-                                  splitmix(c.id ^ RECEPTOR_STREAM ^ effect), true));
+                                  splitmix(c.id ^ RECEPTOR_STREAM ^ effect), true),
+                      (*traits)[cursor].receptors[effect]);
             }
           }
           indices[cursor].push_back(NeuronIndex(cells.size()));
@@ -565,7 +567,7 @@ struct Substrate::GridDevelopment {
           auto &r = cell == BODY               ? owner.growth_receptor
                     : query == GROWTH_RECEPTOR ? owner.neurons[cell].development_receptor
                                                : owner.neurons[cell].hormone_receptors[query];
-          r = receptor_parameters(v);
+          r = receptor_parameters(v, values[j]);
           if (cell != BODY) {
             if (query == GROWTH_RECEPTOR)
               s.traits[cell].growth = values[j];

@@ -16,7 +16,7 @@ inline constexpr OutputMask spread_mask(OutputMask mask) {
 }
 inline constexpr OutputMask receptor_means =
     (1u << capacity) | (1u << field_width) | (1u << time_constant) | (1u << threshold) |
-    (1u << quality1) | (1u << quality2) | (1u << quality_width);
+    (1u << quality1) | (1u << quality2) | (1u << quality_width) | (1u << sender1);
 inline constexpr OutputMask receptor_mask = spread_mask(receptor_means);
 inline constexpr OutputMask contact_mask = spread_mask(
     (1ull << expression) | (1ull << receiver1) | (1ull << receiver2) | (1ull << search_width));

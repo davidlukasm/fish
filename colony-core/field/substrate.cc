@@ -517,7 +517,8 @@ void Network::apply_hormones(const Hormones &h) {
   for (auto i : active_) {
     const auto &c = tissue->neurons[i];
     for (int e = 0; e < HORMONE_EFFECTS; ++e)
-      hormone_effect_[e][i] = c.hormone_receptors[e].response(h, maturity_, reserve_, fatigue_);
+      hormone_effect_[e][i] =
+          c.hormone_receptors[e].response(h, maturity_, reserve_, fatigue_, cell_maturity(i));
     if (plasticity_enabled && hormone_effect_[Death][i] > .5f) {
       die(i);
       died = true;
@@ -586,8 +587,8 @@ double Network::grow(const Hormones &h, double maturity, double reserve, double 
     return 0;
   bool died = false;
   for (auto i : active_)
-    if (tissue->neurons[i].hormone_receptors[Death].response(h, maturity_, reserve_, fatigue_) >
-        .5f) {
+    if (tissue->neurons[i].hormone_receptors[Death].response(h, maturity_, reserve_, fatigue_,
+                                                             cell_maturity(i)) > .5f) {
       die(i);
       died = true;
     }
@@ -1516,6 +1517,6 @@ void Network::read_runtime_state(std::istream &in) {
   for (auto i : active_)
     for (int e = 0; e < HORMONE_EFFECTS; ++e)
       hormone_effect_[e][i] = tissue->neurons[i].hormone_receptors[e].response(
-          active_hormones_, maturity_, reserve_, fatigue_);
+          active_hormones_, maturity_, reserve_, fatigue_, cell_maturity(i));
 }
 }
