@@ -3010,7 +3010,7 @@ const mouthShare = long => MOUTH.share[0] + MOUTH.share[1] * long, jawLever = lo
 // The force on each kind of food: cutting, grinding, a loose piece, scraping.
 function mouthForces(m = S.mouth) {
   const lever = jawLever(m.long), bite = m.bite * lever, suck = m.suck;
-  return [bite * (1 - m.blunt) ** 2, bite * m.blunt ** 2, bite, suck * mouthShare(m.long) * lever * lever * 2];
+  return [bite * (1 - m.blunt) ** 2, bite * m.blunt ** 2, bite, suck * mouthShare(m.long) / mouthShare(.5) * lever * lever];
 }
 function drawMouth() {
   const cell = S.mouth, {svg, live} = picture('mouth', MOUTH.height), [hx, hy] = MOUTH.hinge, long = MOUTH.jaw[0] + (MOUTH.jaw[1] - MOUTH.jaw[0]) * cell.long, open = MOUTH.gape * mouthShare(cell.long);
@@ -3032,7 +3032,8 @@ function drawMouth() {
   MOUTH.foods.forEach((food, j) => {
     const x = 40 + 73 * j, y = 176, deep = clamp(forces[j] / most, 0, 1);
     el('rect', {x : x - 15, y : y - 15, width : 30, height : 30, rx : 7, fill : food.colour}, live);
-    if (deep > .01) el('path', {d : `M${x - 15 * deep - 2} ${y - 16} Q${x} ${y - 16 + 34 * deep} ${x + 15 * deep + 2} ${y - 16} Z`, fill : COLOUR.body}, live);
+    // The bite: as wide and as deep as the force; the whole of a piece at the most force.
+    if (deep > .01) el('path', {d : `M${x - 15 * Math.sqrt(deep)} ${y - 16} Q${x} ${y - 16 + 62 * deep} ${x + 15 * Math.sqrt(deep)} ${y - 16} Z`, fill : COLOUR.body}, live);
     txt(live, x, y + 29, food.name, {'text-anchor' : 'middle', style : 'font-size:9.5px', fill : food.colour});
   });
   // The settings: the jaw's length at its tip, the teeth's form at a tooth, the cells at each muscle.
