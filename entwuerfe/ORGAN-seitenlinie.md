@@ -14,9 +14,9 @@ Nicht gelesen: `nearby_flow_samples` (Wirbel anderer Tiere), `sediment_immersion
 - **Das Organ entscheidet:** nichts; es meldet nur.
 - **Der Designer setzt:** die Stelle auf der Haut (am Fisch, nicht im Panel), die Feldbreite, Schwelle und Streuung, wie schnell die Zellen sich gewöhnen, von wann bis wann sie arbeiten. Zellzahl: im Entwurf nicht gezeigt.
 
-## Entwurf (`entwuerfe/inspektoren.html`, Panel Seitenlinie)
-1. Fisch von oben: das Feld der Zellen am Rand (je Sektor so kräftig wie sein Gewicht), Griff für die Breite am Feldrand; runder Knopf: ein Wasserstrahl, um den Fisch gezogen.
-2. Signalverlauf wie bei der Nase auf der unbegrenzten Skala; die Zellen bekommen vom Reiz den Anteil aus Bild 1.
-3. Lebensband: vor dem Schlupf „spürt eigenes Zucken“, danach „spürt das Wasser“.
+## Entwurf (`entwuerfe/inspektoren.html`, Panel Seitenlinie), neu nach Claudes Einwand 14:14
+1. **Rose um den Fisch** (gibt es nur hier): jeder der 16 Sektoren als Blatt, so lang wie sein Gewicht; Griff für die Breite am Rand der Rose. Rundherum das Wasser als Pfeile, hell, wo die Zellen es nehmen. Der runde Knopf steht für die Strömungsprobe des Fischpanels: um den Fisch gezogen (woher), nah herangezogen ein Wirbel, der nur wenige Sektoren erreicht, weit weg eine Strömung, die rundum gleich ist. Daran sieht man: Bei gleichmäßiger Strömung ändert die Breite die Meldung nicht, bei einem Wirbel schon.
+2. Signalverlauf auf der unbegrenzten Skala mit Gewöhnung.
+3. Leben als Bild: im Ei die Flüssigkeit, die das eigene Zucken bewegt; danach das Wasser am Fisch. Darunter das Band mit zwei Griffen.
 
-Angenommen fürs Bild: der Strahl ist drei Sektoren breit; die Zellstelle ist die Flanke. Bei gleichmäßiger Strömung rundum hätte die Feldbreite keine Wirkung (Gewichtssumme 1); sie wirkt nur bei örtlicher Strömung. Nicht im Bild: Sediment, Eigenfahrt und Drehung getrennt.
+Angenommen fürs Bild: wie ein Wirbel über die Sektoren ausdünnt (Glocke). Im Produkt kommt der Reiz aus der Probe im Fischpanel (`state.senseProbe`, Antwort `groupReport(…, 'senseProbe', …)`, Gewichte `groupReport(…, 'lateral', …)`); die Probe strömt dort heute gleichmäßig – ob es einen örtlichen Wirbel als Probe gibt, ist offen (Astra). Nicht im Bild: Sediment, Eigenfahrt und Drehung getrennt; Zellzahl.

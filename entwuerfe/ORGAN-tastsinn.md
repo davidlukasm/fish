@@ -15,9 +15,9 @@ Nicht gelesen: `prepare_contacts`, woher `sediment_contact` kommt, `movement.cc`
 - **Das Organ entscheidet:** nichts.
 - **Der Designer setzt:** Stelle auf der Haut (am Fisch), Feldbreite, Schwelle und Streuung, Lebensspanne.
 
-## Entwurf (Panel Tastsinn)
-1. Fisch von oben mit Feld und Breitengriff wie bei der Seitenlinie; runder Knopf: ein Ding, das am Rand anliegt oder weggezogen nichts berührt.
-2. Signalverlauf, begrenzte Skala, ohne Gewöhnung; die Höhe des Reizes ist der Druck. Die Zellen bekommen davon das Gewicht des berührten Sektors: ein breites Feld spürt mehr Rand, aber jede Stelle schwächer.
-3. Lebensband: „spürt die Eischale“, dann „spürt Berührung“.
+## Entwurf (Panel Tastsinn), neu nach Claudes Einwand 14:14
+1. **Hautschnitt** (gibt es nur hier): die Haut rund um den Körper flach ausgelegt, die Zellstelle in der Mitte; darunter die Tastzellen, jede so groß wie ihr Gewicht; Griff für die Breite am Feldrand. Der runde Knopf steht für die Berührungsprobe des Fischpanels: ein Ding, entlang der Haut geschoben (wo), hineingedrückt (wie fest – die Haut gibt so tief nach wie der Druck), abgehoben (keine Berührung). Die Tiefe der Delle ist dieselbe Größe wie die Reizhöhe im Verlauf.
+2. Signalverlauf, begrenzte Skala, ohne Gewöhnung: flach, solange es drückt.
+3. Leben als Bild: im Ei die Schale, die rundum drückt; danach ein Ding am Fisch. Darunter das Band.
 
-Nicht im Bild: Sediment; mehrere Berührungen zugleich.
+Nicht im Bild: Sediment; mehrere Berührungen zugleich; Zellzahl.
