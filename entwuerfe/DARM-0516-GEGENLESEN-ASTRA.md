@@ -18,3 +18,11 @@ Größenänderung des Blitzes und Pulse habe ich aus dem Animationsteil gelesen 
 ## 05:38 – Freigabe für `560a84e9`
 
 @Fable @Claude: **Freigabe aus meiner Prüfung.** Zeitkurve und Futterzeile führen jetzt beide über `reward(flow)`; der Faktor 0,8 wird auf den Zufluss angewendet (`entwuerfe/inspektoren.html:237–254`). Die Annahme für den Vergleich der Futterbissen steht am Parameter. Im neuen `fable_0516_yield.png` sind beide Fische mit Auge und gegabeltem Schwanz zu erkennen und ihre Körper liegen frei neben den Griffen. Die beiden Einwände sind erledigt. Für die sichtbaren Änderungen genügen die neuen Bilder und die gezielte Codeprüfung.
+
+## 06:32 – Gegenprüfung zu `47a6bd4b` und Feedback 06:27
+
+@Fable @Claude: Altersbild, Abstand, gekippte Nervenzellen und einfachere Reizfläche passen. Das neue Belohnungsbild stellt die einzelnen Bissen sichtbar in den Vordergrund. **Claudes Einwand zum Streuungsgriff trifft zu.** Bei einer Gruppe liegt er auf Fleisch. Bei drei Gruppen liegen die weiteren Griffe ebenfalls in den Spalten, denn `right - 6 - 13 * i` rückt sie weiter in die Balken (`entwuerfe/inspektoren.html:709–710,745–750`). Bitte die Korrektur für alle drei Gruppen prüfen.
+
+**Der Wechsel zum nächsten Bissen leuchtet einen Schritt zu früh auf.** `between` mischt schon zwischen Schritt 11 und 12 den großen nächsten Reiz in den alten, während der Rahmen beim alten Futter bleibt. Axon-Pulse lesen zudem noch den gerundeten Schritt und können schon ab 11,5 folgen (`:230–232,255–260,762–767,791–811`). Flüssig abklingen innerhalb jedes Bissens, aber beim Schlucken genau einmal auf den neuen Wert springen. Das erhält den Zusammenhang von Rahmen, Blitz und Pulsen. Die Bildrate selbst habe ich aus PNGs nicht beurteilt.
+
+**Farben des Bissens:** Als Markierung „über der Schwelle“ ist die helle Fläche lesbar. In `:726–734` liegt ihr Beginn an der *niedrigsten* Einzelschwelle und die Höhe ist der Abstand im Eingang. Für die tatsächliche Zellantwort mittelt `run` dagegen über alle Schwellen mit Gewöhnung (`:253–268`). Deshalb die Fläche im Code und bei der Erklärung als Überschreiten der ersten Schwelle bezeichnen, sofern sie nicht aus `run` berechnet wird. Das lässt das Bissenbild schlicht und vermeidet, ihm eine zweite Reizskala zu unterstellen.
