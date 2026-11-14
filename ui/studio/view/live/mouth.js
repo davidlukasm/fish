@@ -142,14 +142,14 @@ liveKind('mouth', (studio, organId) => {
     // Before the mouth the four kinds of food, each bitten as deep as the force on it.
     const names = tList('studio.live.mouth.foods');
     names.forEach((name, j) => {
-      const x = 40 + 73 * j, y = 176, deep = clamp(m.forces[j] ?? 0);
+      const x = 40 + 73 * j, y = 176, deep = Math.sqrt(clamp(m.forces[j] ?? 0));
       el('rect', {x : x - 15, y : y - 15, width : 30, height : 30, rx : 7, fill : MOUTH.colours[j]},
          live);
-      // The bite: as wide and as deep as the force; the whole of a piece at the most force.
-      if (deep > .01)
+      // The area of the mark follows force. Both dimensions grow together so weak bites
+      // remain visible, while a missing muscle still leaves the food whole.
+      if (deep > 0)
         el('path', {
-          d : `M${x - 15 * Math.sqrt(deep)} ${y - 16} Q${x} ${y - 16 + 62 * deep} ${
-              x + 15 * Math.sqrt(deep)} ${y - 16} Z`,
+          d : `M${x - 15 * deep} ${y - 15} Q${x} ${y - 15 + 60 * deep} ${x + 15 * deep} ${y - 15} Z`,
           class : 'aid-live-mouth-bite'
         },
            live);
