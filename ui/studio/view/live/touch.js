@@ -1,7 +1,7 @@
 // The sense of touch's live inspector: the skin pressed in, what its cells report of a touch
 // over time, and their life.
 // Read in the engine (body_plan.cc, the skin cells' wedge of weights, record_touch and the touch
-// stimulus; physiology_parameters.hh, touch_rest and touch_impact_half; embryo.cc): the body's rim
+// stimulus; physiology_parameters.hh, touch_rest and touch_impact; embryo.cc): the body's rim
 // has 16 sectors; the cells weigh them by a wedge round their own place, 22.5 to 180 degrees wide,
 // the weights summing to one. A touch presses its sector: 0.1 for a mere leaning up to 1 for the
 // hardest blow. The cells' stimulus is the touched sector's weight x that pressure; it is bounded
@@ -9,6 +9,7 @@
 // The thing is the fish panel's probe (probes.js). The cells' place is the plan's report
 // (anatomy.felt).
 // Not in the pictures: sediment; several touches at once.
+import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
@@ -28,9 +29,8 @@ import {
 
 const word = (key, values) => t('studio.live.touch.' + key, values);
 const ROUND_MS = 12000;
-// The pressure of a touch (physiology_parameters.hh:39; STOPGAP: not in schema.js).
-const TOUCH = Object.freeze({rest : .1, half : .05});
-const pressureOf = impact => TOUCH.rest + (1 - TOUCH.rest) * impact / (impact + TOUCH.half);
+const pressureOf = impact => SKIN_RESPONSE.touch_rest + (1 - SKIN_RESPONSE.touch_rest) * impact /
+                                                            (impact + SKIN_RESPONSE.touch_impact);
 const CUT = Object.freeze(
     {height : 150, L : 14, R : 286, skin : 58, deep : 30, cells : 104, thing : 10, dent : 20});
 const turnTo = a => ((a + 540) % 360) - 180;

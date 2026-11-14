@@ -28,7 +28,7 @@ struct PhysiologyParameters {
   static constexpr double growth_cost = .3;
   static constexpr double basal_rate = .06, basal_fixed = .35;
   static constexpr double growth_reserve = .10, growth_rate = .16;
-  static constexpr double heal_reserve = .15, heal_rate = .001, heal_cost = .03;
+  static constexpr double heal_reserve = .15, heal_rate = skin_response::heal_rate, heal_cost = .03;
   static constexpr double catabolism_yield = .8, tissue_floor_share = .5;
   static constexpr double nutrient_share = .2, nutrient_keep = .8;
   static constexpr double spine_block_cost = .5;
@@ -36,7 +36,8 @@ struct PhysiologyParameters {
   static constexpr double senescence_share = .37, fasting_share = 1.5;
   double organ_mass_ref = DEFAULT_ORGAN_MASS_REF, undulation_loss = .5;
   double resting_spines = .3, resting_spines_half = 5, pigment_half = .5, pigment_rest = .2;
-  double touch_rest = .1, touch_impact = .05, stroke_threshold = .2;
+  double touch_rest = skin_response::touch_rest, touch_impact = skin_response::touch_impact,
+         stroke_threshold = .2;
   double drag_along = .028512, drag_across = .38016;
   double transfer_cost = .004, pigment_cost = .0002;
   double spine_rate = .02, spine_max = MAX_SPINE_EXTENT;

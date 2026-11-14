@@ -2011,6 +2011,12 @@ inline constexpr int organ_half = 3;
 inline constexpr double spread = 0.45;
 inline constexpr int reach = 2;
 }
+namespace skin_response {
+inline constexpr double touch_rest = 0.1;
+inline constexpr double touch_impact = 0.05;
+inline constexpr double heal_rate = 0.001;
+inline constexpr double bite_wound = 0.25;
+}
 namespace muscle_fibre {
 inline constexpr double force_slow = 0.4;
 inline constexpr double force_fast = 2.5;

@@ -1344,6 +1344,12 @@ class Barbel:
     SPREAD = 0.45
     REACH = 2
 
+class SkinResponse:
+    TOUCH_REST = 0.1
+    TOUCH_IMPACT = 0.05
+    HEAL_RATE = 0.001
+    BITE_WOUND = 0.25
+
 class MuscleFibre:
     FORCE_SLOW = 0.4
     FORCE_FAST = 2.5

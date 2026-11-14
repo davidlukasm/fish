@@ -10,6 +10,7 @@
 // (anatomy.felt).
 // Not in the pictures: harm without a place (hunger, illness, age), which lies evenly on all
 // sectors; that a hungry fish does not heal.
+import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, updateCenter} from '../../model/document.js';
@@ -29,10 +30,6 @@ import {
 
 const word = (key, values) => t('studio.live.pain.' + key, values);
 const ROUND_MS = 12000;
-// What a fed fish heals each step and what a whole bite takes of a fish of reference size, as
-// shares of its health (physiology_parameters.hh:31, heal_rate; physiology_parameters.cc:6,
-// bite_wound; STOPGAP: not in schema.js).
-const HEAL = .001, BITE = .25;
 const WOUND =
     Object.freeze({height : 132, cx : 150, cy : 66, s : 2.5, rx : 70, ry : 27, bite : 13});
 const radians = d => d * Math.PI / 180, degrees = r => r * 180 / Math.PI;
@@ -57,7 +54,7 @@ liveKind('pain', (studio, organId) => {
   const ache = svgOf();
   heading(word('life'));
   const life = svgOf();
-  const own = {chosen : 0, input : {rise : 90, height : BITE, stop : 0}};
+  const own = {chosen : 0, input : {rise : 90, height : SKIN_RESPONSE.bite_wound, stop : 0}};
   let step = 0, share = 0, clock = null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
@@ -68,8 +65,8 @@ liveKind('pain', (studio, organId) => {
     own,
     tires : true,
     most : 1,
-    heals : HEAL,
-    mark : {at : BITE, word : word('bite')},
+    heals : SKIN_RESPONSE.heal_rate,
+    mark : {at : SKIN_RESPONSE.bite_wound, word : word('bite')},
     scale : BOUNDED,
     words : {course : word('course'), used : word('used'), steps : word('steps')},
     keys : () => keysOf([ {id : '', centers : organ().centers} ], BOUNDED),

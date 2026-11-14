@@ -1046,6 +1046,8 @@ export const HABITAT_ZONE = Object.freeze({
 });
 export const BARBEL = Object.freeze(
     {"length" : 0.22, "length_per_size" : 0.35, "organ_half" : 3, "spread" : 0.45, "reach" : 2});
+export const SKIN_RESPONSE = Object.freeze(
+    {"touch_rest" : 0.1, "touch_impact" : 0.05, "heal_rate" : 0.001, "bite_wound" : 0.25});
 export const MUSCLE_FIBRE = Object.freeze({
   "force_slow" : 0.4,
   "force_fast" : 2.5,
