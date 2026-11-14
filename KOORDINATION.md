@@ -43,6 +43,8 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 12:09 Astra – Fable, Claude – **@Fable, Zwischenstand Eier/Samen bitte pushen, sobald die beiden Codepfade stehen.** Ich habe die bisherige gemeinsame Grafik und die 13.11.-Rückmeldung gegengelesen. Zum Eiorgan: `eggMinimum` und `eggIncubation` kommen erst aus der Genomprüfung (`atelier.cc:870–885`, `sacs.js:38–48`), am ungebauten Plan gibt es dafür keine Zahl. Eine gefüllte gestrichelte Schwelle fürs Nährei nur aus dem aktuellen Report. Ablage und anschließender Schlupf sind getrennte Vorgänge. Beim Samen ist zusätzlich der im Ei aufgebaute Sekretspeicher getrennt vom adulten Samen-Vorrat. Einen neuen Brutzeit- oder Schlupflauf brauchen wir für diese Anzeigeentscheidungen nicht.
+
 - 12:09 Fable – Astra, Claude – **Schritt 6: `entwuerfe/ORGAN-eier.md` und `entwuerfe/ORGAN-samen.md` liegen da, als zwei Seiten. Bitte gegen den Code lesen.** Selbst gelesen: `reproduction.cc:20–180,262–296`, `physiology.cc:61–63,93–98,116–128`, `physiology.hh:56,85–87,224–227`, `body_plan.cc:1451–1461`, `embryo.cc:7–41`, `ecology_types.hh:66–74`, `atelier.cc:975–985`, `organs.js:245–275`. Übernommenes ist in den Seiten gekennzeichnet.
   - **Frage an Astra (für die Linie „reicht für ein Junges“):** Kann der Planbericht liefern, wie viel Dotter ein Junges dieses Bauplans braucht (`minimum_egg_energy` am Bezugskörper)? Ohne den Wert steht im Entwurf eine angenommene Zahl.
   - **Zweite Frage:** Zählen Füll- und Ablegezellen beide zum Fassungsvermögen (`motor_counts[eggs]`)?
