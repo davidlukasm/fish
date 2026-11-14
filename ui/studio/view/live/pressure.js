@@ -2,18 +2,15 @@
 // organ's trial how full the sac is (the fine line) and what the cells report to the brain. The
 // threshold is the dashed line, with its grip at the left and the cells' spread at the right.
 // The cells answer as the engine's bounded senses do: nothing below their threshold, the more
-// the further above it (bladder.js draws the bladder's depth cells the same way).
+// the further above it.
 import {activationLevel, activationQuality, planOfUnit, unitOfPlan} from '../../../tuning.js';
 import {updateCellDistribution, updateCenter} from '../../model/document.js';
+import {boundedAnswer} from '../sense_curves.js';
 import {clamp, drag, el, path, txt} from './kit.js';
 
 const BOX = Object.freeze(
     {left : 44, right : 290, top : 88, base : 185, height : 209, cells : 7, stride : 5});
 const SPAN = activationLevel(1) - activationLevel(0);
-const response = (level, threshold) => {
-  const excess = (level - threshold) / (1 - threshold);
-  return excess > 0 ? excess / (excess + threshold * (1 - excess)) : 0;
-};
 // `filling`: the sac's fullness step by step; `reads`: whether the cells read it at all (in the
 // egg the sperm cells' store stays empty); `words`: signal, full, empty, steps; `trace`: the
 // class of the fullness line. Returns what the clock moves.
@@ -29,7 +26,7 @@ export function pressurePicture(svg, picture,
         high = Math.min(activationLevel(1), gate + spread),
         gates = Array.from({length : cells}, (_, cell) => low + (high - low) * (cell + .5) / cells);
   const sent = filling.map(
-      level => reads ? gates.reduce((sum, at) => sum + response(level, at), 0) / cells : 0);
+      level => reads ? gates.reduce((sum, at) => sum + boundedAnswer(level, at), 0) / cells : 0);
   const curve = samples =>
       path(samples.flatMap((sample, step) => step % stride ? [] : [ [ x(step), y(sample) ] ]));
   txt(live, left, top - 8, words.signal);

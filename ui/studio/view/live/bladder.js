@@ -14,6 +14,7 @@ import {
 } from '../../model/document.js';
 import {nodeLimit, ORGAN_BY_KEY} from '../../model/organs.js';
 import {label} from '../kit.js';
+import {boundedAnswer} from '../sense_curves.js';
 import {chip, clamp, drag, el, fishIcon, heldGrip, liveKind, path, picture, txt} from './kit.js';
 
 const word = (key, values) => t('studio.live.bladder.' + key, values);
@@ -84,10 +85,6 @@ const hoverAt = (capacity, physics) => {
 };
 const bounds = key => [Math.max(activationLevel(0), key.gate - key.spread),
                        Math.min(activationLevel(1), key.gate + key.spread)];
-function response(depth, threshold) {
-  const excess = (depth - threshold) / (1 - threshold);
-  return excess > 0 ? excess / (excess + threshold * (1 - excess)) : 0;
-}
 const curve = (samples, x, y) =>
     path(samples.flatMap((sample, step) => step % PLOT_STRIDE ? [] : [ [ x(step), y(sample) ] ]));
 
@@ -354,7 +351,7 @@ liveKind('bladder', (studio, organId) => {
       const sent = model.depth.map(
           d => !model.capacity || !key.readsDepth
                    ? 0
-                   : cells.reduce((sum, gate) => sum + response(d, gate), 0) / cells.length);
+                   : cells.reduce((sum, gate) => sum + boundedAnswer(d, gate), 0) / cells.length);
       const [cx, cy] = [ [ 150, 46 ], [ 124, 38 ], [ 176, 54 ] ][i];
       const chooseKey = () => {
         choose('pressure', key.type);
