@@ -294,10 +294,52 @@ constexpr int LIGHT_HUES = 72;
 constexpr double LIGHT_DIMMEST = 1e-4;
 constexpr int SENSE_LEVELS = 48;
 constexpr int SPINE_DIRECTIONS = 64;
+// Six recovery times cover the transients in the continuous-command preview, including white
+// fibres. The other motors stay idle and the fish can pay for all the work.
+constexpr int SPINE_PREVIEW_STEPS = 6 * fishsim::muscle_fibre::recovery_fast;
 constexpr int LATERAL_DIRECTIONS = 48;
 constexpr int COLOUR_STEPS = 9;
 constexpr double ADAPT_HELD = 4, ADAPT_SPAN = 4;
 constexpr int ADAPT_SAMPLES = 96;
+double raised_spine_height(const fishsim::BrainInterface &plan,
+                           const fishsim::PhysiologyParameters &physiology) {
+  namespace fs = fishsim;
+  constexpr auto channel = fs::StrokeDefense;
+  if (plan.stroke_capacity[channel] < physiology.stroke_threshold)
+    return 0;
+  // Only the spine erectors are driven. Other muscles neither change the command nor spend
+  // energy in this preview.
+  fs::BrainInterface muscle;
+  for (const auto &pull : plan.pulls) {
+    if (pull.stroke != channel)
+      continue;
+    const auto index = muscle.effectors.size();
+    muscle.effectors.push_back(plan.effectors[pull.effector]);
+    muscle.effectors.back().neuron = index;
+    muscle.pulls.push_back({std::uint32_t(index), channel, pull.share});
+  }
+  const auto count = muscle.effectors.size();
+  const auto drive = fs::effector_activity(std::vector<float>(count, 1), muscle);
+  std::vector<double> reserve(count, 1);
+  const auto &hold = plan.stroke_timing[channel];
+  fs::StrokeState stroke;
+  double extension = 0, highest = 0;
+  for (int step = 0; step < SPINE_PREVIEW_STEPS; ++step) {
+    const auto demand = fs::muscle_demand(muscle, drive.cells, reserve);
+    fs::StrokeTiming twitch = hold;
+    if (demand.drive[channel] > 0)
+      twitch.set(demand.steps[channel] / demand.drive[channel]);
+    fs::stroke_step(stroke, demand.drive[channel], twitch, physiology.stroke_threshold);
+    std::array<double, fs::STROKE_COUNT> work{};
+    work[channel] = stroke.drive * fs::stroke_shape(stroke);
+    extension = fs::spine_extension(extension, work[channel], hold, physiology);
+    highest = std::max(highest, extension);
+    if (highest >= physiology.spine_max)
+      break;
+    fs::tire_fibres(muscle, demand, work, reserve);
+  }
+  return highest;
+}
 std::optional<fishsim::BrainInterface::Receptor> nominal_light(const Group &group) {
   if (group.role != 0 || group.function != field::Light)
     return std::nullopt;
@@ -528,7 +570,8 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
     const double rest = fishsim::resting_spine_height(a.capacities[fishsim::organ_port::defense],
                                                       physiology.resting_spines,
                                                       physiology.resting_spines_half),
-                 raised = std::max(rest, physiology.spine_max);
+                 raised = std::max(rest, raised_spine_height(a, physiology));
+    std::cout << ",\"spineHeights\":[" << rest << ',' << raised << ']';
     const auto direction = [](int k) {
       return -fishsim::PI + (k + .5) * 2 * fishsim::PI / SPINE_DIRECTIONS;
     };

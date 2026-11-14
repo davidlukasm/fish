@@ -83,6 +83,8 @@ Point nostril_source(const Body &, Point nose, Point flow, int side);
 Point barbel_tip(const Body &, const BrainInterface &, int side);
 double stroke_step(StrokeState &, double drive, const StrokeTiming &, double threshold);
 double stroke_shape(const StrokeState &);
+double spine_extension(double current, double force, const StrokeTiming &,
+                       const PhysiologyParameters &);
 // What a muscle's cells ask of it this step. Each cell pulls with its own drive, as far as its
 // fibres are rested; the twitch lasts as long as the cells that pull make it, and its work costs
 // what their fibres charge. drive: the cells' pull per stroke; steps, price: their twitch

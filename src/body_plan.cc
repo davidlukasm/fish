@@ -1273,6 +1273,10 @@ double stroke_shape(const StrokeState &stroke) {
                s = std::sin(PI * middle / stroke.span);
   return 2 * s * s;
 }
+double spine_extension(double current, double force, const StrokeTiming &timing,
+                       const PhysiologyParameters &p) {
+  return std::clamp(current * timing.keep + p.spine_rate * force, 0., p.spine_max);
+}
 MuscleDemand muscle_demand(const BrainInterface &layout, const std::vector<double> &amounts,
                            const std::vector<double> &reserve) {
   MuscleDemand demand;
@@ -1637,9 +1641,8 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   b.reproduction_.egg_release &= f > 0;
   b.reproduction_.sperm_release &= f > 0;
   b.motor_.aggression = std::clamp(b.bite_signal, 0., 1.);
-  b.motor_.defense = std::clamp(b.motor_.defense * layout.stroke_timing[StrokeDefense].keep +
-                                    p.spine_rate * strokes[StrokeDefense].force,
-                                0., p.spine_max);
+  b.motor_.defense = spine_extension(b.motor_.defense, strokes[StrokeDefense].force,
+                                     layout.stroke_timing[StrokeDefense], p);
   for (int c = 0; c < rgb::count; ++c) {
     const double full = layout.pigment_absorption[c],
                  active = full > 0 ? std::clamp(pigment[c] / full, 0., 1.) : 0.;
