@@ -55,3 +55,18 @@ Pflichtlektüre in dieser Runde neu geöffnet: `LEITLINIE.md`, `AUFTRAG-1311.md`
 ### Schwanz (`bilder/2026-11-14_atelier/schwanz_durchsicht_1820_*.png`)
 - Gut: „Schwanzschläger · 2,4 % des Ruhebedarfs“, Muskel mit Faserbändern, Faserleiste ausdauernd–kräftig, Kraft mit Erschöpfung und „Befehl aus“, Geschwindigkeit „im Wasser / tief im Sand“. Das ist Davids Beispiel.
 - **Prüfen:** Unter dem Lebenszyklus die Funktions-Knopfreihe „Vortrieb / Lenken / Ansaugen / Zubeißen“. Sie wählt echte verschiedene Muskelarten, ist aber eine Knopfreihe (LEITLINIE 3). Der bekannte Fehler „mittiger Muskel → Lenken“ hängt dort.
+
+### Auge nach Rücknahme (`54c5e903`, 18:30)
+- Klick auf die Szene schaltet hell → dunkel → beide; Empfindlichkeit ziehbar (mit der Maus geprüft). Der Fehler vorher: `controller.js` schluckte den Klick, der Test umging den Controller (Astra hat Test und Code berichtigt).
+- Bleibt (alt, von David nicht kritisiert, nur gemeldet): „39 Beispielzellen“, „Bauplan“, Textzeile „Mitte 180° · Breite 100 % · Gegenfarbe hemmt 0 %“; unter „Lebensphasen“ ohne Häkchen der Satz „Die Zelle lebt mit dem Fisch: von Anfang an, immer aktiv“.
+
+### Ältere Inspektoren, neu gegen die Regeln (Bilder `durchsicht_1835_*.png`, `ohne_band_1830_kiefer_flosse_nahsinn_nase.png`)
+Pflichtlektüre wie oben, 18:18–18:21 neu geöffnet.
+| Organ | Gut (Element nur hier) | Verstoß / prüfen |
+|---|---|---|
+| Schwimmblase | Becken mit Grund, Pflanze, Oberfläche; Kopfzeile „Schwebt bei 53 % Füllung · 1,6 % des Ruhebedarfs“ | Lebensbild zeigt das Ei mit, obwohl der Auftrieb erst nach dem Schlupf greift (ORGANOPTIONEN Schwimmblase, LEITLINIE 3) – prüfen, ob das Bild dort etwas Gültiges zeigt |
+| Kiemen | Kopf mit Reusen, Reusenbogen Plankton/Flocken, „Darm ›“ als Verbindung (A6 hier begonnen); Kopfzeile mit 2,4 % | – |
+| Eiorgan | Fisch mit Eiballen, Füllen/Ablegen als Sägezahn; „Ein Ei alle 106 Schritte“ | keine Kosten in der Kopfzeile (A3) |
+| Spermienorgan | Wolke vor dem Fisch; Lebensbild „Schlupfsekret → Samen“ (Davids Punkt: Samen dienen dem Schlupf) | keine Kosten (A3) |
+| Barteln | Geschmackskarte mit Stein, Meldung schmeckt–tastet | **Lebensbild rechts abgeschnitten** „schmeckt u…“ (LEITLINIE 4); **Probe „was die Spitze berührt“ (rotes X) im Inspektor** (FEEDBACK-2115 Nase: „Die Geruchsprobe gehört nicht ins Panel, sie ist im Fischpanel“; LEITLINIE 3); keine Kosten |
+| Nase | Geruchskarte groß, Duftzellen mit (−)/(+) | **Lebensbild rechts abgeschnitten** „links und re…“; **„Duftprobe“ (rotes X) im Inspektor** (wie Barteln); Satz „Riecht Aas“ (A2); keine Kosten |
