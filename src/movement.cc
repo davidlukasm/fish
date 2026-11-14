@@ -2,9 +2,6 @@
 #include "physiology.hh"
 #include "body_plan.hh"
 namespace fishsim {
-namespace {
-constexpr double MIN_THRUST_MASS = .5;
-}
 // A unit of muscle force pushes alike from the tail or a fin; where it attaches decides when it
 // pushes well. The tail drives a wave down the body that grips the better the faster the fish
 // already swims; a fin rows and slips on water that streams past it. At cruising speed both push

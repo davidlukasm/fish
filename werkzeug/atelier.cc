@@ -5,6 +5,7 @@
 #include "../src/eye_geometry.hh"
 #include "../src/observations.hh"
 #include "../src/body_plan.hh"
+#include "../src/movement.hh"
 #include "../src/simulation_types.hh"
 #include "../src/physiology_parameters.hh"
 #include "../src/physiology.hh"
@@ -646,19 +647,27 @@ std::vector<int> anatomy_report(const field::Substrate &t,
   const fishsim::EvolutionParameters evolution;
   const double basal = fishsim::basal_cost(adult.tissue, physiology),
                gut_size = fishsim::gut_size_factor(adult),
+               gut_upkeep = fishsim::digestion::upkeep * gut_size * basal,
+               muscle_upkeep =
+                   fishsim::muscle_upkeep(a.muscle_maintenance, adult.tissue, physiology),
+               cell_upkeep = t.neurons.size() * field::scaled_costs(t.options).neuron_maintenance *
+                             physiology.neural_cost,
                yolk =
                    std::min(evolution.egg_capacity, evolution.egg_organ_capacity *
                                                         a.motor_counts[fishsim::organ_port::eggs]);
-  std::cout << "],\"budget\":{\"rest\":{\"basal\":" << basal
-            << ",\"gut\":" << fishsim::digestion::upkeep * gut_size * basal << ",\"muscles\":"
-            << fishsim::muscle_upkeep(a.muscle_maintenance, adult.tissue, physiology)
-            << ",\"cells\":"
-            << t.neurons.size() * field::scaled_costs(t.options).neuron_maintenance *
-                   physiology.neural_cost
+  double tail_maintenance = 0;
+  for (const auto &effector : a.effectors)
+    if (effector.port == fishsim::organ_port::forward)
+      tail_maintenance += fishsim::effector_upkeep(effector);
+  const double tail_upkeep = fishsim::muscle_upkeep(tail_maintenance, adult.tissue, physiology);
+  std::cout << "],\"budget\":{\"rest\":{\"basal\":" << basal << ",\"gut\":" << gut_upkeep
+            << ",\"muscles\":" << muscle_upkeep << ",\"cells\":" << cell_upkeep
             << "},\"mass\":{\"tissue\":" << adult.tissue / fishsim::BODY_TISSUE
             << ",\"gut\":" << fishsim::digestion::wall_mass * gut_size
             << ",\"organs\":" << a.organ_mass << "},\"yolk\":{\"organ\":" << yolk
-            << ",\"store\":" << fishsim::belly_room(adult) * yolk << "}}";
+            << ",\"store\":" << fishsim::belly_room(adult) * yolk << "}}"
+            << ",\"tail\":{\"restShare\":"
+            << tail_upkeep / (basal + gut_upkeep + muscle_upkeep + cell_upkeep) << '}';
   const auto &growth = t.growth_receptor;
   std::cout << ",\"gutSpeed\":" << fishsim::gut_speed(adult)
             << ",\"growth\":{\"sensitivity\":" << growth.sensitivity << ",\"half\":" << growth.half
@@ -1070,6 +1079,10 @@ int main(int argc, char **argv) {
 
                 << ",\"diet\":" << diet_report() << ",\"lateralRing\":" << lateral_ring_report()
                 << ",\"gonads\":" << gonad_report() << ",\"buoyancy\":" << buoyancy_report()
+                << ",\"tail\":{\"thrustFloor\":" << fishsim::MIN_THRUST_MASS
+                << ",\"undulationLoss\":" << fishsim::PhysiologyParameters{}.undulation_loss
+                << ",\"sedimentDrag\":{\"stiff\":" << fishsim::SEDIMENT_DRAG_STIFF
+                << ",\"wriggling\":" << fishsim::SEDIMENT_DRAG_WRIGGLING << "}}"
                 << ",\"biasScale\":" << field::Options{}.bias_scale
                 << ",\"hormoneHeight\":" << fishsim::PhysiologyParameters{}.hormones.height
                 << ",\"hormoneBinding\":" << fishsim::PhysiologyParameters{}.hormones.binding_rate

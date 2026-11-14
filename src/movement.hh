@@ -4,6 +4,8 @@
 #include "perception.hh"
 #include "physiology_parameters.hh"
 namespace fishsim {
+inline constexpr double MIN_THRUST_MASS = .5;
+
 struct SwimmingGrip {
   double tail = 0, fins = 0;
 };
