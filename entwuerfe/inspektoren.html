@@ -241,10 +241,14 @@ const SENSE = {
 };
 const cellGates = k => Array.from({length : CELLS}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5), .02, .98));
 const answer = (x, gate, used) => { const over = (clamp(x, 0, 1) - used - gate) / (1 - gate); return over > 0 ? over / (over + gate * (1 - over)) : 0; };
-function stimulus(id) {
+function offered(id) {
   const i = S[id].input, top = i.height * clamp(i.stop / Math.max(1, i.rise), 0, 1), after = SENSE[id].after;
   return Array.from({length : STEPS + 1}, (_, st) => st <= i.stop ? i.height * clamp(st / Math.max(1, i.rise), 0, 1) : top * Math.exp(-(st - i.stop) / after));
 }
+// What reaches the cells: the reward is no more than the reserve has room for (take_nutrition,
+// src/physiology.cc:205-213), the same limit as in the food row below.
+const roomFor = id => SENSE[id].row?.room ? tried.room : 1;
+const stimulus = id => offered(id).map(v => Math.min(v, roomFor(id)));
 // What a key's cells send under an input, step by step, and what they have got used to by then.
 function run(id, k, stim) {
   const gates = cellGates(k), pace = SENSE[id].tires ? 1 / k.used : 0, sent = [], used = []; let u = 0;
@@ -606,6 +610,12 @@ function drawSense(id) {
   // feel and what they send.
   el('rect', {x : L, y : I0, width : R - L, height : I1 - I0, fill : COLOUR.track}, live);
   el('path', {d : path(stim.map((v, st) => [X(st), IY(v)])) + ` L${R} ${I1} L${L} ${I1} Z`, fill : o.colour, opacity : .35, stroke : o.colour, 'stroke-width' : 1.6}, live);
+  // What the reserve has no room for: outlined above its line, as in the food row.
+  if (roomFor(id) < 1) {
+    const raw = offered(id);
+    if (raw.some(v => v > roomFor(id))) el('path', {d : path(raw.map((v, st) => [X(st), IY(v)])), fill : 'none', stroke : o.colour, 'stroke-dasharray' : '2 2', opacity : .6}, live);
+    el('path', {d : `M${L} ${IY(roomFor(id))} H${R}`, stroke : COLOUR.icon, 'stroke-width' : 1.4}, live);
+  }
   keys.forEach((k, i) => {
     const chosen = i === cell.chosen, low = Math.min(...cellGates(k)), felt = runs[i].used.map((u, st) => Math.max(0, stim[st] - u));
     const shapes = [keyBand(live, k, i, chosen, L, R - L, IY)];
