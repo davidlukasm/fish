@@ -100,17 +100,29 @@ liveKind('balance', (studio, organId) => {
     el('circle', {cx, cy, r : ring, class : 'aid-live-ringline'}, live);
     const body = el('g', {transform : `rotate(${- tried.tilt} ${cx} ${cy})`}, live);
     fishLeft(body, cx, cy, TILT.fish);
+    // At each hair's tip the stimulus as the bolt it is in every sense (how far gravity bends the
+    // hair), and round the tip the glow of what the cells report of it.
     let loudest = 0;
     for (const s of [...sides].reverse()) {
-      const [x, y] = at(tried.tilt + s.side * s.hair, TILT.hair), now = report(tried.tilt, s),
-                [ px, py ] = at(tried.tilt + s.side * s.hair, TILT.hair + 13);
+      const [x, y] = at(tried.tilt + s.side * s.hair, TILT.hair), pull = down(tried.tilt, s),
+                now = report(tried.tilt, s),
+                [ px, py ] = at(tried.tilt + s.side * s.hair, TILT.hair + 14);
       loudest = Math.max(loudest, now);
-      el('path', {d : `M${cx} ${cy} L${x} ${y}`, class : 'aid-live-hair k' + s.k}, live);
       if (now > 0)
+        el('circle', {
+          cx : x,
+          cy : y,
+          r : 6 + 6 * now,
+          class : 'aid-live-glow k' + s.k,
+          opacity : .25 + .5 * now
+        },
+           live);
+      el('path', {d : `M${cx} ${cy} L${x} ${y}`, class : 'aid-live-hair k' + s.k}, live);
+      if (pull > 0)
         el('path', {
           d : IRRITANT,
-          class : s.k ? 'aid-live-petal k1' : 'aid-live-pulse',
-          transform : `translate(${px} ${py}) scale(${(.45 + .9 * now).toFixed(2)})`
+          class : 'aid-live-pulse',
+          transform : `translate(${px} ${py}) scale(${(.45 + .9 * pull).toFixed(2)})`
         },
            live);
     }
@@ -143,17 +155,17 @@ liveKind('balance', (studio, organId) => {
       tried.tilt = angleOf(p);
       show();
     }, 'balancetilt', 'knob');
-    // Where the report goes. Wired to the motor region, its name leads there; not wired, the
-    // button wires it; a fish without a motor region has nothing here.
+    // Where the report goes: the glow, as strong as the louder side, and the motor region. Wired
+    // to it, its name leads there; not wired, the button wires it; a fish without a motor region
+    // shows the name pale, since nothing can right it.
     const doc = studio.state.document, link = motorLink(doc, own, twin), y = TILT.link;
-    if (!link.motor)
-      return;
     if (loudest > 0)
-      el('path', {
-        d : IRRITANT,
-        class : 'aid-live-pulse',
-        opacity : link.wired ? 1 : .35,
-        transform : `translate(${cx - 52} ${y - 3}) scale(${(.45 + .9 * loudest).toFixed(2)})`
+      el('circle', {
+        cx : cx - 50,
+        cy : y - 3,
+        r : 3 + 4 * loudest,
+        class : 'aid-live-glow k0',
+        opacity : link.wired ? .25 + .5 * loudest : .2
       },
          live);
     if (link.wired) {
@@ -162,13 +174,14 @@ liveKind('balance', (studio, organId) => {
       txt(live, cx - 6, y, t('studio.organs.motor'), {
         class : 'aid-live-small aid-live-chip'
       }).addEventListener('click', () => studio.select('organ', link.motor.id, null, false));
-    } else {
+      return;
+    }
+    if (link.motor)
       chip(live, cx - 25, y - 3, '+',
            () => change(addWire(doc, own.id, link.motor.id, null, studio.state.sites, {
                           toPort : 'feel'
                         })?.document));
-      txt(live, cx - 6, y, t('studio.organs.motor'), {class : 'aid-live-small', opacity : .45});
-    }
+    txt(live, cx - 6, y, t('studio.organs.motor'), {class : 'aid-live-small', opacity : .45});
   }
   function show() {
     const own = organ();
