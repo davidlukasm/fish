@@ -621,16 +621,17 @@ function drawSense(id) {
   for (const st of [300, 600]) txt(live, X(st), I1 + 14, st, {'text-anchor' : 'middle'});
   txt(live, R, I1 + 14, STEPS, {'text-anchor' : 'end'});
   play.lines[id] = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : I0, base : I1};
-  // Where each key's cells have got used to the input: a mark for each on the step axis (not for
+  // Where each key's cells have got used to the input: a mark for each standing on the step axis,
+  // clear of the words below it (not for
   // cells that never send), dragged along it; the chosen one's with its dashed upright.
   if (o.tires) keys.forEach((k, i) => {
     const at = ends[i], x = X(Math.min(at, STEPS)), chosen = i === cell.chosen, left = x > (L + R) / 2;
     if (at < 1) return;
     if (chosen) {
       el('path', {d : `M${x} ${I0} V${I1}`, stroke : keyColour(i), 'stroke-dasharray' : '2 3'}, live);
-      if (at <= STEPS) txt(live, x + (left ? -8 : 8), I1 - 5, o.used, {'text-anchor' : left ? 'end' : 'start', style : 'font-size:10px'});
+      if (at <= STEPS) txt(live, x + (left ? -8 : 8), I1 - 3, o.used, {'text-anchor' : left ? 'end' : 'start', style : 'font-size:10px'});
     }
-    drag(svg, el('rect', {x : x - 4, y : I1 - 5, width : 8, height : 10, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2 : 1}`}, live), p => tire(k, i, p), id + 'used' + i);
+    drag(svg, el('rect', {x : x - 4, y : I1 - 11, width : 8, height : 10, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2 : 1}`}, live), p => tire(k, i, p), id + 'used' + i);
   });
   // The grips, above everything they could be hidden by: every key and its spread (side by
   // side), the input's knobs (when it is fully there and how strong, and when it stops).
@@ -708,8 +709,9 @@ function showNerves(dt) {
   play.time += dt;
   for (const [id, n] of Object.entries(play.nerves)) {
     const felt = play.stim[id]?.[st] ?? 0;
-    n.irritant.setAttribute('transform', `translate(${NERVE.irritant}) scale(${((.9 + .4 * felt) * (1 + (felt > .02 ? .22 : 0) * Math.sin(play.time / 110))).toFixed(2)})`);
-    n.irritant.setAttribute('opacity', (.12 + .88 * felt).toFixed(2));
+    // In full size and throbbing while the input is there, gone when it is not.
+    n.irritant.setAttribute('transform', `translate(${NERVE.irritant}) scale(${(1.2 * (1 + .22 * Math.sin(play.time / 110))).toFixed(2)})`);
+    n.irritant.setAttribute('opacity', felt > .02 ? (.5 + .5 * felt).toFixed(2) : 0);
     n.cells.forEach((c, i) => {
       const sent = play.sentBy[id]?.[i]?.[st] ?? 0, idle = c.pulses.find(p => p.t >= 1);
       c.due += dt * rate * sent;
