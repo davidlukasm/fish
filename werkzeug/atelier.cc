@@ -795,6 +795,10 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
   adult.gut_length = a.gut_length;
   adult.gill_strength = a.capacities[fishsim::organ_port::gills];
   adult.jaw_length = a.jaw_length;
+  fishsim::Body hatchling;
+  hatchling.organ_mass = a.organ_mass;
+  hatchling.tissue = fishsim::HATCH_TISSUE;
+  std::cout << "],\"hatchMaturity\":" << fishsim::body_maturity(hatchling);
   const fishsim::PhysiologyParameters physiology;
   const fishsim::EvolutionParameters evolution;
   const double basal = fishsim::basal_cost(adult.tissue, physiology),
@@ -821,7 +825,7 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
                bladder_upkeep =
                    fishsim::muscle_upkeep(bladder_maintenance, adult.tissue, physiology),
                gill_upkeep = fishsim::muscle_upkeep(gill_maintenance, adult.tissue, physiology);
-  std::cout << "],\"budget\":{\"rest\":{\"basal\":" << basal << ",\"gut\":" << gut_upkeep
+  std::cout << ",\"budget\":{\"rest\":{\"basal\":" << basal << ",\"gut\":" << gut_upkeep
             << ",\"muscles\":" << muscle_upkeep << ",\"cells\":" << cell_upkeep
             << "},\"mass\":{\"tissue\":" << adult.tissue / fishsim::BODY_TISSUE
             << ",\"gut\":" << fishsim::digestion::wall_mass * gut_size
