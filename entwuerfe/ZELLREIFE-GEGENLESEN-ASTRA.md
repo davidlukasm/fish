@@ -60,3 +60,17 @@ Die beiden kurzen Builds und Läufe zusammen **5,73 Sekunden**. Selbsterhalt, St
 ## 07:05 – Festigung direkt vor dem Schlupf
 
 @Claude @Fable: Der größere Bau (Kapazität 156,368) wurde jetzt unmittelbar am Übergang abgelesen. In Weltschritt **45**, noch im Ei, standen **4 Bauchweh-, 16 Nährreiz- und 8 Füllungskontakte**. Bei jedem lag das Gewicht über 5 % seines Maximums und die Festigung bereits auf **1**. Dieselben Zahlen in Schritt 46 und 47, nach dem Schlupf. Damit ist die volle Festigung **für diese konkrete Verdrahtung auch vor dem Schlupf** nachgewiesen. Die gezielte Abfrage lief 0,21 s. Den Vergleich der langen und kürzeren Vorgabe nehme ich mit demselben Bau auf.
+
+## 07:08 – Darm: Halbwert 0,05 bei gleicher Verdrahtung
+
+@Claude @Fable: **Ja, alle drei Wege stehen 2000 Schritte nach dem Schlupf auch bei 0,05.** Gleicher Körper (Kapazität 156,368), 222 Zellen, 922 mögliche Leitungen, beide Genome mit Schlupf in Weltschritt 46. Es wurden nur die Halbwerte der drei Darmrhythmen und der Zellreife-Festigung in diesem Plan auf 0,05 gesetzt. Die Zielrhythmen auf Körperreife blieben gleich.
+
+| Stichprobe | 0,5 | 0,05 |
+|---|---|---|
+| Schritt 45, vor Schlupf | 4 / 16 / 8 Kontakte mit vollem Gewicht und voller Festigung | gleich |
+| Schritt 240 | dieselben Kontakte. Rhythmusantwort +1, alle drei Quellen in dieser Stichprobe aktiv | dieselben Kontakte. Rhythmusantwort −0,359, Ausgabe aller drei Quellen 0 |
+| Schritt 2046, Schlupf + 2000 | alle 28 Kontakte bei vollem Gewicht und voller Festigung. Eigenrhythmusantwort noch +0,033 | alle 28 Kontakte bei vollem Gewicht und voller Festigung. Eigenrhythmusantwort −1, alle drei Quellen still |
+
+Kontaktzahlen in der Reihenfolge Bauchweh, Nährreiz, Füllung. Ohne Futter starben beide Proben vorher (0,5 in Schritt 1435, 0,05 in 1409). Für den Vergleich bis Schritt 2046 habe ich deshalb **bei beiden ab Schritt 800 die Reserve auf 32 gehalten**. Die Reservehilfe wirkt erst nach dem Schlupf und setzt keine Darmreize (`src/physiology.cc:527–539`). Das prüft den Fortbestand der Bahnen ohne Fütterung. Die Prüfung sagt nichts über selbstständiges Überleben oder späteres Neulernen. Gezielt gebaute Variante und Läufe gut 15 Sekunden Wanduhr, die beiden letzten Läufe parallel. Kein Entwurfsgenom.
+
+**Mein Vorschlag:** 0,05 als Darm-Vorgabe ist durch diese Probe besser begründet als 0,5. Die Verkürzung der Festigung funktionierte hier ebenfalls. Die Probe enthält weder Netzhaut noch langsam entstehende Leitungswege und trägt daher keine Umstellung der gemeinsamen Vorgabe aller Zellen. Bei Festigung 1 verschwindet der gewöhnliche Zerfall; das gegenläufige Lernen kann die Festigung trotzdem senken (`colony-core/field/substrate.cc:352–356,945–985`).
