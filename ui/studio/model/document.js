@@ -42,6 +42,7 @@ import {
   nodeLimit,
   organFunction,
   ORGAN_BY_KEY,
+  ORGANS,
   organSlots,
   PAIRINGS,
   PELVIC_CELL,
@@ -685,6 +686,10 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
     if (!result)
       return null;
   }
+  // What comes with this organ is set with it, where there is room for it.
+  for (const part of ORGANS.filter(o => o.with === type))
+    if (!result.organs.some(o => o.type === part.key))
+      result = addOrgan(result, part.key, sites, position, Infinity, paired)?.document ?? result;
   const placed = findOrgan(result, organ.id);
   return {
     document : result,
@@ -1319,7 +1324,9 @@ export function removeOrgan(doc, id) {
                                 wireIds : a.wireIds.filter(i => draft.wires.some(w => w.id === i))
                               }))
                          .filter(a => a.organIds.length);
-  return draft;
+  // What came with this organ goes with it.
+  const parts = ORGANS.filter(o => o.with === organ.type).map(o => o.key);
+  return draft.organs.filter(o => parts.includes(o.type)).reduce((left, part) => removeOrgan(left, part.id) ?? left, draft);
 }
 export function removeCenter(doc, id) {
   const found = findCenter(doc, id);

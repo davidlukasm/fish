@@ -184,6 +184,8 @@ export const ORGANS = Object.freeze([
   {
     key : 'gutmuscle',
     category : 'internal',
+    // It comes with the gut and goes with it: to the eye the two are one organ.
+    with : 'gut',
     scope : 'single',
     bilateral : true,
     nodes : 8,

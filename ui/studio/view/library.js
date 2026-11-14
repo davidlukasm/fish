@@ -93,7 +93,7 @@ function placingLibrary(state) {
   return categories
              .map(category => section(
                       label('sections.' + category),
-                      ORGANS.filter(o => o.category === category)
+                      ORGANS.filter(o => o.category === category && !o.with)
                           .map(o => o.category === 'regions'
                                         ? organTile(
                                               o, regionTerm(o.key),
