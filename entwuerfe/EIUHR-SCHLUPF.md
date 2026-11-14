@@ -20,9 +20,31 @@ Heute hängt alles an der Reife. Die Reife beim Schlupf liegt je nach Ei zwische
 - **Schlupf** braucht: Bau fertig, Schale gelockert, Zuckung stark genug, Gewebe und Reserve (`physiology.cc:166-169`, `embryo.cc:38-41`).
 - **Schale lockern** kann nur der Fisch selbst: Samenorgan aufbauen und auslösen (`reproduction.cc:269-281`). In der Vorlage treibt das der Knoten `hatch` der Region Körperzustand (`state_region.js:24`).
 
-## Vorschlag
+## Fassung 2 (04:25, nach Astra 04:19): Das erste Licht beendet die Eiphase
 
-**Ein spät gebildeter Knoten startet den Schlupf und meldet ihn über einen eigenen Botenstoff.**
+Astra 04:19: Ein spät gebildeter Knoten meldet nur seine eigene Bildung, nicht den Schlupf. Ein Schlupftakt, der darauf endet, kann vor seiner ersten Wirkung abschalten. Nach dem Schlupf löst `hatch` sonst normale Samenabgabe aus. Gebraucht wird eine **kausale Rückmeldung aus dem Fisch**.
+
+**Diese Rückmeldung gibt es schon, und zwar über die Sinne:**
+- Im Ei sieht der Fisch nichts: Die Schale hält das Licht ab, das Sehen ist dort 0 (`birth_exposure`, `physiology.hh:436-439`).
+- Nach dem Schlupf ist nie ganz dunkel: höchstens Nachtlicht 0,1 × Bodenlicht 0,35 (`environment.cc:575-584`, `environment_parameters.hh:28-31`).
+- Echte Fische: Mit der ersten Sinneserfahrung enden die Spontanphasen. Beim Säuger enden die Netzhautwellen, wenn die Augen aufgehen.
+
+**Vorschlag:**
+- Die Augenvorlage bekommt eine kleine Gruppe Zellen, die auf Licht ansprechen, mit niedriger Schwelle unter dem Nachtlicht. Sie treiben eine Drüse mit dem Botenstoff „Licht“. Das Auge meldet also selbst: Ich sehe.
+- Alle Eiprogramme lesen „Licht“ statt Reife, mit Antwort an im Ei und aus bei Licht:
+  - Eigenfeuern der Sinneszellen
+  - Ei-Härtung
+  - Netzhautwellen
+  - **Schlupftakt `hatch`:** Er lockert die Schale, solange der Fisch im Ei ist, und endet nach dem Schlupf. Damit gibt es keine Samenabgabe durch den Schlupftakt mehr. Er kann nicht vor seiner Wirkung enden, denn Licht kommt erst nach dem Schlupf.
+- Es braucht weder einen Uhrknoten noch eine Bildungsverzögerung. Der Schlupf selbst bleibt, wie er ist.
+
+**Offen, bitte am Code prüfen:**
+1. Messen die Lichtzellen Helligkeit oder nur Kontrast? Bei Kontrast fehlt in gleichmäßigem Licht das Signal.
+2. Nachts tief unten: Bleibt die Antwort sicher über der Schwelle der Drüse? Sonst kehrt das Eiprogramm nachts zurück. Braucht es einen Riegel, z. B. Helferzellen, die das Eiprogramm tragen und auf „Licht“ sterben?
+3. Fische ohne Auge: Ohne Licht bleibt die Eiphase an. Dann bräuchte ein anderes Organ eine eigene Meldung, oder der Fisch hat keine Eiphase. Kann das Atelier ein Organ ohne Auge zulassen?
+4. Die Drüse braucht einen gelernten Eingang (Astra 04:19). Wächst die Verbindung Lichtzellen → Drüse, bevor Licht kommt? Im Ei gibt es kein Licht und kein Eigenfeuern der Netzhaut-Treiberzellen.
+
+## Fassung 1 (überholt): Ein spät gebildeter Knoten startet den Schlupf und meldet ihn über einen eigenen Botenstoff.
 
 - Der Knoten `hatch` bekommt eine niedrige Bildungsantwort. Er entsteht erst spät im Ei.
 - Erst dann lockert er die Schale. Vorher kann der Fisch nicht schlüpfen.
