@@ -11,7 +11,6 @@
 // what the organ's cells report of it in the engine (the strongest of them); the reach is set on
 // the fish. The grip on the dashed ring sets the threshold: there the cell answers half. ASSUMED
 // for the picture: a bright thing straight before the cell.
-import {t} from '../../../strings.js';
 import {unitOfPlan} from '../../../tuning.js';
 import {findOrgan, updateField} from '../../model/document.js';
 import {organCells} from '../vision.js';
@@ -19,7 +18,6 @@ import {clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {answer, BOUNDED, IRRITANT} from './sense.js';
 import {fishAbove} from './skin.js';
 
-const word = key => t('studio.live.near.' + key);
 const NEAR = Object.freeze({
   height : 206,
   cx : 214,
@@ -39,17 +37,11 @@ const radians = d => d * Math.PI / 180;
 liveKind('near', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-near';
-  const heading = words => {
-    const h = document.createElement('h4');
-    h.textContent = words;
-    root.appendChild(h);
-  };
   const svgOf = () => {
     const svg = el('svg', {class : 'aid-live-picture'});
     root.appendChild(svg);
     return svg;
   };
-  heading(word('far'));
   const rings = svgOf();
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();

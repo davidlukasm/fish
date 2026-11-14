@@ -33,17 +33,11 @@ const hairOf = q1 => 90 * (1 + (q1 ?? 0)), qualityOf = hair => clamp(hair / 90 -
 liveKind('balance', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-balance';
-  const heading = words => {
-    const h = document.createElement('h4');
-    h.textContent = words;
-    root.appendChild(h);
-  };
   const svgOf = () => {
     const svg = el('svg', {class : 'aid-live-picture'});
     root.appendChild(svg);
     return svg;
   };
-  heading(word('feels'));
   const tilt = svgOf();
   // The posture tried: where the snout points (0 to the left, as in the fish panel; 90 down). Not
   // part of the fish.

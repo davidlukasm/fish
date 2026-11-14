@@ -38,7 +38,6 @@ liveKind('pain', (studio, organId) => {
     root.appendChild(svg);
     return svg;
   };
-  heading(word('feels'));
   const fish = svgOf();
   heading(word('cells'));
   const ache = svgOf();

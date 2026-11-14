@@ -43,7 +43,6 @@ liveKind('lateral', (studio, organId) => {
     root.appendChild(svg);
     return svg;
   };
-  heading(word('feels'));
   const rose = svgOf();
   heading(word('cells'));
   const flow = svgOf();

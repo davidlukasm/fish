@@ -72,13 +72,12 @@ const STEPS = [
 liveKind('gland', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-gland';
-  const heading = () => root.appendChild(document.createElement('h4'));
   const svgOf = () => {
     const svg = el('svg', {class : 'aid-live-picture'});
     root.appendChild(svg);
     return svg;
   };
-  const title = heading(), blood = svgOf();
+  const blood = svgOf();
   // What is tried: the brain's command, from binding (-1) to pouring (1). Not part of the fish.
   const own = {chosen : 0, command : 1};
   let now = null, phase = 0;
@@ -139,11 +138,6 @@ liveKind('gland', (studio, organId) => {
                 // A strand is full where the gland's main hormone stands with all the cells a node
                 // can have, so that a weak gland shows too.
         most = wheel().hormoneHeight * shares[main];
-    title.textContent = word(own.command < 0 ? 'binds' : 'pours', {
-      list : shares.map((s, k) => s > .5 * shares[main] ? substanceName(studio.state, k) : null)
-                 .filter(Boolean)
-                 .join(', ')
-    });
     el('rect',
        {x : L, y : top - 2, width : R - L, height : GLAND.rows + 4, class : 'aid-live-ground'},
        live);

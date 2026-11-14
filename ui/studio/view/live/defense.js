@@ -13,14 +13,12 @@
 // Raised is as high as the planned muscles can raise them under a lasting command
 // (anatomy.spineHeights and spinesRaised).
 // Not in the pictures: that a hungry fish holds off less; the brake in the water and in the sand.
-import {t} from '../../../strings.js';
 import {ATELIER_LIMITS} from '../../../schema.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, setNodeCopies, updateCenter} from '../../model/document.js';
 import {clamp, drag, el, liveKind, picture} from './kit.js';
 import {fishAbove} from './skin.js';
 
-const word = (key, values) => t('studio.live.defense.' + key, values);
 const SPINE = Object.freeze({
   height : 204,
   cx : 150,
@@ -39,17 +37,11 @@ const turnTo = a => ((a + 540) % 360) - 180;
 liveKind('defense', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-defense aid-live-sense-ache';
-  const heading = words => {
-    const h = document.createElement('h4');
-    h.textContent = words;
-    root.appendChild(h);
-  };
   const svgOf = () => {
     const svg = el('svg', {class : 'aid-live-picture'});
     root.appendChild(svg);
     return svg;
   };
-  heading(word('guards'));
   const spines = svgOf();
   // What is tried on the spines: how far the brain has them raised, and the mouth (where it bites
   // from, in degrees from the snout; how wide it opens, in body radii). Not part of the fish.

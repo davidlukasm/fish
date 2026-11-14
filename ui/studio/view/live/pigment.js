@@ -71,7 +71,6 @@ liveKind('pigment', (studio, organId) => {
     root.appendChild(svg);
     return svg;
   };
-  heading(word('colours'));
   const scene = svgOf();
   heading(word('cells'));
   const band = svgOf();

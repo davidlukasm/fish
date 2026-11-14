@@ -13,12 +13,10 @@
 // Not in the picture: that the ground's resistance across adds to a fin's grip there.
 // Speed and depth are the picture's own knobs; the fish panel has no probe for them.
 import {FIN_STROKE, SIDE_FIN, STROKE_GRIP} from '../../../schema.js';
-import {t} from '../../../strings.js';
 import {findOrgan, finAngle, finStroke, groupReport, setFinAngle} from '../../model/document.js';
 import {clamp, drag, el, liveKind, picture} from './kit.js';
 import {fishLeft} from './skin.js';
 
-const word = key => t('studio.live.fin.' + key);
 const FIN = Object.freeze({
   height : 206,
   cx : 168,
@@ -39,17 +37,11 @@ const radians = d => d * Math.PI / 180, degrees = r => r * 180 / Math.PI;
 liveKind('fin', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-fin';
-  const heading = words => {
-    const h = document.createElement('h4');
-    h.textContent = words;
-    root.appendChild(h);
-  };
   const svgOf = () => {
     const svg = el('svg', {class : 'aid-live-picture'});
     root.appendChild(svg);
     return svg;
   };
-  heading(word('does'));
   const oar = svgOf();
   // What is tried: the fish's speed over its cruising speed, and how deep it lies in the ground.
   const own = {speed : .3, bury : 0};

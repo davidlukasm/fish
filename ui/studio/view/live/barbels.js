@@ -26,7 +26,7 @@ import {label} from '../kit.js';
 import {clamp, drag, el, hatchOf, liveKind, picture, txt} from './kit.js';
 import {sideIndex} from '../../model/layout.js';
 import {STONE} from '../../model/probe.js';
-import {bestScents, sampleColour, scentMap} from './scentmap.js';
+import {sampleColour, scentMap} from './scentmap.js';
 import {BOUNDED, IRRITANT, keyGrip, setGate, typeLife} from './sense.js';
 
 const word = (key, values) => t('studio.live.barbels.' + key, values);
@@ -62,7 +62,7 @@ liveKind('barbels', (studio, organId) => {
     root.appendChild(svg);
     return svg;
   };
-  const kind = heading(''), head = svgOf();
+  const head = svgOf();
   heading(word('taste'));
   const map = svgOf();
   heading(word('report'));
@@ -260,7 +260,6 @@ liveKind('barbels', (studio, organId) => {
     const scent = senseProbe?.kind === 'taste' ? senseProbe.scent : 0;
     own.probe =
         scent === STONE ? {...scentTuning(0), stone : true} : {...scentTuning(scent), scent};
-    kind.textContent = word('tasting', {list : bestScents(cells)});
     const contacts = anatomy?.barbelProbe ?? [];
     drawHead(barbels, cells[own.chosen], contacts);
     scentMap(map, {

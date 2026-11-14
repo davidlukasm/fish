@@ -12,12 +12,11 @@
 // The food tiles use the plan's fully driven bite and scrape forces.
 import {ATELIER_LIMITS, BODY_UNIT, MOTOR_KIND} from '../../../schema.js';
 import {mouthShare} from '../../../fish_forms.js';
-import {t, tList} from '../../../strings.js';
+import {tList} from '../../../strings.js';
 import {findOrgan, muscleTrait, setMuscleTrait, setNodeCopies} from '../../model/document.js';
 import {organFunction} from '../../model/organs.js';
 import {clamp, drag, el, liveKind, picture, txt} from './kit.js';
 
-const word = key => t('studio.live.mouth.' + key);
 const MOUTH = Object.freeze({
   height : 226,
   hinge : [ 180, 78 ],
@@ -36,17 +35,11 @@ const degrees = r => r * 180 / Math.PI;
 liveKind('mouth', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-mouth';
-  const heading = words => {
-    const h = document.createElement('h4');
-    h.textContent = words;
-    root.appendChild(h);
-  };
   const svgOf = () => {
     const svg = el('svg', {class : 'aid-live-picture'});
     root.appendChild(svg);
     return svg;
   };
-  heading(word('bites'));
   const head = svgOf();
   let film = null, phase = 0;
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');

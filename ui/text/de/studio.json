@@ -1877,7 +1877,6 @@
       "signal": "Füllung und Meldung ans Gehirn"
     },
     "nose": {
-      "smells": "Riecht {list}",
       "cells": "Duftzellen",
       "life": "Lebenszyklus",
       "course": "Signalverlauf bei der Duftprobe",
@@ -1888,7 +1887,6 @@
       "grown": "links und rechts verschieden"
     },
     "barbels": {
-      "tasting": "Schmeckt {list}",
       "taste": "Geschmack",
       "report": "Meldung",
       "life": "Lebenszyklus",
@@ -1904,60 +1902,41 @@
       "apart": "berührt nichts"
     },
     "lateral": {
-      "feels": "Spürt Wasser, das gegen die Haut strömt",
       "cells": "Strömungszellen",
       "course": "Signalverlauf bei Strömung",
       "used": "an Strömung gewöhnt",
       "steps": "Schritte"
     },
     "touch": {
-      "feels": "Spürt, was die Haut berührt",
       "cells": "Tastzellen",
       "course": "Signalverlauf bei Berührung",
       "steps": "Schritte"
     },
     "pain": {
-      "feels": "Spürt, wo es gebissen wird",
       "cells": "Schmerzzellen",
       "course": "Signalverlauf bei einer Wunde",
       "used": "an Schmerz gewöhnt",
       "steps": "Schritte",
       "bite": "ein voller Biss"
     },
-    "near": {
-      "far": "Spürt, wie nah etwas ist"
-    },
     "gland": {
-      "pours": "Schüttet {list}",
-      "binds": "Bindet {list}",
       "steps": "{n} Schritte"
     },
     "mouth": {
-      "bites": "Beißt und saugt",
       "foods": ["Fleisch", "Pflanze, Schale", "Brocken", "Algen schaben"]
     },
-    "fin": {
-      "does": "Rudert"
-    },
     "balance": {
-      "feels": "Spürt, wo unten ist",
       "down": "unten"
     },
     "blood": {
-      "reads": "Liest {list}",
       "report": "Meldung",
       "nothing": "nichts",
       "whole": "voll",
-      "all": "alles zugleich",
       "maturity": "Reife",
       "reserve": "Reserve",
       "fatigue": "Erschöpfung"
     },
-    "defense": {
-      "guards": "Hält Bisse ab und sperrt im Maul"
-    },
     "pigment": {
-      "colours": "Färbt den Fisch für fremde Augen",
       "cells": "Pigmentzellen",
       "rest": "Ruhe",
       "full": "voll",

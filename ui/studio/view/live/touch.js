@@ -38,7 +38,6 @@ liveKind('touch', (studio, organId) => {
     root.appendChild(svg);
     return svg;
   };
-  heading(word('feels'));
   const cut = svgOf();
   heading(word('cells'));
   const press = svgOf();

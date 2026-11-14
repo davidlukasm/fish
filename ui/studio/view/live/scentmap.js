@@ -46,11 +46,6 @@ const snapped = p => scents().find(s => {
 }) ?? tuningAt(p);
 const shares = cell => scentAffinities(cell.q1, cell.q2, cell.qwidth);
 export const sampleColour = probe => probe.stone ? null : scentColors?.[probe.scent] ?? null;
-// The scents the types take most of, each named once.
-export const bestScents = cells => [...new Set(cells.map(cell => {
-                                     const taken = shares(cell);
-                                     return scentNames?.[taken.indexOf(Math.max(...taken))] ?? '';
-                                   }))].join(', ');
 
 // `own`: the chosen type and the sample ({q1, q2, stone}), kept by the inspector; `cells`: the
 // first cell of each type; `stone`: whether a stone lies beside the map for the sample;

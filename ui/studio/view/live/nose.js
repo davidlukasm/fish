@@ -21,7 +21,7 @@ import {
 } from '../../model/document.js';
 import {label} from '../kit.js';
 import {el, hatchOf, liveKind} from './kit.js';
-import {bestScents, sampleColour, scentMap} from './scentmap.js';
+import {sampleColour, scentMap} from './scentmap.js';
 import {INTENSITY, keysOf, senseCourse, STEPS, typeLife} from './sense.js';
 
 const word = (key, values) => t('studio.live.nose.' + key, values);
@@ -41,7 +41,7 @@ liveKind('nose', (studio, organId) => {
     root.appendChild(svg);
     return svg;
   };
-  const kind = heading(''), map = svgOf();
+  const map = svgOf();
   heading(word('cells'));
   const smell = svgOf();
   heading(word('life'));
@@ -103,7 +103,6 @@ liveKind('nose', (studio, organId) => {
     own.probe = {...scentTuning(at), scent : at};
     concentrations = anatomy?.noseProbe?.[sideIndex(nose.side)] ?? [];
     total = concentrations.reduce((sum, value) => sum + value, 0);
-    kind.textContent = word('smells', {list : bestScents(cells)});
     scentMap(map, {
       name : 'nose',
       own,
