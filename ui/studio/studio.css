@@ -718,7 +718,8 @@
 .aid-probe-distance{fill:var(--aid-name-text);font:600 12px system-ui;paint-order:stroke;stroke:var(--aid-ground);stroke-width:3}
 .aid-probe-handle{pointer-events:all;cursor:grab}
 .aid-probe-handle circle{fill:var(--aid-handle);fill-opacity:.25;stroke:var(--aid-handle);stroke-width:2}
-.aid-sense-probe.smell .aid-probe-handle circle{fill:transparent;stroke:var(--aid-chosen)}
+.aid-probe-handle.smell circle{fill:transparent;stroke:var(--aid-chosen)}
+.aid-probe-water{pointer-events:none}
 .aid-probe-answer circle{fill:color-mix(in srgb,var(--aid-cell-on) calc(var(--lit) * 100%),var(--aid-chip));stroke:var(--aid-cell-on);stroke-width:1.6}
 .aid-probe-answer text{fill:var(--aid-name-text);font:600 11px system-ui;paint-order:stroke;stroke:var(--aid-ground);stroke-width:3}
 .aid-probe-answer.unknown circle{stroke-dasharray:3 3}

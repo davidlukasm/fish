@@ -74,6 +74,8 @@ function handleRadius(probe, faintest) {
 }
 export const probeHandle = (probe, faintest) =>
     pointAt(radians(probe.bearing), handleRadius(probe, faintest));
+export const probeFlow = probe =>
+    probe.kind === 'flow' ? probe : probe.flow && {...probe.flow, kind : 'flow'};
 export function probePatch(kind, position, faintest) {
   const dx = position.x - BODY_MIDDLE.x, dy = position.y - BODY_MIDDLE.y;
   const angle = Math.atan2(dy, -dx), r = Math.hypot(dx, dy), bearing = degrees(angle);
@@ -81,7 +83,9 @@ export function probePatch(kind, position, faintest) {
   const from = kind === 'flow' ? PROBE_SCENE.far : PROBE_SCENE.gap;
   return kind === 'smell' ? {bearing, distance : distanceAt(beyond)} : {
     bearing,
-    strength : shareStrength((beyond - from) / PROBE_SCENE.reach, kind, faintest)
+    strength : kind === 'flow' && beyond <= from
+                   ? 0
+                   : shareStrength((beyond - from) / PROBE_SCENE.reach, kind, faintest)
   };
 }
 function smellRings(zoom) {
@@ -118,7 +122,7 @@ function stimulusSvg(probe, faintest, zoom) {
            '</text></g>';
   }
   if (probe.kind === 'flow')
-    return waterSvg(probe, faintest, zoom) + flowArrows(angle, at, P);
+    return '';
   return '<path class="aid-probe-arrow ' + probe.kind + '" d="' + arrowPath(at, onto) + '"/>';
 }
 function flowArrows(angle, at, P) {
@@ -282,17 +286,42 @@ export function gutProbeControls(state, organ) {
          C.x + '" y="' + F.top + '" text-anchor="middle">' +
          escapeText(t('studio.probe.response')) + '</text>' + cells + '</svg></section>';
 }
-export function senseProbeSvg(state) {
+function visibleProbe(state) {
   const probe = state.senseProbe, faintest = state.anatomy?.lightDimmest;
   const organ = probe ? findOrgan(state.document, probe.organ) : null;
-  if (!organ || probe.kind === 'gut' || !isChosen(state.selected, organ) || !(faintest > 0))
-    return '';
-  const zoom = zoomOf(state), at = probeHandle(probe, faintest);
-  return '<g class="aid-sense-probe ' + probe.kind + '">' + stimulusSvg(probe, faintest, zoom) +
-         answerSvg(state, organ, zoom) + '<g class="aid-probe-handle" data-sense-handle="' +
-         escapeText(organ.id) + '"' + steadyAt(at, zoom) + '><title>' +
+  return organ && probe.kind !== 'gut' && isChosen(state.selected, organ) && faintest > 0
+             ? {probe, organ, faintest, zoom : zoomOf(state)}
+             : null;
+}
+function probeGrip(organ, probe, faintest, zoom) {
+  const at = probeHandle(probe, faintest);
+  return '<g class="aid-probe-handle ' + probe.kind + '" data-sense-control="' + probe.kind +
+         '" data-sense-handle="' + escapeText(organ.id) + '"' + steadyAt(at, zoom) + '><title>' +
          escapeText(t('studio.probe.handle.' + probe.kind)) + '</title><circle r="' +
-         (probe.kind === 'smell' ? PROBE_SCENE.source : PROBE_SCENE.handle) + '"/></g></g>';
+         (probe.kind === 'smell' ? PROBE_SCENE.source : PROBE_SCENE.handle) + '"/></g>';
+}
+export function senseProbeSvg(state) {
+  const config = visibleProbe(state);
+  if (!config)
+    return '';
+  const {probe, organ, faintest, zoom} = config, flow = probeFlow(probe);
+  const arrows = flow?.strength > 0
+                     ? flowArrows(radians(flow.bearing), probeHandle(flow, faintest), PROBE_SCENE)
+                     : '';
+  return '<g class="aid-sense-probe">' + arrows + stimulusSvg(probe, faintest, zoom) +
+         answerSvg(state, organ, zoom) +
+         (probe.kind === 'flow' ? '' : probeGrip(organ, probe, faintest, zoom)) +
+         (flow ? probeGrip(organ, flow, faintest, zoom) : '') + '</g>';
+}
+export function probeWater(state) {
+  const config = visibleProbe(state), flow = config && probeFlow(config.probe);
+  if (!(flow?.strength > 0))
+    return null;
+  const {faintest, zoom} = config;
+  return {
+    key : [ flow.bearing, flow.strength, faintest, zoom ].join(':'),
+    svg : () => waterSvg(flow, faintest, zoom)
+  };
 }
 export function probeScents(state) {
   const probe = state.senseProbe, organ = probe ? findOrgan(state.document, probe.organ) : null;

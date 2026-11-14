@@ -388,6 +388,15 @@ public:
   bool position(Rng &, double &, double &, double radius = MAX_BODY_RADIUS) const;
   int motion_workers = 1;
   void motion(const Water *replay_water = nullptr);
+  // A uniform sample is enough for the Atelier's scent transport and nostril lookup.
+  void set_uniform_flow(Point velocity) {
+    water_ = {};
+    water_.width = geometry_.width;
+    water_.height = geometry_.height;
+    water_.columns = water_.rows = 1;
+    water_.u = {velocity.x, velocity.x};
+    water_.v = {velocity.y, velocity.y};
+  }
   void collide(Body &, double old_x, double old_y, double radius = -1) const;
   void resize(double, double);
   void spray(double, double, int count, double radius);

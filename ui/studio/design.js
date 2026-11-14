@@ -19,7 +19,14 @@ const SENSE_PICTURES = Object.freeze({
 });
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
-import {probeHandle, probeScents, senseProbeSvg, gutProbeControls} from './view/probes.js';
+import {
+  gutProbeControls,
+  probeFlow,
+  probeHandle,
+  probeScents,
+  probeWater,
+  senseProbeSvg
+} from './view/probes.js';
 import {scentMap} from './view/scents.js';
 import {pigmentInspector} from './view/pigments.js';
 import {skinField} from './view/skin.js';
@@ -148,9 +155,12 @@ export const designMethods = {
       return;
     const sense = probeFor(organ, this.state.senseProbe);
     if (sense && sense !== this.state.senseProbe) {
-      // A new scent lies a few lengths out; the view widens to show it.
-      if (sense.kind === 'smell' && sense.organ !== this.state.senseProbe?.organ)
-        this.keepInView(probeHandle(sense, this.state.anatomy?.lightDimmest));
+      if (sense.kind === 'smell' && sense.organ !== this.state.senseProbe?.organ) {
+        const faintest = this.state.anatomy?.lightDimmest, flow = probeFlow(sense);
+        this.keepInView(probeHandle(sense, faintest));
+        if (flow && faintest > 0)
+          this.keepInView(probeHandle(flow, faintest));
+      }
       this.state.senseProbe = sense;
       this.requestDesign();
     }
@@ -286,8 +296,15 @@ export const designMethods = {
   },
   refreshProbes() {
     const layer = this.bodyMap()?.querySelector('#' + PROBE_LAYER);
-    if (layer)
-      layer.innerHTML = senseProbeSvg(this.state);
+    if (layer) {
+      const controls = layer.querySelector('[data-probe-controls]'),
+            water = layer.querySelector('[data-probe-water]'), current = probeWater(this.state);
+      controls.innerHTML = senseProbeSvg(this.state);
+      if (water.dataset.probeWater !== (current?.key ?? '')) {
+        water.dataset.probeWater = current?.key ?? '';
+        water.innerHTML = current?.svg() ?? '';
+      }
+    }
     const scents = this.root.querySelector('[data-probe-scents-layer]');
     if (scents)
       scents.innerHTML = probeScents(this.state);

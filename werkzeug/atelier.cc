@@ -105,6 +105,7 @@ SightScene read_sight(std::istream &in) {
 struct SenseScene {
   int kind = 0, scent = 0;
   double bearing = 0, distance = 0, strength = 0, nutrient = 0;
+  double flow_bearing = 0, flow_strength = 0;
 };
 namespace sense_scene {
 constexpr int smell = 1, touch = 2, flow = 3, wound = 4, gut = 5;
@@ -123,6 +124,11 @@ SenseScene read_sense_scene(std::istream &in) {
           between(scene.nutrient, 0, SENSE_SCENE_STRENGTH) && scene.scent >= 0 &&
           scene.scent < fishsim::odor_kind::count,
       "invalid sense scene");
+  if (scene.kind == sense_scene::smell)
+    ensure(bool(in >> scene.flow_bearing >> scene.flow_strength) &&
+               between(scene.flow_bearing, -half_turn, half_turn) &&
+               between(scene.flow_strength, 0, SENSE_SCENE_STRENGTH),
+           "invalid smell flow");
   return scene;
 }
 void sense_report(const field::Substrate &t,
@@ -856,6 +862,11 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
     probe_tank.emplace(SIGHT_TANK_SEED);
   if (sight)
     sight_report(t, g.interface, groups, *sight, *probe_tank);
+  if (sense && sense->kind == sense_scene::smell && sense->flow_strength > 0) {
+    const double from = fishsim::radians(sense->flow_bearing);
+    probe_tank->field.set_uniform_flow(
+        {-sense->flow_strength * std::cos(from), -sense->flow_strength * std::sin(from)});
+  }
   if (sense)
     sense_report(t, g.interface, groups, *sense, probe_tank ? &probe_tank->field : nullptr);
   std::cout << '}';

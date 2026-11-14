@@ -12,7 +12,7 @@ import {clamp} from '../units.js';
 import {kindLimit, kindNodes} from './model/organs.js';
 import {lateralPatch} from './view/lateral.js';
 import {hairPatch} from './view/balance.js';
-import {gutProbePatch, probeHandle, probePatch} from './view/probes.js';
+import {gutProbePatch, probeFlow, probeHandle, probePatch} from './view/probes.js';
 import {scentMapTuning, scentMapWidth} from './view/scents.js';
 import {pigmentAmount, pigmentWheelPatch} from './view/pigments.js';
 import {planOfUnit, thresholdQualityShift, unitOfPlan} from '../tuning.js';
@@ -284,7 +284,7 @@ export const GRIPS = Object.freeze([
     graphic : '[data-sense-handle]',
     held : 'probe',
     rect : false,
-    start : (studio, g) => ({id : g.dataset.senseHandle})
+    start : (studio, g) => ({id : g.dataset.senseHandle, control : g.dataset.senseControl})
   },
   {
     graphic : '[data-vision-handle]',
@@ -720,9 +720,11 @@ export const handleMethods = {
     if (probe?.organ !== drag.id || !(faintest > 0))
       return;
     const position = cameraCoordinates(event, this.bodyMap(), this.state.camera);
-    const patch = probePatch(probe.kind, position, faintest);
-    this.state.senseProbe = {...probe, ...patch};
-    this.keepInView(probeHandle(this.state.senseProbe, faintest));
+    const patch = probePatch(drag.control, position, faintest);
+    const smellFlow = drag.control === 'flow' && probe.kind === 'smell';
+    this.state.senseProbe = smellFlow ? {...probe, flow : patch} : {...probe, ...patch};
+    this.keepInView(probeHandle(
+        smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, faintest));
     this.refreshProbes();
     this.requestDesign();
   },

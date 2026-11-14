@@ -31,7 +31,7 @@ import {
 } from './wires.js';
 import {ICON} from './kit.js';
 import {stimulusKind} from './stimulus.js';
-import {probeScents, senseProbeSvg} from './probes.js';
+import {probeScents, probeWater, senseProbeSvg} from './probes.js';
 import {detailMix, nodeOpacity, layerShown} from './layers.js';
 
 const MARKER = Object.freeze({
@@ -218,6 +218,7 @@ export function fishScene(state) {
                               tectumBands(state)
                         : '');
   const own = fans.filter(ownField).map(o => visionFan(state, o)).join('');
+  const water = probeWater(state);
   return '<svg id="' + BODY_MAP_ID + '" viewBox="' + viewBoxOf(state.camera) +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +
          escapeText(t('studio.app.empty')) + '">' +
@@ -232,7 +233,8 @@ export function fishScene(state) {
          generatedCenters(state) + '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g class="aid-fov-fields" opacity="' + fixed(detailMix(state).fields) + '">' + cones +
          '</g><g class="aid-fov-fields">' + own + '</g>' +
-         '<g id="' + PROBE_LAYER + '">' + senseProbeSvg(state) + '</g>' +
+         '<g id="' + PROBE_LAYER + '"><g data-probe-water="' + (water?.key ?? '') + '">' +
+         (water?.svg() ?? '') + '</g><g data-probe-controls>' + senseProbeSvg(state) + '</g></g>' +
          '<g id="' + LAYER_ID.hints + '"></g>' +
          '<g id="' + LAYER_ID.preview + '" pointer-events="none"></g>' +
          '<path id="' + LAYER_ID.line +

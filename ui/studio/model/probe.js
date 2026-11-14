@@ -8,7 +8,7 @@ export const PROBE_LIMITS =
 // A new scent starts just beyond the snout, so choosing it keeps the view; dragged further out,
 // the view widens with it.
 const START = Object.freeze({
-  smell : {bearing : 40, distance : 1.6, strength : 0},
+  smell : {bearing : 40, distance : 1.6, strength : 0, flow : {bearing : 60, strength : .2}},
   touch : {bearing : 90, distance : 0, strength : .05},
   wound : {bearing : 90, distance : 0, strength : .02},
   flow : {bearing : 60, distance : 0, strength : .02},
@@ -21,21 +21,17 @@ export function probeFor(organ, probe) {
   if (probe?.organ === organ.id)
     return probe;
   const side = sideOf(organ);
-  if (probe?.kind === kind)
-    return {
-      ...probe,
-      organ : organ.id,
-      side,
-      bearing : probe.side === side ? probe.bearing : -probe.bearing
-    };
-  const tuning = organ.centers[0];
+  const prior = probe?.kind === kind ? probe : null;
+  const facing = prior ? prior.side === side ? 1 : -1 : side;
+  const scene = prior ?? START[kind], tuning = organ.centers[0];
   return {
+    ...scene,
     organ : organ.id,
     kind,
     side,
-    scent : kind === 'smell' && tuning ? preferredScent(tuning) : 0,
-    ...START[kind],
-    bearing : side * START[kind].bearing
+    scent : prior?.scent ?? (kind === 'smell' && tuning ? preferredScent(tuning) : 0),
+    bearing : facing * scene.bearing,
+    ...(scene.flow ? {flow : {...scene.flow, bearing : facing * scene.flow.bearing}} : {})
   };
 }
 export const senseScene = probe => probe ? {
@@ -44,6 +40,7 @@ export const senseScene = probe => probe ? {
   distance : probe.distance,
   strength : probe.strength,
   scent : probe.scent,
-  nutrient : probe.nutrient ?? 0
+  nutrient : probe.nutrient ?? 0,
+  ...(probe.flow ? {flowBearing : probe.flow.bearing, flowStrength : probe.flow.strength} : {})
 }
                                          : null;
