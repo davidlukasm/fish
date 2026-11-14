@@ -114,6 +114,17 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Lebenszyklus</h4>
     <svg id="noselife"></svg>
   </section>
+  <section class="panel" aria-label="Barteln">
+    <h2>Organ</h2><h3>Barteln</h3>
+    <h4 id="barb-kind" class="first">Barteln</h4>
+    <svg id="barbels"></svg>
+    <h4>Geschmack</h4>
+    <svg id="tastemap"></svg>
+    <h4>Meldung</h4>
+    <svg id="tastes"></svg>
+    <h4>Lebenszyklus</h4>
+    <svg id="barblife"></svg>
+  </section>
 </main>
 <script>
 'use strict';
@@ -196,7 +207,10 @@ const S = {
   spermfull : {keys : [{gate : .8, spread : .1}], chosen : 0, input : null},
   // The nose's types of cells: each with its place on the scent map (lat, lon) and its width;
   // probe: the scent tried on them.
-  smell : {keys : [{gate : .25, spread : .1, used : 200, lat : 35, lon : 25, width : .25}], chosen : 0, input : {rise : 80, height : .8, stop : 560}, probe : {lat : 35, lon : 25}}
+  smell : {keys : [{gate : .25, spread : .1, used : 200, lat : 35, lon : 25, width : .25}], chosen : 0, input : {rise : 80, height : .8, stop : 560}, probe : {lat : 35, lon : 25}},
+  // The barbels' types: a place and width on the same map, and feel: their share of mere touch;
+  // probe: what the thing at the tip tastes of, or a stone.
+  taste : {keys : [{gate : .3, lat : 35, lon : 155, width : .25, feel : .3}], chosen : 0, probe : {lat : 35, lon : 155}}
 };
 
 // ===== The model: the one source for every picture and number =====
@@ -2037,20 +2051,23 @@ const mapPlace = p => { const {cx, cy, R} = SNIFF.M, dx = p.x - cx, dy = cy - p.
 // A place dragged close to a scent is that scent.
 const snapped = p => { const at = SCENTS.find(([, lat, lon]) => { const [x, y] = mapPoint(lat, lon); return Math.hypot(x - p.x, y - p.y) <= SNIFF.snap; }); return at ? {lat : at[1], lon : at[2]} : mapPlace(p); };
 // What the sample holds of each scent: all of one where it lies on it, else a mix of those near.
-function sampleMix() {
-  const at = onSphere(S.smell.probe.lat, S.smell.probe.lon), raw = SCENTS.map(([, lat, lon]) => { const a = angleBetween(at, onSphere(lat, lon)); return a < .5 ? 1e6 : Math.exp(-((a / SNIFF.mix) ** 2)); }), sum = raw.reduce((x, y) => x + y, 0);
+// A sample of stone holds no scent at all.
+function sampleMix(cell = S.smell) {
+  if (cell.probe.stone) return SCENTS.map(() => 0);
+  const at = onSphere(cell.probe.lat, cell.probe.lon), raw = SCENTS.map(([, lat, lon]) => { const a = angleBetween(at, onSphere(lat, lon)); return a < .5 ? 1e6 : Math.exp(-((a / SNIFF.mix) ** 2)); }), sum = raw.reduce((x, y) => x + y, 0);
   return raw.map(v => sum > 0 ? v / sum : 0);
 }
 const typeShares = k => { const at = onSphere(k.lat, k.lon); return SCENTS.map(([, lat, lon]) => scentShare(angleBetween(at, onSphere(lat, lon)), k.width)); };
-const smellShare = k => { const mix = sampleMix(), shares = typeShares(k); return mix.reduce((sum, m, j) => sum + m * shares[j], 0); };
-const sampleColour = () => { const mix = sampleMix(); return SCENTS[mix.indexOf(Math.max(...mix))][3]; };
+const smellShare = (k, cell = S.smell) => { const mix = sampleMix(cell), shares = typeShares(k); return mix.reduce((sum, m, j) => sum + m * shares[j], 0); };
+const STONE = '#8d9aa0';
+const sampleColour = (cell = S.smell) => { const mix = sampleMix(cell); return cell.probe.stone ? STONE : SCENTS[mix.indexOf(Math.max(...mix))][3]; };
 // The scent map: the eight scents as balls, the bigger the more the nose's cells take of them;
 // each type of cells as the patch in which it takes at least half, with a grip at its place and
 // one on its edge for its width; the sample as a red cross.
-function drawScentMap() {
-  const {svg, live} = picture('scentmap', SNIFF.M.height), {cx, cy, R, ball, samples} = SNIFF.M, cell = S.smell, keys = cell.keys;
+function drawScentMap(id = 'scentmap', cell = S.smell, NOSE_PARTS = ['scentmap', 'smell', 'noselife'], words = {kind : 'nose-kind', verb : 'Riecht', sample : 'Duftprobe', stone : false, fresh : {}}) {
+  const {svg, live} = picture(id, SNIFF.M.height), {cx, cy, R, ball, samples} = SNIFF.M, keys = cell.keys;
   const taken = SCENTS.map((_, j) => Math.max(...keys.map(k => typeShares(k)[j]))), best = keys.map(k => { const s = typeShares(k); return SCENTS[s.indexOf(Math.max(...s))][0]; });
-  document.getElementById('nose-kind').textContent = 'Riecht ' + [...new Set(best)].join(', ');
+  document.getElementById(words.kind).textContent = words.verb + ' ' + [...new Set(best)].join(', ');
   el('circle', {cx, cy, r : R, fill : COLOUR.track, stroke : COLOUR.trackEdge}, live);
   keys.forEach((k, i) => {
     const chosen = i === cell.chosen, half = scentHalf(k.width), at = onSphere(k.lat, k.lon);
@@ -2070,12 +2087,12 @@ function drawScentMap() {
     txt(live, x + (right ? 14 : -14), y + 4, name, {'text-anchor' : right ? 'start' : 'end', fill : colour, style : 'font-size:10.5px', opacity : .55 + .45 * taken[j], 'pointer-events' : 'none'});
   });
   el('path', {d : `M8 ${SNIFF.M.height - 13} l7 7 m0 -7 l-7 7`, stroke : '#ff5a4d', 'stroke-width' : 2, 'stroke-linecap' : 'round'}, live);
-  txt(live, 20, SNIFF.M.height - 6, 'Duftprobe', {style : 'font-size:10.5px'});
+  txt(live, 20, SNIFF.M.height - 6, words.sample, {style : 'font-size:10.5px'});
   // The types' grips: at their place; the chosen one's width on its patch's edge, and its (×).
   keys.forEach((k, i) => {
     const chosen = i === cell.chosen, [x, y] = mapPoint(k.lat, k.lon);
     drag(svg, el('rect', {x : x - 5, y : y - 5, width : 10, height : 10, rx : 2.5, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2.5 : 1}`}, live),
-      p => { Object.assign(k, snapped(p)); cell.chosen = i; draw(NOSE_PARTS); }, 'type' + i);
+      p => { Object.assign(k, snapped(p)); cell.chosen = i; draw(NOSE_PARTS); }, id + 'type' + i);
     if (!chosen) return;
     const half = Math.min(scentHalf(k.width), 170), edge = (() => { const p = mapPoint(k.lat - half, k.lon); return Math.hypot(p[0] - cx, p[1] - cy) <= R + .5 ? p : mapPoint(k.lat + half > 90 ? 180 - k.lat - half : k.lat + half, k.lat + half > 90 ? k.lon + 180 : k.lon); })();
     drag(svg, el('circle', {cx : edge[0], cy : edge[1], r : 4.5}, live), p => {
@@ -2083,19 +2100,25 @@ function drawScentMap() {
       const wanted = angleBetween(onSphere(k.lat, k.lon), (({lat, lon}) => onSphere(lat, lon))(mapPlace(p)));
       let lo = 0, hi = .8;
       for (let n = 0; n < 22; n++) { const mid = (lo + hi) / 2; if (scentHalf(mid) < wanted) lo = mid; else hi = mid; }
-      k.width = lo; draw(NOSE_PARTS); }, 'typewidth');
+      k.width = lo; draw(NOSE_PARTS); }, id + 'typewidth');
     if (keys.length > 1) chip(live, x + 11, y - 11, '×', () => { keys.splice(i, 1); cell.chosen = 0; }, NOSE_PARTS, true, 6);
   });
   // The sample: a red cross, above the grips so that it shows where it lies on one.
-  const [sx, sy] = mapPoint(cell.probe.lat, cell.probe.lon), cross = el('g', {}, live);
+  // A stone has no place among the scents: it lies beside the map, and the sample can lie on it.
+  const stoneAt = [2 * cx - 26, 22];
+  if (words.stone) {
+    el('path', {d : `M${stoneAt[0] - 9} ${stoneAt[1] + 4} l3 -9 l8 -3 l7 5 l-2 8 l-10 3 Z`, fill : STONE, opacity : cell.probe.stone ? 1 : .6, class : 'chip'}, live).addEventListener('pointerdown', () => { cell.probe = {...cell.probe, stone : true}; draw(NOSE_PARTS); });
+    txt(live, stoneAt[0], stoneAt[1] + 22, 'Stein', {'text-anchor' : 'middle', style : 'font-size:10.5px', fill : STONE});
+  }
+  const [sx, sy] = cell.probe.stone ? stoneAt : mapPoint(cell.probe.lat, cell.probe.lon), cross = el('g', {}, live);
   el('circle', {cx : sx, cy : sy, r : 9, fill : 'transparent'}, cross);
   el('path', {d : `M${sx - 5} ${sy - 5} l10 10 m0 -10 l-10 10`, stroke : '#ff5a4d', 'stroke-width' : 2.6, 'stroke-linecap' : 'round'}, cross);
-  drag(svg, cross, p => { cell.probe = snapped(p); draw(NOSE_PARTS); }, 'sample', 'knob');
-  chip(live, 2 * cx - 12, SNIFF.M.height - 10, '+', () => { keys.push({gate : .25, spread : .1, used : 200, ...cell.probe, width : .25}); cell.chosen = keys.length - 1; }, NOSE_PARTS, keys.length < 3, 7);
+  drag(svg, cross, p => { cell.probe = words.stone && Math.hypot(p.x - stoneAt[0], p.y - stoneAt[1]) < 16 ? {...cell.probe, stone : true} : snapped(p); draw(NOSE_PARTS); }, id + 'sample', 'knob');
+  chip(live, 2 * cx - 12, SNIFF.M.height - 10, '+', () => { keys.push({gate : .25, spread : .1, used : 200, lat : cell.probe.lat, lon : cell.probe.lon, width : .25, ...words.fresh}); cell.chosen = keys.length - 1; }, NOSE_PARTS, keys.length < 3, 7);
 }
 // Life cycle: across, the fish's maturity. A type's band: from where its cells work to where
-// they die (a grip at each end). In the egg the two nostrils give the same; from hatching on the
-// cells tell left from right.
+// they die (a grip at each end). In the egg the cells smell already, both nostrils the same; from
+// hatching on the band is two, left and right.
 function buildNoseLife(fixed) {
   const {L, R, top, icons} = SNIFF.LIFE, hatch = L + (R - L) * SNIFF.hatch, arrow = {stroke : COLOUR.icon, 'stroke-width' : 1.3, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'};
   txt(fixed, L + 4, top + 11, 'riecht ohne Richtung', {style : 'font-size:10px'}); txt(fixed, hatch + 5, top + 11, 'links und rechts verschieden', {style : 'font-size:10px'});
@@ -2110,15 +2133,113 @@ function drawNoseLife() {
   el('rect', {x : L, y : top, width : R - L, height : base - top, fill : COLOUR.track}, under);
   keys.forEach((k, i) => {
     const chosen = i === cell.chosen, from = k.from ?? 0, until = Math.min(1, k.until ?? 1), y = top + 18 + high * i, hatch = clamp(SNIFF.hatch, from, until);
-    // Paler in the egg, where it smells without a side.
-    el('rect', {x : X(from), y : y + 1, width : X(hatch) - X(from), height : high - 2, fill : keyColour(i), opacity : chosen ? .3 : .15}, under);
-    el('rect', {x : X(hatch), y : y + 1, width : X(until) - X(hatch), height : high - 2, fill : keyColour(i), opacity : chosen ? .75 : .35, class : 'chip'}, under).addEventListener('pointerdown', () => { cell.chosen = i; draw(NOSE_PARTS); });
+    // In the egg the cells smell as strongly, one band; from hatching on it parts into left and right.
+    const pick = () => { cell.chosen = i; draw(NOSE_PARTS); }, look = {fill : keyColour(i), opacity : chosen ? .75 : .35, class : 'chip'};
+    el('rect', {x : X(from), y : y + 1, width : X(hatch) - X(from), height : high - 2, ...look}, under).addEventListener('pointerdown', pick);
+    for (const half of [0, 1]) el('rect', {x : X(hatch), y : y + 1 + half * (high / 2), width : X(until) - X(hatch), height : high / 2 - 2.5, ...look}, under).addEventListener('pointerdown', pick);
     if (!chosen) return;
     const grip = (r, inside, name, move) => drag(svg, el('rect', {x : (inside ? X(r) : name === 'nosefrom' ? L - beside : R + beside) - 4, y : y + high / 2 - 5.5, width : 8, height : 11, rx : 2, style : `fill:${keyColour(i)}`}, live), p => { move(rOf(p.x)); draw(NOSE_PARTS); }, name);
     grip(from, from > 0, 'nosefrom', to => { k.from = to < whole ? 0 : Math.min(to, until - least); });
     grip(until, until < 1, 'noseuntil', to => { k.until = to > 1 - whole ? 1 : Math.max(to, from + least); });
   });
   el('path', {d : `M${X(SNIFF.hatch)} ${top} V${base + 5}`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3'}, live);
+  el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+}
+
+// ===== The barbels: what their tips touch =====
+// Read in the engine (body_plan.cc:1003-1010; cppn_brain.cc:370-382; small_animals.cc:73-101;
+// protocol_schema.hh:2007-2013; physiology.hh:437-441):
+//   a barbel on each side of the mouth, 0.45 rad outwards, as long as the body's radius x
+//   (0.22 + 0.35 x g / (g + 3)), g the root of its cells;
+//   it tastes only what its tip touches (within a reach of 2): every scent of the thing touched
+//   counts whole, not by amount; a stone is touched and has no taste;
+//   a cell's stimulus = (1 - feel) x min(1, taste) + feel x touched, taste the sum of the touched
+//   scents x what the cell takes of them (the nose's map), feel its share of mere touch;
+//   in the egg a barbel reports nothing.
+// No time here: a tip touches or does not.
+const BARB = {least : 1, most : 16, spread : .45, short : .22, long : .35, half : 3, reach : 9, hatch : .5,
+              H : {height : 150, mouthX : 150, mouthY : 78, radius : 150},
+              B : {L : 70, R : 280, top : 12, row : 26, height : 100},
+              LIFE : {L : 44, R : 264, top : 14, base : 64, icons : 82, height : 96, beside : 16, whole : .015, least : .08}};
+const BARB_PARTS = ['barbels', 'tastemap', 'tastes', 'barblife'];
+const BA = {cells : 3, thing : {x : 44, y : 44}};
+const barbLength = cells => BARB.H.radius * (BARB.short + BARB.long * Math.sqrt(cells) / (Math.sqrt(cells) + BARB.half));
+const barbTip = (side, cells = BA.cells) => { const {mouthX, mouthY} = BARB.H, long = barbLength(cells); return [mouthX - long * Math.cos(BARB.spread), mouthY + side * (10 + long * Math.sin(BARB.spread))]; };
+const barbTouches = () => [-1, 1].some(side => { const [x, y] = barbTip(side); return Math.hypot(x - BA.thing.x, y - BA.thing.y) <= BARB.reach + 7; });
+// What a type's cells get: taste of the thing touched, and its mere touch.
+function barbStimulus(k) {
+  const touched = barbTouches() ? 1 : 0, taste = Math.min(1, smellShare(k, S.taste)) * touched;
+  return {taste : (1 - k.feel) * taste, touch : k.feel * touched};
+}
+function buildBarbels(fixed) {
+  const {mouthX, mouthY} = BARB.H;
+  // The head from above, snout to the left; only its front, the body runs on to the right.
+  el('path', {d : `M300 ${mouthY - 62} Q${mouthX + 60} ${mouthY - 64} ${mouthX + 12} ${mouthY - 22} Q${mouthX - 8} ${mouthY} ${mouthX + 12} ${mouthY + 22} Q${mouthX + 60} ${mouthY + 64} 300 ${mouthY + 62} Z`, fill : HEAD, stroke : COLOUR.axis, 'stroke-width' : 1.4}, fixed);
+  for (const side of [-1, 1]) { el('circle', {cx : mouthX + 62, cy : mouthY + side * 40, r : 5, fill : COLOUR.unchosen, stroke : COLOUR.axis, 'stroke-width' : 1.2}, fixed); el('circle', {cx : mouthX + 60.2, cy : mouthY + side * 40 - 1.5, r : 1.3, fill : COLOUR.icon}, fixed); }
+}
+function drawBarbels() {
+  const {svg, live} = picture('barbels', BARB.H.height, buildBarbels), {mouthX, mouthY} = BARB.H, touching = barbTouches();
+  txt(live, 4, 10, touching ? 'berührt' : 'berührt nichts', {style : 'font-size:10px'});
+  for (const side of [-1, 1]) {
+    const [x, y] = barbTip(side), from = [mouthX + 8, mouthY + side * 10];
+    el('path', {d : `M${from[0]} ${from[1]} Q${(from[0] + x) / 2} ${(from[1] + y) / 2 + side * 6} ${x} ${y}`, stroke : COLOUR.icon, 'stroke-width' : 3, fill : 'none', 'stroke-linecap' : 'round'}, live);
+    el('circle', {cx : x, cy : y, r : BARB.reach, fill : 'none', stroke : COLOUR.icon, 'stroke-dasharray' : '2 3', opacity : .6}, live);
+  }
+  // The cells: the grip at the upper tip, pulled out for more of them.
+  const [gx, gy] = barbTip(-1);
+  drag(svg, el('rect', {x : gx - 4, y : gy - 5.5, width : 8, height : 11, rx : 2, style : `fill:${COLOUR.icon}`}, live), p => {
+    let best = BA.cells;
+    for (let c = BARB.least; c <= BARB.most; c++) if (Math.abs(barbTip(-1, c)[0] - p.x) < Math.abs(barbTip(-1, best)[0] - p.x)) best = c;
+    BA.cells = best; draw(BARB_PARTS); }, 'barbcells');
+  // The thing a tip may touch: in the colour of what it tastes of, pushed about freely.
+  drag(svg, el('circle', {cx : BA.thing.x, cy : BA.thing.y, r : 7, fill : sampleColour(S.taste)}, live), p => { BA.thing = {x : clamp(p.x, 8, 292), y : clamp(p.y, 20, BARB.H.height - 8)}; draw(BARB_PARTS); }, 'barbthing', 'knob');
+}
+// What each type reports of the thing at the tip: its taste (in the taste's colour) and, beside
+// it, its mere touch (light). The dashed mark is the type's threshold; the grip between taste and
+// touch sets how much of the cell is given to touch.
+function drawTastes() {
+  const keys = S.taste.keys, {L, R, top, row} = BARB.B, {svg, live} = picture('tastes', top + row * 3 + 22), X = v => L + (R - L) * clamp(v, 0, 1), colour = sampleColour(S.taste);
+  txt(live, L, top + row * 3 + 16, 'nichts'); txt(live, R, top + row * 3 + 16, 'voll', {'text-anchor' : 'end'});
+  keys.forEach((k, i) => {
+    const chosen = i === S.taste.chosen, y = top + row * i, got = barbStimulus(k), sum = got.taste + got.touch, pick = () => { S.taste.chosen = i; draw(BARB_PARTS); };
+    el('rect', {x : L, y, width : R - L, height : row - 8, rx : 4, fill : COLOUR.track, stroke : chosen ? keyColour(i) : COLOUR.trackEdge, 'stroke-width' : chosen ? 1.8 : 1, class : 'chip'}, live).addEventListener('pointerdown', pick);
+    el('rect', {x : L, y : y + 1, width : X(got.taste) - L, height : row - 10, rx : 3, fill : colour, opacity : .85, 'pointer-events' : 'none'}, live);
+    el('rect', {x : X(got.taste), y : y + 1, width : X(sum) - X(got.taste), height : row - 10, rx : 3, fill : COLOUR.line, opacity : .55, 'pointer-events' : 'none'}, live);
+    el('circle', {cx : L - 16, cy : y + row / 2 - 4, r : 6, fill : keyColour(i), stroke : chosen ? COLOUR.chosen : COLOUR.unchosen, 'stroke-width' : chosen ? 2.5 : 1, class : 'chip'}, live).addEventListener('pointerdown', pick);
+    // It reports where its stimulus passes its threshold.
+    el('path', {d : `M${X(k.gate)} ${y - 2} v${row - 4}`, stroke : keyColour(i), 'stroke-dasharray' : '3 2', 'stroke-width' : 1.6}, live);
+    if (sum > k.gate) txt(live, L - 30, y + row / 2, '⚡', {'text-anchor' : 'end', fill : COLOUR.line, style : 'font-size:11px'});
+    if (!chosen) return;
+    drag(svg, el('rect', {x : X(k.gate) - 4, y : y + row - 12, width : 8, height : 10, rx : 2, style : `fill:${keyColour(i)}`}, live), p => { k.gate = clamp((p.x - L) / (R - L), .03, .97); draw(BARB_PARTS); }, 'tastegate');
+    // Taste against touch: the grip on the row's upper edge, from all taste (left) to all touch.
+    drag(svg, el('circle', {cx : X(k.feel), cy : y, r : 4.5}, live), p => { k.feel = clamp((p.x - L) / (R - L), 0, 1); draw(BARB_PARTS); }, 'tastefeel');
+  });
+  txt(live, L, top - 3, 'schmeckt', {style : 'font-size:10px'}); txt(live, R, top - 3, 'tastet', {'text-anchor' : 'end', style : 'font-size:10px'});
+}
+// Life cycle: a type's band from where its cells work to where they die. In the egg a barbel
+// reports nothing: there the band is empty.
+function buildBarbLife(fixed) {
+  const {L, R, top, icons} = BARB.LIFE, hatch = L + (R - L) * BARB.hatch, arrow = {stroke : COLOUR.icon, 'stroke-width' : 1.3, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'};
+  txt(fixed, L + 4, top + 11, 'meldet nichts', {style : 'font-size:10px'}); txt(fixed, hatch + 5, top + 11, 'schmeckt und tastet', {style : 'font-size:10px'});
+  el('ellipse', {cx : L + 8, cy : icons, rx : 6, ry : 5, fill : 'none', stroke : COLOUR.icon, 'stroke-width' : 1.4}, fixed);
+  el('circle', {cx : L + 8, cy : icons, r : 1.8, fill : COLOUR.icon}, fixed);
+  fishIcon(fixed, hatch, icons, AGE_SIZE.young, COLOUR.icon); fishIcon(fixed, R - 36, icons, AGE_SIZE.grown, COLOUR.icon);
+  el('path', {d : `M${L + 22} ${icons} H${hatch - 16} m-6 -3.5 l6 3.5 l-6 3.5 M${hatch + 18} ${icons} H${R - 60} m-6 -3.5 l6 3.5 l-6 3.5`, ...arrow}, fixed);
+}
+function drawBarbLife() {
+  const {svg, under, live} = picture('barblife', BARB.LIFE.height, buildBarbLife), {L, R, top, base, beside, whole, least} = BARB.LIFE, cell = S.taste, keys = cell.keys;
+  const X = r => L + (R - L) * clamp(r, 0, 1), rOf = x => clamp((x - L) / (R - L), 0, 1), high = (base - top - 20) / keys.length;
+  el('rect', {x : L, y : top, width : R - L, height : base - top, fill : COLOUR.track}, under);
+  keys.forEach((k, i) => {
+    const chosen = i === cell.chosen, from = k.from ?? 0, until = Math.min(1, k.until ?? 1), y = top + 18 + high * i, hatch = clamp(BARB.hatch, from, until);
+    el('rect', {x : X(from), y : y + 1, width : X(hatch) - X(from), height : high - 2, fill : 'none', stroke : keyColour(i), 'stroke-dasharray' : '2 3', opacity : chosen ? .9 : .5}, under);
+    el('rect', {x : X(hatch), y : y + 1, width : X(until) - X(hatch), height : high - 2, fill : keyColour(i), opacity : chosen ? .75 : .35, class : 'chip'}, under).addEventListener('pointerdown', () => { cell.chosen = i; draw(BARB_PARTS); });
+    if (!chosen) return;
+    const grip = (r, inside, name, move) => drag(svg, el('rect', {x : (inside ? X(r) : name === 'barbfrom' ? L - beside : R + beside) - 4, y : y + high / 2 - 5.5, width : 8, height : 11, rx : 2, style : `fill:${keyColour(i)}`}, live), p => { move(rOf(p.x)); draw(BARB_PARTS); }, name);
+    grip(from, from > 0, 'barbfrom', to => { k.from = to < whole ? 0 : Math.min(to, until - least); });
+    grip(until, until < 1, 'barbuntil', to => { k.until = to > 1 - whole ? 1 : Math.max(to, from + least); });
+  });
+  el('path', {d : `M${X(BARB.hatch)} ${top} V${base + 5}`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3'}, live);
   el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
 }
 
@@ -2231,9 +2352,10 @@ const PAINT = {fish : drawFish, yield : drawYield, bars : drawBars, life : drawL
                gills : drawGills, rakers : drawRakers, gillwater : drawGillWater, gilllife : drawGillLife,
                eggs : drawEggs, eggfill : drawEggFill, eggfull : drawEggFull, egglife : drawEggLife,
                sperm : drawSperm, spermfill : drawSpermFill, spermfull : drawSpermFull, spermlife : drawSpermLife,
-               scentmap : drawScentMap, smell : () => drawSense('smell'), noselife : drawNoseLife};
+               scentmap : () => drawScentMap(), smell : () => drawSense('smell'), noselife : drawNoseLife,
+               barbels : drawBarbels, tastemap : () => drawScentMap('tastemap', S.taste, BARB_PARTS, {kind : 'barb-kind', verb : 'Schmeckt', sample : 'was die Spitze berührt', stone : true, fresh : {feel : .3}}), tastes : drawTastes, barblife : drawBarbLife};
 // The senses first: the fish's stomach follows the fullness input.
-for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife']) dirty.add(part);
+for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife']) dirty.add(part);
 repaint();
 showGut(0);
 // Nothing moves while the panel is off the screen, or for someone who has asked for less motion:
