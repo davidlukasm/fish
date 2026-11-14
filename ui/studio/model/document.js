@@ -1348,20 +1348,24 @@ function tissueTargets(doc, id) {
   const organs = [ found.organ ];
   if (found.organ.linked)
     organs.push(findOrgan(doc, found.organ.pair));
-  const same = isRegion(found.organ)                   ? c => c.node === found.center.node
-               : ORGAN_BY_KEY[found.organ.type]?.types ? c => typeOf(c) === typeOf(found.center)
-                                                       : c => c.key === found.center.key;
+  const typed = ORGAN_BY_KEY[found.organ.type]?.types;
+  const same = isRegion(found.organ) ? c => c.node === found.center.node
+                                     : c => c.key === found.center.key &&
+                                            (!typed || typeOf(c) === typeOf(found.center));
   return organs.filter(Boolean).flatMap(o => o.centers.filter(same));
 }
 const typeOf = center => center.profile ?? '';
-export function organTypes(organ) {
+export function organTypes(organ, key) {
   const types = new Map();
   for (const center of organ?.centers ?? []) {
-    if (!types.has(typeOf(center)))
-      types.set(typeOf(center), []);
-    types.get(typeOf(center)).push(center);
+    if (key !== undefined && center.key !== key)
+      continue;
+    const id = typeOf(center), group = JSON.stringify([ center.key, id ]);
+    if (!types.has(group))
+      types.set(group, {id, centers : []});
+    types.get(group).centers.push(center);
   }
-  return [...types ].map(([ id, centers ]) => ({id, centers}));
+  return [...types.values() ];
 }
 export const typeOfCenter = (organ, centerId) =>
     organTypes(organ).find(type => type.centers.some(c => c.id === centerId)) ?? null;
@@ -1400,22 +1404,25 @@ export function nextTypeTuning(organ, wheel) {
       (_, k) => Math.max(...firsts.map(c => scentAffinities(c.q1, c.q2, c.qwidth)[k])));
   return {...scentTuning(smelled.indexOf(Math.min(...smelled))), qwidth : firsts[0].qwidth};
 }
-export function addOrganType(doc, organId, sites, tuning = {}) {
+export function addOrganType(doc, organId, sites, tuning = {}, key) {
   const original = findOrgan(doc, organId), most = ORGAN_BY_KEY[original?.type]?.types;
-  if (!most || !original.centers.length || organTypes(original).length >= most)
+  key ??= original?.centers[0]?.key;
+  const types = organTypes(original, key);
+  if (!most || !types.length || types.length >= most)
     return null;
   const draft = copy(doc), main = findOrgan(draft, organId), id = identifier('profile');
   const twin = main.linked ? findOrgan(draft, main.pair) : null;
   for (const organ of [main, twin].filter(Boolean)) {
-    const first = organ.centers[0], home = findSite(sites, first.site);
+    const first = organ.centers.find(c => c.key === key), home = findSite(sites, first?.site);
     if (!home)
       return null;
     const used = usedSites(draft);
     const partner = organ === twin ? main.centers.at(-1) : null;
     const mirror = partner ? mirroredSite(findSite(sites, partner.site), sites) : null;
     const site =
-        mirror && !used.has(mirror.id)
-            ? mirror
+        mirror && !used.has(mirror.id) ? mirror
+        : organ.type === 'gut'
+            ? closestNativeSite(first, sites, used, home, home.side, organ.type)
             : closestSiteDoing(first, functionFor(first, home), sites, used,
                                sitePoint(home, siteRole(organ.type)), home.side, organ.type);
     if (!site)
@@ -1426,16 +1433,21 @@ export function addOrganType(doc, organId, sites, tuning = {}) {
   settleAssemblies(draft);
   return {document : draft, typeId : id};
 }
-export function removeOrganType(doc, organId, typeId) {
+export function removeOrganType(doc, organId, typeId, key) {
   const original = findOrgan(doc, organId);
-  if (!original || organTypes(original).length < 2)
+  key ??= original?.centers[0]?.key;
+  const types = organTypes(original, key);
+  if (types.length < 2 || !types.some(type => type.id === typeId))
     return null;
   const draft = copy(doc), main = findOrgan(draft, organId);
   const twin = main.linked ? findOrgan(draft, main.pair) : null;
+  const matches = c => c.key === key && typeOf(c) === typeId;
+  if (twin?.centers.some(matches) && !twin.centers.some(c => c.key === key && !matches(c)))
+    return null;
   const dropped = new Set();
   for (const organ of [main, twin].filter(Boolean)) {
     for (const c of organ.centers)
-      if (typeOf(c) === typeId)
+      if (matches(c))
         dropped.add(c.id);
     organ.centers = organ.centers.filter(c => !dropped.has(c.id));
   }

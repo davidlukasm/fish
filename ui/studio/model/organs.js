@@ -167,6 +167,7 @@ export const ORGANS = Object.freeze([
     key : 'gut',
     category : 'internal',
     scope : 'single',
+    types : 3,
     centers : [
       young(sensor('food', SENSE_KIND.intake, 4, 'inner'), GUT_YOUNG_HALF),
       young(sensor('fullness', SENSE_KIND.inner_pressure, 2, 'inner'), GUT_YOUNG_HALF),
