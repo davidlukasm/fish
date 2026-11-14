@@ -67,7 +67,7 @@ liveKind('barbels', (studio, organId) => {
   heading(word('life'));
   const life = svgOf();
   // What is tried on the barbels and which of their types is chosen: not part of the fish.
-  const own = {chosen : 0, probe : null, thing : {x : 44, y : 44}};
+  const own = {chosen : 0, probe : null, thing : null};
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -116,7 +116,11 @@ liveKind('barbels', (studio, organId) => {
   function drawHead(cells, chosen) {
     const {svg, live} = picture(head, HEAD.height, buildHead), {mouthX, mouthY} = HEAD,
                 all = cells.reduce((sum, c) => sum + c.copies, 0), others = all - chosen.copies,
-                touched = touching(all), colour = sampleColour(own.probe);
+                colour = sampleColour(own.probe);
+    // At first the thing lies at the upper tip.
+    own.thing ??= {x : tipOf(-1, all)[0] - HEAD.thing - 5, y : tipOf(-1, all)[1]};
+    const touched = touching(all);
+    txt(live, 6, HEAD.height - 6, word(touched ? 'touching' : 'apart'), {class : 'aid-live-small'});
     for (const side of [-1, 1]) {
       const [x, y] = tipOf(side, all), from = [ mouthX + 8, mouthY + side * HEAD.root ],
                 mid = [ (from[0] + x) / 2, (from[1] + y) / 2 + side * 6 ];

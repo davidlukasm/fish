@@ -1921,7 +1921,9 @@
       "tastes": "schmeckt",
       "feels": "tastet",
       "egg": "meldet nichts",
-      "grown": "schmeckt und tastet"
+      "grown": "schmeckt und tastet",
+      "touching": "berührt",
+      "apart": "berührt nichts"
     }
   }
 }
