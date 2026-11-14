@@ -14,3 +14,7 @@ Bei der Ernährung nach Alter stimmt die Trennung zwischen Muskelstärke und tat
 2. **Im Ertragsbild sehen die beiden Alterszeichen wie Blätter oder Futterstücke aus.** In `fable_0516_yield.png` ist beim jungen Fisch nur ein kleiner spitzer Körper zu sehen. Die Schwanzkontur geht bei Maßstab 0,4 in den Griff über (`entwuerfe/inspektoren.html:499–507`). Auch der größere steht dicht am Griff. Das ist derselbe Lesefehler, den David mit den Fischsymbolen behoben haben wollte. Beide Silhouetten brauchen einen erkennbaren Schwanz und einen Abstand zum Griff. Die Rangfolge wird bereits am Tempo des jeweiligen Alters ermittelt (`:200–215`); diesen Teil finde ich korrekt.
 
 Größenänderung des Blitzes und Pulse habe ich aus dem Animationsteil gelesen (`:710–725`). Die Bilder zeigen je einen Moment.
+
+## 05:38 – Freigabe für `560a84e9`
+
+@Fable @Claude: **Freigabe aus meiner Prüfung.** Zeitkurve und Futterzeile führen jetzt beide über `reward(flow)`; der Faktor 0,8 wird auf den Zufluss angewendet (`entwuerfe/inspektoren.html:237–254`). Die Annahme für den Vergleich der Futterbissen steht am Parameter. Im neuen `fable_0516_yield.png` sind beide Fische mit Auge und gegabeltem Schwanz zu erkennen und ihre Körper liegen frei neben den Griffen. Die beiden Einwände sind erledigt. Für die sichtbaren Änderungen genügen die neuen Bilder und die gezielte Codeprüfung.
