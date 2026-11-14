@@ -13,27 +13,25 @@
 //   hatching) / (the cell's time steps), up to one.
 // NOT read: the waves over the retina in the egg (retinal_tissue takes the cells with a share of
 // light); the response curve's own lines (here contrast / (contrast + half contrast)).
-// The strip is the view as one cell has it: its field in the middle, the surround beside it. The
-// round knob in the strip is a thing looked at (where it lies in the cell's view, how bright),
-// the round knob at the strip's end the light all round; the thing has the colour of the fish
-// panel's test light. They are the picture's own: the fish panel's test light has no place in
-// one cell's view.
-// ASSUMED for the picture: the thing is as wide as four fifths of the field; the cell's time
-// steps are those of its time constant (ui/tuning.js, timeConstantSteps).
-import {RGB, TUNING} from '../../../schema.js';
+// The strip is the engine's own: the light at the eye for the fish panel's test light, round the
+// field of the cell of the chosen colour type that answers it most; the columns are that cell's
+// report colour by colour, the scale beside them its contrast, the mark its answer (the plan
+// report's sight, as the sight pictures below use it). Nothing is worked out again here.
+// UNVERIFIED: that a growing angle lies to the right in the strip.
+// ASSUMED: the cell's time steps are those of its time constant (ui/tuning.js,
+// timeConstantSteps).
+import {IMAGE_BAND, RECEPTOR, TUNING, VISUAL_SAMPLE} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {
-  hueAffinities,
-  hueOffset,
   LONGEST_TIME_CONSTANT,
   planOfUnit,
   timeConstantOf,
   timeConstantSteps,
-  tuningHue,
   unitOfPlan
 } from '../../../tuning.js';
 import {findOrgan, updateCenter, updateField} from '../../model/document.js';
-import {clamp, drag, el, liveKind, path, picture} from './kit.js';
+import {organCells} from '../vision.js';
+import {clamp, drag, el, liveKind, picture} from './kit.js';
 import {IRRITANT, keyGrip} from './sense.js';
 import {eggShape, fishLeft, LIFE, lifeBand, lifePlaces} from './skin.js';
 
@@ -46,20 +44,16 @@ const EYE = Object.freeze({
   field : 28,
   top : 16,
   high : 34,
-  thing : .8,
   PT : 74,
   PB : 120,
   star : [ 284, 66 ],
-  hue : 20,
+  column : 22,
   channels : [ '#ee8a80', '#8fd18a', '#8daded' ],
   cells : 6,
   wedge : [ 8, 70 ],
   round : 2600
 });
 const css = rgb => `rgb(${rgb.map(v => Math.round(255 * clamp(v))).join(',')})`;
-// The light of a hue, as the engine's three channels have it (model/retina.js, nominalSpectrum).
-const hueLight = hue => Object.values(RGB).map(
-    c => clamp(2 - Math.abs(hueOffset(hue, TUNING.channel_hue * c)) / (.5 * TUNING.channel_hue)));
 const profileOf = (studio, organ) =>
     organ?.field?.profiles.find(p => p.id === studio.state.visionProfile) ??
     organ?.field?.profiles[0];
@@ -73,113 +67,88 @@ liveKind('eye', (studio, organId) => {
   root.appendChild(h);
   const strip = el('svg', {class : 'aid-live-picture'});
   root.appendChild(strip);
-  // What is tried: the light all round, and a thing: where it lies in the cell's view (in field
-  // widths from the field's middle) and how bright it is. Not part of the fish.
-  const own = {ground : .3, at : 0, bright : .85};
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
   const patch = (profile, change) =>
       draft(updateField(studio.state.document, organId, {profile : {id : profile.id, ...change}},
                         studio.state.sites));
   function show() {
-    const profile = profileOf(studio, findOrgan(studio.state.document, organId));
+    const organ = findOrgan(studio.state.document, organId), profile = profileOf(studio, organ);
     if (!profile)
       return;
     const {svg, live} = picture(strip, EYE.height), {L, R, mid, field, top, high, PT, PB} = EYE,
-                X = at => mid + field * at;
-    // What light is worth to the cell: in its colours, less what the opponent colour takes.
-    const affinity = hueAffinities(tuningHue(profile.q1), profile.qwidth),
-          total = affinity.reduce((a, b) => a + b, 0), spectrum = affinity.map(v => v / total),
-          peak = Math.max(...spectrum), complement = spectrum.map(v => 1 - v / peak),
-          untuned = complement.reduce((a, b) => a + b, 0),
-          opponent =
-              (studio.state.capabilities?.visionSpectrum?.opponent ?? 0) * unitOfPlan(profile.q2);
-    const worth = light => Math.max(
-        0, spectrum.reduce((sum, v, c) => sum + v * light[c], 0) -
-               (untuned > 0
-                    ? opponent * complement.reduce((sum, v, c) => sum + v * light[c], 0) / untuned
-                    : 0));
-    const hue = studio.state.sightProbe?.hue ?? EYE.hue,
-          ground = [ own.ground, own.ground, own.ground ],
-          thing = hueLight(hue).map(v => v * own.bright),
-          lightAt = at => Math.abs(at - own.at) <= EYE.thing / 2 ? thing : ground;
-    // As the engine does it, colour by colour (retina.cc:207-247): the field's light, weighed
-    // most at its middle and not at all at its edges; the surround's, the plain mean over three
-    // field widths to either side, the field among them; how much brighter and how much darker
-    // the field is, over the surround's light and the threshold. Only then the cell's colours
-    // and its shares.
-    const mean = (from, to, weight) => {
-      const sum = [ 0, 0, 0 ];
-      let all = 0;
-      for (let a = from + .0125; a < to; a += .025) {
-        const w = weight(a), light = lightAt(a);
-        all += w;
-        light.forEach((v, c) => sum[c] += w * v);
+                X = at => mid + field * at, sight = studio.state.anatomy?.sight,
+                range = TUNING.threshold_range, scale = TUNING.threshold_min * range;
+    // The cell shown: of the chosen colour type's cells the one that answers the fish panel's
+    // test light most.
+    const cell = organCells(studio.state, organ)
+                     .filter(c => c.center.profile === profile.id)
+                     .sort((a, b) => b.answer - a.answer)[0],
+          sample = cell && sight.samples.find(s => s[VISUAL_SAMPLE.neuron] ===
+                                                   cell.receptor[RECEPTOR.neuron]);
+    el('rect', {x : L, y : top, width : R - L, height : high, class : 'aid-live-ground'}, live);
+    if (cell) {
+      // The strip: the light at the eye by its angle, as the engine has it for the test light,
+      // four of the cell's field widths to either side of its field's middle.
+      const r = cell.receptor, wide = r[RECEPTOR.view_right] - r[RECEPTOR.view_left],
+            at = angle => (angle - r[RECEPTOR.angle]) / wide, side = organ.side < 0 ? 0 : 1;
+      for (const band of sight.bands ?? []) {
+        if (band[IMAGE_BAND.eye] !== undefined && band[IMAGE_BAND.eye] !== side)
+          continue;
+        const from = Math.max(-4, at(band[IMAGE_BAND.left])),
+              to = Math.min(4, at(band[IMAGE_BAND.right]));
+        if (to > from)
+          el('rect', {
+            x : X(from),
+            y : top,
+            width : field * (to - from),
+            height : high,
+            fill : css([ band[IMAGE_BAND.red], band[IMAGE_BAND.green], band[IMAGE_BAND.blue] ])
+          },
+             live);
       }
-      return sum.map(v => v / all);
-    };
-    const inField = mean(-.5, .5, a => 1 - 2 * Math.abs(a)), around = mean(-3, 3, () => 1),
-          half = halfOf(profile), threshold = half * TUNING.threshold_min * TUNING.threshold_range,
-          dark = profile.polarity,
-          brighter = inField.map((m, c) => Math.max(0, m - around[c]) / (around[c] + threshold)),
-          darker = inField.map((m, c) => Math.max(0, around[c] - m) / (around[c] + threshold)),
-          asBright = (1 - dark) * worth(brighter), asDark = dark * worth(darker),
-          contrast = asBright + asDark, up = asBright >= asDark,
-          report = contrast / (contrast + half);
-    // The strip: the view by its angle, as bright and as coloured as it is. Over it the field,
-    // as the cell weighs it; under it the surround.
-    el('rect', {x : L, y : top, width : R - L, height : high, fill : css(ground)}, live);
-    el('rect', {
-      x : X(own.at - EYE.thing / 2),
-      y : top,
-      width : field * EYE.thing,
-      height : high,
-      fill : css(thing)
-    },
-       live);
+    }
+    // Over it the field, as the cell weighs it: most at its middle, not at all at its edges;
+    // under it the surround, three field widths to either side, the field among them.
     el('path', {
       d : `M${X(-.5)} ${top + high + 3} L${X(0)} ${top - 3} L${X(.5)} ${top + high + 3}`,
       class : 'aid-live-eye-field'
     },
        live);
     el('path', {d : `M${X(-3)} ${top + high + 2} v6 H${X(3)} v-6`, class : 'aid-live-hatch'}, live);
-    // What field and surround hold, colour by colour: the field's light as a bar over the field,
-    // the surround's as a dashed line over all of it.
-    const Y = v => PB - (PB - PT) * clamp(v);
+    // What the cell makes of it, colour by colour: a column for each, its area as large as that
+    // colour's part of what the cell reports (the engine's numbers).
     el('path', {d : `M${L} ${PB} H${R}`, class : 'aid-live-rim'}, live);
-    EYE.channels.forEach((colour, c) => {
-      el('path', {
-        d : `M${X(-3)} ${Y(around[c])} H${X(3)}`,
-        class : 'aid-live-eye-level around',
-        style : `stroke:${colour}`
-      },
-         live);
-      el('path', {
-        d : `M${X(-.5 + c / 3)} ${Y(inField[c])} h${field / 3 - 1.5}`,
-        class : 'aid-live-eye-level',
-        style : `stroke:${colour}`
-      },
-         live);
+    const parts = sample ? [ VISUAL_SAMPLE.red, VISUAL_SAMPLE.green, VISUAL_SAMPLE.blue ].map(
+                               k => clamp(sample[k] / scale))
+                         : [ 0, 0, 0 ];
+    parts.forEach((v, c) => {
+      const side = EYE.column * Math.sqrt(v);
+      if (side > .5)
+        el('rect', {
+          x : X(0) + (c - 1) * (EYE.column + 3) - side / 2,
+          y : PB - side * (PB - PT) / EYE.column,
+          width : side,
+          height : side * (PB - PT) / EYE.column,
+          fill : EYE.channels[c]
+        },
+           live);
     });
-    // Beside it the gap between the two, on a scale of its own: from the faintest contrast a cell
-    // can be set to (below) to the full one (above), each step as many times the one before.
-    // Bright where the field is brighter, blue where it is darker; as far as the cell's shares
-    // take it. The grip on the scale is the contrast at which the cell answers half.
-    const gx = X(3.5) + 20, range = TUNING.threshold_range,
+    // Beside it the contrast the cell has, on a scale of its own: from the faintest a cell can be
+    // set to (below) to the full one (above), each step as many times the one before. The grip
+    // on the scale is the contrast at which the cell answers half.
+    const gx = X(3.5) + 20, half = halfOf(profile),
+          contrast = sample ? sample[VISUAL_SAMPLE.light] / scale : 0,
           G = v => PB - (PB - PT) * (1 + Math.log(clamp(v, 1 / range, 1)) / Math.log(range));
     el('path', {d : `M${gx} ${PT} V${PB}`, class : 'aid-live-rim'}, live);
     if (contrast > 1 / range)
-      el('path', {
-        d : `M${gx} ${PB} V${G(contrast)}`,
-        class : 'aid-live-eye-gap' + (up ? '' : ' darker'),
-      },
-         live);
-    if (report > .01)
+      el('path', {d : `M${gx} ${PB} V${G(contrast)}`, class : 'aid-live-eye-gap'}, live);
+    if (cell?.answer > .01)
       el('path', {
         d : IRRITANT,
         class : 'aid-live-irritant',
         transform :
-            `translate(${EYE.star[0]} ${EYE.star[1]}) scale(${(.5 + 1.5 * report).toFixed(2)})`
+            `translate(${EYE.star[0]} ${EYE.star[1]}) scale(${(.5 + 1.5 * cell.answer).toFixed(2)})`
       },
          live);
     const hy = G(half);
@@ -188,7 +157,7 @@ liveKind('eye', (studio, organId) => {
          p => patch(profile, {threshold : planOfUnit(clamp((PB - p.y) / (PB - PT)))}), 'eyehalf',
          'grip', settle);
     // The shares: how much of the cell answers brighter (below), how much darker (above).
-    const sx = 12, st = PT + 2, sb = PB - 2, sy = st + (sb - st) * dark;
+    const sx = 12, st = PT + 2, sb = PB - 2, dark = profile.polarity, sy = st + (sb - st) * dark;
     el('path', {d : `M${sx} ${st} V${sy}`, class : 'aid-live-eye-gap darker'}, live);
     el('path', {d : `M${sx} ${sy} V${sb}`, class : 'aid-live-eye-gap'}, live);
     drag(svg,
@@ -197,31 +166,6 @@ liveKind('eye', (studio, organId) => {
             live),
          p => patch(profile, {polarity : clamp((p.y - st) / (sb - st))}), 'eyedark', 'grip',
          settle);
-    // The thing in the strip: along it where it is, up and down how bright; and the light all
-    // round at the strip's end.
-    drag(svg,
-         el('circle', {
-           cx : X(own.at),
-           cy : top + high * (1 - own.bright),
-           r : 5.5,
-           class : 'aid-live-posture'
-         },
-            live),
-         p => {
-           own.at = clamp((p.x - mid) / field, -3.6, 3.6);
-           own.bright = clamp(1 - (p.y - top) / high);
-           show();
-         },
-         'eyething', 'knob');
-    drag(svg,
-         el('circle',
-            {cx : R + 9, cy : top + high * (1 - own.ground), r : 5, style : `fill:${css(ground)}`},
-            live),
-         p => {
-           own.ground = clamp(1 - (p.y - top) / high);
-           show();
-         },
-         'eyeground', 'knob');
   }
   return {root, show, tick() {}};
 });
