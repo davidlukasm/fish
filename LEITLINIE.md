@@ -22,6 +22,7 @@ Davids aktuelle Rückmeldung zu allen Panels steht erklärt und mit Bildern in `
   1. Prüfen, welche Mechanismen es schon gibt: Rhythmus, Wellen, Bildung, Tod, Festigung, Hormonsysteme.
   2. Prüfen, wie Organe sie schon nutzen, zum Beispiel `DEVELOPING_RELAY` und `THRESHOLD_RELAY` in den Regionen.
   3. Prüfen, ob ein Organ das Problem mit diesen Mitteln selbst lösen kann.
+- **Auch kein Quick-Fix (David 01:32).** Erst die Ursache und die vorhandenen Mechanismen verstehen, mit Für und Wider entscheiden, dann bauen. Ein Symptom an der schnellsten Stelle zu flicken, ist in der Engine genauso verboten wie im Inspektor-Code.
 - **Fehlbeispiel:** Claude `14762028` (14.11. 00:53) gab allen Sinneszellen Netzhautwellen und schaltete sie beim Schlupf in der Engine ab. Zurückgenommen in `f27e2cc0`.
 
 ## 1. Musterverbot (David 13.11. 18:01)
