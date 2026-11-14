@@ -30,6 +30,14 @@ export const BARBEL_FEEL = Object.freeze({taste : 0, both : .5, touch : 1});
 export const GLAND_COPIES = 5;
 const sensor = (key, functionCode, copies = COPIES, surface = 'any', zones = null) =>
     Object.freeze({key, role : 'sensor', functionCode, copies, surface, zones});
+// An organ's own length of its cells' early phase, in place of the common first value
+// (YOUNG_CELL_HALF): the share of the span the engine counts a cell's maturity over.
+const young = (cell, half) => Object.freeze({...cell, youngHalf : half});
+// The gut's sense cells fire on their own for about 200 steps after they form (0.05 of 4096). A
+// hatchling learning to eat must not feel reward without a bite or bellyache without food for
+// long. Checked on one build (Astra, 14.11. 07:08): its three gut paths stood at full weight and
+// fully hardened before hatching and 2000 steps after it, as with the longer common value.
+const GUT_YOUNG_HALF = .05;
 const motor = (key, functionCode, copies = COPIES, surface = 'any') =>
     Object.freeze({key, role : 'motor', functionCode, copies, surface});
 
@@ -160,10 +168,10 @@ export const ORGANS = Object.freeze([
     category : 'internal',
     scope : 'single',
     centers : [
-      sensor('food', SENSE_KIND.intake, 4, 'inner'),
-      sensor('fullness', SENSE_KIND.inner_pressure, 2, 'inner'),
+      young(sensor('food', SENSE_KIND.intake, 4, 'inner'), GUT_YOUNG_HALF),
+      young(sensor('fullness', SENSE_KIND.inner_pressure, 2, 'inner'), GUT_YOUNG_HALF),
       // Pain cells inside the body feel the aching gut: spoiled flesh, and plants that pass closed.
-      sensor('ache', SENSE_KIND.damage, 2, 'inner')
+      young(sensor('ache', SENSE_KIND.damage, 2, 'inner'), GUT_YOUNG_HALF)
     ],
     slots : [
       slot('intake', 'out', [], false, 'food'), slot('fullness', 'out', [], false, 'fullness'),

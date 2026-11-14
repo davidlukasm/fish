@@ -498,12 +498,14 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
                              // Motor membranes must learn even when their action gate is closed.
                              if (desc.role === 'motor' && effect === HORMONE_EFFECT.excitation)
                                Object.assign(receptor, {active : 1, baseline : .5});
-                             // Every other sense cell fires on its own in the egg, so that its
-                             // paths into the brain grow before hatching; it falls silent with
-                             // maturity around hatching (the retina has its waves instead).
+                             // Every other sense cell fires on its own while it is young, so
+                             // that its paths into the brain grow; it falls silent with its own
+                             // maturity, after the common first value or its organ's own (the
+                             // retina has its waves instead).
                              if (desc.role === 'sensor' && desc.functionCode !== SENSE_KIND.light &&
                                  effect === HORMONE_EFFECT.rhythm)
-                               Object.assign(receptor, EGG_RHYTHM);
+                               Object.assign(receptor, EGG_RHYTHM,
+                                             desc.youngHalf ? {half : desc.youngHalf} : {});
                              if (desc.role === 'sensor' && desc.functionCode === SENSE_KIND.light &&
                                  effect === HORMONE_EFFECT.excitation)
                                Object.assign(receptor, {
