@@ -229,6 +229,15 @@ const STEPS = 900, CELLS = 7, USED = [4, 1024];
 // The clock counts STEPS; a sense with a shorter axis runs through its own in the same time.
 const stepOf = id => Math.round(play.step / STEPS * SENSE[id].steps), stepAt = id => play.step / STEPS * SENSE[id].steps;
 // A row of values at a moment between two steps.
+// What a sense's cells are offered at a moment: between two steps the mean of both, but a bite
+// fades on by itself until the next one is swallowed, and that one is there at once.
+function inputAt(id, at) {
+  const o = SENSE[id], stim = play.stim[id];
+  if (!o.bite || !stim)
+    return between(stim, at);
+  const per = o.steps / CURVES.length, since = at - Math.floor(at / per) * per, first = Math.floor(at / per) * per;
+  return reward(stim[first] / Math.max(.001, 1 - stim[first]) * Math.pow(BITE_KEEP, since));
+}
 const between = (values, at) => { const a = Math.floor(at), f = at - a; return values ? (values[a] ?? 0) * (1 - f) + (values[a + 1] ?? values[a] ?? 0) * f : 0; };
 // steps: how long the sense's round of the clock is in the engine's steps. The reward has no
 // time axis: in its round one bite of each food is swallowed.
@@ -701,7 +710,7 @@ function drawSense(id) {
 // as a bite of it irritates the reward's cells in this gut: darker what it always does, lighter
 // what it does when the muscle drives. Across them the keys' thresholds and bands, set at the
 // holder on the left as in the other senses; in the sense's own colour what of a bar lies above
-// the chosen key's thresholds: what its cells send for that bite. The round knob on the right
+// the lowest threshold of the chosen key's cells: from there on they send for that bite. The round knob on the right
 // sets how big the bites tried are (small below, big above). The clock swallows one bite after
 // the other: the frame shows which, the flash and the pulses of the nerve cells above follow it.
 function drawReward() {
@@ -724,7 +733,7 @@ function drawReward() {
   play.levels.push({owner : id, sense : id, show : v => { content.setAttribute('y', IY(v).toFixed(1)); content.setAttribute('height', (I1 - IY(v)).toFixed(1)); }});
   // The bites: a bar for each food, the keys' bands across, what the chosen key's cells send.
   const low = Math.min(...cellGates(keys[cell.chosen])), ranges = M().ranges;
-  keys.forEach((k, i) => { const band = keyBand(live, k, i, i === cell.chosen, L, right - L, IY); band.setAttribute('class', 'chip'); band.addEventListener('pointerdown', choose(i)); });
+  keys.forEach((k, i) => { const band = keyBand(live, k, i, i === cell.chosen, LX + 14, right - LX - 14, IY); band.setAttribute('class', 'chip'); band.addEventListener('pointerdown', choose(i)); });
   CURVES.forEach((c, j) => {
     const [least, most] = biteOf(ranges[j]), x = column(j);
     el('rect', {x, y : I0, width : wide, height : I1 - I0, rx : 2, fill : COLOUR.track, stroke : COLOUR.trackEdge}, live);
@@ -741,12 +750,13 @@ function drawReward() {
   el('path', {d : `M${L} ${I0 - 2} V${I1} H${right}`, stroke : COLOUR.axis, fill : 'none'}, live);
   // The bite swallowed now.
   play.bite = {frame : el('rect', {y : I0 - 2, width : wide + 4, height : I1 - I0 + 4, rx : 3, fill : 'none', stroke : COLOUR.line, 'stroke-width' : 1.3}, live), x : j => column(j) - 2, count : CURVES.length, per : o.steps / CURVES.length};
-  // The grips: every key and its spread, and the knob for how big the bites are.
+  // The grips: every key and, between the holder and the bars so that it hides no bar, its
+  // spread; and the knob for how big the bites are.
   keys.forEach((k, i) => {
     const chosen = i === cell.chosen, gates = cellGates(k);
     drag(svg, el('rect', {x : LX - 9, y : IY(k.gate) - 4, width : 18, height : 8, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2.5 : 1}`}, live),
       p => { k.gate = clamp(vOf(p.y), .03, .97); cell.chosen = i; draw(o.shows); }, id + 'key' + i);
-    spreadGrip(svg, live, right - 6 - 13 * i, IY(Math.max(...gates)), IY(Math.min(...gates)), p => { k.spread = clamp(2 * (vOf(p.y) - k.gate), 0, .8); cell.chosen = i; draw(o.shows); }, id + 'spread' + i);
+    spreadGrip(svg, live, LX + 20 + 11 * i, IY(Math.max(...gates)), IY(Math.min(...gates)), p => { k.spread = clamp(2 * (vOf(p.y) - k.gate), 0, .8); cell.chosen = i; draw(o.shows); }, id + 'spread' + i);
   });
   const span = Math.log(BITES[1] / BITES[0]), by = I1 - (I1 - I0) * Math.log(tried.bite / BITES[0]) / span, bx = R - 6;
   el('path', {d : `M${bx} ${I0 + 8} V${I1 - 6}`, stroke : COLOUR.trackEdge, 'stroke-width' : 2, 'stroke-linecap' : 'round'}, live);
@@ -760,7 +770,7 @@ function drawReward() {
 // Shows the present moment: the lines, what the holders hold, the keys the input has passed, what
 // irritants at the nerve cells.
 function showMoment() {
-  const now = id => between(play.stim[id], stepAt(id));
+  const now = id => inputAt(id, stepAt(id));
   for (const [id, {line, x, top, base}] of Object.entries(play.lines)) line.setAttribute('d', `M${x(stepAt(id)).toFixed(1)} ${top} V${base}`);
   if (play.bite) play.bite.frame.setAttribute('x', play.bite.x(Math.min(play.bite.count - 1, Math.floor(stepAt('feed') / play.bite.per))).toFixed(1));
   for (const l of play.levels) l.show(now(l.sense));
@@ -792,7 +802,7 @@ function showNerves(dt) {
   const {speed, rate, merge, bundle} = NERVE, place = (e, [x, y]) => { e.setAttribute('cx', x.toFixed(1)); e.setAttribute('cy', y.toFixed(1)); };
   play.time += dt;
   for (const [id, n] of Object.entries(play.nerves)) {
-    const st = stepOf(id), felt = between(play.stim[id], stepAt(id));
+    const st = SENSE[id].bite ? Math.floor(stepAt(id)) : stepOf(id), felt = inputAt(id, stepAt(id));
     // As big as the input is now, throbbing a little; gone when there is none.
     n.irritant.setAttribute('transform', `translate(${n.at}) scale(${((.4 + 1.6 * felt) * (1 + .12 * Math.sin(play.time / 110))).toFixed(2)})`);
     n.irritant.setAttribute('opacity', felt > .02 ? 1 : 0);
