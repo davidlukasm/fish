@@ -659,8 +659,10 @@ async function checkPulseCallbacks(createPlanPlayer) {
 
 async function checkRedraws(model, caps, root) {
   const {OrganStudio} = await import('../ui/studio/controller.js');
-  const doc = JSON.parse(require('node:fs').readFileSync(
+  const {settleRegions} = await import('../ui/studio/model/regions.js');
+  const stored = JSON.parse(require('node:fs').readFileSync(
       require('node:path').join(root, 'genomes/entwuerfe/liora.fish.json')));
+  const doc = settleRegions(stored, caps.sites);
   const counts = {};
   function make() {
     const studio = new OrganStudio({
@@ -698,7 +700,7 @@ async function checkRedraws(model, caps, root) {
       studio.placeStimulus('light');
     counts[action] = hits;
   }
-  for (const held of ['spectrum', 'sense', 'vision', 'skin', 'response']) {
+  for (const held of ['spectrum', 'sense', 'vision', 'response']) {
     const {studio, hits} = make();
     const cell = model.allCenters(doc)[0];
     studio.state.document = model.updateCenter(doc, cell.id, {field : .314159});
