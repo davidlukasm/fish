@@ -1012,6 +1012,17 @@ std::string diet_report() {
   row("plant", yield(food_kind::plant), true);
   row("meat", yield(food_kind::worm));
   row("size", [](double l) { return gut_size(l); });
+  Body reference;
+  reference.tissue = BODY_TISSUE;
+  reference.force_scale = physiology.max_bite_force;
+  // suction_share is already one at this force; stronger muscles cannot quicken passage further.
+  const double speed_max_strength = reference.force_scale / (MOUTH_FORCE_GAIN - 1);
+  row("speed", [&](double share) {
+    reference.gut_strength = share * speed_max_strength;
+    return gut_speed(reference);
+  });
+  out << ",\"speedMaxStrength\":" << speed_max_strength
+      << ",\"muscleCellForce\":" << MUSCLE_CELL_FORCE;
   out << "},\"foods\":{";
   // What each food is made of: its shares of the six stuffs, the rest being ballast.
   const std::pair<const char *, int> foods[] = {{"plant", food_kind::plant},

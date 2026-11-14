@@ -13,9 +13,6 @@
 namespace fishsim {
 namespace {
 constexpr double SENSOR_MASS = .001, MUSCLE_MASS = .007;
-// A muscle cell stands for a whole muscle segment: it pulls four times as hard as one fibre, and
-// its mass, upkeep and work grow with it.
-constexpr float MUSCLE_CELL_FORCE = 4;
 constexpr double NOSE_AHEAD = .8, LATERAL_PROBE = .5;
 // Steps the water at a nostril has taken to reach it: it carries the scent of the place it left
 // that long ago.

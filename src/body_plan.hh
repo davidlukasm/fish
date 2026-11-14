@@ -4,6 +4,9 @@
 #include "brain_interface.hh"
 #include "environment.hh"
 namespace fishsim {
+// A muscle cell stands for a segment; force, mass, upkeep and work scale with it.
+inline constexpr float MUSCLE_CELL_FORCE = 4;
+
 inline double visual_weight(const BrainInterface::Receptor &r, double angle) {
   if (angle < r.view_left || angle > r.view_right)
     return 0;
