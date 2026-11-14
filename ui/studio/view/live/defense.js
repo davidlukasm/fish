@@ -10,8 +10,8 @@
 // The guard round the fish at rest and raised is the plan's report (anatomy.spinesRest,
 // spinesRaised: all the fish's spines together), this organ's direction too (spineAims).
 // The mouth and the raising are the picture's own knobs; the fish panel has no probe for them.
-// STOPGAP: raised means the most any spines can stand (the report's spinesRaised), not what these
-// cells' twitches reach; that is the engine's to report.
+// Raised is as high as the planned muscles can raise them under a lasting command
+// (anatomy.spineHeights and spinesRaised).
 // Not in the pictures: that a hungry fish holds off less; the brake in the water and in the sand.
 import {t} from '../../../strings.js';
 import {ATELIER_LIMITS} from '../../../schema.js';
@@ -75,8 +75,10 @@ liveKind('defense', (studio, organId) => {
     const {cx, cy, rx, ry} = SPINE, count = rest.length, mouth = own.mouth,
                        guard =
                            rest.map((v, k) => Math.min(1, v + Math.max(0, raised[k] - v) * own.up)),
-                       mean = values => values.reduce((a, b) => a + b, 0) / values.length,
-                       height = mean(guard);
+                       // The spines' height for the whole fish, at rest and as high as its
+                       // muscles can raise them: what a mouth that would swallow it reckons with.
+        [ low, high ] = studio.state.anatomy?.spineHeights ?? [ 0, 0 ],
+                       lift = Math.max(0, high - low), height = low + own.up * lift;
     // A place on the rim, the fish's right side down; a direction in degrees from the snout.
     const rim = (angle, out = 0) => [cx - 4 - (rx + out) * Math.cos(radians(angle)),
                                      cy + (ry + out) * Math.sin(radians(angle))],
@@ -159,10 +161,12 @@ liveKind('defense', (studio, organId) => {
     // is dragged round the fish at its hinge and opened at a jaw's tip.
     const [rx2, ry2] = rim(direction(mid), SPINE.long * guard[mid] + 9),
                 span = Math.max(.02, raised[mid] - rest[mid]);
-    drag(svg, el('circle', {cx : rx2, cy : ry2, r : 5, class : 'aid-live-petal k0'}, live), p => {
-      own.up = clamp(((outOf(p) - 9) / SPINE.long - rest[mid]) / span);
-      show();
-    }, 'defenseup', 'knob');
+    // Muscles that cannot raise the spines above their rest have no knob for it.
+    if (lift > 0)
+      drag(svg, el('circle', {cx : rx2, cy : ry2, r : 5, class : 'aid-live-petal k0'}, live), p => {
+        own.up = clamp(((outOf(p) - 9) / SPINE.long - rest[mid]) / span);
+        show();
+      }, 'defenseup', 'knob');
     drag(svg, el('circle', {cx : mx, cy : my, r : 5.5, class : 'aid-live-thing'}, live), p => {
       mouth.bearing = degrees(Math.atan2(p.y - cy, cx - 4 - p.x));
       show();

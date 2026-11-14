@@ -139,9 +139,20 @@ liveKind('pigment', (studio, organId) => {
       paint(g, colourAt(v));
       txt(live, R + 5, Y(v) + 4, word(name), {class : 'aid-live-small'});
     }
-    const spreadAt = st => st < own.stop ? own.command * -Math.expm1(-st / time)
-                                         : own.command * -Math.expm1(-own.stop / time) *
-                                               Math.exp(-(st - own.stop) / time);
+    const spreadIn = (st, steps) => st < own.stop ? own.command * -Math.expm1(-st / steps)
+                                                  : own.command * -Math.expm1(-own.stop / steps) *
+                                                        Math.exp(-(st - own.stop) / steps),
+          spreadAt = st => spreadIn(st, time);
+    // Each channel of the body's colour spreads in its own time (anatomy.pigmentTimes: the
+    // cells' times weighed by what they swallow of that channel).
+    const times = studio.state.anatomy?.pigmentTimes,
+          bodyAt = st =>
+              range?.length
+                  ? css(range[0].map(
+                        (_, c) =>
+                            range[Math.round(clamp(spreadIn(st, times?.[c] > 0 ? times[c] : time)) *
+                                             (range.length - 1))][c]))
+                  : '';
     el('path',
        {d : `M${L} ${Y(own.command)} H${X(own.stop)} V${base}`, class : 'aid-live-sense-offered'},
        live);
@@ -179,7 +190,7 @@ liveKind('pigment', (studio, organId) => {
          },
          'pigmentcommand', 'knob');
     clock = at => {
-      paint(body, colourAt(spreadAt(at)));
+      paint(body, bodyAt(at));
       now.setAttribute('d', `M${X(at).toFixed(1)} ${top} V${base}`);
     };
   }
