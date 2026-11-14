@@ -205,6 +205,11 @@ double predicted_hatch_radius(const Body &b, const Genome &g, double neural_cost
 double take_nutrition(Body &b, double amount, const Fodder &f, const PhysiologyParameters &p) {
   const double accepted = std::clamp(amount, 0., gut_room(b, f)),
                usable = accepted * digestibility(b, f, p);
+  // What the bite is worth to the fish: what it can still store of it, after what its gut already
+  // holds for the reserve. A sated fish is rewarded for nothing (the food cells' signal).
+  const double room = std::max(0., (reserve_capacity(b) - b.energy) / (1 - p.digestion_cost) -
+                                       b.gut_energy * gut_use(b, p)),
+               worth = std::min(usable, room);
   b.gut_energy += accepted;
   double ballast = accepted;
   // Of each stuff only its usable share enters the gut's stores; the rest is ballast.
@@ -219,7 +224,7 @@ double take_nutrition(Body &b, double amount, const Fodder &f, const PhysiologyP
   b.gut_meal_flesh += accepted * f.stuff[digestion::flesh];
   b.gut_fill += accepted * f.fill;
   b.nutrition += usable;
-  b.nutrient_flow += PhysiologyParameters::nutrient_share * usable;
+  b.nutrient_flow += PhysiologyParameters::nutrient_share * worth;
   if (accepted > 0)
     b.hunger = 0;
   return accepted;
