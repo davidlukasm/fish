@@ -980,38 +980,47 @@ function drawTailSpeed() {
   stepAxis(live, L, R, VB, X);
   play.lines.tailspeed = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : VT, base : VB};
 }
-// Life cycle: across, the fish's maturity from the hatchling to the grown fish. Each bundle is a
-// band from where it begins to work to where it dies, with a grip at each end. Above them the
-// push the working bundles give the body at each maturity (at a full command, rested): the same
-// muscle pushes a small body harder than a large one. The round knob on that curve chooses the
-// maturity at which the pictures above show the fish.
-const TLIFE = {L : 30, R : 282, top : 14, base : 62, rows : 80, row : 13, samples : 84};
+// Life cycle: across, the fish's maturity from the hatchling to the grown fish; up, the push the
+// working bundles give the body at each maturity (at a full command, rested), stacked by bundle in
+// the order they join, as the force above. A bundle's layer begins where it begins to work and
+// ends where it dies; its two grips sit on those edges, in the layer. The same muscle pushes a
+// small body harder than a large one, so every layer thins as the fish grows. The round knob on
+// the curve chooses the maturity at which the pictures above show the fish.
+const TLIFE = {L : 30, R : 282, top : 14, base : 86, icons : 104, height : 118, samples : 126, edge : .004};
 function buildTailLife(fixed) {
-  const {L, R, top, base} = TLIFE;
-  el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, fixed);
-  txt(fixed, L + 4, top + 8, 'Schub');
+  const {L, R, top, base, icons} = TLIFE;
+  txt(fixed, L + 4, top + 2, 'Schub');
+  fishIcon(fixed, L + 8, icons, AGE_SIZE.young, COLOUR.icon); fishIcon(fixed, R - 16, icons, AGE_SIZE.grown, COLOUR.icon);
+  el('path', {d : `M${L + 26} ${icons} H${R - 40} m-6 -3.5 l6 3.5 l-6 3.5`, stroke : COLOUR.icon, 'stroke-width' : 1.3, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'}, fixed);
 }
 function drawTailLife() {
-  const {L, R, top, base, rows, row, samples} = TLIFE, nodes = T.nodes, icons = rows + row * TAIL.bundles + 8, {svg, live} = picture('taillife', icons + 14, buildTailLife);
+  const {L, R, top, base, samples, edge} = TLIFE, nodes = T.nodes, {svg, live} = picture('taillife', TLIFE.height, buildTailLife);
   const X = r => L + (R - L) * clamp(r, 0, 1), rOf = x => clamp((x - L) / (R - L), 0, 1);
-  const pushes = Array.from({length : samples + 1}, (_, k) => pushAt(k / samples)), most = Math.max(1e-6, ...pushes), Y = v => base - (base - top - 10) * v / most;
-  // Upright steps where a bundle joins or dies.
-  let d = `M${L} ${base}`;
-  pushes.forEach((v, k) => { d += ` L${X(k / samples).toFixed(1)} ${Y(v).toFixed(1)}`; });
-  el('path', {d : d + ` L${R} ${base} Z`, fill : COLOUR.muscle, opacity : .45, stroke : COLOUR.stomachEdge, 'stroke-width' : 1.6}, live);
-  nodes.forEach((n, i) => {
-    const y = rows + row * i, chosen = i === T.chosen, until = Math.min(1, n.until);
-    el('path', {d : `M${L} ${y} H${R}`, stroke : COLOUR.trackEdge}, live);
-    el('path', {d : `M${X(n.from)} ${y} H${X(until)}`, stroke : fibreColour(n.fast), 'stroke-width' : 6, 'stroke-linecap' : 'round', class : 'chip'}, live).addEventListener('pointerdown', () => { T.chosen = i; draw(TAIL_PARTS); });
-    const grip = (x, name, move) => drag(svg, el('rect', {x : x - 4, y : y - 5.5, width : 8, height : 11, rx : 2, style : `fill:${fibreColour(n.fast)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2.5 : 1}`}, live), p => { move(rOf(p.x)); T.chosen = i; draw(TAIL_PARTS); }, name + i);
-    grip(X(n.from), 'from', r => { n.from = Math.min(r, until - .08); });
-    grip(X(until), 'until', r => { n.until = Math.max(r, n.from + .08); });
-  });
-  fishIcon(live, L + 8, icons, AGE_SIZE.young, COLOUR.icon); fishIcon(live, R - 16, icons, AGE_SIZE.grown, COLOUR.icon);
-  el('path', {d : `M${L + 26} ${icons} H${R - 40} m-6 -3.5 l6 3.5 l-6 3.5`, stroke : COLOUR.icon, 'stroke-width' : 1.3, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'}, live);
+  const order = nodes.map((n, i) => i).sort((p, q) => nodes[p].gate - nodes[q].gate);
+  const share = (n, r) => works(n, r) ? n.cells * forceOf(n.fast) / Math.max(THRUST_FLOOR, r) : 0;
+  // A bundle's layer at a maturity: from what the bundles under it give to that and its own.
+  const layer = (i, r) => { let under = 0; for (const j of order) { if (j === i) break; under += share(nodes[j], r); } return [under, under + share(nodes[i], r)]; };
+  const most = Math.max(1e-6, ...Array.from({length : samples + 1}, (_, k) => pushAt(k / samples))), Y = v => base - (base - top - 12) * v / most;
+  for (const i of order) {
+    const n = nodes[i], until = Math.min(1, n.until), at = Array.from({length : samples + 1}, (_, k) => n.from + (until - n.from) * k / samples).map(r => Math.min(r, until - edge));
+    const upper = at.map(r => [X(r), Y(layer(i, r)[1])]), lower = at.map(r => [X(r), Y(layer(i, r)[0])]).reverse();
+    el('path', {d : path(upper) + ' L' + path(lower).slice(1) + 'Z', fill : fibreColour(n.fast), opacity : .85, class : 'chip'}, live).addEventListener('pointerdown', () => { T.chosen = i; draw(TAIL_PARTS); });
+  }
+  el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
   // The fish shown above.
   const r = T.input.maturity;
-  el('path', {d : `M${X(r)} ${Y(pushAt(r))} V${rows + row * (nodes.length - 1) + 6}`, stroke : COLOUR.line, 'stroke-dasharray' : '2 4', 'stroke-width' : 1.2}, live);
+  el('path', {d : `M${X(r)} ${Y(pushAt(r))} V${base}`, stroke : COLOUR.line, 'stroke-dasharray' : '2 4', 'stroke-width' : 1.2}, live);
+  // The grips on each layer's two edges.
+  for (const i of order) {
+    const n = nodes[i], chosen = i === T.chosen, until = Math.min(1, n.until);
+    const grip = (r, inside, name, move) => {
+      const [under, over] = layer(i, inside);
+      drag(svg, el('rect', {x : X(r) - 4, y : Y((under + over) / 2) - 5.5, width : 8, height : 11, rx : 2, style : `fill:${fibreColour(n.fast)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2.5 : 1}`}, live),
+        p => { move(rOf(p.x)); T.chosen = i; draw(TAIL_PARTS); }, name + i);
+    };
+    grip(n.from, n.from + edge, 'from', to => { n.from = Math.min(to, until - .08); });
+    grip(until, until - 2 * edge, 'until', to => { n.until = Math.max(to, n.from + .08); });
+  }
   drag(svg, el('circle', {cx : X(r), cy : Y(pushAt(r)), r : 5.5, fill : COLOUR.line}, live), p => { T.input.maturity = rOf(p.x); draw(TAIL_PARTS); }, 'maturity', 'knob');
 }
 // The fish swims while the command lasts: it beats as hard as its force and as quick as the fibres
