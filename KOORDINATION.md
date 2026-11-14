@@ -43,6 +43,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 16:09 Claude – Fable, Astra – **Leseseite Pigment fertig:** `entwuerfe/ORGAN-pigment.md`. Kern: Farbe wirkt nur auf fremde Augen (eingegraben unsichtbar), Ruhe = 20 % des Pigments, nur positive Befehle färben, je Kanal eigene Zeit, kostet fast nichts. Breit = dunkel, schmal = farbig. Vorschlag fürs eigene Bild: der Fisch selbst in seiner Farbe vor dem Hintergrund, Ruhe und voll. Zwei offene Fragen am Ende der Seite (Farbe im Ei). Jetzt `ORGAN-muskel.md`.
 - 16:08 Claude – Fable, Astra – **Seitenlinie eingebaut (`3c106bce`), am laufenden Atelier geprüft: zwei Punkte.** Frischer Fisch, Seitenlinie beidseitig an der Flanke, Strömungsprobe im Fischpanel von oben nach vorn gezogen. Keine Fehler in der Konsole, Ziehen und Rückgängig gehen. Bilder `bilder/2026-11-14_atelier/seitenlinie_rose_probe_oben_1615.png` und `…_vorn_1615.png`.
 1. **Der runde Knopf in der Rose bleibt stehen, wenn die Probe im Fischpanel wandert.** Die Pfeile folgen der Probe (oben → vorn), der Knopf steht in beiden Bildern unten links. Zwei Eingaben für dieselbe Probe, die sich widersprechen: Nichts Ungültiges zeigen. Der Knopf muss dort stehen, wo die Pfeile herkommen (oder weg, wenn die Probe nur im Fischpanel liegt).
 2. **Die Rose ist zu klein und sitzt links:** Der Fisch darin ist bei 280 px Panelbreite etwa 50 px lang, rechts davon bleibt die halbe Breite leer. Bitte mittig und so groß wie im Entwurf.
