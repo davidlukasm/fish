@@ -262,8 +262,8 @@ const SENSE = {
   full : {title : 'Signalverlauf bei Magenfüllung', colour : COLOUR.stomachEdge, tires : false, steps : 900, after : 260, shows : ['fish', 'full'], row : null},
   ache : {title : 'Signalverlauf bei Bauchweh', used : 'an Schmerz gewöhnt', colour : COLOUR.sore, tires : true, steps : 900, after : 120, shows : ['ache'],
           row : {word : 'Reizschwelle für Bauchweh nach Futterart', of : r => r.ache, any : c => c.aches.some(a => a > 0)}},
-  // derived: the input is not shaped here, it follows from another picture's trial.
-  depth : {title : 'Signalverlauf bei Tiefe', colour : '#9cc8f0', tires : false, steps : 900, shows : ['bladder', 'bladderfill', 'depth', 'bladderlife'], row : null, derived : () => BM().depth}
+  // The swim bladder's depth cells; their picture is its own (drawDepth).
+  depth : {title : 'Tiefe und Meldung ans Gehirn', colour : '#9cc8f0', tires : false, steps : 900}
 };
 // The reward signal (David 14.11.): at each swallow the engine adds what the bite will give this
 // gut at its present pace to a flow that fades within some ten steps (take_nutrition,
@@ -661,7 +661,7 @@ function nerves(svg, parent, id, cell, choose, gripX, tire) {
   play.nerves[id] = {cells, bundle : merged, at, dots, due : 0, irritant : el('path', {d : IRRITANT, fill : o.colour}, parent)};
 }
 function drawSense(id) {
-  const cell = S[id], o = SENSE[id], keys = cell.keys, inp = cell.input, stim = play.stim[id] = o.derived ? o.derived() : stimulus(id), steps = o.steps;
+  const cell = S[id], o = SENSE[id], keys = cell.keys, inp = cell.input, stim = play.stim[id] = stimulus(id), steps = o.steps;
   const {L, R, LX, I0, I1, row} = SENSE_BOX, {svg, live} = picture(id, I1 + 22 + (o.row ? row + 50 : 0));
   const IY = v => I1 - (I1 - I0) * clamp(v, 0, 1), vOf = y => clamp((I1 - y) / (I1 - I0), 0, 1);
   const X = st => L + (R - L) * st / steps, stOf = x => clamp(Math.round((x - L) / (R - L) * steps), 0, steps);
@@ -728,8 +728,8 @@ function drawSense(id) {
       p => { k.gate = clamp(vOf(p.y), .03, .97); cell.chosen = i; draw(o.shows); }, id + 'key' + i);
     spreadGrip(svg, live, R - 8 - 13 * i, IY(Math.max(...gates)), IY(Math.min(...gates)), p => { k.spread = clamp(2 * (vOf(p.y) - k.gate), 0, .8); cell.chosen = i; draw(o.shows); }, id + 'spread' + i);
   });
-  if (!o.derived) drag(svg, el('circle', {cx : X(inp.rise), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.rise = clamp(stOf(p.x), 1, inp.stop - 1); inp.height = vOf(p.y); draw(o.shows); }, id + 'rise', 'knob');
-  if (!o.derived) drag(svg, el('circle', {cx : X(inp.stop), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.stop = clamp(stOf(p.x), inp.rise + 1, steps - 10); inp.height = vOf(p.y); draw(o.shows); }, id + 'stop', 'knob');
+  drag(svg, el('circle', {cx : X(inp.rise), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.rise = clamp(stOf(p.x), 1, inp.stop - 1); inp.height = vOf(p.y); draw(o.shows); }, id + 'rise', 'knob');
+  drag(svg, el('circle', {cx : X(inp.stop), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.stop = clamp(stOf(p.x), inp.rise + 1, steps - 10); inp.height = vOf(p.y); draw(o.shows); }, id + 'stop', 'knob');
   chip(live, LX - 9, I1 + 10, '−', fewer, o.shows, keys.length > 1, 6);
   chip(live, LX + 9, I1 + 10, '+', more, o.shows, keys.length < 3, 6);
   // How strongly each food irritates these cells in this gut: only the foods that can at all.
@@ -1108,7 +1108,7 @@ const BLADDER = {rate : .002, lift : .03, sinking : .012, fall : 150, groups : 5
                  F : {L : 64, R : 290, c0 : 20, c1 : 44, top : 60, base : 126, height : 150},
                  LIFE : {L : 44, R : 264, top : 18, base : 88, icons : 106, height : 120, samples : 120, beside : 16, apart : 13, whole : .015, least : .08}};
 const BL = {groups : [{cells : 16, from : 0, until : 1}, {cells : 16, from : 0, until : 1}, {cells : 16, from : 0, until : 1}], chosen : 0,
-            input : {fill : .9, stop : 330, empty : .7, maturity : 1}};
+            input : {fill : .9, stop : 330, empty : .7, start : 0, maturity : 1}};
 const BLADDER_PARTS = ['bladder', 'bladderfill', 'depth', 'bladderlife'];
 const WATER = '#9cc8f0';
 const groupWorks = (g, maturity) => (g.until >= 1 || maturity < g.until) && maturity >= g.from;
@@ -1116,18 +1116,26 @@ const capacityAt = maturity => BL.groups.reduce((sum, g) => sum + (groupWorks(g,
 // The filling at which a bladder of this capacity carries the fish; above 1: it never does.
 const hoverAt = capacity => capacity > 0 ? BLADDER.sinking / BLADDER.lift * (1 + capacity) / capacity : Infinity;
 function deriveBladder() {
-  const {fill, stop, empty, maturity} = BL.input, capacity = capacityAt(maturity), hover = hoverAt(capacity);
+  const {fill, stop, empty, start, maturity} = BL.input, capacity = capacityAt(maturity), hover = hoverAt(capacity);
   const filling = [], depth = [], push = [];
-  // The fish begins on the ground, empty.
-  let level = 0, at = 1;
+  // The fish begins on the ground, as full as the trial has it.
+  let level = start, at = 1;
   for (let st = 0; st <= STEPS; st++) {
     const pull = (BLADDER.sinking - BLADDER.lift * capacity / (1 + capacity) * level) / BLADDER.sinking;
     filling.push(level); depth.push(at); push.push(-pull);
     level = clamp(level + BLADDER.rate * capacity * (st < stop ? fill : -empty), 0, 1);
     at = clamp(at + pull / BLADDER.fall, 0, 1);
   }
-  return {capacity, hover, filling, depth, push};
+  // Where the filling passes the line at which the fish hovers: from when it rises, from when it
+  // sinks again.
+  const rises = hover <= 1 ? filling.findIndex(v => v > hover) : -1, sinks = rises < 0 ? -1 : filling.findIndex((v, st) => st > rises && v < hover);
+  return {capacity, hover, filling, depth, push, rises, sinks};
 }
+// Upkeep as a share of the resting need of a body of the reference size: a bladder cell costs
+// 0.0004 a unit of its strength (effector_upkeep, src/body_plan.cc:54-58, src/brain_interface.hh:
+// 166) against the basal rate 0.06 (src/physiology_parameters.hh:27). Filling and emptying cost
+// besides, holding does not (src/body_plan.cc:1504).
+const bladderCost = () => 100 * .0004 * BL.groups.reduce((sum, g) => sum + (g.until >= 1 || BL.input.maturity < g.until ? g.cells / BLADDER.full : 0), 0) / .06;
 let bladderModel = null;
 const BM = () => bladderModel ??= deriveBladder();
 // The fish of the water column, seen from the side; it outlives every repaint.
@@ -1156,6 +1164,7 @@ function drawBladder() {
   document.getElementById('bladder-kind').textContent = m.hover <= 1 ? `Schwebt bei ${Math.round(100 * m.hover)} % Füllung` : 'Kann nicht schweben';
   bladderFilm.sac.setAttribute('rx', sacLength(m.capacity)); bladderFilm.sac.setAttribute('ry', 3 + 4 * clamp(m.capacity / BLADDER.groups, 0, 1));
   bladderFilm.at = DY;
+  txt(live, 4, 10, `+${comma(bladderCost())} % Ruhebedarf`, {style : 'font-size:10px'});
   // The depth cells' keys across the column: a line where each begins to report, lit while the
   // fish is deeper; its grip at the left edge, its band how far its cells spread.
   play.glow = play.glow.filter(g => g.owner !== 'bladder');
@@ -1166,7 +1175,10 @@ function drawBladder() {
     play.glow.push({owner : 'bladder', line, gate : k.gate, sense : 'depth'});
     drag(svg, el('rect', {x : L - 16, y : y - 4, width : 14, height : 8, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2.5 : 1}`}, live),
       p => { k.gate = clamp(dOf(p.y), .03, .97); cell.chosen = i; draw(BLADDER_PARTS); }, 'depthline' + i);
+    spreadGrip(svg, live, R - 8 - 13 * i, DY(Math.min(...gates)), y, p => { k.spread = clamp(2 * (k.gate - dOf(p.y)), 0, .8); cell.chosen = i; draw(BLADDER_PARTS); }, 'depthspread' + i);
   });
+  chip(live, L - 18, base + 12, '−', () => { keys.splice(cell.chosen, 1); cell.chosen = 0; }, BLADDER_PARTS, keys.length > 1, 6);
+  chip(live, L - 2, base + 12, '+', () => { keys.push({gate : clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95), spread : .1}); cell.chosen = keys.length - 1; }, BLADDER_PARTS, keys.length < 3, 6);
   // The bladder's size: the grip at its rear end, dragged along the fish. It rides with the fish,
   // which stands still while a grip of this picture is held.
   const reach = sacLength(m.capacity);
@@ -1199,10 +1211,46 @@ function drawBladderFill() {
   txt(live, L, base + 15, 'Schritte');
   for (const st of [STEPS / 3, 2 * STEPS / 3]) txt(live, X(st), base + 15, st, {'text-anchor' : 'middle'});
   txt(live, R, base + 15, STEPS, {'text-anchor' : 'end'});
+  // From which step the fish rises, and from which it sinks again.
+  for (const [st, sign] of [[m.rises, '↑'], [m.sinks, '↓']]) if (st > 0) {
+    el('circle', {cx : X(st), cy : Y(m.hover), r : 2.6, fill : COLOUR.line}, live);
+    txt(live, X(st) + (sign === '↑' ? -5 : 5), Y(m.hover) - 6, `${sign} ${st}`, {'text-anchor' : sign === '↑' ? 'end' : 'start', class : 'value', style : `paint-order:stroke;stroke:${COLOUR.track};stroke-width:3px`});
+  }
   play.lines.bladderfill = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : c0, base};
   const stOf = x => clamp(Math.round((x - L) / (R - L) * STEPS), 0, STEPS), vOf = y => clamp((mid - y) / half, -1, 1);
   drag(svg, el('circle', {cx : X(inp.stop), cy : CY(inp.fill), r : 5.5, fill : COLOUR.line}, live), p => { inp.stop = clamp(stOf(p.x), 20, STEPS - 60); inp.fill = clamp(vOf(p.y), 0, 1); draw(BLADDER_PARTS); }, 'blfill', 'knob');
   drag(svg, el('circle', {cx : (X(inp.stop) + R) / 2, cy : CY(-inp.empty), r : 5.5, fill : COLOUR.line}, live), p => { inp.empty = clamp(-vOf(p.y), 0, 1); draw(BLADDER_PARTS); }, 'blempty', 'knob');
+  // How full the bladder is when the trial begins.
+  drag(svg, el('circle', {cx : L, cy : Y(inp.start), r : 5.5, fill : WATER}, live), p => { inp.start = clamp((base - p.y) / (base - top), 0, 1); draw(BLADDER_PARTS); }, 'blstart', 'knob');
+}
+// The depth sense: the nerve cells, and under them over the steps the depth the fish has in the
+// trial (the line) and, for each key, what its cells report to the brain (a see-through area in
+// the key's colour, across the whole picture). The thresholds are the dashed lines; they are set
+// in the water column, where one sees the depth.
+const DEPTH = {L : 44, R : 292};
+function drawDepth() {
+  const id = 'depth', cell = S.depth, keys = cell.keys, stim = play.stim.depth = BM().depth, {I0, I1} = SENSE_BOX, {L, R} = DEPTH, {svg, live} = picture('depth', I1 + 22);
+  const X = st => L + (R - L) * st / STEPS, IY = v => I1 - (I1 - I0) * clamp(v, 0, 1);
+  const choose = i => () => { cell.chosen = i; draw(BLADDER_PARTS); };
+  play.glow = play.glow.filter(g => g.owner !== id);
+  play.levels = play.levels.filter(l => l.owner !== id);
+  const runs = keys.map(k => run(id, k, stim));
+  play.sentBy[id] = runs.map(r => r.sent);
+  nerves(svg, live, id, cell, choose);
+  txt(live, L, I0 - 9, SENSE[id].title);
+  el('rect', {x : L, y : I0, width : R - L, height : I1 - I0, fill : COLOUR.track}, live);
+  keys.forEach((k, i) => {
+    const chosen = i === cell.chosen;
+    el('path', {d : path(runs[i].sent.map((v, st) => [X(st), IY(v)])) + ` L${R} ${I1} L${L} ${I1} Z`, fill : keyColour(i), opacity : chosen ? .45 : .22, stroke : keyColour(i), 'stroke-width' : chosen ? 1.6 : 1, class : 'chip'}, live).addEventListener('pointerdown', choose(i));
+    el('path', {d : `M${L} ${IY(k.gate)} H${R}`, stroke : keyColour(i), 'stroke-dasharray' : '4 3', 'stroke-width' : chosen ? 1.8 : 1.1}, live);
+  });
+  el('path', {d : path(stim.map((v, st) => [X(st), IY(v)])), fill : 'none', stroke : WATER, 'stroke-width' : 2}, live);
+  el('path', {d : `M${L} ${I0 - 2} V${I1} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+  txt(live, L - 4, I0 + 9, 'tief', {'text-anchor' : 'end'}); txt(live, L - 4, I1, 'flach', {'text-anchor' : 'end'});
+  txt(live, L, I1 + 16, 'Schritte');
+  for (const st of [STEPS / 3, 2 * STEPS / 3]) txt(live, X(st), I1 + 16, st, {'text-anchor' : 'middle'});
+  txt(live, R, I1 + 16, STEPS, {'text-anchor' : 'end'});
+  play.lines[id] = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : I0, base : I1};
 }
 // Life cycle: across, the fish's maturity; up, the filling. The line is the filling at which the
 // fish hovers with the groups of cells that work then: above it the fish rises, below it sinks;
@@ -1368,7 +1416,7 @@ function tick(now) {
 const PRESETS = [['Räuber', .6, 0, 0], ['Planktonfresser', .8, 0, 0], ['Allesfresser', 1.6, 0, 0], ['Algenfresser', 3.4, 0, 0], ['Pflanzenfresser', 4, 0, 0], ['Jung Plankton, dann Blatt', 3, 1, 0]];
 choiceList(document.getElementById('presets'), 'Vorlage', PRESETS.map(p => p[0]), i => { const [, length, young, grown] = PRESETS[i]; Object.assign(S, {length, young, grown}); draw(); });
 const PAINT = {fish : drawFish, yield : drawYield, bars : drawBars, life : drawLife, full : () => drawSense('full'), ache : () => drawSense('ache'), feed : drawReward, tail : drawTail, tailforce : drawTailForce, tailspeed : drawTailSpeed, taillife : drawTailLife,
-               bladder : drawBladder, bladderfill : drawBladderFill, depth : () => drawSense('depth'), bladderlife : drawBladderLife};
+               bladder : drawBladder, bladderfill : drawBladderFill, depth : drawDepth, bladderlife : drawBladderLife};
 // The senses first: the fish's stomach follows the fullness input.
 for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife']) dirty.add(part);
 repaint();
