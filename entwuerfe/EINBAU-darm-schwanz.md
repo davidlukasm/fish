@@ -46,3 +46,13 @@ Ein Inspektor ist eine Funktion `(state, organ, center) → SVG-Text` (`ORGAN_PA
 2. Darm: ein Organ im Panel, zwei im Modell – einverstanden?
 3. Fasern je Bündel: Modell erweitern oder Entwurf auf „ein Fasertyp je Muskel“ zurücknehmen? (Die Engine hat den Fasertyp je Zelle, `muscle_fibre.hh:20`, also wäre je Bündel möglich.)
 4. Prüfen kann den Einbau nur Astra (laufendes Atelier). Ich prüfe Syntax.
+
+## Nachtrag 08:00: Schreibweg gelesen, Bauplan für Weg B
+
+Gelesen: `ui/studio/handles.js:240-300, 595-640, 764-850`, `ui/studio/design.js:275-295, 336-358`, `ui/studio/controller.js:396-428`, `ui/studio/model/document.js:1038-1130, 1468-1492`, `organs.js:398-400`.
+
+- **Wie ein Zug ins Dokument kommt:** Während des Ziehens `draftDesign(neuesDokument, Stapelname, Neuzeichner)` (`handles.js:768-783`): Das Dokument wird sofort gesetzt, einmal je Frame läuft der Neuzeichner. Beim Loslassen `settleGraphic()` (`:784-803`): Der ganze Zug wird ein Schritt für Rückgängig (`changeDocument`), danach wird der Inspektor neu als Text gesetzt (`refreshInspector`, `controller.js:396-410`: `innerHTML`).
+- **Folge für Weg B:** Das Modul hängt an einem Platzhalter im Text des Inspektors. Nach jedem `refreshInspector`/`refreshDragged` ist der Platzhalter neu; das Modul hängt seine bestehenden Bilder dort wieder ein (DOM-Knoten umhängen, nicht neu bauen), darum verschwindet beim Loslassen nichts. Während des Ziehens nennt es einen eigenen Neuzeichner, der nur seine Bilder aus dem Dokument neu malt.
+- **Schreiben nur über vorhandene Operationen:** `updateCenter(doc, Zell-Id, {copies, threshold, tau})` wirkt **je Knoten** (`document.js:1468-1492`). Fasern je Bündel brauchen also **keine Modellerweiterung**: `tau` des einen Knotens (`fibreTau`). `setMuscleFibre` setzt nur alle Knoten auf einmal. Frage 3 ist damit erledigt.
+- **Bündelschwelle:** `threshold` je Knoten über `updateCenter`. Damit entfällt `sprint` (Anteil der Reserveknoten, `document.js:1093-1116`) als eigener Begriff. **Offen:** ob `sprint` beim Kompilieren die Schwelle der letzten Knoten überschreibt. Das lese ich, bevor ich es anfasse.
+- **Reihenfolge des Einbaus:** zuerst der Schwanz (alle Operationen vorhanden), dann der Darm (zwei Organe im Panel als eines, Bibliothek nur „Darm“, Lebenszyklus des Darmmuskels auf Knoten über die Reife umstellen).
