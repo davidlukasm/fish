@@ -158,6 +158,8 @@ Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false)
     for (auto &r : g.receptors)
       r = read_receptor(input);
     g.growth = read_receptor(input);
+    // A cell forms before it can age; its forming cannot wait for its own maturity.
+    ensure(g.growth.substance != field::CELL_MATURITY, "cell formation cannot read cell maturity");
     ensure(between(g.electrical_limit, 0, 1), "invalid electrical limit");
     ensure(between(g.spread_physiology, 0, 1), "invalid trait spread");
     ensure(between(g.spread_receptors, 0, 1), "invalid trait spread");
