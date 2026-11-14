@@ -19,7 +19,7 @@ import {
 import {label} from '../kit.js';
 import {el, liveKind} from './kit.js';
 import {bestScents, sampleColour, sampleShare, scentMap} from './scentmap.js';
-import {gateThreshold, keysOf, senseCourse, STEPS, typeLife} from './sense.js';
+import {INTENSITY, keysOf, senseCourse, STEPS, typeLife} from './sense.js';
 
 const word = (key, values) => t('studio.live.nose.' + key, values);
 const ROUND_MS = 12000, MOST = 4, NEW_WIDTH = .25;
@@ -73,11 +73,12 @@ liveKind('nose', (studio, organId) => {
     after : 120,
     most : MOST,
     words : {course : word('course'), used : word('used'), steps : word('steps')},
-    keys : () => keysOf(types()),
+    scale : INTENSITY,
+    keys : () => keysOf(types(), INTENSITY),
     share : k => sampleShare(k.cell, own.probe),
     colour : () => sampleColour(own.probe),
     fewer : k => remove(k.type),
-    more : gate => add({threshold : gateThreshold(gate)}),
+    more : gate => add({threshold : INTENSITY.threshold(gate)}),
     doc : () => studio.state.document,
     draft,
     settle,

@@ -15,6 +15,7 @@ import {
   unitOfPlan
 } from '../../../tuning.js';
 import {updateCellDistribution, updateCenter} from '../../model/document.js';
+import {TUNING} from '../../../schema.js';
 import {chip, clamp, drag, el, fishIcon, path, picture, txt} from './kit.js';
 
 export const STEPS = 900, CELLS = 7, LEVELS = [ activationLevel(0), activationLevel(1) ],
@@ -31,6 +32,45 @@ export const answer = (x, gate, used) => {
   const over = (clamp(x) - used - gate) / (1 - gate);
   return over > 0 ? over / (over + gate * (1 - over)) : 0;
 };
+// The two scales a sense's stimulus has (brain_interface.hh, intensity_sense). `pos`: where a
+// stimulus stands in the diagram, from nothing (0) to the strongest (1); `val`: the stimulus
+// there; `gate`, `spread`: a key's threshold and its cells' spread as places in the diagram;
+// `gates`: its cells' thresholds as stimuli; `answer`: what a cell reports; `threshold`,
+// `spreading`: the plan's values for a place in the diagram.
+// BOUNDED: a stimulus between nothing and all; a cell answers nothing up to its threshold and all
+// at the full stimulus (body_plan.cc, bounded_response).
+export const BOUNDED = Object.freeze({
+  pos : s => clamp(s),
+  val : v => clamp(v),
+  gate : cell => activationLevel(unitOfPlan(cell.threshold)),
+  spread : cell => 2 * cell.distribution.spread_physiology * LEVEL_SPAN,
+  gates : cellGates,
+  answer,
+  threshold : v => planOfUnit(activationQuality(clamp(v, LEVELS[0], LEVELS[1]))),
+  spreading : spread => clamp(spread / (2 * LEVEL_SPAN), 0, 1)
+});
+// INTENSITY: a stimulus without upper bound (scent, flow), on a logarithmic scale from the
+// faintest threshold a cell can have (0) to a stimulus of one (1); a threshold is threshold_min
+// x threshold_range ^ quality (receptor_tuning.hh, response_threshold), so it lies at REACH x
+// its quality. A cell answers nothing up to its threshold and half at twice the threshold; what
+// it is used to raises the threshold by as much (body_plan.cc, excess_response).
+const FAINTEST = TUNING.threshold_min,
+      REACH = Math.log(TUNING.threshold_range) / -Math.log(FAINTEST);
+const places = k => Array.from(
+    {length : CELLS}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5), 0, REACH));
+export const INTENSITY = Object.freeze({
+  pos : s => s > FAINTEST ? clamp(1 - Math.log(s) / Math.log(FAINTEST)) : 0,
+  val : v => v > 0 ? Math.exp(Math.log(FAINTEST) * (1 - clamp(v))) : 0,
+  gate : cell => REACH * unitOfPlan(cell.threshold),
+  spread : cell => 2 * cell.distribution.spread_physiology * REACH,
+  gates : k => places(k).map(v => Math.exp(Math.log(FAINTEST) * (1 - v))),
+  answer : (s, gate, used) => {
+    const excess = s - gate - used;
+    return excess > 0 ? excess / (excess + gate + used) : 0;
+  },
+  threshold : v => planOfUnit(clamp(v / REACH)),
+  spreading : spread => clamp(spread / (2 * REACH), 0, 1)
+});
 // The input tried on a sense: it rises to a height, holds and stops, then fades.
 export const stimulusOf = (input, after) => {
   const top = input.height * clamp(input.stop / Math.max(1, input.rise));
@@ -39,11 +79,12 @@ export const stimulusOf = (input, after) => {
                                                 : top * Math.exp(-(st - input.stop) / after));
 };
 // What a key's cells send under an input, step by step, and what they have got used to by then.
-export function runOf(k, stim, tires) {
-  const gates = cellGates(k), pace = tires ? 1 / k.used : 0, sent = [], used = [];
+export function runOf(k, stim, tires, scale = BOUNDED) {
+  const gates = scale.gates(k), reply = scale.answer, pace = tires ? 1 / k.used : 0, sent = [],
+        used = [];
   let u = 0;
   for (const s of stim) {
-    sent.push(gates.reduce((sum, g) => sum + answer(s, g, u), 0) / CELLS);
+    sent.push(gates.reduce((sum, g) => sum + reply(s, g, u), 0) / CELLS);
     used.push(u);
     u += (s - u) * pace;
   }
@@ -51,8 +92,8 @@ export function runOf(k, stim, tires) {
 }
 // The step at which a key's last cell falls silent under this input; past the picture's steps
 // if it never does, 0 if the cell never sends at all.
-export function silentStep(k, stim) {
-  const last = Math.min(...cellGates(k));
+export function silentStep(k, stim, scale = BOUNDED) {
+  const last = Math.min(...scale.gates(k));
   let used = 0, heard = false;
   for (let st = 0; st < stim.length; st++) {
     const hears = stim[st] - used > last;
@@ -64,13 +105,13 @@ export function silentStep(k, stim) {
   return heard ? stim.length : 0;
 }
 // The pace of tiring that puts that step where it is wanted (the slower, the later).
-export function usedFor(k, stim, step) {
-  if (!silentStep({...k, used : USED[1]}, stim))
+export function usedFor(k, stim, step, scale = BOUNDED) {
+  if (!silentStep({...k, used : USED[1]}, stim, scale))
     return k.used;
   let [lo, hi] = USED;
   for (let n = 0; n < 24; n++) {
     const mid = (lo + hi) / 2;
-    if (silentStep({...k, used : mid}, stim) < step)
+    if (silentStep({...k, used : mid}, stim, scale) < step)
       lo = mid;
     else
       hi = mid;
@@ -105,25 +146,23 @@ export const cubic = (a, b, c, d, s) => {
 };
 
 // A sense's keys as the document has them: one for each type of its cells.
-export const keysOf = types => types.map(type => {
+export const keysOf = (types, scale = BOUNDED) => types.map(type => {
   const cell = type.centers[0];
   return {
     id : cell.id,
     type : type.id,
     cell,
-    gate : activationLevel(unitOfPlan(cell.threshold)),
-    spread : 4 * cell.distribution.spread_physiology * LEVEL_SPAN / 2,
+    gate : scale.gate(cell),
+    spread : scale.spread(cell),
     used : adaptationSteps(cell.tau)
   };
 });
-export const setGate = (doc, k, gate) => updateCenter(
-    doc, k.id, {threshold : planOfUnit(activationQuality(clamp(gate, LEVELS[0], LEVELS[1])))});
-export const setSpread = (doc, k, spread) =>
-    updateCellDistribution(doc, k.id, 'spread_physiology', clamp(spread / (2 * LEVEL_SPAN), 0, 1));
+export const setGate = (doc, k, gate, scale = BOUNDED) =>
+    updateCenter(doc, k.id, {threshold : scale.threshold(gate)});
+export const setSpread = (doc, k, spread, scale = BOUNDED) =>
+    updateCellDistribution(doc, k.id, 'spread_physiology', scale.spreading(spread));
 export const setUsed = (doc, k, steps) =>
     updateCenter(doc, k.id, {tau : adaptationOf(clamp(steps, USED[0], USED[1]))});
-export const gateThreshold = gate =>
-    planOfUnit(activationQuality(clamp(gate, LEVELS[0], LEVELS[1])));
 export const keyGrip = (i, on) => 'aid-live-keygrip k' + i + (on ? ' on' : '');
 
 // One sense's course: the nerve cells, and under them one diagram over the steps: the input with
@@ -133,14 +172,15 @@ export const keyGrip = (i, on) => 'aid-live-keygrip k' + i + (on ? ' on' : '');
 // `own`: which key is chosen and the input tried (rise, height, stop), kept by the inspector;
 // `keys()`: the keys now; `share(k)`: what a key's cells meet of the input, if not all of it;
 // `colour()`: the input's colour, if it changes; `fewer(k)`, `more(gate)`: the keys' pair of
-// buttons; `most`: how many keys there may be. Returns draw(), and what the clock moves:
-// moment(step), pulse(dt, step).
+// buttons; `most`: how many keys there may be; `scale`: the stimulus's scale. Returns draw(), and
+// what the clock moves: moment(step), pulse(dt, step).
 export function senseCourse(svg, {
   name,
   own,
   tires,
   after,
   most = 3,
+  scale = BOUNDED,
   words,
   keys : keysNow,
   share = null,
@@ -238,18 +278,18 @@ export function senseCourse(svg, {
       live.style.color = colour();
     const offered = stimulusOf(inp, after);
     // What each key's cells meet of the input: all of it, or the share their sense gives them.
-    const met = keys.map(k => share ? offered.map(v => v * share(k)) : offered),
-          stim = play.stim = met[own.chosen];
+    const met = keys.map(k => offered.map(v => scale.val(v) * (share ? share(k) : 1))),
+          stim = play.stim = met[own.chosen].map(scale.pos);
     const IY = v => I1 - (I1 - I0) * clamp(v), vOf = y => clamp((I1 - y) / (I1 - I0));
     const X = st => L + (R - L) * st / STEPS,
           stOf = x => clamp(Math.round((x - L) / (R - L) * STEPS), 0, STEPS);
-    const runs = keys.map((k, i) => runOf(k, met[i], tires));
+    const runs = keys.map((k, i) => runOf(k, met[i], tires, scale));
     play.sent = runs.map(r => r.sent);
     // Where a key's cells send nothing more, and the grips' way of moving it.
-    const ends = keys.map((k, i) => silentStep(k, met[i]));
+    const ends = keys.map((k, i) => silentStep(k, met[i], scale));
     const tire = (k, i, p) => {
       own.chosen = i;
-      draft(setUsed(doc(), k, usedFor(k, met[i], stOf(p.x))));
+      draft(setUsed(doc(), k, usedFor(k, met[i], stOf(p.x), scale)));
     };
     const choose = i => () => {
       own.chosen = i;
@@ -277,8 +317,8 @@ export function senseCourse(svg, {
     },
        live);
     keys.forEach((k, i) => {
-      const on = i === own.chosen, gates = cellGates(k), low = Math.min(...gates),
-            felt = runs[i].used.map((u, st) => Math.max(0, met[i][st] - u));
+      const on = i === own.chosen, gates = scale.gates(k).map(scale.pos), low = Math.min(...gates),
+            felt = runs[i].used.map((u, st) => scale.pos(Math.max(0, met[i][st] - u)));
       // The key's band: from its lowest to its highest cell's threshold.
       const top = IY(Math.max(...gates)), bottom = IY(low),
             shapes = [ el('rect', {
@@ -308,7 +348,7 @@ export function senseCourse(svg, {
         class : 'aid-live-keyline k' + i + (on ? ' on' : '')
       },
                       live);
-      play.glow.push({line, gate : k.gate, met : met[i]});
+      play.glow.push({line, gate : scale.val(k.gate), met : met[i]});
     });
     el('path', {d : `M${L} ${I0 - 2} V${I1} H${R}`, class : 'aid-live-axis'}, live);
     txt(live, L, I1 + 16, words.steps);
@@ -334,7 +374,7 @@ export function senseCourse(svg, {
           class : 'aid-live-keyline k' + i
         },
            live);
-        if (at <= STEPS && met[i][at] > Math.min(...cellGates(k)))
+        if (at <= STEPS && met[i][at] > Math.min(...scale.gates(k)))
           txt(live, x + (left ? -7 : 7), I0 + 11, words.used,
               {'text-anchor' : left ? 'end' : 'start', class : 'aid-live-onground'});
         drag(svg,
@@ -346,7 +386,7 @@ export function senseCourse(svg, {
     // The grips, above everything they could be hidden by: every key and its spread, the input's
     // two knobs (when it is fully there and how strong, and when it stops).
     keys.forEach((k, i) => {
-      const on = i === own.chosen, gates = cellGates(k);
+      const on = i === own.chosen, gates = scale.gates(k).map(scale.pos);
       drag(svg,
            el('rect', {
              x : LX - 9,
@@ -359,7 +399,7 @@ export function senseCourse(svg, {
               live),
            p => {
              own.chosen = i;
-             draft(setGate(doc(), k, vOf(p.y)));
+             draft(setGate(doc(), k, vOf(p.y), scale));
            },
            name + 'key' + i, 'grip', settle);
       const sx = R - 8 - 13 * i, top = IY(Math.max(...gates)), bottom = IY(Math.min(...gates));
@@ -367,7 +407,7 @@ export function senseCourse(svg, {
          live);
       drag(svg, el('circle', {cx : sx, cy : top, r : 4.5}, live), p => {
         own.chosen = i;
-        draft(setSpread(doc(), k, clamp(2 * (vOf(p.y) - k.gate), 0, .8)));
+        draft(setSpread(doc(), k, clamp(2 * (vOf(p.y) - k.gate), 0, .8), scale));
       }, name + 'spread' + i, 'grip', settle);
     });
     const knob = (at, part, move) =>

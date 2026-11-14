@@ -24,7 +24,7 @@ import {
 import {label} from '../kit.js';
 import {clamp, drag, el, liveKind, picture, txt} from './kit.js';
 import {bestScents, sampleColour, sampleShare, scentMap} from './scentmap.js';
-import {answer, gateThreshold, IRRITANT, keyGrip, setGate, typeLife} from './sense.js';
+import {answer, BOUNDED, IRRITANT, keyGrip, setGate, typeLife} from './sense.js';
 
 const word = (key, values) => t('studio.live.barbels.' + key, values);
 const MOST = 4, NEW_WIDTH = .25, NEW_TOUCH = .3, NEW_GATE = .3;
@@ -84,7 +84,7 @@ liveKind('barbels', (studio, organId) => {
       q2 : own.probe.q2,
       qwidth : NEW_WIDTH,
       field : NEW_TOUCH,
-      threshold : gateThreshold(NEW_GATE)
+      threshold : BOUNDED.threshold(NEW_GATE)
     });
     if (!added)
       return studio.notice(label('status.noRoom'));
