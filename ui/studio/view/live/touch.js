@@ -1,70 +1,58 @@
-// The sense of touch's live inspector: the skin pressed in, what its cells report of a touch
-// over time.
+// The sense of touch's live inspector: the skin pressed in, and how deep it must be pressed at
+// each place for the cells to report it.
 // Read in the engine (body_plan.cc, the skin cells' wedge of weights, record_touch and the touch
 // stimulus; physiology_parameters.hh, touch_rest and touch_impact; embryo.cc): the body's rim
 // has 16 sectors; the cells weigh them by a wedge round their own place, 22.5 to 180 degrees wide,
 // the weights summing to one. A touch presses its sector: 0.1 for a mere leaning up to 1 for the
 // hardest blow. The cells' stimulus is the touched sector's weight x that pressure; it is bounded
-// and they do not get used to it. In the egg they feel the shell's pressure.
+// and they do not get used to it, so there is no course over time to show. In the egg they feel
+// the shell's pressure.
 // The thing is the fish panel's probe (probes.js). The cells' place is the plan's report
-// (anatomy.felt).
-// Not in the pictures: sediment; several touches at once.
+// (anatomy.felt), what they report of the probe the engine's (anatomy.senseProbe).
+// Not in the picture: sediment; several touches at once.
 import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
-import {findOrgan, updateCenter} from '../../model/document.js';
+import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
 import {clamp, drag, el, liveKind, path, picture} from './kit.js';
-import {BOUNDED, keysOf, senseCourse, STEPS} from './sense.js';
+import {BOUNDED} from './sense.js';
 import {placeOf, sectorOf, wedge} from './skin.js';
 
 const word = (key, values) => t('studio.live.touch.' + key, values);
-const ROUND_MS = 12000;
 const pressureOf = impact => SKIN_RESPONSE.touch_rest + (1 - SKIN_RESPONSE.touch_rest) * impact /
                                                             (impact + SKIN_RESPONSE.touch_impact);
-const CUT = Object.freeze(
-    {height : 150, L : 14, R : 286, skin : 58, deep : 30, cells : 104, thing : 10, dent : 20});
+const CUT = Object.freeze({
+  height : 150,
+  L : 14,
+  R : 286,
+  skin : 58,
+  deep : 30,
+  cells : 104,
+  thing : 10,
+  dent : 20,
+  least : .08
+});
 const turnTo = a => ((a + 540) % 360) - 180;
 
 liveKind('touch', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-touch aid-live-sense-touch';
-  const heading = words => {
-    const h = document.createElement('h4');
-    h.textContent = words;
-    root.appendChild(h);
-  };
   const svgOf = () => {
     const svg = el('svg', {class : 'aid-live-picture'});
     root.appendChild(svg);
     return svg;
   };
   const cut = svgOf();
-  heading(word('cells'));
-  const press = svgOf();
-  const own = {chosen : 0};
-  let step = 0, share = 0, pressure = 0;
+  let pressure = 0;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
-  const again = () => show();
-  const course = senseCourse(press, {
-    name : 'touch',
-    own,
-    tires : false,
-    most : 1,
-    scale : BOUNDED,
-    words : {course : word('course'), used : '', steps : word('steps')},
-    keys : () => keysOf([ {id : '', centers : organ().centers} ], BOUNDED),
-    held : () => pressure,
-    share : () => share,
-    doc : () => studio.state.document,
-    draft,
-    settle,
-    redraw : again
-  });
   // The skin round the body laid out flat, the cells' own place in the middle; under it the
   // touch cells, each as big as the group weighs its place; the grip at the field's edge sets its
-  // width. The fish panel's thing presses the skin in as deep as its pressure.
+  // width. The fish panel's thing presses the skin in as deep as its pressure. The line under the
+  // skin is how deep a place must be pressed before the cells report it (threshold / the place's
+  // weight; where the hardest blow is not enough, no line); its grip sets the threshold. The cell
+  // under the thing glows as strongly as the engine reports the probe.
   function drawCut(cell) {
     const {svg, under, live} = picture(cut, CUT.height),
                        {L, R, skin, deep, cells, thing, dent} = CUT, place = placeOf(studio, cell),
@@ -87,8 +75,19 @@ liveKind('touch', (studio, organId) => {
     },
        under);
     el('path', {d : path(line), class : 'aid-live-skinline'}, live);
-    const hit = probe ? sectorOf(probe.bearing, count) : -1;
-    share = hit < 0 ? 0 : weights[hit];
+    const hit = probe ? sectorOf(probe.bearing, count) : -1, gate = BOUNDED.gate(cell),
+          heard = probe ? groupReport(studio.state.document, studio.state.anatomy, 'senseProbe',
+                                      cell.id)
+                        : 0;
+    // One step per sector of the rim: the cells weigh whole sectors.
+    const half = (R - L) / count / 2;
+    weights.forEach((v, k) => {
+      const x = X(turnTo(-180 + (k + .5) * 360 / count - place)), d = gate / v;
+      if (v > 0 && d <= 1)
+        el('path',
+           {d : `M${x - half + 1} ${skin + d * deep} h${2 * half - 2}`, class : 'aid-live-hair k0'},
+           live);
+    });
     weights.forEach((v, k) => {
       const x = X(turnTo(-180 + (k + .5) * 360 / count - place)), y = cells + .35 * dip(x);
       if (v <= 0) {
@@ -104,13 +103,13 @@ liveKind('touch', (studio, organId) => {
         opacity : .45 + .55 * v / most
       },
          live);
-      if (k === hit)
+      if (k === hit && heard > 0)
         el('circle', {
           cx : x,
           cy : y,
-          r : 5.5 + 5 * v / most,
-          class : 'aid-live-water',
-          'stroke-width' : 1 + 3 * v * pressure
+          r : 7 + 7 * clamp(heard),
+          class : 'aid-live-glow k0',
+          opacity : .25 + .5 * clamp(heard)
         },
            live);
     });
@@ -124,19 +123,25 @@ liveKind('touch', (studio, organId) => {
       el('circle',
          {cx : tx, cy : skin + pressure * deep - thing + 1, r : thing, class : 'aid-live-thing'},
          live);
+    drag(svg,
+         el('rect', {
+           x : X(0) - 4.5,
+           y : skin + clamp(gate / most, CUT.least, 1) * deep - 4.5,
+           width : 9,
+           height : 9,
+           rx : 2.5,
+           class : 'aid-live-keygrip k0 on'
+         },
+            live),
+         p => draft(updateCenter(
+             studio.state.document, cell.id,
+             {threshold : BOUNDED.threshold(most * clamp((p.y - skin) / deep, CUT.least, 1))})),
+         'touchgate', 'grip', settle);
   }
   function show() {
     const cell = organ()?.centers[0];
-    if (!cell)
-      return;
-    drawCut(cell);
-    course.draw();
-    tick(0);
+    if (cell)
+      drawCut(cell);
   }
-  function tick(dt) {
-    step = (step + dt * STEPS / ROUND_MS) % STEPS;
-    course.moment(step);
-    course.pulse(dt, step);
-  }
-  return {root, show, tick};
+  return {root, show, tick() {}};
 });
