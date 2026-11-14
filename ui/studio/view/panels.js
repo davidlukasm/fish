@@ -134,7 +134,8 @@ const ORGAN_PANELS = Object.freeze({
   pain : (state, organ) => livePlace('pain', organ),
   blood : (state, organ) => livePlace('blood', organ),
 });
-// The organs whose live inspector draws the cells' life itself.
+// The organs with a live inspector: below them the cells' life along the maturity is drawn only
+// where a life receptor of the cell reads the maturity (view/life_cycle.js).
 const LIVE_LIFE = new Set([...Object.keys(ORGAN_PANELS), 'proximity' ]);
 const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
                                       icon(organ.type, ICON.metric) + '<span>' +

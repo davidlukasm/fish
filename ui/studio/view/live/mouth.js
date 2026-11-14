@@ -1,6 +1,6 @@
 // The mouth's live inspector: jaw and opener as one picture, whichever of the two muscles is
 // chosen. The head from the side, looking to the left as in the fish panel; before the mouth the
-// four kinds of food, each with the bite it gets; below it the chosen muscle's life.
+// four kinds of food, each with the bite it gets.
 // Read in the engine (src/physiology.hh:266-305):
 //   the mouth opens to the share short + span x the jaw's length of the body; a longer jaw opens
 //   wider and has the shorter lever;
@@ -16,7 +16,6 @@ import {t, tList} from '../../../strings.js';
 import {findOrgan, muscleTrait, setMuscleTrait, setNodeCopies} from '../../model/document.js';
 import {organFunction} from '../../model/organs.js';
 import {clamp, drag, el, liveKind, picture, txt} from './kit.js';
-import {eggShape, fishLeft, LIFE, lifeBand, lifePlaces} from './skin.js';
 
 const word = key => t('studio.live.mouth.' + key);
 const MOUTH = Object.freeze({
@@ -49,8 +48,6 @@ liveKind('mouth', (studio, organId) => {
   };
   heading(word('bites'));
   const head = svgOf();
-  heading(word('life'));
-  const life = svgOf();
   let film = null, phase = 0;
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -210,39 +207,11 @@ liveKind('mouth', (studio, organId) => {
       e.setAttribute('opacity', (wide * .9).toFixed(2));
     });
   }
-  // Its life: the same mouth in a small body takes small food, in a big one big food.
-  function drawLife(muscle) {
-    const {svg, under, live} = picture(life, LIFE.height, fixed => {
-      const {L, R, between} = LIFE, at = L + (R - L) * between, {egg, y} = lifePlaces();
-      eggShape(fixed, egg, y, 17, false);
-      for (const [x, s] of [[ at + 24, .4 ], [ R - 24, .78 ]]) {
-        fishLeft(fixed, x, y, s);
-        el('rect', {
-          x : x - 44 * s,
-          y : y - 5 * s,
-          width : 10 * s,
-          height : 10 * s,
-          rx : 2.5 * s,
-          fill : MOUTH.colours[2]
-        },
-           fixed);
-      }
-    });
-    lifeBand(svg, under, live, {
-      studio,
-      center : muscle.centers[0],
-      centers : muscle.centers.map(c => c.id),
-      name : 'mouth',
-      draft,
-      settle
-    });
-  }
   function show() {
     const muscle = findOrgan(studio.state.document, organId);
     if (!muscle?.centers.length)
       return;
     drawHead(model());
-    drawLife(muscle);
   }
   return {
     root,

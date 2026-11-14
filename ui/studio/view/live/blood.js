@@ -1,5 +1,5 @@
 // The blood sense's live inspector: the circulation with the substances in it and the sense's
-// types of cells among them; what each type reports of the blood as it is; and their life.
+// types of cells among them; what each type reports of the blood as it is.
 // Read in the engine (colony-core/field/hormones.hh, the substances' places, hormone_affinity and
 // blood_stimulus; body_plan.cc, the blood stimulus; brain_interface.hh): the blood carries the
 // hormones and what the body reports of itself: its maturity, its energy reserve and the
@@ -28,7 +28,6 @@ import {label} from '../kit.js';
 import {substanceName} from '../substances.js';
 import {chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {answer, BOUNDED, IRRITANT, keyGrip, setGate} from './sense.js';
-import {eggShape, fishSide, lifeBand, lifePlaces, LIFE} from './skin.js';
 
 const word = (key, values) => t('studio.live.blood.' + key, values);
 const RING = Object.freeze({
@@ -80,8 +79,6 @@ liveKind('blood', (studio, organId) => {
   const kind = heading(''), ring = svgOf();
   heading(word('report'));
   const rows = svgOf();
-  heading(word('life'));
-  const life = svgOf();
   const own = {chosen : 0};
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
@@ -256,24 +253,6 @@ liveKind('blood', (studio, organId) => {
              'bloodgate', 'grip', settle);
     });
   }
-  // Its life: the cells read the blood in the egg as outside; what they find there differs: the
-  // maturity is still small in the egg and whole in the grown fish.
-  function drawLife(cell) {
-    const {svg, under, live} = picture(life, LIFE.height, fixed => {
-      const {egg, grown, y} = lifePlaces();
-      eggShape(fixed, egg, y, 19, false);
-      fishSide(fixed, grown, y, .62);
-      for (const [x, wide] of [[ egg + 34, RING.thin ], [ grown + 40, RING.thick * .7 ]])
-        el('path', {
-          d : `M${x} ${y - 11} q5 11 0 22`,
-          fill : 'none',
-          stroke : colourOf(BLOOD_SUBSTANCE.maturity),
-          'stroke-width' : wide
-        },
-           fixed);
-    });
-    lifeBand(svg, under, live, {studio, center : cell, name : 'blood', draft, settle});
-  }
   function remove(i) {
     const type = organTypes(organ())[i];
     own.chosen = 0;
@@ -308,7 +287,6 @@ liveKind('blood', (studio, organId) => {
     kind.textContent = word('reads', {list : [...new Set(best) ].join(', ')});
     drawRing(wheel, cells, levels, takes);
     drawRows(cells, levels, takes);
-    drawLife(cells[own.chosen]);
   }
   return {root, show, tick() {}};
 });

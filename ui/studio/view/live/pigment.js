@@ -1,5 +1,5 @@
 // The pigment's live inspector: the fish in its colour before a ground and how it recolours;
-// the light as a band of its hues with the notches the types of cells swallow; and their life.
+// the light as a band of its hues with the notches the types of cells swallow.
 // Read in the engine (receptor_tuning.hh, hue_affinities; body_plan.cc, the cells' colour, the
 // spreading of pigment and visible_absorption; material.hh, pigment_color): a pigment cell
 // swallows of each of the three channels of light what its hue and width give it: wide = all
@@ -8,8 +8,6 @@
 // colour.
 // The colours from rest to all the pigment spread are the plan's report (anatomy.colour.range).
 // The command and the ground are the picture's own knobs; the fish panel has no probe for them.
-// ASSUMED for the life picture: a young and a grown fish's colour as the skin less what the types
-// alive then swallow, each type wholly (the plan reports the grown fish only).
 import {t} from '../../../strings.js';
 import {ATELIER_LIMITS, TUNING} from '../../../schema.js';
 import {
@@ -24,7 +22,6 @@ import {
 import {
   addOrganType,
   findOrgan,
-  lifePhase,
   organTypes,
   removeOrganType,
   updateCenter
@@ -32,7 +29,7 @@ import {
 import {label} from '../kit.js';
 import {chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {keyGrip, STEPS} from './sense.js';
-import {eggShape, fishSide, hatchOf, LIFE, lifeBand, lifePlaces} from './skin.js';
+import {fishSide} from './skin.js';
 
 const word = (key, values) => t('studio.live.pigment.' + key, values);
 const ROUND_MS = 12000, MOST = 4, TURN = 2 * TUNING.hue_half_circle;
@@ -78,8 +75,6 @@ liveKind('pigment', (studio, organId) => {
   const scene = svgOf();
   heading(word('cells'));
   const band = svgOf();
-  heading(word('life'));
-  const life = svgOf();
   // What is tried: how far the brain has the pigment spread and at which step it lets go; what
   // lies behind the fish (0 deep water - 1 sand). Not part of the fish.
   const own = {chosen : 0, command : 1, stop : 450, ground : .35, pull : null};
@@ -261,31 +256,6 @@ liveKind('pigment', (studio, organId) => {
     });
     chip(live, R - 6, base + 16, '+', add, cells.length < MOST, 7);
   }
-  // Its life: the chosen type's span; over it the fish with all its pigment spread, young and
-  // grown, in the colour the types alive then give it.
-  function drawLife(cells) {
-    const cell = cells[own.chosen], skin = studio.state.anatomy?.colour?.skin ?? [ 1, 1, 1 ];
-    const alive = (c, maturity) => {
-      const phase = lifePhase(c);
-      return maturity >= (phase.start ?? 0) && maturity <= (phase.end ?? 1);
-    };
-    const colourAt = maturity => css(
-        cells.filter(c => alive(c, maturity))
-            .reduce((left, c) =>
-                        hueAffinities(tuningHue(c.q1), c.qwidth).map((a, k) => left[k] * (1 - a)),
-                    skin));
-    const {svg, under, live} = picture(life, LIFE.height), {egg, grown, y} = lifePlaces(),
-                       hatch = LIFE.L + (LIFE.R - LIFE.L) * LIFE.between;
-    eggShape(live, egg, y, 17, false);
-    // The young fish has the colour of the fish just hatched.
-    for (const [x, maturity, s] of [[ hatch + 22, hatchOf(studio), .42 ],
-                                    [ LIFE.R - 30, 1, .75 ]]) {
-      const g = el('g', {}, live);
-      fishSide(g, x, y, s);
-      paint(g, colourAt(maturity));
-    }
-    lifeBand(svg, under, live, {studio, center : cell, name : 'pigment', draft, settle});
-  }
   function remove(i) {
     const type = organTypes(organ())[i];
     own.chosen = 0;
@@ -306,7 +276,6 @@ liveKind('pigment', (studio, organId) => {
     own.chosen = Math.min(own.chosen, cells.length - 1);
     drawScene(cells[own.chosen]);
     drawBand(cells);
-    drawLife(cells);
     tick(0);
   }
   function tick(dt) {

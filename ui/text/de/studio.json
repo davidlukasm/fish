@@ -1906,7 +1906,6 @@
     "lateral": {
       "feels": "Spürt Wasser, das gegen die Haut strömt",
       "cells": "Strömungszellen",
-      "life": "Lebenszyklus",
       "course": "Signalverlauf bei Strömung",
       "used": "an Strömung gewöhnt",
       "steps": "Schritte"
@@ -1914,47 +1913,39 @@
     "touch": {
       "feels": "Spürt, was die Haut berührt",
       "cells": "Tastzellen",
-      "life": "Lebenszyklus",
       "course": "Signalverlauf bei Berührung",
       "steps": "Schritte"
     },
     "pain": {
       "feels": "Spürt, wo es gebissen wird",
       "cells": "Schmerzzellen",
-      "life": "Lebenszyklus",
       "course": "Signalverlauf bei einer Wunde",
       "used": "an Schmerz gewöhnt",
       "steps": "Schritte",
       "bite": "ein voller Biss"
     },
     "near": {
-      "far": "Spürt, wie nah etwas ist",
-      "life": "Lebenszyklus"
+      "far": "Spürt, wie nah etwas ist"
     },
     "gland": {
       "pours": "Schüttet {list}",
       "binds": "Bindet {list}",
-      "life": "Lebenszyklus",
       "steps": "{n} Schritte"
     },
     "mouth": {
       "bites": "Beißt und saugt",
-      "life": "Lebenszyklus",
       "foods": ["Fleisch", "Pflanze, Schale", "Brocken", "Algen schaben"]
     },
     "fin": {
-      "does": "Rudert",
-      "life": "Lebenszyklus"
+      "does": "Rudert"
     },
     "balance": {
       "feels": "Spürt, wo unten ist",
-      "life": "Lebenszyklus",
       "down": "unten"
     },
     "blood": {
       "reads": "Liest {list}",
       "report": "Meldung",
-      "life": "Lebenszyklus",
       "nothing": "nichts",
       "whole": "voll",
       "all": "alles zugleich",
@@ -1963,13 +1954,11 @@
       "fatigue": "Erschöpfung"
     },
     "defense": {
-      "guards": "Hält Bisse ab und sperrt im Maul",
-      "life": "Lebenszyklus"
+      "guards": "Hält Bisse ab und sperrt im Maul"
     },
     "pigment": {
       "colours": "Färbt den Fisch für fremde Augen",
       "cells": "Pigmentzellen",
-      "life": "Lebenszyklus",
       "rest": "Ruhe",
       "full": "voll",
       "steps": "Schritte"

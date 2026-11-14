@@ -1,5 +1,5 @@
 // The sense of touch's live inspector: the skin pressed in, what its cells report of a touch
-// over time, and their life.
+// over time.
 // Read in the engine (body_plan.cc, the skin cells' wedge of weights, record_touch and the touch
 // stimulus; physiology_parameters.hh, touch_rest and touch_impact; embryo.cc): the body's rim
 // has 16 sectors; the cells weigh them by a wedge round their own place, 22.5 to 180 degrees wide,
@@ -15,7 +15,7 @@ import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, updateCenter} from '../../model/document.js';
 import {clamp, drag, el, liveKind, path, picture} from './kit.js';
 import {BOUNDED, keysOf, senseCourse, STEPS} from './sense.js';
-import {eggShape, fishAbove, lifeBand, lifePlaces, LIFE, placeOf, sectorOf, wedge} from './skin.js';
+import {placeOf, sectorOf, wedge} from './skin.js';
 
 const word = (key, values) => t('studio.live.touch.' + key, values);
 const ROUND_MS = 12000;
@@ -42,8 +42,6 @@ liveKind('touch', (studio, organId) => {
   const cut = svgOf();
   heading(word('cells'));
   const press = svgOf();
-  heading(word('life'));
-  const life = svgOf();
   const own = {chosen : 0};
   let step = 0, share = 0, pressure = 0;
   const organ = () => findOrgan(studio.state.document, organId);
@@ -128,32 +126,12 @@ liveKind('touch', (studio, organId) => {
          {cx : tx, cy : skin + pressure * deep - thing + 1, r : thing, class : 'aid-live-thing'},
          live);
   }
-  // Its life: in the egg the shell that presses all round, after hatching what touches the skin.
-  function drawLife(cell) {
-    const {svg, under, live} = picture(life, LIFE.height, fixed => {
-      const {egg, grown, y} = lifePlaces();
-      eggShape(fixed, egg, y, 17, true);
-      for (let n = 0; n < 8; n++) {
-        const a = n * Math.PI / 4 + .3;
-        el('path', {
-          d : `M${egg + 24 * Math.cos(a)} ${y + 24 * Math.sin(a)} L${egg + 19.5 * Math.cos(a)} ${
-              y + 19.5 * Math.sin(a)}`,
-          class : 'aid-live-water'
-        },
-           fixed);
-      }
-      fishAbove(fixed, grown, y, .62);
-      el('circle', {cx : grown - 2, cy : y - 13, r : 5.5, class : 'aid-live-thing'}, fixed);
-    });
-    lifeBand(svg, under, live, {studio, center : cell, name : 'touch', draft, settle});
-  }
   function show() {
     const cell = organ()?.centers[0];
     if (!cell)
       return;
     drawCut(cell);
     course.draw();
-    drawLife(cell);
     tick(0);
   }
   function tick(dt) {

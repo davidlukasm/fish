@@ -1369,10 +1369,6 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-rim{fill:none;stroke:var(--aid-panel-edge)}
 .aid-live-petal{fill:var(--key)}
 .aid-live-water{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-.aid-live-eggrim{fill:var(--aid-chip);stroke:#e9e2c6;stroke-width:1.4}
-.aid-live-eggrim.tight{stroke-width:2.4}
-.aid-live-embryo{fill:none;stroke:#1f4852;stroke-width:5;stroke-linecap:round}
-.aid-live-embryo.tight{stroke-width:6.5}
 .aid-live-sense-touch{color:#d9b98c}
 .aid-live-sense-mark{fill:none;stroke:currentColor;stroke-width:1.4}
 .aid-live-flesh{fill:#1f4852}
@@ -1407,7 +1403,6 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-gland-mark{fill:var(--key);opacity:.45;cursor:pointer}
 .aid-live-gland-mark.on{opacity:1;stroke:#f1dda6;stroke-width:1.2;cursor:default}
 .aid-live-grip.aid-live-gland-time{stroke:var(--aid-ink);stroke-width:1.5}
-.aid-live-drop{stroke:var(--aid-ground);stroke-width:.6}
 .aid-live-near-ring{fill:none;stroke:var(--key)}
 .aid-live-near-half{fill:none;stroke:#f1dda6;stroke-dasharray:3 3}
 .aid-live-near-thing{fill:#f08a4b}

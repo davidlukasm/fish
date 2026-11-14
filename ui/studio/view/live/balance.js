@@ -1,5 +1,4 @@
-// The sense of balance's live inspector: the fish, turned, with a rose of postures; and the
-// cells' life.
+// The sense of balance's live inspector: the fish, turned, with a rose of postures.
 // Read in the engine (body_plan.hh, hair_direction; body_plan.cc, the balance stimulus;
 // brain_interface.hh): hair cells inside the body; their hair points from the snout (quality -1)
 // over the flank (0) to the tail (1), the other side mirrors it. The stimulus is how far the hair
@@ -11,7 +10,7 @@ import {t} from '../../../strings.js';
 import {findOrgan, updateCenter} from '../../model/document.js';
 import {clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {answer, BOUNDED, IRRITANT} from './sense.js';
-import {eggShape, fishLeft, lifeBand, lifePlaces, LIFE} from './skin.js';
+import {fishLeft} from './skin.js';
 
 const word = (key, values) => t('studio.live.balance.' + key, values);
 const TILT = Object.freeze({
@@ -46,8 +45,6 @@ liveKind('balance', (studio, organId) => {
   };
   heading(word('feels'));
   const tilt = svgOf();
-  heading(word('life'));
-  const life = svgOf();
   // The posture tried: where the snout points (0 to the left, as in the fish panel; 90 down). Not
   // part of the fish.
   const own = {tilt : 25};
@@ -134,24 +131,11 @@ liveKind('balance', (studio, organId) => {
       show();
     }, 'balancetilt', 'knob');
   }
-  // Its life: the same in the egg as outside.
-  function drawLife(cell) {
-    const {svg, under, live} = picture(life, LIFE.height, fixed => {
-      const {egg, grown, y} = lifePlaces();
-      eggShape(fixed, egg, y, 19, false);
-      fishLeft(fixed, grown, y, .62);
-      for (const x of [egg, grown])
-        el('path', {d : `M${x + 30} ${y - 9} v18 m-4 -6 l4 6 l4 -6`, class : 'aid-live-hair k0'},
-           fixed);
-    });
-    lifeBand(svg, under, live, {studio, center : cell, name : 'balance', draft, settle});
-  }
   function show() {
     const cell = organ()?.centers[0];
     if (!cell)
       return;
     drawTilt(cell);
-    drawLife(cell);
   }
   return {root, show, tick() {}};
 });

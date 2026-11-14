@@ -148,7 +148,5 @@ export function fishIcon(parent, x, cy, s) {
 }
 // The maturity at which this plan's fish hatches at the earliest (the plan report's
 // hatchMaturity: more energy in the egg makes it later, and the mother is not in the Atelier).
-// Until the report is in, the pictures that need a number reckon with the middle; hatchKnown
-// says whether there is one to draw.
-export const hatchKnown = studio => Number.isFinite(studio.state.anatomy?.hatchMaturity);
-export const hatchOf = studio => hatchKnown(studio) ? clamp(studio.state.anatomy.hatchMaturity) : .5;
+// Until the report is in, the middle.
+export const hatchOf = studio => clamp(studio.state.anatomy?.hatchMaturity ?? .5);

@@ -1,5 +1,5 @@
 // The gland's live inspector: the blood as strands through time, one for each hormone, as thick
-// as its level; the gland stands before the strands it pours into. Below it the gland's life.
+// as its level; the gland stands before the strands it pours into.
 // Read in the engine (src/body_plan.cc:1343-1347, src/hormone_state.cc:40-60, hormone_state.hh):
 //   a gland's command above nought pours, below nought binds, each hormone by the gland's share
 //   of it (its affinities over all hormones add up to one);
@@ -25,7 +25,6 @@ import {
   addOrganType,
   findOrgan,
   glandShares,
-  lifePhase,
   organTypes,
   removeOrganType,
   updateCenter,
@@ -35,7 +34,6 @@ import {label} from '../kit.js';
 import {substanceName} from '../substances.js';
 import {chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {keyGrip} from './sense.js';
-import {eggShape, fishLeft, hatchOf, LIFE, lifeBand, lifePlaces} from './skin.js';
 
 const word = (key, values) => t('studio.live.gland.' + key, values);
 const GLAND = Object.freeze({
@@ -80,8 +78,7 @@ liveKind('gland', (studio, organId) => {
     root.appendChild(svg);
     return svg;
   };
-  const title = heading(), blood = svgOf(), lifeTitle = heading(), life = svgOf();
-  lifeTitle.textContent = word('life');
+  const title = heading(), blood = svgOf();
   // What is tried: the brain's command, from binding (-1) to pouring (1). Not part of the fish.
   const own = {chosen : 0, command : 1};
   let now = null, phase = 0;
@@ -297,33 +294,6 @@ liveKind('gland', (studio, organId) => {
     now?.setAttribute('d', `M${(GLAND.L + (GLAND.R - GLAND.L) * phase).toFixed(1)} ${
                                GLAND.top - 2} V${GLAND.top + GLAND.rows + 2}`);
   }
-  // Its life: every age the gland lives in has its hormone; one that forms late brings it late.
-  function drawLife(cell) {
-    const shares = sharesOf(cell), colour = substanceColor(shares.indexOf(Math.max(...shares))),
-          {L, R, between} = LIFE, at = L + (R - L) * between, {egg, y} = lifePlaces(),
-          hatch = hatchOf(studio),
-          // The three ages drawn, each with its maturity: the egg half way to hatching, the
-          // fish just hatched, the grown fish.
-        places = [ [ egg, 0, hatch / 2 ], [ at + 24, .42, hatch ], [ R - 40, .78, 1 ] ];
-    const {svg, under, live} = picture(life, LIFE.height, fixed => {
-      eggShape(fixed, egg, y, 17, false);
-      for (const [x, s] of places.slice(1))
-        fishLeft(fixed, x, y, s);
-    });
-    const phaseOf = lifePhase(cell), from = phaseOf.start ?? 0,
-          until = Math.min(1, phaseOf.end ?? 1);
-    for (const [x, , r] of places) {
-      if (r >= from && r <= until)
-        el('path', {
-          d : x === egg ? `M${x + 2} ${y - 7} q8 9 0 14 q-8 -5 0 -14 Z`
-                        : `M${x} ${y - 5} q5 6 0 9 q-5 -3 0 -9 Z`,
-          fill : colour,
-          class : 'aid-live-drop'
-        },
-           live);
-    }
-    lifeBand(svg, under, live, {studio, center : cell, name : 'gland', draft, settle});
-  }
   function remove(i) {
     const type = organTypes(organ())[i];
     own.chosen = 0;
@@ -354,7 +324,6 @@ liveKind('gland', (studio, organId) => {
       return;
     own.chosen = Math.min(own.chosen, cells.length - 1);
     drawBlood(cells, cells[own.chosen]);
-    drawLife(cells[own.chosen]);
   }
   return {
     root,

@@ -1,5 +1,5 @@
 // The skin's pain cells' live inspector: the fish with its wound, what the cells report of it
-// while it closes, and their life.
+// while it closes.
 // Read in the engine (physiology.hh, harm_body; body_plan.cc, the skin cells' wedge of weights and
 // the damage stimulus; physiology.cc, healing; feeding.cc and physiology_parameters.cc, bite_wound;
 // embryo.cc): every harm takes from the fish's health; a bite is booked on the sector it comes
@@ -16,17 +16,7 @@ import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, updateCenter} from '../../model/document.js';
 import {drag, el, liveKind, picture} from './kit.js';
 import {BOUNDED, keysOf, senseCourse, STEPS} from './sense.js';
-import {
-  eggShape,
-  fishAbove,
-  lifeBand,
-  lifePlaces,
-  LIFE,
-  placeOf,
-  sectorAngle,
-  sectorOf,
-  wedge
-} from './skin.js';
+import {fishAbove, placeOf, sectorAngle, sectorOf, wedge} from './skin.js';
 
 const word = (key, values) => t('studio.live.pain.' + key, values);
 const ROUND_MS = 12000;
@@ -52,8 +42,6 @@ liveKind('pain', (studio, organId) => {
   const fish = svgOf();
   heading(word('cells'));
   const ache = svgOf();
-  heading(word('life'));
-  const life = svgOf();
   const own = {chosen : 0, input : {rise : 90, height : SKIN_RESPONSE.bite_wound, stop : 0}};
   let step = 0, share = 0, clock = null;
   const organ = () => findOrgan(studio.state.document, organId);
@@ -130,24 +118,12 @@ liveKind('pain', (studio, organId) => {
       }
     };
   }
-  // Its life: in the egg what the tight shell harms, all round; after hatching the bite.
-  function drawLife(cell) {
-    const {svg, under, live} = picture(life, LIFE.height, fixed => {
-      const {egg, grown, y} = lifePlaces();
-      eggShape(fixed, egg, y, 17, true);
-      el('circle', {cx : egg, cy : y, r : 13, class : 'aid-live-sore'}, fixed);
-      fishAbove(fixed, grown, y, .62);
-      el('path', {d : `M${grown - 9} ${y - 7.5} a6 5 0 0 0 12 0`, class : 'aid-live-bite'}, fixed);
-    });
-    lifeBand(svg, under, live, {studio, center : cell, name : 'pain', draft, settle});
-  }
   function show() {
     const cell = organ()?.centers[0];
     if (!cell)
       return;
     drawFish(cell);
     course.draw();
-    drawLife(cell);
     tick(0);
   }
   function tick(dt) {

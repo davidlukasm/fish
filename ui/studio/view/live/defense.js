@@ -1,4 +1,4 @@
-// The defence's live inspector: the fish with its spines against a mouth; and the cells' life.
+// The defence's live inspector: the fish with its spines against a mouth.
 // Read in the engine (body_plan.cc, local_defense, spine_aim, spread_spines and the raising of
 // spines; material.hh, resting_spine_height; feeding.cc, the bite and what fits a mouth;
 // embryo.cc): defence cells stand on the skin and aim from the body's middle to their place;
@@ -18,7 +18,7 @@ import {ATELIER_LIMITS} from '../../../schema.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, setNodeCopies, updateCenter} from '../../model/document.js';
 import {clamp, drag, el, liveKind, picture} from './kit.js';
-import {eggShape, fishAbove, lifeBand, lifePlaces, LIFE} from './skin.js';
+import {fishAbove} from './skin.js';
 
 const word = (key, values) => t('studio.live.defense.' + key, values);
 const SPINE = Object.freeze({
@@ -51,8 +51,6 @@ liveKind('defense', (studio, organId) => {
   };
   heading(word('guards'));
   const spines = svgOf();
-  heading(word('life'));
-  const life = svgOf();
   // What is tried on the spines: how far the brain has them raised, and the mouth (where it bites
   // from, in degrees from the snout; how wide it opens, in body radii). Not part of the fish.
   const own = {up : .4, mouth : {bearing : -60, gape : 1.2}, pull : null};
@@ -177,39 +175,11 @@ liveKind('defense', (studio, organId) => {
       show();
     }, 'defensegape', 'knob');
   }
-  // Its life: in the egg raised spines harm the fish itself against the shell; outside they
-  // guard.
-  function drawLife(cell) {
-    const {svg, under, live} = picture(life, LIFE.height, fixed => {
-      const {egg, grown, y} = lifePlaces();
-      eggShape(fixed, egg, y, 17, true);
-      for (let n = 0; n < 5; n++) {
-        const a = -2.4 + n * .45;
-        el('path', {
-          d : `M${egg + 11 * Math.cos(a)} ${y + 11 * Math.sin(a)} L${egg + 17 * Math.cos(a)} ${
-              y + 17 * Math.sin(a)}`,
-          class : 'aid-live-jaw',
-          'stroke-width' : 1.8
-        },
-           fixed);
-      }
-      fishAbove(fixed, grown, y, .62);
-      for (let n = 0; n < 5; n++)
-        el('path', {
-          d : `M${grown - 12 + n * 5} ${y - 7} l${- 1.5 + n * .6} -8`,
-          class : 'aid-live-hair k0',
-          'stroke-width' : 1.6
-        },
-           fixed);
-    });
-    lifeBand(svg, under, live, {studio, center : cell, name : 'defense', draft, settle});
-  }
   function show() {
     const cell = organ()?.centers[0];
     if (!cell)
       return;
     drawSpines(cell);
-    drawLife(cell);
   }
   return {root, show, tick() {}};
 });

@@ -1,5 +1,5 @@
 // The lateral line's live inspector: a rose round the fish, what its cells report of a current
-// over time, and their life.
+// over time.
 // Read in the engine (body_plan.cc, the skin cells' wedge of weights and the flow stimulus;
 // embryo.cc; brain_interface.hh, intensity_sense): the body's rim has 16 sectors; the cells weigh
 // them by a wedge round their own place, 22.5 to 180 degrees wide, the weights summing to one.
@@ -14,7 +14,7 @@ import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
 import {clamp, drag, el, liveKind, path, picture} from './kit.js';
 import {INTENSITY, keysOf, senseCourse, STEPS} from './sense.js';
-import {eggShape, fishAbove, lifeBand, lifePlaces, LIFE} from './skin.js';
+import {fishAbove} from './skin.js';
 
 const word = (key, values) => t('studio.live.lateral.' + key, values);
 const ROUND_MS = 12000;
@@ -47,8 +47,6 @@ liveKind('lateral', (studio, organId) => {
   const rose = svgOf();
   heading(word('cells'));
   const flow = svgOf();
-  heading(word('life'));
-  const life = svgOf();
   // What is tried on the cells over time: not part of the fish.
   const own = {chosen : 0, input : {rise : 80, height : .8, stop : 560}};
   let step = 0, share = 0;
@@ -138,27 +136,6 @@ liveKind('lateral', (studio, organId) => {
                          {field : contactFieldOf(Math.abs(turnTo(angle - place)))}));
     }, 'lateralfield', 'grip', settle);
   }
-  // Its life: in the egg the fluid its own twitches move, after hatching the water.
-  function drawLife(cell) {
-    const {svg, under, live} = picture(life, LIFE.height, fixed => {
-      const {egg, grown, y} = lifePlaces();
-      eggShape(fixed, egg, y, 19, false);
-      el('path', {
-        d : `M${egg - 9} ${y + 13} q9 5 17 -3 m-1 -4 l1 4 l-4.5 .5 M${egg + 13} ${
-            y - 9} q-7 -8 -17 -4 m2 3.5 l-2 -3.5 l4 -2`,
-        class : 'aid-live-water'
-      },
-         fixed);
-      fishAbove(fixed, grown, y, .62);
-      for (const dy of [-17, 17])
-        el('path', {
-          d : `M${grown - 44} ${y + dy} q11 ${- dy / 5} 22 0 t22 0 t22 0 m-5 -3.5 l5 3.5 l-5 3.5`,
-          class : 'aid-live-water'
-        },
-           fixed);
-    });
-    lifeBand(svg, under, live, {studio, center : cell, name : 'lateral', draft, settle});
-  }
   function show() {
     const line = organ(), cell = line?.centers[0];
     if (!cell)
@@ -168,7 +145,6 @@ liveKind('lateral', (studio, organId) => {
     if (weights)
       drawRose(cell, weights);
     course.draw();
-    drawLife(cell);
     tick(0);
   }
   function tick(dt) {

@@ -1,5 +1,5 @@
 // The near sense's live inspector, below its answers by direction: how the report falls with the
-// distance; and the cells' life.
+// distance.
 // Read in the engine (src/retina.cc:28-33, 728-735; src/cppn_brain.cc:404-418):
 //   a near cell's signal for a thing before it is 2^(-distance / reach), times the thing's
 //   brightness up to one; the answer is bounded and the cell does not get used to it; from
@@ -17,7 +17,7 @@ import {findOrgan, updateField} from '../../model/document.js';
 import {organCells} from '../vision.js';
 import {clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {answer, BOUNDED, IRRITANT} from './sense.js';
-import {eggShape, fishAbove, LIFE, lifeBand, lifePlaces} from './skin.js';
+import {fishAbove} from './skin.js';
 
 const word = key => t('studio.live.near.' + key);
 const NEAR = Object.freeze({
@@ -32,8 +32,7 @@ const NEAR = Object.freeze({
   CT : 128,
   CB : 178,
   least : .02,
-  most : .9,
-  round : 1500
+  most : .9
 });
 const radians = d => d * Math.PI / 180;
 
@@ -52,9 +51,6 @@ liveKind('near', (studio, organId) => {
   };
   heading(word('far'));
   const rings = svgOf();
-  heading(word('life'));
-  const life = svgOf();
-  let beat = null, phase = 0;
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
   function drawRings(organ, profile, reach) {
@@ -128,51 +124,12 @@ liveKind('near', (studio, organId) => {
                              studio.state.sites));
          }, 'neargate', 'grip', settle);
   }
-  // Its life: in the egg the cell reports its own rhythm; from hatching on, how near things are.
-  function drawLife(organ) {
-    const {egg, grown, y} = lifePlaces();
-    const {svg, under, live} = picture(life, LIFE.height, fixed => {
-      eggShape(fixed, egg, y, 19, false);
-      fishAbove(fixed, grown + 14, y, .62);
-      for (const k of [1, 2]) {
-        const r = 9 * k + 8, x = grown - 6;
-        el('path', {
-          d : `M${x - r * .8} ${y - r * .6} A${r} ${r} 0 0 0 ${x - r * .8} ${y + r * .6}`,
-          class : 'aid-live-near-ring k0',
-          'stroke-width' : 3 / k
-        },
-           fixed);
-      }
-    });
-    beat = el('circle', {cx : egg + 32, cy : y, r : 4, class : 'aid-live-petal k0'}, live);
-    lifeBand(svg, under, live, {
-      studio,
-      center : organ.centers[0],
-      centers : organ.centers.map(c => c.id),
-      name : 'near',
-      draft,
-      settle
-    });
-    pulse();
-  }
-  function pulse() {
-    beat?.setAttribute('opacity',
-                       (.2 + .8 * Math.max(0, Math.sin(2 * Math.PI * phase))).toFixed(2));
-  }
   function show() {
     const organ = findOrgan(studio.state.document, organId), profile = organ?.field?.profiles[0],
           [ least, most ] = studio.state.capabilities?.nearDepth ?? [];
     if (!profile || !organ.centers.length || !(least > 0))
       return;
     drawRings(organ, profile, least * (most / least) ** unitOfPlan(profile.q2));
-    drawLife(organ);
   }
-  return {
-    root,
-    show,
-    tick(dt) {
-      phase = (phase + dt / NEAR.round) % 1;
-      pulse();
-    }
-  };
+  return {root, show, tick() {}};
 });

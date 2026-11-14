@@ -1,5 +1,5 @@
 // The side fin muscle's live inspector: the fish from the side with its fin as an oar, and what a
-// beat does to the fish; below it the muscle's life.
+// beat does to the fish.
 // Read in the engine (src/body_plan.cc:89-128, fin_mechanics; src/movement.cc:9-19, 78-97):
 //   a side fin cell beats at its angle: straight back at 0, outward up to 90 degrees, inward down
 //   to -90; along the body its force pushes the fish and turns it with the cell's lever, as an
@@ -16,7 +16,7 @@ import {FIN_STROKE, SIDE_FIN, STROKE_GRIP} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {findOrgan, finAngle, finStroke, groupReport, setFinAngle} from '../../model/document.js';
 import {clamp, drag, el, liveKind, picture} from './kit.js';
-import {eggShape, fishLeft, LIFE, lifeBand, lifePlaces} from './skin.js';
+import {fishLeft} from './skin.js';
 
 const word = key => t('studio.live.fin.' + key);
 const FIN = Object.freeze({
@@ -51,8 +51,6 @@ liveKind('fin', (studio, organId) => {
   };
   heading(word('does'));
   const oar = svgOf();
-  heading(word('life'));
-  const life = svgOf();
   // What is tried: the fish's speed over its cruising speed, and how deep it lies in the ground.
   const own = {speed : .3, bury : 0};
   const film = {blade : null, effects : null, angle : 0, hx : 0, hy : 0, phase : 0};
@@ -187,36 +185,11 @@ liveKind('fin', (studio, organId) => {
                                              (film.angle - FIN.swing * (1 - pull)).toFixed(1)})`);
     film.effects.setAttribute('opacity', (.3 + .7 * pull).toFixed(2));
   }
-  // Its life: in the egg the fin twitches like every muscle; after hatching it rows.
-  function drawLife(muscle) {
-    const {svg, under, live} = picture(life, LIFE.height, fixed => {
-      const {egg, grown, y} = lifePlaces();
-      eggShape(fixed, egg, y, 19, false);
-      el('path', {
-        d : `M${egg + 4} ${y + 3} q7 2 9 8 M${egg + 15} ${y + 2} l3 -3 M${egg + 17} ${y + 7} l4 0`,
-        class : 'aid-live-fin-twitch k0'
-      },
-         fixed);
-      fishLeft(fixed, grown, y, .62);
-      el('path',
-         {d : `M${grown - 4} ${y + 7} q9 3 14 9 q-9 0 -14 -5 Z`, class : 'aid-live-fin-blade k0'},
-         fixed);
-    });
-    lifeBand(svg, under, live, {
-      studio,
-      center : muscle.centers[0],
-      centers : muscle.centers.map(c => c.id),
-      name : 'fin',
-      draft,
-      settle
-    });
-  }
   function show() {
     const muscle = organ();
     if (!muscle?.centers.length)
       return;
     drawOar(muscle);
-    drawLife(muscle);
   }
   return {
     root,
