@@ -3199,8 +3199,10 @@ function drawGlandLife() {
 // the colours its colour: both stand in for the fish panel's sight probe. Where the field lies
 // on the fish, how wide it is and how dense the cells stand is set on the fish.
 // ASSUMED for the picture: the cell weighs colours as a bell round its hue; the thing is as wide
-// as four fifths of the field.
-const EYE = {height : 204, L : 26, R : 250, mid : 138, field : 28, top : 24, high : 34, thing : .8, PT : 86, PB : 142, band : 176, least : .01, star : [284, 92],
+// as four fifths of the field; the light all round is fixed. In the Atelier nothing of this is
+// worked out in the inspector: strip, columns, contrast and answer are the engine's, for the
+// fish panel's test light.
+const EYE = {height : 204, L : 26, R : 250, mid : 138, field : 28, top : 24, high : 34, thing : .8, PT : 86, PB : 142, band : 176, least : .003, star : [284, 92],
              time : [4, 48], wedge : 70};
 const EYE_PARTS = ['eye', 'eyelife'];
 const hueRgb = (hue, light = 1) => [0, 120, 240].map(c => light * clamp(1 - Math.abs(turnTo(hue - c)) / 120, 0, 1));
@@ -3218,12 +3220,18 @@ function eyeLight(cell, at) {
   const t = cell.thing, ground = [cell.ground, cell.ground, cell.ground];
   return Math.abs(at - t.at) <= EYE.thing / 2 ? hueRgb(t.hue, t.bright).map(v => v + (1 - Math.max(...hueRgb(t.hue))) * t.bright) : ground;
 }
-// The cell's field and surround: what each holds, and the report.
+// As the engine does it, colour by colour (retina.cc:207-247): the field's light, weighed most at
+// its middle and not at all at its edges; the surround's, the plain mean over three field widths
+// to either side, the field among them; how much brighter and how much darker the field is, over
+// the surround's light and the threshold; only then the cell's colours and its shares.
+const EYE_SCALE = .1;
 function eyeReport(cell) {
-  const mean = (from, to) => { let sum = 0, n = 0; for (let a = from + .025; a < to; a += .05) { sum += eyeDrive(cell, eyeLight(cell, a)); n++; } return sum / n; };
-  const field = mean(-.5, .5), around = (mean(-3.5, -.5) + mean(.5, 3.5)) / 2, full = eyeDrive(cell, [1, 1, 1]) || 1;
-  const brighter = Math.max(0, field - around) / full, darker = Math.max(0, around - field) / full, contrast = (1 - cell.dark) * brighter + cell.dark * darker;
-  return {field : field / full, around : around / full, contrast, report : contrast / (contrast + cell.half)};
+  const mean = (from, to, weight) => { const sum = [0, 0, 0]; let all = 0; for (let a = from + .0125; a < to; a += .025) { const w = weight(a); all += w; eyeLight(cell, a).forEach((v, c) => sum[c] += w * v); } return sum.map(v => v / all); };
+  const field = mean(-.5, .5, a => 1 - 2 * Math.abs(a)), around = mean(-3, 3, () => 1), threshold = cell.half * EYE_SCALE;
+  const brighter = field.map((m, c) => Math.max(0, m - around[c]) / (around[c] + threshold)), darker = field.map((m, c) => Math.max(0, around[c] - m) / (around[c] + threshold));
+  const w = eyeWeights(cell), total = w.reduce((x, y) => x + y, 0), parts = brighter.map((v, c) => w[c] / total * ((1 - cell.dark) * v + cell.dark * darker[c]));
+  const contrast = (1 - cell.dark) * eyeDrive(cell, brighter) + cell.dark * eyeDrive(cell, darker);
+  return {parts, contrast, report : contrast / (contrast + cell.half)};
 }
 function drawEye() {
   const cell = S.eye, {svg, live} = picture('eye', EYE.height), {L, R, mid, field, top, high, PT, PB, band} = EYE, X = at => mid + field * at, r = eyeReport(cell);
@@ -3231,24 +3239,22 @@ function drawEye() {
   el('rect', {x : L, y : top, width : R - L, height : high, fill : css([cell.ground, cell.ground, cell.ground])}, live);
   el('rect', {x : X(cell.thing.at - EYE.thing / 2), y : top, width : field * EYE.thing, height : high, fill : css(eyeLight(cell, cell.thing.at))}, live);
   // The field and its surround.
-  el('rect', {x : X(-.5), y : top - 3, width : field, height : high + 6, fill : 'none', stroke : COLOUR.line, 'stroke-width' : 1.6}, live);
-  for (const side of [-1, 1]) el('path', {d : `M${X(side * .5)} ${top + high + 7} H${X(side * 3.5)} v-5`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3', fill : 'none'}, live);
-  // What the cell makes of the light: its worth along the strip, and what field and surround hold.
-  const Y = v => PB - (PB - PT) * clamp(v, 0, 1), pts = [];
-  for (let a = -4; a <= 4.001; a += .05) pts.push([X(a), Y(eyeDrive(cell, eyeLight(cell, a)) / (eyeDrive(cell, [1, 1, 1]) || 1))]);
+  el('path', {d : `M${X(-.5)} ${top + high + 3} L${X(0)} ${top - 3} L${X(.5)} ${top + high + 3}`, fill : 'none', stroke : COLOUR.line, 'stroke-width' : 1.6}, live);
+  el('path', {d : `M${X(-3)} ${top + high + 2} v6 H${X(3)} v-6`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3', fill : 'none'}, live);
+  // What the cell makes of it, colour by colour: a column for each, its area as large as that
+  // colour's part of what the cell reports.
   el('path', {d : `M${L} ${PB} H${R}`, stroke : COLOUR.axis}, live);
-  el('path', {d : path(pts), stroke : hueLight(cell.hue), 'stroke-width' : 1.4, fill : 'none', opacity : .8}, live);
-  el('path', {d : `M${X(-.5)} ${Y(r.field)} H${X(.5)}`, stroke : COLOUR.line, 'stroke-width' : 3, 'stroke-linecap' : 'round'}, live);
-  for (const side of [-1, 1]) el('path', {d : `M${X(side * .5)} ${Y(r.around)} H${X(side * 3.5)}`, stroke : COLOUR.icon, 'stroke-width' : 2, 'stroke-dasharray' : '5 3'}, live);
-  // The gap between the two is what the cell could report: bright where its field is brighter,
-  // blue where it is darker; as far as the cell's shares take it, it does.
-  const gx = X(3.5) + 20, up = r.field >= r.around;
-  if (Math.abs(r.field - r.around) > .004) el('path', {d : `M${gx} ${Y(r.around)} V${Y(r.field)}`, stroke : up ? COLOUR.line : '#9cc8f0', 'stroke-width' : 5, opacity : (up ? 1 - cell.dark : cell.dark) * .85 + .15}, live);
+  r.parts.forEach((v, c) => { const side = 22 * Math.sqrt(clamp(v, 0, 1)); if (side > .5) el('rect', {x : X(0) + (c - 1) * 25 - side / 2, y : PB - side * (PB - PT) / 22, width : side, height : side * (PB - PT) / 22, fill : ['#ee8a80', '#8fd18a', '#8daded'][c]}, live); });
+  // Beside it the contrast the cell has, on a scale of its own: from the faintest a cell can be
+  // set to (below) to the full one (above), each step as many times the one before. The grip on
+  // the scale is the contrast at which the cell answers half.
+  const gx = X(3.5) + 20, G = v => PB - (PB - PT) * (1 + Math.log(clamp(v, EYE.least, 1)) / Math.log(1 / EYE.least));
+  el('path', {d : `M${gx} ${PT} V${PB}`, stroke : COLOUR.axis}, live);
+  if (r.contrast > EYE.least) el('path', {d : `M${gx} ${PB} V${G(r.contrast)}`, stroke : COLOUR.line, 'stroke-width' : 5}, live);
   el('path', {d : IRRITANT, fill : COLOUR.line, transform : `translate(${EYE.star[0]} ${EYE.star[1]}) scale(${(r.report > .01 ? .5 + 1.5 * r.report : 0).toFixed(2)})`}, live);
-  // The grip beside the gap: the difference at which the cell answers half.
-  const hy = Y(r.around) + (up ? -1 : 1) * (PB - PT) * cell.half;
+  const hy = G(cell.half);
   el('path', {d : `M${gx - 7} ${hy} h14`, stroke : COLOUR.handle, 'stroke-width' : 1.4}, live);
-  drag(svg, el('circle', {cx : gx + 12, cy : hy, r : 4.5}, live), p => { cell.half = clamp(Math.abs(p.y - Y(eyeReport(cell).around)) / (PB - PT), EYE.least, 1); draw(EYE_PARTS); }, 'eyehalf');
+  drag(svg, el('circle', {cx : gx + 12, cy : hy, r : 4.5}, live), p => { cell.half = Math.pow(EYE.least, 1 - clamp((PB - p.y) / (PB - PT), 0, 1)); draw(EYE_PARTS); }, 'eyehalf');
   // The shares: how much of the cell answers brighter, how much darker.
   const sx = 12, st = PT + 4, sb = PB - 4, sy = st + (sb - st) * cell.dark;
   el('path', {d : `M${sx} ${st} V${sy}`, stroke : '#9cc8f0', 'stroke-width' : 5}, live);
@@ -3271,8 +3277,6 @@ function drawEye() {
   // The thing in the strip: along it where it is, up and down how bright.
   drag(svg, el('circle', {cx : X(cell.thing.at), cy : top + high * (1 - cell.thing.bright), r : 5.5, fill : COLOUR.icon}, live), p => {
     cell.thing.at = clamp((p.x - mid) / field, -3.6, 3.6); cell.thing.bright = clamp(1 - (p.y - top) / high, 0, 1); draw(EYE_PARTS); }, 'eyething', 'knob');
-  // The light all round: a round knob at the strip's end, up and down.
-  drag(svg, el('circle', {cx : R + 9, cy : top + high * (1 - cell.ground), r : 5, fill : css([cell.ground, cell.ground, cell.ground])}, live), p => { cell.ground = clamp(1 - (p.y - top) / high, 0, 1); draw(EYE_PARTS); }, 'eyeground', 'knob');
 }
 // Its life: in the egg waves run over the retina; after hatching what is seen fades in over the
 // cell's time; then it sees.
