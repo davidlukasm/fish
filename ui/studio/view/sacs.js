@@ -212,13 +212,6 @@ export function gonadGraphic(state, organ, selected, dragged = null) {
                      organ.type === 'eggs' ? MOTOR_KIND.eggs : MOTOR_KIND.sperm, motor?.key, true) +
          (pressure ? pressureCurve(state, organ, pressure, dragged) : '') + '</div>';
 }
-// What the pressure cells of an organ with a live inspector report: their picture alone, below
-// the inspector. STOPGAP: the old sense picture, until the live inspector draws the cells itself.
-export function gonadSense(state, organ, dragged = null) {
-  const pressure = organ.centers.find(c => c.key === 'pressure');
-  return '<div data-sense-block="' + escapeText(organ.id) + '">' +
-         (pressure ? pressureCurve(state, organ, pressure, dragged) : '') + '</div>';
-}
 // The cells the handle on the store's room sets, from the pointer's height.
 export function sacPatch(state, organ, fy) {
   const store = gonadStore(state, organ);

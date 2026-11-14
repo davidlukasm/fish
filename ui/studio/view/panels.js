@@ -54,7 +54,6 @@ import {learningInspector} from './learning.js';
 import {workflow} from './library.js';
 import {centerTitle, endpointTitle, familyTitle, moduleName, nodeFamilies} from './names.js';
 import {organTitle} from './names.js';
-import {gonadSense} from './sacs.js';
 import {skinField} from './skin.js';
 import {gutProbeControls} from './probes.js';
 import {livePlace} from './live/kit.js';
@@ -115,8 +114,8 @@ const ORGAN_PANELS = Object.freeze({
   gutmuscle : () => livePlace('gut', {id : 'gut'}),
   defense : (state, organ) => spineField(state, organ),
   gland : (state, organ, center) => glandProfile(state, organ, center),
-  eggs : (state, organ) => livePlace('eggs', organ) + gonadSense(state, organ),
-  sperm : (state, organ) => livePlace('sperm', organ) + gonadSense(state, organ),
+  eggs : (state, organ) => livePlace('eggs', organ),
+  sperm : (state, organ) => livePlace('sperm', organ),
   lateral : (state, organ) => lateralField(state, organ),
   balance : (state, organ, center) => hairField(state, organ, center),
   touch : skinPanel,

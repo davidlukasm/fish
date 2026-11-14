@@ -29,6 +29,7 @@ import {
 import {nodeLimit} from '../../model/organs.js';
 import {label} from '../kit.js';
 import {chip, clamp, drag, el, fishIcon, liveKind, path, picture, txt} from './kit.js';
+import {pressurePicture} from './pressure.js';
 
 const word = (key, values) => t('studio.live.eggs.' + key, values);
 const FULL = ATELIER_LIMITS.max_copies, STEPS = 900, ROUND_MS = 12000, HATCH = .5;
@@ -72,6 +73,7 @@ liveKind('eggs', (studio, organId) => {
   const belly = svgOf();
   heading(word('trial'));
   const trial = svgOf();
+  const senseTitle = heading(word('sense')), sense = svgOf();
   heading(word('life'));
   const life = svgOf();
   // What is tried on the organ: not part of the fish.
@@ -449,6 +451,29 @@ liveKind('eggs', (studio, organId) => {
     }
     return room;
   }
+  // The pressure cells, where the organ has them: what they report of the trial's fullness.
+  let senseClock = null;
+  function drawSense(sac) {
+    const center = sac.centers.find(c => c.key === 'pressure'), t0 = m.trial;
+    senseTitle.hidden = !center;
+    sense.style.display = center ? '' : 'none';
+    senseClock = center ? pressurePicture(sense, picture, {
+      studio,
+      center,
+      filling : t0.yolk.map(v => t0.room > 0 ? v / t0.room : 0),
+      reads : true,
+      words : {
+        signal : word('signal'),
+        full : word('full'),
+        empty : word('empty'),
+        steps : word('steps')
+      },
+      trace : 'aid-live-yolktrace',
+      draft,
+      settle
+    })
+                        : null;
+  }
   function show(next) {
     state = next;
     const eggs = organ();
@@ -462,6 +487,7 @@ liveKind('eggs', (studio, organId) => {
     film.eggs?.replaceChildren();
     drawBelly();
     drawTrial();
+    drawSense(eggs);
     drawLife();
     tick(0);
   }
@@ -470,6 +496,7 @@ liveKind('eggs', (studio, organId) => {
     if (!m || !film.yolk || !film.sac)
       return;
     step = (step + dt * STEPS / ROUND_MS) % STEPS;
+    senseClock?.(step);
     const t0 = m.trial, at = Math.floor(step),
           level = t0.room > 0 ? (t0.yolk[at] ?? 0) / t0.room : 0, {long, high} = film.sac;
     film.yolk.setAttribute('rx', (long / 2 * Math.sqrt(level)).toFixed(1));

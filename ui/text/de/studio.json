@@ -1862,7 +1862,9 @@
       "least": "Mindestdotter laut Bauplan",
       "steps": "Schritte",
       "perEgg": "Dotter je Ei",
-      "sets": "löst aus"
+      "sets": "löst aus",
+      "sense": "Füllgefühl",
+      "signal": "Füllung und Meldung ans Gehirn"
     },
     "sperm": {
       "trial": "Füllen und Abgeben",
@@ -1885,7 +1887,9 @@
       "secretion": "Schlupfsekret",
       "sperm": "Samen",
       "sets": "löst aus",
-      "thinner": "Schale dünner"
+      "thinner": "Schale dünner",
+      "sense": "Füllgefühl",
+      "signal": "Füllung und Meldung ans Gehirn"
     }
   }
 }
