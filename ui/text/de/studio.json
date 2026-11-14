@@ -1952,6 +1952,11 @@
       "steps": "Schritte",
       "bite": "ein voller Biss"
     },
+    "mouth": {
+      "bites": "Beißt und saugt",
+      "life": "Lebenszyklus",
+      "foods": ["Fleisch", "Pflanze, Schale", "Brocken", "Algen schaben"]
+    },
     "fin": {
       "does": "Rudert",
       "life": "Lebenszyklus"

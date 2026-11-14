@@ -1,0 +1,267 @@
+// The mouth's live inspector: jaw and opener as one picture, whichever of the two muscles is
+// chosen. The head from the side, looking to the left as in the fish panel; before the mouth the
+// four kinds of food, each with the bite it gets; below it the chosen muscle's life.
+// Read in the engine (src/physiology.hh:266-305):
+//   the mouth opens to the share short + span x the jaw's length of the body; a longer jaw opens
+//   wider and has the shorter lever;
+//   bite force = the jaw cells' capacity x the brain's command x the body's size x lever x the
+//   teeth's grip: sharp teeth cut flesh, blunt ones grind plants and crack shells, a loose piece
+//   gives way to either;
+//   the opener sucks with its cells' capacity x the body's size; scraping algae takes the sucking
+//   force x the opener's pull x lever^2.
+// Lever, opening, cutting and grinding are the engine's own curves (capabilities.diet).
+// ASSUMED for the picture: how the forces compare with each other: a bite is as deep as its
+// force over what the most cells of one node give a jaw of middle length; the cells count alike,
+// whatever their fibres.
+import {ATELIER_LIMITS, BODY_UNIT, MOTOR_KIND} from '../../../schema.js';
+import {mouthShare} from '../../../fish_forms.js';
+import {t, tList} from '../../../strings.js';
+import {findOrgan, muscleTrait, setMuscleTrait, setNodeCopies} from '../../model/document.js';
+import {organFunction} from '../../model/organs.js';
+import {clamp, drag, el, liveKind, picture, txt} from './kit.js';
+import {eggShape, fishLeft, LIFE, lifeBand, lifePlaces} from './skin.js';
+
+const word = key => t('studio.live.mouth.' + key);
+const MOUTH = Object.freeze({
+  height : 226,
+  hinge : [ 196, 78 ],
+  jaw : [ 46, 92 ],
+  gape : 58,
+  teeth : 6,
+  round : 3000,
+  muscles : {
+    [MOTOR_KIND.aggression] : {x : 26, y : 4, k : 0},
+    [MOTOR_KIND.suction] : {x : 30, y : 32, k : 1}
+  },
+  colours : [ '#ee9f9a', '#8fd18a', '#e6b47c', '#77d2bd' ]
+});
+const degrees = r => r * 180 / Math.PI;
+// A curve of the engine at a trait's value.
+const valueAt = (values, at) => {
+  const pos = clamp(at) * (values.length - 1), k = Math.floor(pos);
+  return values[k] + (values[Math.min(values.length - 1, k + 1)] - values[k]) * (pos - k);
+};
+
+liveKind('mouth', (studio, organId) => {
+  const root = document.createElement('div');
+  root.className = 'aid-live-mouth';
+  const heading = words => {
+    const h = document.createElement('h4');
+    h.textContent = words;
+    root.appendChild(h);
+  };
+  const svgOf = () => {
+    const svg = el('svg', {class : 'aid-live-picture'});
+    root.appendChild(svg);
+    return svg;
+  };
+  heading(word('bites'));
+  const head = svgOf();
+  heading(word('life'));
+  const life = svgOf();
+  let film = null, phase = 0;
+  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
+  const settle = () => studio.drafted && studio.settleGraphic();
+  // The muscles of one kind and their cells.
+  const musclesOf = code => studio.state.document.organs.filter(
+      o => o.type === 'muscle' && organFunction(o, studio.state.sites) === code);
+  const cellsOf = organs =>
+      organs.reduce((sum, o) => sum + o.centers.reduce((n, c) => n + c.copies, 0), 0);
+  function model() {
+    const state = studio.state, middle = BODY_UNIT.trait_middle,
+          trait = key => muscleTrait(state.document, MOTOR_KIND.aggression, key, state.sites),
+          long = trait('jaw_length') ?? middle, blunt = trait('blunt_teeth') ?? middle,
+          diet = state.capabilities?.diet, jaws = musclesOf(MOTOR_KIND.aggression),
+          openers = musclesOf(MOTOR_KIND.suction);
+    const lever = diet ? valueAt(diet.jaw.lever, long) : mouthShare(middle) / mouthShare(long),
+          cut = diet ? valueAt(diet.teeth.cut, blunt) : (1 - blunt) ** 2,
+          grind = diet ? valueAt(diet.teeth.grind, blunt) : blunt ** 2,
+          bite = cellsOf(jaws) * lever, suck = cellsOf(openers);
+    return {
+      long,
+      blunt,
+      jaws,
+      openers,
+      bite : cellsOf(jaws),
+      suck,
+      // The force on each kind of food: cutting, grinding, a loose piece, scraping.
+      forces : [ bite * cut, bite * grind, bite, suck * lever * lever ]
+    };
+  }
+  function drawHead(m) {
+    const {svg, live} = picture(head, MOUTH.height), [ hx, hy ] = MOUTH.hinge,
+                long = MOUTH.jaw[0] + (MOUTH.jaw[1] - MOUTH.jaw[0]) * m.long,
+                open = MOUTH.gape * mouthShare(m.long), most = ATELIER_LIMITS.max_copies;
+    // The head behind the jaws, with the two muscles: the jaw's closer above, the opener below.
+    el('path', {
+      d : `M${hx - 8} ${hy - 30} Q${hx + 40} ${hy - 52} 300 ${hy - 46} V${hy + 50} Q${hx + 40} ${
+          hy + 50} ${hx - 8} ${hy + 30} Z`,
+      class : 'aid-live-head'
+    },
+       live);
+    el('circle', {cx : hx + 34, cy : hy - 22, r : 5, class : 'aid-live-eye'}, live);
+    const sizeOf = cells => 9 + 1.4 * Math.min(cells, 2 * most);
+    for (const [code, organs, cells] of [[ MOTOR_KIND.aggression, m.jaws, m.bite ],
+                                         [ MOTOR_KIND.suction, m.openers, m.suck ]]) {
+      if (!organs.length)
+        continue;
+      const {x, y, k} = MOUTH.muscles[code], cx = hx + x, cy = hy + y, out = sizeOf(cells),
+                   own = organs.some(o => o.id === organId);
+      el('ellipse', {
+        cx,
+        cy,
+        rx : out,
+        ry : out * .55,
+        class : 'aid-live-mouth-muscle k' + k + (own ? ' own' : ''),
+        transform : `rotate(-18 ${cx} ${cy})`
+      },
+         live);
+      // The grip at a muscle: the cells of each of its nodes.
+      const nodes = organs.reduce((n, o) => n + o.centers.length, 0);
+      drag(svg,
+           el('rect', {
+             x : cx + out - 4,
+             y : cy - 5 - out * .3,
+             width : 8,
+             height : 10,
+             rx : 2,
+             class : 'aid-live-keygrip k' + k + ' on'
+           },
+              live),
+           p => {
+             const copies = Math.round(clamp((p.x - cx - 9) / 1.4 / nodes, 1, most));
+             draft(organs.reduce((doc, o) => setNodeCopies(doc, o.id, copies) ?? doc,
+                                 studio.state.document));
+           },
+           'mouthcells' + k, 'grip', settle);
+    }
+    // The jaws: two bars from the hinge; they open and shut.
+    const jaws = [ -1, 1 ].map(side => {
+      const g = el('g', {}, live);
+      el('path', {d : `M0 0 L${- long} 0`, class : 'aid-live-mouth-jaw'}, g);
+      // The teeth: sharp points or blunt blocks.
+      for (let n = 0; n < MOUTH.teeth; n++) {
+        const x = -long * (.35 + .6 * n / (MOUTH.teeth - 1)), flat = 3.2 * m.blunt,
+              high = 7 - 3 * m.blunt;
+        el('path', {
+          d : `M${x - 3.4} 0 L${x - flat} ${- side * high} L${x + flat} ${- side * high} L${
+              x + 3.4} 0 Z`,
+          class : 'aid-live-mouth-tooth'
+        },
+           g);
+      }
+      return {g, side};
+    });
+    // Before the mouth the four kinds of food, each bitten as deep as the force on it.
+    const names = tList('studio.live.mouth.foods');
+    m.forces.forEach((force, j) => {
+      const x = 40 + 73 * j, y = 176, deep = clamp(force / most);
+      el('rect', {x : x - 15, y : y - 15, width : 30, height : 30, rx : 7, fill : MOUTH.colours[j]},
+         live);
+      // The bite: as wide and as deep as the force; the whole of a piece at the most force.
+      if (deep > .01)
+        el('path', {
+          d : `M${x - 15 * Math.sqrt(deep)} ${y - 16} Q${x} ${y - 16 + 62 * deep} ${
+              x + 15 * Math.sqrt(deep)} ${y - 16} Z`,
+          class : 'aid-live-mouth-bite'
+        },
+           live);
+      txt(live, x, y + 29, names[j] ?? '',
+          {'text-anchor' : 'middle', class : 'aid-live-small', style : `fill:${MOUTH.colours[j]}`});
+    });
+    // The jaw's settings, where there is a jaw muscle to carry them: its length at its tip, the
+    // teeth's form at a tooth.
+    let tipGrip = null, toothGrip = null;
+    const setTrait = (key, value) => draft(setMuscleTrait(
+        studio.state.document, MOTOR_KIND.aggression, key, clamp(value), studio.state.sites));
+    if (m.jaws.length) {
+      tipGrip =
+          el('rect', {width : 9, height : 9, rx : 2.5, class : 'aid-live-keygrip k0 on'}, live);
+      drag(svg, tipGrip,
+           p => setTrait('jaw_length', (hx - p.x - MOUTH.jaw[0]) / (MOUTH.jaw[1] - MOUTH.jaw[0])),
+           'mouthlong', 'grip', settle);
+      toothGrip = el('circle', {r : 4.5}, live);
+      drag(svg, toothGrip, p => setTrait('blunt_teeth', (p.x - (hx - long * .9)) / (long * .5)),
+           'mouthblunt', 'grip', settle);
+    }
+    // The water the opener draws in: threads before the mouth, the more the stronger it sucks.
+    const threads =
+        m.openers.length
+            ? Array.from({length : 5}, () => el('path', {class : 'aid-live-fin-stream'}, live))
+            : [];
+    film = {jaws, tipGrip, toothGrip, threads, long, open, hx, hy, blunt : m.blunt, suck : m.suck};
+    move();
+  }
+  // The mouth opens and sucks, then bites.
+  function move() {
+    if (!film)
+      return;
+    const {jaws,
+           tipGrip,
+           toothGrip,
+           threads,
+           long,
+           open,
+           hx,
+           hy,
+           blunt,
+           suck} = film,
+           wide = phase < .55 ? Math.sin(Math.PI * phase / .55) : 0,
+           angle = degrees(Math.atan2(open * wide / 2, long));
+    for (const {g, side} of jaws)
+      g.setAttribute('transform', `translate(${hx} ${hy + side * 4}) rotate(${- side * angle})`);
+    const tx = hx - long, at = .9 - .5 * blunt;
+    tipGrip?.setAttribute('x', (tx - 4.5).toFixed(1));
+    tipGrip?.setAttribute('y', (hy - 4 - open * wide / 2 * .98 - 12).toFixed(1));
+    toothGrip?.setAttribute('cx', (hx - long * at).toFixed(1));
+    toothGrip?.setAttribute('cy', (hy + 4 + open * wide / 2 * at + 10).toFixed(1));
+    threads.forEach((e, n) => {
+      const far = (20 + 30 * Math.min(1, suck / ATELIER_LIMITS.max_copies)) * wide,
+            y = hy + (n - 2) * open * wide / 5;
+      e.setAttribute('d', `M${tx - 6 - far} ${y + (n - 2) * 5 * wide} L${tx - 6} ${y}`);
+      e.setAttribute('opacity', (wide * .9).toFixed(2));
+    });
+  }
+  // Its life: the same mouth in a small body takes small food, in a big one big food.
+  function drawLife(muscle) {
+    const {svg, under, live} = picture(life, LIFE.height, fixed => {
+      const {L, R, band, hatch} = LIFE, at = L + (R - L) * hatch, {egg, y} = lifePlaces();
+      eggShape(fixed, egg, y, 17, false);
+      for (const [x, s] of [[ at + 24, .4 ], [ R - 24, .78 ]]) {
+        fishLeft(fixed, x, y, s);
+        el('rect', {
+          x : x - 44 * s,
+          y : y - 5 * s,
+          width : 10 * s,
+          height : 10 * s,
+          rx : 2.5 * s,
+          fill : MOUTH.colours[2]
+        },
+           fixed);
+      }
+    });
+    lifeBand(svg, under, live, {
+      studio,
+      center : muscle.centers[0],
+      centers : muscle.centers.map(c => c.id),
+      name : 'mouth',
+      draft,
+      settle
+    });
+  }
+  function show() {
+    const muscle = findOrgan(studio.state.document, organId);
+    if (!muscle?.centers.length)
+      return;
+    drawHead(model());
+    drawLife(muscle);
+  }
+  return {
+    root,
+    show,
+    tick(dt) {
+      phase = (phase + dt / MOUTH.round) % 1;
+      move();
+    }
+  };
+});

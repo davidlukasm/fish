@@ -5,7 +5,7 @@ import {driveContext} from './preview.js';
 export {driveContext} from './preview.js';
 import {cellDevelopment, previewControls} from './development.js';
 import {visionInspector} from './vision.js';
-import {effectorGraphic, finSettings} from './effectors.js';
+import {effectorGraphic, muscleSettings} from './effectors.js';
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {
@@ -67,6 +67,7 @@ import './live/blood.js';
 import './live/defense.js';
 import './live/pigment.js';
 import './live/fin.js';
+import './live/mouth.js';
 
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
@@ -108,13 +109,14 @@ const ORGAN_PANELS = Object.freeze({
   pigment : (state, organ) => livePlace('pigment', organ),
   gut : (state, organ) => livePlace('gut', {id : 'gut'}) + gutProbeControls(state, organ),
   bladder : (state, organ) => livePlace('bladder', organ),
-  // Tail and side fin muscles have live inspectors; the mouth's muscles keep their pictures until
-  // their turn.
+  // Tail, side fin and the mouth's muscles have live inspectors.
   muscle : (state, organ) => {
     const code = organFunction(organ, state.sites);
     return code === MOTOR_KIND.forward ? livePlace('tail', organ)
-           : code === MOTOR_KIND.turn  ? livePlace('fin', organ) + finSettings(state, organ)
-                                       : effectorGraphic(state, organ);
+           : code === MOTOR_KIND.turn  ? livePlace('fin', organ) + muscleSettings(state, organ)
+           : code === MOTOR_KIND.suction || code === MOTOR_KIND.aggression
+               ? livePlace('mouth', organ) + muscleSettings(state, organ)
+               : effectorGraphic(state, organ);
   },
   gills : (state, organ) => livePlace('gills', organ),
   // Gut and gut muscle are one organ to the eye: one live inspector for both.

@@ -1410,3 +1410,8 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-knob.aid-live-fin-streamknob{fill:#9cc8f0}
 .aid-live-fin-ground{fill:#b9a678;opacity:.85}
 .aid-live-fin-ground.over{opacity:.55;pointer-events:none}
+.aid-live-mouth-muscle{fill:var(--key);opacity:.6}
+.aid-live-mouth-muscle.own{opacity:.95;stroke:#f1dda6;stroke-width:1.2}
+.aid-live-mouth-jaw{fill:none;stroke:#f4efd8;stroke-width:6;stroke-linecap:round}
+.aid-live-mouth-tooth{fill:#f4efd8}
+.aid-live-mouth-bite{fill:var(--aid-ground)}
