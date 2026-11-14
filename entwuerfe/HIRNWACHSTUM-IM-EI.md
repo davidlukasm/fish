@@ -25,12 +25,12 @@ David 00:50–01:32: Lernen ist Hirnwachstum, vor allem im Ei. Alle Verbindungen
 
 ## 2. Welche Lücke wirklich bleibt
 
-1. **Eine Sinneszelle ohne Licht hat keinen erblichen Weg, von selbst zu feuern.**
+1. **Eine Sinneszelle, die nicht Licht misst (alle außer der Netzhaut), hat keinen erblichen Weg, von selbst zu feuern.**
    - Sie wird nicht ausgewertet (`substrate.cc:983-984`), ihr Signal ist nur ihr Reiz (`:742-745`).
    - Ihr `pace` ist immer 0, weil die Klasse nur für Nerven gerechnet wird.
    - Ein Organ kann ihr also keine Spontanaktivität geben, mit keinem Gen und keinem Hormon.
    - Ihre Kontakte wachsen aber nur mit ihrem eigenen Signal (`:913-921`).
-2. **Ein Sinnesorgan kann die Härtung seiner eigenen ausgehenden Kontakte nicht selbst steuern.** Bei Sinn-zu-Nerv zählt nur die Festigungsantwort der empfangenden Hirnzelle. Beim Muskel ist es umgekehrt, dort zählt der Sender.
+2. ~~Ein Sinnesorgan kann seine Bahnen nicht härten~~ **Keine Lücke (David 01:53):** Ein Organ kann eigene empfangende Nervenzellen enthalten, wie Hirnregionen ihre Zellen verdrahten. Die Kontakte von seinen Sinneszellen in diese Zellen festigt das Organ über deren Festigungsantwort selbst.
 
 Alles andere geht schon mit vorhandenen Mitteln: Zeitpunkt über Bildung und Tod, Helferzellen, Ende über Reife, Härtung der Hirnseite über Antworten und Hormone.
 
@@ -51,15 +51,12 @@ Alles andere geht schon mit vorhandenen Mitteln: Zeitpunkt über Bildung und Tod
   - Ist die Identität der Sinneszellen in Atelier-Genomen und in alten Genomen so gesetzt, dass `pace` 0 bleibt?
   - Oder braucht es ein eigenes Gen?
 
-**Engine B: Der Sender darf beim Festigen mitreden.** Bei Sinn-zu-Nerv-Kontakten zählt neben der Festigungsantwort des Ziels auch die des Senders, wie heute schon bei Muskeln.
-- **Für:** Das Sinnesorgan kann seine eigenen Bahnen zum richtigen Zeitpunkt härten.
-- **Wider:** Zwei Stellen entscheiden über denselben Kontakt.
-- **Offen:** wie die beiden Antworten zusammenwirken, das Maximum oder die Summe. Fable bitte Für und Wider.
+**Engine B entfällt:** Das Organ härtet über eigene Empfängerzellen.
 
 **Organe im Atelier** (je Organ eigene Entscheidung, keine gemeinsame Vorgabe):
 - **Darm:**
   - Füll-, Schmerz- und Nährzellen bekommen im Ei einen Rhythmus, der über die Reife endet, wie `DEVELOPING_RELAY`.
-  - Ihre Bahn härtet beim Schlupf, über Engine B mit einer Festigungsantwort auf Reife.
+  - Eigene Empfängerzellen im Darmorgan härten die Bahn zum Schlupf über ihre Festigungsantwort auf Reife.
   - Die Nährzellen haben im Ei schon echtes Signal vom Wachstum.
 - **Nase und Barteln:** Grundaktivität je Gruppe im Ei, nach dem Riechzellen-Beleg.
 - **Netzhaut:** bleibt, wie sie ist.
