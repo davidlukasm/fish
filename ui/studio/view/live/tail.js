@@ -298,6 +298,8 @@ liveKind('tail', (studio, organId) => {
     if (!muscle)
       return;
     bundles = bundlesOf(state, muscle);
+    if (!bundles.length)
+      return;
     chosen = clamp(chosen, 0, bundles.length - 1);
     wriggle = muscleTrait(state.document, MOTOR_KIND.forward, 'undulation', state.sites) ?? 0;
     model = derive(bundles, input);

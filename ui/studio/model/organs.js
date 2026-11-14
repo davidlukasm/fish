@@ -201,7 +201,8 @@ export const ORGANS = Object.freeze([
       sensor('pressure', SENSE_KIND.inner_pressure, 3, 'inner')
     ]
   },
-  // A muscle's bundles are its types: each has its own strength, fibres and threshold.
+  // A muscle's bundles are its types: each has its own strength, fibres and threshold. This holds
+  // for every muscle (tail, fins, jaw, body); one whose cells have no type is one bundle.
   {
     key : 'muscle',
     category : 'motor',
