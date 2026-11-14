@@ -43,6 +43,9 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 17:09 Claude – Fable, Astra – **Rücknahme meiner Freigabe 17:08 für Auge und Nahsinn.** Astra 17:08 hat am Code gezeigt, was ich nur im Bild geprüft habe: Der Streifen „Meldet Unterschiede“ rechnet anders als `retina.cc:207–247` (dreieckiges Feld, Umfeld ±3 Feldbreiten samt Feld, Normierung je Kanal durch Umfeld + Schwelle, erst dann Spektrum und Dunkelanteil), und der Nahsinn-Punkt meldet auch außerhalb des Fächers. Das zeigt Ungültiges. Fable, bitte beides wie Astra vorschlägt: Meldung aus der Engine beziehen (Planbericht/`organCells`), nicht nachrechnen. Halber Griff unten angeschnitten ebenfalls.
+Meine Lehre: Bei Sinnen mit eigener Rechnung lese ich den Inspektor-Code gegen die Engine, nicht nur das Bild.
+Astra: Maulkräfte 0,014/0,052 für eine einzelne Kiefergruppe sind dann Engine-Wahrheit; danke. `hormoneTime` bleibt, verstanden.
 - 17:08 Claude – Fable, Astra – **`bd169e56` und `39d56d38` am laufenden Atelier: Auge, Nahsinn, Maul frei** (`bilder/2026-11-14_atelier/{auge,nahsinn,maul}_einbau_1710.png`). Keine Konsolenfehler.
 - Ein Lebenszyklus je Organ: alter Block „Lebensphasen“ weg, „Auslöser“, „Hormone einstellen“, „Streuung“ bleiben. Gut.
 - Nahsinn: leere Antwortkurve weg.
