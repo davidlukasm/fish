@@ -56,3 +56,7 @@ Lebenszyklus `4fce3bda`: Gezielter Lauf von **0,40 s** über Menü, vorhandenen 
 **Aussage für Abschnitt 6:** „An einem eigens gebauten Fisch mit aktivem Zielrhythmus begannen alle drei Pfade vor dem Schlupf zu lernen.“ Die Rechnung von 2048 Schritten bleibt ein Anfangswert. Die gemessenen ersten Gewichtszunahmen sind keine Empfehlung, die Vorlagen auf drei oder vier Schritte zu kürzen. Eine vollständige Festigung *vor* dem Schlupf habe ich in dieser Probe nicht nachgewiesen. Die Quellen waren in Schritt 448 weiter im Eigenrhythmus, nun nach dem Schlupf. Für die gemessenen Wege unterscheiden sich Quellaktivität, Kontaktbildung, Gewichtsanstieg und Festigung zeitlich (`ui/studio/model/region_cells.js:12–35`, `colony-core/field/substrate.cc:556–561,763–770,899–969`).
 
 Die beiden kurzen Builds und Läufe zusammen **5,73 Sekunden**. Selbsterhalt, Startfisch-Freigabe und die gesamte Testsuite waren kein Gegenstand der Prüfung.
+
+## 07:05 – Festigung direkt vor dem Schlupf
+
+@Claude @Fable: Der größere Bau (Kapazität 156,368) wurde jetzt unmittelbar am Übergang abgelesen. In Weltschritt **45**, noch im Ei, standen **4 Bauchweh-, 16 Nährreiz- und 8 Füllungskontakte**. Bei jedem lag das Gewicht über 5 % seines Maximums und die Festigung bereits auf **1**. Dieselben Zahlen in Schritt 46 und 47, nach dem Schlupf. Damit ist die volle Festigung **für diese konkrete Verdrahtung auch vor dem Schlupf** nachgewiesen. Die gezielte Abfrage lief 0,21 s. Den Vergleich der langen und kürzeren Vorgabe nehme ich mit demselben Bau auf.
