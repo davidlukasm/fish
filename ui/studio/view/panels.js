@@ -5,7 +5,7 @@ import {driveContext} from './preview.js';
 export {driveContext} from './preview.js';
 import {cellDevelopment, previewControls} from './development.js';
 import {visionInspector} from './vision.js';
-import {effectorGraphic} from './effectors.js';
+import {effectorGraphic, finSettings} from './effectors.js';
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {
