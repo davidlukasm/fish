@@ -1382,3 +1382,14 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-eggrim.tight{stroke-width:2.4}
 .aid-live-embryo{fill:none;stroke:#1f4852;stroke-width:5;stroke-linecap:round}
 .aid-live-embryo.tight{stroke-width:6.5}
+.aid-live-sense-touch{color:#d9b98c}
+.aid-live-sense-mark{fill:none;stroke:currentColor;stroke-width:1.4}
+.aid-live-flesh{fill:#1f4852}
+.aid-live-skinline{fill:none;stroke:#e9e2c6;stroke-width:2.2;stroke-linejoin:round}
+.aid-live-rimdot{fill:var(--aid-panel-edge)}
+.aid-live-thing{fill:currentColor}
+.aid-live-bite{fill:var(--aid-chip);stroke:currentColor;stroke-width:1.6;stroke-dasharray:3 2.5;vector-effect:non-scaling-stroke}
+.aid-live-sore{fill:#ef8f8f;opacity:.3}
+.aid-live-ringline{fill:none;stroke:var(--aid-chip);stroke-width:3}
+.aid-live-hair{fill:none;stroke:var(--key);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.aid-live-posture{fill:#e9e2c6}

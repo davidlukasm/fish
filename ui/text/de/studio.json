@@ -1932,6 +1932,27 @@
       "course": "Signalverlauf bei Strömung",
       "used": "an Strömung gewöhnt",
       "steps": "Schritte"
+    },
+    "touch": {
+      "feels": "Spürt, was die Haut berührt",
+      "cells": "Tastzellen",
+      "life": "Lebenszyklus",
+      "course": "Signalverlauf bei Berührung",
+      "steps": "Schritte"
+    },
+    "pain": {
+      "feels": "Spürt, wo es gebissen wird",
+      "cells": "Schmerzzellen",
+      "life": "Lebenszyklus",
+      "course": "Signalverlauf bei einer Wunde",
+      "used": "an Schmerz gewöhnt",
+      "steps": "Schritte",
+      "bite": "ein voller Biss"
+    },
+    "balance": {
+      "feels": "Spürt, wo unten ist",
+      "life": "Lebenszyklus",
+      "down": "unten"
     }
   }
 }

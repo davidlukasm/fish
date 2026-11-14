@@ -172,7 +172,9 @@ export const keyGrip = (i, on) => 'aid-live-keygrip k' + i + (on ? ' on' : '');
 // `own`: which key is chosen and the input tried (rise, height, stop), kept by the inspector;
 // `keys()`: the keys now; `share(k)`: what a key's cells meet of the input, if not all of it;
 // `colour()`: the input's colour, if it changes; `fewer(k)`, `more(gate)`: the keys' pair of
-// buttons; `most`: how many keys there may be; `scale`: the stimulus's scale. Returns draw(), and
+// buttons; `most`: how many keys there may be; `scale`: the stimulus's scale; `heals`: the input is
+// a wound that closes by this much each step (one knob: when and how deep); `mark`: a height
+// named on the input's scale. Returns draw(), and
 // what the clock moves: moment(step), pulse(dt, step).
 export function senseCourse(svg, {
   name,
@@ -180,6 +182,8 @@ export function senseCourse(svg, {
   tires,
   after,
   most = 3,
+  heals = 0,
+  mark = null,
   scale = BOUNDED,
   words,
   keys : keysNow,
@@ -276,8 +280,15 @@ export function senseCourse(svg, {
     live.setAttribute('class', 'aid-live-sense-' + name);
     if (colour)
       live.style.color = colour();
-    const offered = stimulusOf(inp, after);
+    // A wound's course: nothing, then all at once, then closing by `heals` each step.
+    const offered =
+        heals
+            ? Array.from({length : STEPS + 1},
+                         (_, st) =>
+                             st < inp.rise ? 0 : Math.max(0, inp.height - (st - inp.rise) * heals))
+            : stimulusOf(inp, after);
     // What each key's cells meet of the input: all of it, or the share their sense gives them.
+    play.offered = offered;
     const met = keys.map(k => offered.map(v => scale.val(v) * (share ? share(k) : 1))),
           stim = play.stim = met[own.chosen].map(scale.pos);
     const IY = v => I1 - (I1 - I0) * clamp(v), vOf = y => clamp((I1 - y) / (I1 - I0));
@@ -360,6 +371,12 @@ export function senseCourse(svg, {
       play.glow.push({line, gate : scale.val(k.gate), met : met[i]});
     });
     el('path', {d : `M${L} ${I0 - 2} V${I1} H${R}`, class : 'aid-live-axis'}, live);
+    // A height the input's scale is read by.
+    if (mark) {
+      el('path', {d : `M${R - 12} ${IY(mark.at)} H${R}`, class : 'aid-live-sense-mark'}, live);
+      txt(live, R - 15, IY(mark.at) + 3.5, mark.word,
+          {'text-anchor' : 'end', class : 'aid-live-onground'});
+    }
     txt(live, L, I1 + 16, words.steps);
     for (const st of [STEPS / 3, 2 * STEPS / 3])
       txt(live, X(st), I1 + 16, st, {'text-anchor' : 'middle'});
@@ -429,8 +446,9 @@ export function senseCourse(svg, {
                redraw();
              },
              name + part, 'knob');
-    knob(inp.rise, 'rise', st => { inp.rise = clamp(st, 1, inp.stop - 1); });
-    knob(inp.stop, 'stop', st => { inp.stop = clamp(st, inp.rise + 1, STEPS - 10); });
+    knob(inp.rise, 'rise', st => { inp.rise = clamp(st, 1, heals ? STEPS - 10 : inp.stop - 1); });
+    if (!heals)
+      knob(inp.stop, 'stop', st => { inp.stop = clamp(st, inp.rise + 1, STEPS - 10); });
     if (most > 1) {
       chip(live, LX - 9, I1 + 10, '−', () => fewer(keys[own.chosen]), keys.length > 1, 6);
       chip(live, LX + 9, I1 + 10, '+', () => more(newGate()), keys.length < most, 6);
@@ -507,7 +525,10 @@ export function senseCourse(svg, {
           b.e.setAttribute('r', 0);
       }
   }
-  return {draw, moment, pulse};
+  // What the input is at a step, and what the chosen key's cells send of it.
+  const offeredAt = step => play.offered ? between(play.offered, step) : 0,
+        sentAt = step => play.sent[own.chosen]?.[Math.round(step)] ?? 0;
+  return {draw, moment, pulse, offeredAt, sentAt};
 }
 
 // The life of a sense's types: across, the fish's maturity, with hatching in the middle. A type's

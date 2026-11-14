@@ -6,7 +6,6 @@ export {driveContext} from './preview.js';
 import {cellDevelopment, previewControls} from './development.js';
 import {visionInspector} from './vision.js';
 import {effectorGraphic, spineField} from './effectors.js';
-import {hairField} from './balance.js';
 import {pigmentInspector} from './pigments.js';
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
@@ -51,7 +50,6 @@ import {learningInspector} from './learning.js';
 import {workflow} from './library.js';
 import {centerTitle, endpointTitle, familyTitle, moduleName, nodeFamilies} from './names.js';
 import {organTitle} from './names.js';
-import {skinField} from './skin.js';
 import {gutProbeControls} from './probes.js';
 import {livePlace} from './live/kit.js';
 import './live/tail.js';
@@ -63,6 +61,9 @@ import './live/sperm.js';
 import './live/nose.js';
 import './live/barbels.js';
 import './live/lateral.js';
+import './live/touch.js';
+import './live/pain.js';
+import './live/balance.js';
 
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
@@ -98,7 +99,6 @@ const muscleKind = (state, center) => '<div class="aid-muscle-kind" title="' +
                                       muscleGraphic(state, center) + '</div>';
 
 export const biasScale = state => state.capabilities?.biasScale ?? 0;
-const skinPanel = (state, organ, center) => skinField(state, organ, center);
 const ORGAN_PANELS = Object.freeze({
   nose : (state, organ) => livePlace('nose', organ),
   barbels : (state, organ) => livePlace('barbels', organ),
@@ -117,9 +117,9 @@ const ORGAN_PANELS = Object.freeze({
   eggs : (state, organ) => livePlace('eggs', organ),
   sperm : (state, organ) => livePlace('sperm', organ),
   lateral : (state, organ) => livePlace('lateral', organ),
-  balance : (state, organ, center) => hairField(state, organ, center),
-  touch : skinPanel,
-  pain : skinPanel,
+  balance : (state, organ) => livePlace('balance', organ),
+  touch : (state, organ) => livePlace('touch', organ),
+  pain : (state, organ) => livePlace('pain', organ),
   blood : (state, organ, center) => hormonePad(state, organ, center),
 });
 const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
