@@ -72,27 +72,24 @@ Alles andere geht schon mit vorhandenen Mitteln: Zeitpunkt über Bildung und Tod
 4. Organe.
 5. Astra misst.
 
-## 6. Darmorgan: wie es seine Bahnen vor dem Schlupf verdrahtet und härtet (Claude, 02:15, Vorschlag)
+## 6. Darmorgan: wie es seine Bahnen vor dem Schlupf verdrahtet und festigt (Claude, neu 06:58, Stand Produkt `0c1950b`)
 
-**Heute** (berichtigt nach David 02:13):
-- Der Darm hat drei Ausgänge, `intake` (Nährzellen), `fullness` und `ache` (`organs.js:168-170`).
-- Wohin sie laufen, bestimmen die Leitungen, die der Gestalter zieht. Es gibt keine feste Verdrahtung.
-- Die Region Körperzustand bietet zwar Eingänge `intake` und `satiety` mit Rhythmus im Ei (`state_region.js:25`, `DEVELOPING_RELAY`), aber nur, wenn jemand sie verbindet.
-- Unabhängig vom Ziel gilt: Die Sinneszellen schweigen im Ei, nur die Nährzellen melden das Wachstum. Ihre Kontakte wachsen dort nicht, und der Darm härtet nichts.
+Ersetzt den Vorschlag von 02:15. Die Grundlage ist jetzt die Reife der einzelnen Zelle (Engine `cf10d185`, `fd176849`, Vorlagen `0c1950b`), nicht die Körperreife. Das Vorbild sind echte Fische: Jede Zelle beendet ihre Spontanphase mit ihrer eigenen Reife (KCC2), nicht beim Schlupf.
 
-**Vorschlag für die Vorlage des Darmorgans:**
-1. **Spontan im Ei:** Füll-, Bauchweh- und Nährzellen bekommen eine Rhythmusantwort auf Reife (Engine `8579edf5`).
-   - Sie ist im Ei an und endet zum Schlupf.
-   - Form wie `DEVELOPING_RELAY` (Grundwert, fallend mit Reife), nur mit dem Halbwert beim Schlupf statt bei 0,8.
-   - Jede Zellart feuert in ihrem eigenen Takt (Zellzeit), Zeitpunkte nach Lage.
-2. **Härten mit eigenen Zellen:** Das Darmorgan bekommt eigene Empfängerzellen, je Sinnesart eine kleine Gruppe, die zwischen Sinneszellen und Region sitzen.
-   - Ihre Festigungsantwort auf Reife steigt zum Schlupf: Was im Ei gelernt wurde, wird mindestens halb gefestigt und bleibt, auch wenn Füllung und Bauchweh danach selten kommen.
-   - Danach lernt die Bahn weiter, zum Beispiel über Sattheit (System Festigung).
-   - **Wider:** eine Zwischenstufe mehr. Das Signal kommt einen Schritt später in der Region an und kostet Zellen.
-   - **Alternative ohne Zwischenstufe:** Die Zielzellen, an die der Gestalter den Darm anschließt, bekommen eine Festigungsantwort. Dann härtet aber das Ziel, nicht der Darm, und es hängt an jeder einzelnen Verdrahtung.
-3. **Darmmuskel:** zuckt im Ei auf Befehl. Die Füllzellen spüren das heute nicht. Ob sie die eigenen Wellen der Darmwand spüren sollen, wie Dehnungszellen echter Fische vor dem ersten Fressen, wäre eine Engine-Frage für später.
-4. **Zahlen:** Halbwerte nicht schätzen. Astra misst am gebauten Darmorgan, wie viele Kontakte bis zum Schlupf wachsen und wie viele 2000 Schritte danach noch stehen.
+**Ablauf im Ei:**
+1. **Bildung:** Füll-, Bauchweh- und Nährzellen entstehen im Ei, wenn ihre Bildungsantwort und das Baubudget es erlauben (`substrate.cc:609-627`). Ab dann zählt ihr Zellalter.
+2. **Eigenfeuern:** Ihre Rhythmusantwort liest die eigene Zellreife (`EGG_RHYTHM`, Halbwert 0,5 = rund 2048 Schritte ab Bildung, Anfangswert, nicht geeicht).
+   - Solange die Zelle jung ist, feuert sie von selbst in Stößen (Engine `8579edf5`).
+   - Die Nährzellen haben im Ei zusätzlich echtes Signal aus dem Wachstum (`physiology.cc`, `embryo_nutrient_gain`).
+3. **Bahnen wachsen:** Ein Kontakt Sinneszelle → Nervenzelle entsteht mit Gewicht 0, wo der Gestalter den Darm angeschlossen hat (freie Verdrahtung). Er wächst mit dem eigenen Signal der Sinneszelle und der Aktivität des Ziels (`substrate.cc:913-921`).
+   - Die Relais der Regionen schwingen im Ei über `DEVELOPING_RELAY` (Körperreife).
+4. **Festigung:** Die empfangenden Lernzellen festigen, was sie lernen, solange sie selbst jung sind (`EGG_HARDENING` auf Zellreife, Halbwert 0,5).
+   - Ein Kontakt, der mindestens halb gefestigt ist, wird nicht beschnitten (`substrate.cc:976-985`).
+   - So bleiben auch die Bahnen seltener Sinne nach dem Schlupf stehen, Bauchweh etwa kommt dann lange nicht.
+5. **Ende:** Mit wachsender Zellreife schweigt das Eigenfeuern, und die Ei-Festigung klingt aus. Danach lernt die Bahn über echte Reize und das System Festigung (Sattheit).
 
-**Entscheidung durch David:**
-- Härtung mit eigenen Empfängerzellen im Darm (2) oder eine Festigungsantwort an den Relais der Region (Alternative)?
-- Sollen die Füllzellen die eigenen Zuckungen des Darmmuskels spüren (3)?
+**Bewusst offen:**
+- **Eichung:** 0,5 ist eine gemeinsame Anfangsvorgabe. Es gibt heute keinen Fisch, an dem man sie eichen könnte (Astra 06:28/06:29). Sie garantiert keine volle Kontaktprobe, weil die Uhr des Kontakts erst ab seiner Bildung läuft.
+- **Nach dem Schlupf:** Schmerz- und Füllzellen können noch eine Weile von selbst feuern. Echte Larven tun Ähnliches. Am schwächsten begründet ist das bei Schmerz. Das Organ kann den Halbwert selbst kürzer setzen.
+- **Darmmuskel:** Die Füllzellen spüren die eigenen Zuckungen der Darmwand nicht. Echte Dehnungszellen tun das vor dem ersten Fressen. Das wäre eine Engine-Frage.
+- **Schlupftakt:** getrennt, braucht einen echten Auslöser (Astra 06:02).
