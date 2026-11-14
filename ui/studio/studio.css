@@ -719,8 +719,22 @@
 .aid-card-marks .aid-growth-mark{margin:0;padding:5px 8px}
 .aid-hormone-time{display:inline-flex;align-items:center;gap:4px;padding:5px;border-radius:8px;border:1px solid #3d6a70;color:var(--aid-name-text);font-size:11px}
 .aid-card-name{flex-basis:100%;color:var(--aid-name-text)}
-.aid-effect-guide{display:grid;grid-template-columns:1fr;gap:6px}
-.aid-effect-guide .aid-effect-card{margin:0}
+.aid-hormone-preview,.aid-hormone-sources,.aid-hormone-receivers{margin:12px 0;color:var(--aid-name-text)}
+.aid-hormone-preview>.aid-preview-level-row{display:block;margin-top:4px}
+.aid-hormone-preview .aid-preview-level{width:100%;height:auto;display:block}
+.aid-hormone-sources h4,.aid-hormone-receivers h4{margin:0 0 6px}
+.aid-hormone-sources button,.aid-hormone-receivers button{display:block;width:100%;margin:5px 0;padding:7px 8px;border:1px solid var(--aid-card-edge);border-radius:8px;background:#14333a;color:inherit;text-align:left;cursor:pointer}
+.aid-hormone-sources button>span+span{float:right}
+.aid-hormone-sources svg,.aid-hormone-receivers svg{display:block;width:100%;margin-top:4px}
+.aid-hormone-sources svg rect{fill:#224b50}
+.aid-hormone-sources svg .aid-gland-share{fill:var(--substance)}
+.aid-hormone-receiver-heading{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:start}
+.aid-hormone-receiver-heading small{grid-row:2;grid-column:1;color:var(--aid-soft-text)}
+.aid-hormone-receiver-heading output{grid-row:1/3;grid-column:2;align-self:center;color:var(--substance)}
+.aid-hormone-response{fill:none;stroke:var(--substance);stroke-width:1.8}
+.aid-hormone-level-mark{fill:none;stroke:#e5d8a9;stroke-dasharray:2 3}
+.aid-hormone-point{fill:var(--substance);stroke:#e5d8a9;stroke-width:1}
+.aid-hormone-receivers svg text{fill:var(--aid-soft-text);font-size:9px}
 #aid-body-map.aid-dropping [data-organ]:not(.aid-drop-target),#aid-body-map.aid-dropping [data-center]:not(.aid-drop-target){opacity:.3}
 #aid-body-map .aid-drop-target{filter:drop-shadow(0 0 4px #f1dca0aa)}
 #aid-body-map .aid-drop-hover{filter:drop-shadow(0 0 7px #f1dca0)}
@@ -857,7 +871,6 @@
 .aid-effect-chips{display:flex;flex-wrap:wrap;gap:4px}
 .aid-effect-chips button{display:flex;align-items:center;gap:4px;padding:6px}
 .aid-effect-chips button svg{flex-shrink:0}
-.aid-effect-guide{margin:10px 0}
 .aid-effect-card{display:block;margin:6px 0;padding:6px;border:1px solid var(--aid-card-edge);border-radius:10px;background:#17363c}
 .aid-effect-card>div{margin-top:4px}
 .aid-effect-card strong{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--aid-name-text)}

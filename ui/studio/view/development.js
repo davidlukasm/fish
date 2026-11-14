@@ -30,6 +30,8 @@ const SITUATION = Object.freeze({
 });
 const LEVEL =
     Object.freeze({width : 100, height : 32, left : 12, right : 88, middle : 16, depth : 12});
+export const BLOOD_LEVEL =
+    Object.freeze({width : 280, height : 32, left : 9, right : 271, middle : 16, depth : 12});
 export const PREVIEW_INPUT_LOW = -1;
 // A substance gets an example level once it is named or a cell answers it.
 function previewSubstances(doc, wheel) {
@@ -68,16 +70,17 @@ export function previewPatch(key, p, marks) {
              ? {[key] : clamp((p.x - left) / (right - left))}
              : {};
 }
-function substanceLevel(state, index, context) {
-  const L = LEVEL, span = L.right - L.left, level = bloodLevel(context, index);
+export function substanceLevel(state, index, context = previewContextOf(state), wide = false) {
+  const L = wide ? BLOOD_LEVEL : LEVEL, span = L.right - L.left, level = bloodLevel(context, index);
   const name = index < HORMONES.levels
                    ? state.document.substances.find(substance => substance.index === index)?.name ||
                          word('unnamedSubstance', {n : index + 1})
                    : substanceName(state, index);
   const colour = substanceColor(index);
   const x = L.left + span * level, top = L.middle - L.depth / 2;
-  return '<div class="aid-preview-level-row"><span>' + escapeText(name) +
-         '</span><svg class="aid-preview-level" width="' + L.width + '" height="' + L.height +
+  return '<div class="aid-preview-level-row">' +
+         (wide ? '' : '<span>' + escapeText(name) + '</span>') +
+         '<svg class="aid-preview-level" width="' + L.width + '" height="' + L.height +
          '" viewBox="0 0 ' + L.width + ' ' + L.height +
          '" data-preview-bars data-preview-substance="' + index + '" role="img" aria-label="' +
          escapeText(namedText(name, percent(level))) + '" style="--substance:' + colour +

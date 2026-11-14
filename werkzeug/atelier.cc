@@ -435,6 +435,31 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
   std::cout << "],\"hormoneResidence\":[";
   for (int k = 0; k < field::HORMONES; ++k)
     std::cout << (k ? "," : "") << a.hormone_residence[k];
+  std::cout << "],\"hormoneSources\":[";
+  std::vector<field::Hormones> hormone_sources(groups.size());
+  for (const auto &e : a.effectors) {
+    if (e.port != fishsim::organ_port::gland)
+      continue;
+    const auto &place = t.neurons[e.neuron].location;
+    const auto group = std::find_if(groups.begin(), groups.end(),
+                                    [&](const auto &g) { return g.contains(place); });
+    if (group == groups.end())
+      continue;
+    auto &source = hormone_sources[group - groups.begin()];
+    for (int k = 0; k < field::HORMONES; ++k)
+      source[k] += e.strength * e.hormones[k];
+  }
+  bool source_written = false;
+  for (std::size_t i = 0; i < hormone_sources.size(); ++i) {
+    const auto &source = hormone_sources[i];
+    if (std::none_of(source.begin(), source.end(), [](double v) { return v > 0; }))
+      continue;
+    std::cout << (source_written ? ",[" : "[") << i;
+    for (double share : source)
+      std::cout << ',' << share;
+    std::cout << ']';
+    source_written = true;
+  }
   std::cout << "],\"pigmentTimes\":[";
   for (int k = 0; k < fishsim::rgb::count; ++k)
     std::cout << (k ? "," : "") << a.pigment_timing[k].steps;

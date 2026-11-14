@@ -1039,6 +1039,8 @@
   },
   "hormoneCard": {
     "title": "Stoffe",
+    "previewBlood": "Blutpegel in der Vorschau",
+    "totalDrive": "Abgabe bei vollem Befehl: {n}",
     "rise": "steigt",
     "stays": "bleibt",
     "sources": "Quellen",

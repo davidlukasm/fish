@@ -1,12 +1,19 @@
 import {variationGraphic} from './cell_tissue.js';
 import {receptorVariationExamples} from '../model/variation.js';
-import {previewControls, previewContextOf, cellDevelopment} from './development.js';
+import {
+  BLOOD_LEVEL,
+  previewControls,
+  previewContextOf,
+  cellDevelopment,
+  substanceLevel
+} from './development.js';
 import {BLOOD_SUBSTANCE, HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {clamp} from '../../units.js';
 import {isRegion} from '../model/organs.js';
 import {regionNodeMap} from './region_graph.js';
 import {
+  allCenters,
   boundEffects,
   bloodLevel,
   effectsFor,
@@ -14,15 +21,17 @@ import {
   chosenCenter,
   DEATH_RESPONSE,
   effectDirection,
+  effectLevel,
   findCenter,
+  findOrgan,
   organOf,
   growsWith,
   NOTICEABLE_AFFINITY,
-  producers,
   receivers,
   regulatorySubstances,
   receptorEnds,
   receptorAffinity,
+  receptorResponse,
   SUBSTANCE_NAME_LENGTH,
   teachersOf,
   wheelAffinity,
@@ -32,7 +41,7 @@ import {
 } from '../model/document.js';
 import {escapeText, fixed, glyph} from './markup.js';
 import {formatNumber, joinParts, namedText, percent, t, tList} from '../../strings.js';
-import {bandGlyph, heading, icon, ICON, iconSwitch, label, SWITCH_SYMBOL} from './kit.js';
+import {bandGlyph, heading, icon, ICON, iconSwitch, label} from './kit.js';
 import {BIRTH_ICON, DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON, TOOL_ICON} from './icons.js';
 import {EFFECT_ORDER, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
@@ -410,17 +419,6 @@ function growthEditor(state) {
                           receptorVariationExamples(growth, state.capabilities)) +
          '</section>';
 }
-function organsOf(doc, centers) {
-  const seen = new Set();
-  return centers.map(c => findCenter(doc, c.id)?.organ).filter(organ => {
-    if (!organ || seen.has(organ.id))
-      return false;
-    seen.add(organ.id);
-    if (organ.pair)
-      seen.add(organ.pair);
-    return true;
-  });
-}
 const receptorEditor = (state, center, effects, effect) =>
     '<div class="aid-effect-chips">' +
     effects
@@ -484,6 +482,107 @@ export function hormoneTime(state, index) {
                           : formatNumber(NaN)) +
          '</span></span>';
 }
+const BLOOD_CURVE = Object.freeze({height : 58, top : 5, bottom : 42, samples : 36});
+function bloodCurves(state, index, context) {
+  const {document : doc, capabilities : wheel} = state, C = {...BLOOD_LEVEL, ...BLOOD_CURVE};
+  const x = level => C.left + (C.right - C.left) * level;
+  const controls = receivers(doc, index, wheel).flatMap(cell => {
+    const organ = findOrgan(doc, cell.organId);
+    const title = joinParts([ organTitle(organ, state.sites), centerTitle(cell) ]);
+    const effects =
+        boundEffects(cell, index, wheel).map(effect => ({
+                                               id : cell.id,
+                                               effect,
+                                               title,
+                                               receptor : cell.receptors[effect],
+                                               word : tList('studio.axes.effects')[effect]
+                                             }));
+    if (birthAffinity(cell, index, wheel) >= NOTICEABLE_AFFINITY)
+      effects.push({
+        id : cell.id,
+        effect : BIRTH,
+        title,
+        receptor : cell.growth,
+        word : label('development.birthReceptor')
+      });
+    return effects;
+  });
+  if (!controls.length)
+    return '';
+  const present = bloodLevel(context, index), now = x(present);
+  const contexts = Array.from({length : C.samples + 1}, (_, k) => {
+    const level = k / C.samples;
+    const hormones = [...context.hormones ];
+    hormones[index] = level;
+    return {level, context : {...context, hormones}};
+  });
+  return '<section class="aid-hormone-receivers" style="--substance:' + substanceColor(index) +
+         '"><h4>' + label('hormoneCard.acts') + '</h4>' +
+         controls
+             .map(entry => {
+               const {effect, receptor, id, title, word} = entry;
+               const scale = effect === BIRTH || effect === HORMONE_EFFECT.death
+                                 ? GROWTH_SCALE
+                                 : EFFECT_SCALE[effect] ?? SHARE_SCALE;
+               const effectValue = values => {
+                 const response = receptorResponse(wheel, receptor, values);
+                 return effect === HORMONE_EFFECT.death ? effectLevel(effect, response)
+                        : effect === BIRTH              ? clamp(response)
+                                                        : scale.value(response);
+               };
+               const y = value =>
+                   C.bottom - (C.bottom - C.top) * (value - scale.low) / (scale.high - scale.low);
+               const value = effectValue(context);
+               const points = contexts
+                                  .map(probe => fixed(x(probe.level)) + ',' +
+                                                fixed(y(effectValue(probe.context))))
+                                  .join(' ');
+               const name =
+                   '<span>' + escapeText(title) + '</span><small>' + escapeText(word) + '</small>';
+               const values =
+                   '<svg viewBox="0 0 ' + C.width + ' ' + C.height + '" aria-hidden="true">' +
+                   '<path class="aid-chart-axis" d="M' + C.left + ' ' + C.top + ' V' + C.bottom +
+                   ' H' + C.right + '"/><polyline class="aid-hormone-response" points="' + points +
+                   '"/>' +
+                   '<path class="aid-hormone-level-mark" d="M' + fixed(now) + ' ' + C.top + ' V' +
+                   C.bottom + '"/><circle class="aid-hormone-point" cx="' + fixed(now) + '" cy="' +
+                   fixed(y(value)) + '" r="3"/><text x="' + C.left + '" y="55">0</text><text x="' +
+                   C.right + '" y="55" text-anchor="end">1</text></svg>';
+               return '<button data-select-center="' + escapeText(id) + '" data-select-effect="' +
+                      effect + '"><span class="aid-hormone-receiver-heading">' + name + '<output>' +
+                      escapeText(formatNumber(value, 2)) + '</output></span>' + values +
+                      '</button>';
+             })
+             .join('') +
+         '</section>';
+}
+function substanceSources(state, index) {
+  const {document : doc} = state, cells = allCenters(doc), byOrgan = new Map();
+  for (const row of state.anatomy?.hormoneSources ?? []) {
+    const center = cells[row[0]], amount = row[1 + index];
+    if (center?.organType === 'gland' && amount > 0)
+      byOrgan.set(center.organId, amount + (byOrgan.get(center.organId) ?? 0));
+  }
+  const total = [...byOrgan.values() ].reduce((sum, n) => sum + n, 0);
+  if (!(total > 0))
+    return '';
+  return '<section class="aid-hormone-sources" style="--substance:' + substanceColor(index) +
+         '"><h4>' + label('hormoneCard.sources') + '</h4>' +
+         [...byOrgan ]
+             .map(([ id, amount ]) => {
+               const organ = findOrgan(doc, id);
+               const share = amount / total;
+               return '<button data-source-gland="' + escapeText(id) + '"><span>' +
+                      escapeText(organTitle(organ, state.sites)) + '</span><span>' +
+                      percent(share) +
+                      '</span><svg viewBox="0 0 280 8" aria-hidden="true"><rect width="280" height="8"/>' +
+                      '<rect class="aid-gland-share" width="' + fixed(280 * share) +
+                      '" height="8"/></svg></button>';
+             })
+             .join('') +
+         '<small>' + escapeText(t('studio.hormoneCard.totalDrive', {n : formatNumber(total, 2)})) +
+         '</small></section>';
+}
 function substanceInspector(state) {
   const {document : doc, capabilities : wheel} = state;
   const substance = shownSubstance(doc, state.focusSubstance);
@@ -492,34 +591,7 @@ function substanceInspector(state) {
            '</header>';
   const index = substance.index, grows = growsWith(doc, index, wheel);
   const fallback = substanceName(state, index);
-  const list = organs =>
-      organs
-          .map(o => '<button data-select-organ="' + escapeText(o.id) + '">' +
-                    icon(o.type, ICON.list) + escapeText(organTitle(o, state.sites)) + '</button>')
-          .join('');
-  const acts = organsOf(doc, receivers(doc, index, wheel)).map(o => {
-    const effects = new Set(o.centers.flatMap(c => boundEffects(c, index, wheel)));
-    const birth = o.centers.some(c => birthAffinity(c, index, wheel) >= NOTICEABLE_AFFINITY);
-    return '<button data-select-organ="' + escapeText(o.id) + '">' + icon(o.type, ICON.list) +
-           escapeText(organTitle(o, state.sites)) +
-           (birth ? '<span class="aid-bound-effect" title="' + label('development.birthReceptor') +
-                        '">' + glyph(BIRTH_ICON, ICON.mark, {line : true}) + '</span>'
-                  : '') +
-           [...effects ]
-               .map(e => {
-                 const binding = o.centers.find(c => boundEffects(c, index, wheel).includes(e));
-                 return boundEffect(e, effectDirection(e, binding.receptors[e]));
-               })
-               .join('') +
-           '</button>';
-  });
-  // Where the substance comes from and what it acts on, each row led by its symbol.
-  const row = (key, body) =>
-      body ? '<div class="aid-card-row" title="' + label('hormoneCard.' + key) + '"><span>' +
-                 glyph(CARD_ROW_ICON[key], ICON.mark, {line : true}) +
-                 '</span><div><span class="aid-card-name">' + label('hormoneCard.' + key) +
-                 '</span>' + body + '</div></div>'
-           : '';
+  const context = previewContextOf(state);
   return '<header class="aid-inspector-head" style="--substance:' + substanceColor(index) +
          '"><span class="aid-substance-swatch"></span><input class="aid-inline-name ' +
          'aid-inline-title" data-substance-name="' + index + '" value="' +
@@ -530,14 +602,13 @@ function substanceInspector(state) {
          (grows ? 'data-growth-off' : 'data-growth-substance="' + index + '"') + ' aria-pressed="' +
          grows + '" title="' + label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') +
          '">' + glyph(GROWTH_ICON, ICON.mark, {line : true}) + '</button>' +
-         hormoneTime(state, index) + '</div>' + (grows ? growthEditor(state) : '') +
-         row('sources', list(organsOf(doc, producers(doc, index, wheel)))) +
-         row('acts', acts.join('')) + effectGuide(state, index) +
+         hormoneTime(state, index) + '</div>' +
+         '<div class="aid-hormone-preview">' + label('hormoneCard.previewBlood') +
+         substanceLevel(state, index, context, true) + '</div>' + substanceSources(state, index) +
+         (grows ? growthEditor(state) : '') + bloodCurves(state, index, context) +
          '<button class="aid-danger" data-remove-substance="' + index + '">' +
          label('inspector.removeSubstance') + '</button>';
 }
-const CARD_ROW_ICON =
-    Object.freeze({sources : TOOL_ICON.hormone, acts : SWITCH_SYMBOL.receptor.on});
 // What a substance does to a cell, as the receptor turns it (`direction`, 0 for either way).
 const effectWords = (effect, direction) =>
     direction ? tList('studio.' + (direction > 0 ? 'effectsRise' : 'effectsFall'))[effect]
@@ -553,33 +624,6 @@ export function boundEffect(effect, direction) {
               : '') +
          '</span>';
 }
-function effectGuide(state, index) {
-  const {document : doc, capabilities : wheel} = state, colour = substanceColor(index);
-  const receiving = receivers(doc, index, wheel), words = key => tList('studio.hormoneCard.' + key);
-  return '<section class="aid-effect-guide">' +
-         EFFECT_ORDER
-             .map(effect => {
-               const bound = receiving.filter(c => boundEffects(c, index, wheel).includes(effect));
-               const n = bound.length;
-               const ends = n ? receptorEnds(bound[0].receptors[effect]) : undefined;
-               const direction = n ? effectDirection(effect, bound[0].receptors[effect]) : 0;
-               return '<div class="aid-effect-card' + (n ? '' : ' off') +
-                      '" style="--substance:' + colour + '" title="' +
-                      escapeText(effectSentence(effect, direction) + ' ' +
-                                 words('tileTitles')[effect] + ' ' + words('where')[effect]) +
-                      '">' +
-                      effectScene(effect, colour, ends,
-                                  {capabilities : state.capabilities, center : bound[0]}) +
-                      '<div><strong>' + boundEffect(effect, direction) +
-                      escapeText(tList('studio.axes.effects')[effect]) +
-                      (n ? '<span class="aid-effect-count" title="' +
-                               escapeText(t('studio.hormoneCard.here', {n})) + '">' + n + '</span>'
-                         : '') +
-                      '</strong></div></div>';
-             })
-             .join('') +
-         '</section>';
-}
 function hormoneDetails(state) {
   const {document : doc, selected} = state;
   const focus = chosenCenter(doc, selected, state.visionProfile);
@@ -589,8 +633,9 @@ function hormoneDetails(state) {
                '</span>' + heading(centerTitle(focus)) + '</header>';
   const own = effectsFor(focus, state.capabilities);
   const effects = EFFECT_ORDER.filter(e => own.includes(e));
-  const effect = effects.includes(state.effect) ? state.effect : effects[0];
-  if (!focus.receptors?.[effect])
+  const effect =
+      state.effect === BIRTH || effects.includes(state.effect) ? state.effect : effects[0];
+  if (effect !== BIRTH && !focus.receptors?.[effect])
     return html;
   const organ = organOf(doc, focus.id), seen = new Set();
   const choices = (organ?.centers ?? []).filter(c => {
@@ -613,9 +658,15 @@ function hormoneDetails(state) {
                                .join('') +
                            '</div>'
                      : '';
+  if (effect === BIRTH)
+    return html + choose + effectCurve(state, focus.growth, BIRTH, focus.id + ':' + BIRTH) +
+           cellDevelopment(state, focus);
   return html + choose + cellDevelopment(state, focus) +
          '<div class="aid-receptor-editor" title="' + label('inspector.cellEffects') + '">' +
          receptorEditor(state, focus, effects, effect) + '</div>';
 }
 
-export function hormoneInspector(state) { return previewControls(state) + hormoneDetails(state); }
+export function hormoneInspector(state) {
+  return state.selected ? previewControls(state) + hormoneDetails(state)
+                        : substanceInspector(state);
+}

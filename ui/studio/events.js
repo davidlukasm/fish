@@ -447,7 +447,17 @@ export const FISH_CLICKS = Object.freeze([
     (studio, e) => {
       if (e.dataset.selectTool)
         studio.setTool(e.dataset.selectTool);
+      if (e.dataset.selectEffect !== undefined)
+        studio.state.effect = e.dataset.selectEffect === 'birth' ? 'birth' :
+                                                                    Number(e.dataset.selectEffect);
       studio.select('center', e.dataset.selectCenter, null, false);
+    }
+  ],
+  [
+    '[data-source-gland]',
+    (studio, e) => {
+      studio.setTool('select');
+      studio.select('organ', e.dataset.sourceGland, null, false);
     }
   ],
   [ ITEM_KINDS.map(kind => '[data-' + kind + ']').join(','), clickItem ],

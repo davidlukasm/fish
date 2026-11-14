@@ -207,6 +207,8 @@ export const designMethods = {
       this.refreshScene();
       this.refreshGraphics();
     }
+    if (this.state.tool === 'hormone' && !this.state.selected && !traced)
+      this.refreshInspector();
     this.checkPressure();
   },
   async checkPressure() {
