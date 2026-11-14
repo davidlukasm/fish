@@ -81,8 +81,10 @@ Ersetzt den Vorschlag von 02:15. Die Grundlage ist jetzt die Reife der einzelnen
 2. **Eigenfeuern:** Ihre Rhythmusantwort liest die eigene Zellreife (`EGG_RHYTHM`, Halbwert 0,5 = rund 2048 Schritte ab Bildung, Anfangswert, nicht geeicht).
    - Solange die Zelle jung ist, feuert sie von selbst in Stößen (Engine `8579edf5`).
    - Die Nährzellen haben im Ei zusätzlich echtes Signal aus dem Wachstum (`physiology.cc`, `embryo_nutrient_gain`).
-3. **Bahnen wachsen:** Ein Kontakt Sinneszelle → Nervenzelle entsteht mit Gewicht 0, wo der Gestalter den Darm angeschlossen hat (freie Verdrahtung). Er wächst mit dem eigenen Signal der Sinneszelle und der Aktivität des Ziels (`substrate.cc:913-921`).
-   - Die Relais der Regionen schwingen im Ei über `DEVELOPING_RELAY` (Körperreife).
+3. **Bahnen wachsen, wenn das Ziel aktiv ist:** Ein Kontakt Sinneszelle → Nervenzelle entsteht mit Gewicht 0, wo der Gestalter den Darm angeschlossen hat (freie Verdrahtung). Er wächst nur mit dem Signal der Sinneszelle **und** ausreichender Aktivität des Ziels (`substrate.cc:899-944`).
+   - Die Relais der Regionen schwingen im Ei über `DEVELOPING_RELAY` (Körperreife). Das gilt bei Körperreife im Ei um 0,2 bis 0,3.
+   - **Gegenbeispiel (Astra 06:57):** Ein Plan mit Kapazität 7,75 steht im Ei auf Reife 1. Dort schweigen die Ziele, und die drei Darmwege blieben bei Gewicht 0. Solche Pläne meldet jetzt die Bauprüfung (`size`).
+   - **Offener Prüfpunkt:** Wachsen die Wege in einem lebensfähigen Plan (Kapazität ≥ 90)? Astra prüft das.
 4. **Festigung:** Die empfangenden Lernzellen festigen, was sie lernen, solange sie selbst jung sind (`EGG_HARDENING` auf Zellreife, Halbwert 0,5).
    - Ein Kontakt, der mindestens halb gefestigt ist, wird nicht beschnitten (`substrate.cc:976-985`).
    - So bleiben auch die Bahnen seltener Sinne nach dem Schlupf stehen, Bauchweh etwa kommt dann lange nicht.
