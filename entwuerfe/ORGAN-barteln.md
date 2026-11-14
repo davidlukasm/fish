@@ -1,6 +1,6 @@
 # Organ Barteln
 
-Am Produktstand `c468a830` gelesen (Fable, 14.11. 13:35). Selbst gelesen: `body_plan.cc:1003–1010`, `cppn_brain.cc:370–382`, `small_animals.cc:73–101`, `physiology.hh:437–441`, `protocol_schema.hh:2007–2013`, `organs.js:115–123`. Übernommen von Astra 12:26: Stein löst `felt` aus und schmeckt nach nichts; Plankton zählt über die Dichte am Ort (`small_animals.cc:101–111`, nicht selbst gelesen).
+Am Produktstand `c468a830` gelesen (Fable, 14.11. 13:30). Selbst gelesen: `body_plan.cc:1003–1010`, `cppn_brain.cc:370–382`, `small_animals.cc:73–101`, `physiology.hh:437–441`, `protocol_schema.hh:2007–2013`, `organs.js:115–123`. Übernommen von Astra 12:26: Stein löst `felt` aus und schmeckt nach nichts; Plankton zählt über die Dichte am Ort (`small_animals.cc:101–111`, nicht selbst gelesen).
 
 ## Was das Organ tut
 

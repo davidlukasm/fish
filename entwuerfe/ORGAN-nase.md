@@ -1,6 +1,6 @@
 # Organ Nase
 
-Am Produktstand `c468a830` gelesen (Fable, 14.11. 13:35). Grundlage ist Astras Vorarbeit von 12:26. Selbst gelesen: `body_plan.cc:1011–1033`, `cppn_brain.cc:300–368`, `physiology.hh:437–441`, `protocol_schema.hh:1469–1479`, `organs.js:108–114`, `scents.js:22–60`. Nicht selbst gelesen: wie aus `q1`/`q2` einer Zelle ihre acht Gewichte `scents[k]` werden (Compiler), `adapted_response` (Schwelle, Gewöhnung), `odor_field` (wie sich Duft im Wasser verteilt).
+Am Produktstand `c468a830` gelesen (Fable, 14.11. 13:30). Grundlage ist Astras Vorarbeit von 12:26. Selbst gelesen: `body_plan.cc:1011–1033`, `cppn_brain.cc:300–368`, `physiology.hh:437–441`, `protocol_schema.hh:1469–1479`, `organs.js:108–114`, `scents.js:22–60`. Nicht selbst gelesen: wie aus `q1`/`q2` einer Zelle ihre acht Gewichte `scents[k]` werden (Compiler), `adapted_response` (Schwelle, Gewöhnung), `odor_field` (wie sich Duft im Wasser verteilt).
 
 ## Was das Organ tut
 
