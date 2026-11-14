@@ -4,6 +4,26 @@ Das ist die einzige Leitlinie. Ältere Fassungen sind gelöscht: VISUALISIERUNG.
 
 Davids aktuelle Rückmeldung zu allen Panels steht erklärt und mit Bildern in `entwuerfe/AUFTRAG-1311.md`. Fakten aus der Engine je Organ stehen in `entwuerfe/ORGANOPTIONEN.md`.
 
+## 0. Absolutes No-Go: kein Deus ex Machina (David 14.11. 01:30)
+
+**Die Engine zwingt nie allen Zellen ein Verhalten auf.** Spontane Aktivität, Härtung (Festigung), Hirnwachstum, Lernen, Bildung und Tod von Zellen laufen nur über Mechanismen, die erblich und dynamisch steuerbar sind: Zellantworten, Hormone, Modulatoren, Lebenszyklus der Zelle. Ein Organ setzt diese Mechanismen für seine eigenen Zellen ein, zum richtigen Zeitpunkt und mit dem richtigen Ablauf. Vorbild ist die Netzhaut: Ihre Wellen sind ein Mechanismus der Zelle, und ihre Reifeantwort beendet sie.
+
+- **Verboten:**
+  - automatische Aktivität für alle Zellen einer Art, zum Beispiel Wellen für alle Sinneszellen,
+  - automatische Festigung aller lernenden Zellen,
+  - feste Schalter in der Engine, etwa „aus beim Schlupf“.
+  
+  Was die Engine allen aufzwingt, kann die Evolution nicht mehr steuern.
+- **Erlaubt:**
+  - Die Engine bietet einen Mechanismus an, der ohne Gene ruht.
+  - Ein Organ des Ateliers schaltet ihn über Zellantworten ein und aus.
+  - Helferzellen, die vor der Geburt Muster erzeugen und danach sterben, gehören dazu.
+- **Vor jeder Änderung an Lernen, Aktivität oder Reifung:**
+  1. Prüfen, welche Mechanismen es schon gibt: Rhythmus, Wellen, Bildung, Tod, Festigung, Hormonsysteme.
+  2. Prüfen, wie Organe sie schon nutzen, zum Beispiel `DEVELOPING_RELAY` und `THRESHOLD_RELAY` in den Regionen.
+  3. Prüfen, ob ein Organ das Problem mit diesen Mitteln selbst lösen kann.
+- **Fehlbeispiel:** Claude `14762028` (14.11. 00:53) gab allen Sinneszellen Netzhautwellen und schaltete sie beim Schlupf in der Engine ab. Zurückgenommen in `f27e2cc0`.
+
 ## 1. Musterverbot (David 13.11. 18:01)
 
 „Ihr müsst euch gegenseitig verbieten, in Muster oder Templates zu fallen. Erinnert euch regelmäßig an die guten Beispiele und den Kontrast zwischen zwei oder drei der guten Beispiele!“
