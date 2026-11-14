@@ -6,7 +6,6 @@ export {driveContext} from './preview.js';
 import {cellDevelopment, previewControls} from './development.js';
 import {visionInspector} from './vision.js';
 import {effectorGraphic, spineField} from './effectors.js';
-import {lateralField} from './lateral.js';
 import {hairField} from './balance.js';
 import {pigmentInspector} from './pigments.js';
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
@@ -63,6 +62,7 @@ import './live/eggs.js';
 import './live/sperm.js';
 import './live/nose.js';
 import './live/barbels.js';
+import './live/lateral.js';
 
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
@@ -116,7 +116,7 @@ const ORGAN_PANELS = Object.freeze({
   gland : (state, organ, center) => glandProfile(state, organ, center),
   eggs : (state, organ) => livePlace('eggs', organ),
   sperm : (state, organ) => livePlace('sperm', organ),
-  lateral : (state, organ) => lateralField(state, organ),
+  lateral : (state, organ) => livePlace('lateral', organ),
   balance : (state, organ, center) => hairField(state, organ, center),
   touch : skinPanel,
   pain : skinPanel,
