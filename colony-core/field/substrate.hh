@@ -207,16 +207,12 @@ struct WiringAmount {
   std::size_t contacts = 0;
   double length = 0;
 };
-// A sense cell's spontaneous activity: it fires now and then on its own and pulls its nearest
-// neighbours of the same sense along, so waves run over the organ. Before hatching this is all a
-// sense cell can teach the brain with, and the brain grows its contacts on it; after hatching it
-// fades over the cell's own time (`tau`), as the world takes its place.
-struct WaveCell {
+struct RetinalCell {
   NeuronIndex neuron;
-  std::array<std::uint32_t, wave_dynamics::neighbors> neighbors{};
+  std::array<std::uint32_t, retinal_dynamics::neighbors> neighbors{};
   unsigned count = 0;
   float position = 0, transverse = 0, excitability = 0;
-  double activity_decay = 0, recovery_decay = 0, tau = 1;
+  double activity_decay = 0, recovery_decay = 0;
 };
 class Network {
   std::shared_ptr<const Substrate> tissue;
@@ -227,8 +223,8 @@ class Network {
   };
   std::vector<Row> rows_;
   std::vector<float> state_, next_, signal_, pulse_, organ_output_;
-  std::vector<float> wave_activity_, wave_recovery_, wave_next_;
-  std::vector<WaveCell> waves_;
+  std::vector<float> retinal_activity_, retinal_recovery_, retinal_next_;
+  std::vector<RetinalCell> retina_;
   std::vector<float> synaptic_mean_, usual_, deviation_, own_mean_, action_mean_, teach_mean_,
       contrast_, cell_surprise_, progress_;
   std::vector<std::uint32_t> age_;
@@ -246,11 +242,10 @@ class Network {
   };
   std::vector<Stimulus> stimuli_;
   std::size_t dead_count_ = 0;
-  std::uint64_t neural_ticks_ = 0, wave_rng_ = 0, turnover_rng_ = 0, revision_ = 0,
+  std::uint64_t neural_ticks_ = 0, retinal_rng_ = 0, turnover_rng_ = 0, revision_ = 0,
                 tissue_revision_ = 0, organ_revision_ = 0, development_ticks_ = 0,
                 learning_seed = 0;
-  double hatch_steps_ = std::numeric_limits<double>::infinity();
-  bool wave_seeded_ = false, developing_ = false, diagnostic_ = false, observe = false,
+  bool retinal_seeded_ = false, developing_ = false, diagnostic_ = false, observe = false,
        plasticity_enabled = true;
   double maturity_ = 0, reserve_ = 0, fatigue_ = 0, growth_credit_ = 0;
   double build_budget_ = std::numeric_limits<double>::infinity(), build_scale_ = 1;
@@ -269,7 +264,7 @@ class Network {
   void erase_contact(std::size_t);
   bool insert_contact(NeuronIndex, NeuronIndex);
   void advance(const std::vector<float> &, const Hormones &, std::uint64_t);
-  void advance_waves(std::uint64_t);
+  void advance_retina(std::uint64_t);
   void form_synapse(NeuronIndex);
   double turnover_unit();
   void read_runtime_state(std::istream &);
@@ -290,7 +285,7 @@ public:
     NeuronIndex source, target;
     float weight, limit, consolidation;
   };
-  struct WaveState {
+  struct RetinalState {
     NeuronIndex neuron;
     float position, transverse, activity, recovery;
   };
@@ -342,7 +337,7 @@ public:
   const WiringAmount &wiring() const { return wiring_; }
   const WiringAmount &formed_wiring() const { return formed_; }
   std::uint64_t learning_steps() const { return neural_ticks_; }
-  std::vector<WaveState> wave_state() const;
+  std::vector<RetinalState> retinal_state() const;
   std::size_t learning_neurons() const;
   std::size_t learned_connections() const;
   double learned_change() const;
@@ -363,9 +358,6 @@ public:
   }
   void refresh_observation();
   void set_body_levels(double maturity, double reserve, double fatigue);
-  // Steps since hatching; negative inside the egg. Sense cells' spontaneous waves run in the egg
-  // and fade over each cell's time after it.
-  void set_hatch_steps(double steps) { hatch_steps_ = steps; }
   double maturity() const { return maturity_; }
   void set_plasticity(bool on);
   bool plasticity() const { return plasticity_enabled; }

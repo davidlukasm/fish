@@ -20,7 +20,7 @@ inline Value trace_update(Value retention, Value previous, Value fast, Value pre
   return retention * previous + (1 - fast) * pre * post;
 }
 }
-namespace wave_dynamics {
+namespace retinal_dynamics {
 inline constexpr unsigned neighbors = 6;
 inline constexpr double spontaneous_rate = .004, coupling = .9, threshold = .22,
                         refractory_gain = .75, activity_decay = 2, recovery_span = 4,

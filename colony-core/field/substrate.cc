@@ -6,7 +6,7 @@
 #include "mix.hh"
 #include "contacts.hh"
 #include "maturation.hh"
-#include "wave_tissue.hh"
+#include "retinal_tissue.hh"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -366,9 +366,9 @@ void Network::materialize() const {
 }
 void Network::prepare_state() {
   const auto n = tissue->neurons.size();
-  for (auto *v :
-       {&state_, &next_, &pulse_, &organ_output_, &wave_activity_, &wave_recovery_, &wave_next_,
-        &synaptic_mean_, &usual_, &own_mean_, &action_mean_, &teach_mean_, &contrast_, &progress_})
+  for (auto *v : {&state_, &next_, &pulse_, &organ_output_, &retinal_activity_, &retinal_recovery_,
+                  &retinal_next_, &synaptic_mean_, &usual_, &own_mean_, &action_mean_, &teach_mean_,
+                  &contrast_, &progress_})
     v->assign(n, 0);
   signal_.assign(n + 1, 0);
   deviation_ = cell_surprise_ = signal_;
@@ -390,7 +390,7 @@ void Network::prepare_state() {
   active_nerves_.clear();
   active_effectors_.clear();
   active_sensors_.clear();
-  waves_.clear();
+  retina_.clear();
   dead_count_ = 0;
   wiring_ = formed_ = {};
   revision_ = tissue_revision_ = organ_revision_ = 0;
@@ -485,13 +485,15 @@ void Network::die(std::size_t i) {
 void Network::refresh_active() {
   for (auto *v : {&active_, &active_nerves_, &active_effectors_, &active_sensors_})
     v->erase(std::remove_if(v->begin(), v->end(), [&](auto i) { return dead_[i]; }), v->end());
-  if (active_sensors_.size() != waves_.size() ||
-      std::any_of(waves_.begin(), waves_.end(),
+  const auto light = [&](auto i) { return tissue->neurons[i].functions.senses[Light] > 0; };
+  if (std::count_if(active_sensors_.begin(), active_sensors_.end(), light) !=
+          std::ptrdiff_t(retina_.size()) ||
+      std::any_of(retina_.begin(), retina_.end(),
                   [&](const auto &r) { return inactive(r.neuron); })) {
     auto mask = born_;
     for (std::size_t i = 0; i < mask.size(); ++i)
       mask[i] = mask[i] && !dead_[i];
-    waves_ = wave_tissue(tissue->neurons, &mask);
+    retina_ = retinal_tissue(tissue->neurons, &mask);
   }
   stimuli_.erase(std::remove_if(stimuli_.begin(), stimuli_.end(),
                                 [&](const auto &s) { return inactive(s.neuron); }),
@@ -690,36 +692,33 @@ void Network::form_synapse(NeuronIndex t) {
     return;
   insert_contact(s, t);
 }
-void Network::advance_waves(std::uint64_t individual) {
-  if (!wave_seeded_) {
-    wave_rng_ = splitmix(individual ^ tissue->development_seed ^ tissue->variation_seed ^
-                         0x2bf736ca93d1b185ull);
-    wave_seeded_ = true;
+void Network::advance_retina(std::uint64_t individual) {
+  if (!retinal_seeded_) {
+    retinal_rng_ = splitmix(individual ^ tissue->development_seed ^ tissue->variation_seed ^
+                            0x2bf736ca93d1b185ull);
+    retinal_seeded_ = true;
   }
-  for (const auto &r : waves_) {
+  for (const auto &r : retina_) {
     const auto i = r.neuron;
-    wave_rng_ = splitmix(wave_rng_);
+    retinal_rng_ = splitmix(retinal_rng_);
     if (inactive(i)) {
-      wave_next_[i] = wave_recovery_[i] = 0;
+      retinal_next_[i] = retinal_recovery_[i] = 0;
       continue;
     }
-    const double asleep =
-        hatch_steps_ < 0 ? 1 : 1 - std::clamp(hatch_steps_ / std::max(1., r.tau), 0., 1.);
-    const auto excitability =
-        float(asleep * std::clamp(r.excitability + hormone_effect_[Excitation][i], 0.f, 1.f));
+    const auto excitability = std::clamp(r.excitability + hormone_effect_[Excitation][i], 0.f, 1.f);
     float neighbors = 0;
     for (unsigned k = 0; k < r.count; ++k)
-      if (!inactive(waves_[r.neighbors[k]].neuron))
-        neighbors = std::max(neighbors, wave_activity_[waves_[r.neighbors[k]].neuron]);
-    const double spontaneous =
-        unit_center(wave_rng_) < wave_dynamics::spontaneous_rate * excitability * excitability;
-    const double drive = excitability * (wave_dynamics::coupling * neighbors + spontaneous);
-    const bool fires =
-        drive > wave_dynamics::threshold + wave_dynamics::refractory_gain * wave_recovery_[i];
-    wave_next_[i] = fires ? 1 : float(wave_activity_[i] * r.activity_decay);
-    wave_recovery_[i] = fires ? 1 : float(wave_recovery_[i] * r.recovery_decay);
+      if (!inactive(retina_[r.neighbors[k]].neuron))
+        neighbors = std::max(neighbors, retinal_activity_[retina_[r.neighbors[k]].neuron]);
+    const double spontaneous = unit_center(retinal_rng_) <
+                               retinal_dynamics::spontaneous_rate * excitability * excitability;
+    const double drive = excitability * (retinal_dynamics::coupling * neighbors + spontaneous);
+    const bool fires = drive > retinal_dynamics::threshold +
+                                   retinal_dynamics::refractory_gain * retinal_recovery_[i];
+    retinal_next_[i] = fires ? 1 : float(retinal_activity_[i] * r.activity_decay);
+    retinal_recovery_[i] = fires ? 1 : float(retinal_recovery_[i] * r.recovery_decay);
   }
-  wave_activity_.swap(wave_next_);
+  retinal_activity_.swap(retinal_next_);
 }
 void Network::advance(const std::vector<float> &values, const Hormones &h,
                       std::uint64_t individual) {
@@ -736,7 +735,7 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
   ++neural_ticks_;
   formed_ = {};
   learning_summary_ = {};
-  advance_waves(individual);
+  advance_retina(individual);
   for (auto i : active_)
     signal_[i] = inactive(i) ? 0 : state_[i];
   for (auto i : active_sensors_) {
@@ -744,9 +743,9 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
     const float output = .5f * (1 + hormone_effect_[Output][i]);
     signal_[i] = inactive(i) ? 0 : x * output;
   }
-  for (const auto &r : waves_)
+  for (const auto &r : retina_)
     if (!inactive(r.neuron))
-      signal_[r.neuron] += (1 - signal_[r.neuron]) * wave_activity_[r.neuron] *
+      signal_[r.neuron] += (1 - signal_[r.neuron]) * retinal_activity_[r.neuron] *
                            (.5f * (1 + hormone_effect_[Output][r.neuron]));
   for (const auto &s : stimuli_)
     signal_[s.neuron] = std::max(signal_[s.neuron], pulse_[s.neuron]);
@@ -1015,10 +1014,10 @@ void Network::reset() {
   clear_stimuli();
   for (auto *v : {&state_, &next_, &signal_, &organ_output_, &synaptic_mean_, &trace_, &usual_,
                   &deviation_, &own_mean_, &action_mean_, &teach_mean_, &contrast_, &cell_surprise_,
-                  &wave_activity_, &wave_recovery_, &wave_next_})
+                  &retinal_activity_, &retinal_recovery_, &retinal_next_})
     std::fill(v->begin(), v->end(), 0);
-  wave_seeded_ = false;
-  wave_rng_ = 0;
+  retinal_seeded_ = false;
+  retinal_rng_ = 0;
 }
 void Network::reset_learning() {
   reset();
@@ -1091,11 +1090,11 @@ std::vector<Network::Synapse> Network::synapses() const {
                      consolidation_[k]});
   return out;
 }
-std::vector<Network::WaveState> Network::wave_state() const {
-  std::vector<WaveState> out;
-  for (const auto &r : waves_)
-    out.push_back(
-        {r.neuron, r.position, r.transverse, wave_activity_[r.neuron], wave_recovery_[r.neuron]});
+std::vector<Network::RetinalState> Network::retinal_state() const {
+  std::vector<RetinalState> out;
+  for (const auto &r : retina_)
+    out.push_back({r.neuron, r.position, r.transverse, retinal_activity_[r.neuron],
+                   retinal_recovery_[r.neuron]});
   return out;
 }
 std::size_t Network::learning_neurons() const {
@@ -1121,9 +1120,9 @@ std::size_t Network::runtime_bytes() const {
                         &signal_,
                         &pulse_,
                         &organ_output_,
-                        &wave_activity_,
-                        &wave_recovery_,
-                        &wave_next_,
+                        &retinal_activity_,
+                        &retinal_recovery_,
+                        &retinal_next_,
                         &synaptic_mean_,
                         &usual_,
                         &deviation_,
@@ -1147,7 +1146,7 @@ std::size_t Network::runtime_bytes() const {
              sizeof(std::uint16_t) +
          (age_.capacity() + proposal_queue_.capacity()) * sizeof(std::uint32_t) +
          rows_.capacity() * sizeof(Row) + born_.capacity() + dead_.capacity() + muted_.capacity() +
-         waves_.capacity() * sizeof(WaveCell) +
+         retina_.capacity() * sizeof(RetinalCell) +
          (active_.capacity() + active_sensors_.capacity() + active_nerves_.capacity() +
           active_effectors_.capacity()) *
              sizeof(NeuronIndex) +
@@ -1233,10 +1232,10 @@ std::vector<float> as_floats(const std::vector<unsigned char> &v) {
 void Network::write_runtime(std::ostream &out) const {
   const auto precision = out.precision(std::numeric_limits<double>::max_digits10);
   out << "BRAINDEV_WORK " << state_.size() << ' ' << index_.size() << ' ' << learning_seed << ' '
-      << neural_ticks_ << ' ' << wave_rng_ << ' ' << turnover_rng_ << ' ' << revision_ << ' '
-      << tissue_revision_ << ' ' << development_ticks_ << ' ' << wave_seeded_ << ' ' << developing_
-      << ' ' << diagnostic_ << ' ' << plasticity_enabled << ' ' << maturity_ << ' ' << reserve_
-      << ' ' << fatigue_ << ' ' << growth_credit_ << ' '
+      << neural_ticks_ << ' ' << retinal_rng_ << ' ' << turnover_rng_ << ' ' << revision_ << ' '
+      << tissue_revision_ << ' ' << development_ticks_ << ' ' << retinal_seeded_ << ' '
+      << developing_ << ' ' << diagnostic_ << ' ' << plasticity_enabled << ' ' << maturity_ << ' '
+      << reserve_ << ' ' << fatigue_ << ' ' << growth_credit_ << ' '
       << (std::isfinite(build_budget_) ? build_budget_ : -1) << ' ' << build_scale_ << ' '
       << wiring_.length << ' ' << formed_.contacts << ' ' << formed_.length;
   for (double v : active_hormones_)
@@ -1250,11 +1249,26 @@ void Network::write_runtime(std::ostream &out) const {
     out << r.offset << ' ' << r.capacity;
   }
   out << '\n';
-  for (const auto *v :
-       {&state_,         &signal_,        &pulse_,    &organ_output_,  &wave_activity_,
-        &wave_recovery_, &synaptic_mean_, &usual_,    &deviation_,     &own_mean_,
-        &action_mean_,   &teach_mean_,    &contrast_, &cell_surprise_, &progress_,
-        &weight_,        &trace_,         &predict_,  &usage_,         &consolidation_})
+  for (const auto *v : {&state_,
+                        &signal_,
+                        &pulse_,
+                        &organ_output_,
+                        &retinal_activity_,
+                        &retinal_recovery_,
+                        &synaptic_mean_,
+                        &usual_,
+                        &deviation_,
+                        &own_mean_,
+                        &action_mean_,
+                        &teach_mean_,
+                        &contrast_,
+                        &cell_surprise_,
+                        &progress_,
+                        &weight_,
+                        &trace_,
+                        &predict_,
+                        &usage_,
+                        &consolidation_})
     write_values(out, *v);
   for (const auto *v : {&index_, &owner_, &trial_steps_left_})
     write_values(out, std::vector<float>(v->begin(), v->end()));
@@ -1289,8 +1303,8 @@ void Network::read_runtime(std::istream &in) {
 void Network::read_runtime_state(std::istream &in) {
   std::string tag;
   std::size_t cells = 0, slots = 0;
-  if (!(in >> tag >> cells >> slots >> learning_seed >> neural_ticks_ >> wave_rng_ >>
-        turnover_rng_ >> revision_ >> tissue_revision_ >> development_ticks_ >> wave_seeded_ >>
+  if (!(in >> tag >> cells >> slots >> learning_seed >> neural_ticks_ >> retinal_rng_ >>
+        turnover_rng_ >> revision_ >> tissue_revision_ >> development_ticks_ >> retinal_seeded_ >>
         developing_ >> diagnostic_ >> plasticity_enabled >> maturity_ >> reserve_ >> fatigue_ >>
         growth_credit_ >> build_budget_ >> build_scale_ >> wiring_.length >> formed_.contacts >>
         formed_.length) ||
@@ -1323,10 +1337,26 @@ void Network::read_runtime_state(std::istream &in) {
     v->resize(slots);
   for (auto *v : {&index_, &owner_, &trial_steps_left_})
     v->resize(slots);
-  for (auto *v : {&state_,         &signal_,        &pulse_,    &organ_output_,  &wave_activity_,
-                  &wave_recovery_, &synaptic_mean_, &usual_,    &deviation_,     &own_mean_,
-                  &action_mean_,   &teach_mean_,    &contrast_, &cell_surprise_, &progress_,
-                  &weight_,        &trace_,         &predict_,  &usage_,         &consolidation_})
+  for (auto *v : {&state_,
+                  &signal_,
+                  &pulse_,
+                  &organ_output_,
+                  &retinal_activity_,
+                  &retinal_recovery_,
+                  &synaptic_mean_,
+                  &usual_,
+                  &deviation_,
+                  &own_mean_,
+                  &action_mean_,
+                  &teach_mean_,
+                  &contrast_,
+                  &cell_surprise_,
+                  &progress_,
+                  &weight_,
+                  &trace_,
+                  &predict_,
+                  &usage_,
+                  &consolidation_})
     read_values(in, *v, 1e9f);
   std::vector<float> integers(slots);
   for (auto *v : {&index_, &owner_, &trial_steps_left_}) {
@@ -1414,8 +1444,8 @@ void Network::read_runtime_state(std::istream &in) {
   wiring_.contacts = 0;
   for (std::size_t i = 0; i < cells; ++i) {
     if (seen[i] != bool(born_[i] && !dead_[i]) || ((!born_[i] || dead_[i]) && rows_[i].capacity) ||
-        progress_[i] < 0 || progress_[i] > 1 || wave_activity_[i] < 0 || wave_activity_[i] > 1 ||
-        wave_recovery_[i] < 0 || wave_recovery_[i] > 1)
+        progress_[i] < 0 || progress_[i] > 1 || retinal_activity_[i] < 0 ||
+        retinal_activity_[i] > 1 || retinal_recovery_[i] < 0 || retinal_recovery_[i] > 1)
       throw std::runtime_error("invalid cell state");
     std::vector<NeuronIndex> sources;
     auto &r = rows_[i];
@@ -1465,7 +1495,7 @@ void Network::read_runtime_state(std::istream &in) {
     if (!stimulated[i] && pulse_[i] != 0)
       throw std::runtime_error("untracked stimulus");
   next_.assign(cells, 0);
-  wave_next_.assign(cells, 0);
+  retinal_next_.assign(cells, 0);
   observed_contributions.clear();
   learning_summary_ = {};
   refresh_active();

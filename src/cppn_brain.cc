@@ -872,10 +872,6 @@ void cppn_action(Body &b, const Genome &g, const PhysiologyParameters &physiolog
   b.perception_.perception_prepared = false;
   b.brain_->set_body_levels(body_maturity(b), bounded_filling(b.energy, reserve_capacity(b)),
                             b.motor().fatigue);
-  // Inside the egg every sense cell fires in waves of its own; they fade after hatching.
-  b.brain_->set_hatch_steps(!b.hatched        ? -1.
-                            : b.hatch_age < 0 ? std::numeric_limits<double>::infinity()
-                                              : double(b.age - b.hatch_age));
   b.brain_->step(b.perception_.sensor_buffer, b.hormones_.levels(), b.identity);
   b.refresh_organs(g);
   anatomical_action(b, b.active_interface(g), physiology, protected_life);
