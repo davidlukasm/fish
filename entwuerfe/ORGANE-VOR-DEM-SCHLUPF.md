@@ -98,9 +98,31 @@ Keine Vorlage härtet etwas vor dem Schlupf. Festigung gibt es nur über das Hor
 
 jeweils vorher und nachher.
 
-## 5. Umsetzung (nach Fables Gegenlesen)
+## 5. Umsetzung: Produkt `88a99acc` (Claude, 02:55)
 
 - `document.js` `defaults`: Sinneszellen außer Licht bekommen die Rhythmusantwort auf Reife.
 - `region_cells.js`: `DEVELOPING_RELAY`, `TONIC_LEARNING` und `ACTIVE_LEARNING` bekommen die Festigungsantwort im Ei. Einzelne Nervenzellen in `addNeuron` ebenso.
 - Atelier-Lebenszyklus: Die neuen Vorgaben sind dort sichtbar und änderbar, wie jede Antwort.
 - Keine Engine-Änderung.
+
+**Umgesetzt in `88a99acc`:**
+- `EGG_RHYTHM` in `document.js` (Sinneszellen außer Licht)
+- `EGG_HARDENING` in `ACTIVE_LEARNING` (`region_cells.js`, wirkt damit auch in `DEVELOPING_RELAY`, `TONIC_LEARNING` und `pacemakerCell`)
+- `addNeuron` mit `DEVELOPING_RELAY`
+- `systems.js`: Das System „Festigung“ ersetzt die Härtung im Ei, statt die Zelle zu überspringen.
+
+**Nach Fables Gegenlesen 02:44 berichtigt bzw. nachgetragen (selbst gelesen):**
+- **`DEVELOPING_RELAY`:** Bei Nervenzellen wirkt der Rhythmus mit ½ × (1 + Antwort). Die Antwort läuft von 0,5 nach −1,5, aus ist er also erst ab Reife ≈ 0,8.
+- **`TONIC_LEARNING`:** Die inaktive Rhythmusantwort kompiliert zu 0 (`atelier_compiler.hh:590-595`, nur aktive Antworten werden gesetzt). Der Rhythmus ist dann pace × ½ × sin, und Regionszellen haben `pace : 0,6` (`region_cells.js` `regionCell`) → `cell_class` pace = smooth(0,8; 0,7; 0,9) = 0,5 (`substrate.hh:106-121`). Der Rhythmus ist also lebenslang, mit einem Viertel der Stärke.
+- **Sinneszellen gegen Nervenzellen:**
+  - Sinneszellen feuern nur bei einer Antwort > 0. So ruht der neue Mechanismus ohne Vorgabe (`8579edf5`).
+  - Nervenzellen schwingen schon bei einer Antwort von 0 mit halber Stärke, wenn sie `pace` haben.
+  - Der Unterschied ist gewollt, damit bestehende Sinneszellen nicht plötzlich feuern.
+- **Streuung:** Der Streuungsgriff streut auch die Zellzeit (Astra 23:20). Damit streut er auch den Takt der Stöße. Das ist erwünscht: Zellen einer Gruppe haben dann ähnliche, aber nicht gleiche Takte.
+- **Tabellenzeilen, die Fable nicht gelesen hat:**
+  - Gleichgewicht (`body_plan.cc:1102-1103`, innen = Lage des Körpers)
+  - Schmerz außen und innen (`:1149-1157`)
+  - Druckzellen (`:1158-1170`, Gonaden, Samen, Tiefe, Dehnung im Muskel)
+  - Blutsinn (`:1185-1188`)
+
+  Alles von Claude gelesen. Fable bitte stichprobenartig gegenlesen.
