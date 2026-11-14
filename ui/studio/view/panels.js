@@ -135,6 +135,8 @@ const ORGAN_PANELS = Object.freeze({
   pain : (state, organ) => livePlace('pain', organ),
   blood : (state, organ) => livePlace('blood', organ),
 });
+// The organs whose live inspector draws the cells' life itself.
+const LIVE_LIFE = new Set([...Object.keys(ORGAN_PANELS), 'eye', 'proximity' ]);
 const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
                                       icon(organ.type, ICON.metric) + '<span>' +
                                       escapeText(organTitle(organ)) + '</span></div>';
@@ -248,12 +250,13 @@ function organInspector(state, organ) {
              heading(organTitle(organ, state.sites)) + '</header>' +
              moduleChips(state, organ.type === 'brain' ? center?.id : organ.id) +
              sideSwitch(organ) + centerTabs(state, organ);
-  html +=
-      organSettingsBlock(state, organ) + (isRegion(organ) ? '' : slotsSection(state, organ)) +
-      chemistry(state, organ, center) +
-      (isRegion(organ) && state.selected?.kind !== 'center' ? '' : cellDevelopment(state, center)) +
-      contactPlan(state, isRegion(organ) && state.selected?.kind !== 'center' ? organ.centers
-                                                                              : [ center ]);
+  html += organSettingsBlock(state, organ) + (isRegion(organ) ? '' : slotsSection(state, organ)) +
+          chemistry(state, organ, center) +
+          (isRegion(organ) && state.selected?.kind !== 'center'
+               ? ''
+               : cellDevelopment(state, center, !LIVE_LIFE.has(organ.type))) +
+          contactPlan(state, isRegion(organ) && state.selected?.kind !== 'center' ? organ.centers
+                                                                                  : [ center ]);
   if (isRegion(organ))
     html += iconSwitch('inner', organ.openContacts, label('compiler.openRegion'),
                        'data-compiler-open="' + escapeText(organ.id) + '"');

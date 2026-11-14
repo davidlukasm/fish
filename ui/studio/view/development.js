@@ -132,8 +132,8 @@ export function previewControls(state) {
 }
 // A cell's life cycle (when it comes into being, how active it is, when it dies) and how much its
 // copies differ.
-export function cellDevelopment(state, center) {
+export function cellDevelopment(state, center, phases = true) {
   if (!center || !state.capabilities)
     return '';
-  return lifeCycle(state, center) + cellVariation(center);
+  return lifeCycle(state, center, phases) + cellVariation(center);
 }

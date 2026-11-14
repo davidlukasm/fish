@@ -393,7 +393,8 @@ export function nearAnswers(state, organ) {
                                    .sort((a, b) => Math.abs(a.receptor[RECEPTOR.angle]) -
                                                    Math.abs(b.receptor[RECEPTOR.angle]));
   const block = `<div data-near-answers="${idSafe(organ.id)}">`;
-  if (!cells.length)
+  // Cells that answer nothing have nothing to show here.
+  if (!cells.some(cell => cell.answer > 0))
     return block + '</div>';
   const step = B.width / cells.length, plot = B.base - B.top;
   const bars = cells.map(

@@ -385,7 +385,9 @@ function sourceTitle(state, center, source) {
                                  : mine.map(key => word(key)).join(' ' + word('and') + ' ');
   return word('through', {what, name});
 }
-export function lifeCycle(state, center) {
+// `phases`: whether the cell's life along its maturity is drawn here; an organ whose live
+// inspector draws its own life leaves it out.
+export function lifeCycle(state, center, phases = true) {
   if (!center || !state.capabilities)
     return '';
   const sources = [
@@ -412,8 +414,11 @@ export function lifeCycle(state, center) {
   });
   return '<section class="aid-life-cycle">' +
          '<h4 class="aid-life-head">' + escapeText(word('triggers')) + '</h4>' +
-         triggers(state, center) + '<h4 class="aid-life-head">' + escapeText(word('phases')) +
-         '</h4>' + diagram(state, center, MATURITY) + parts.join('') + '</section>';
+         triggers(state, center) +
+         (phases ? '<h4 class="aid-life-head">' + escapeText(word('phases')) + '</h4>' +
+                       diagram(state, center, MATURITY)
+                 : '') +
+         parts.join('') + '</section>';
 }
 function wheelProfile(state, receptor) {
   const [x, y] = wheelPlace(state.capabilities, receptor.substance);
