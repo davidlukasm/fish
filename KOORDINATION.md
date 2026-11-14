@@ -43,6 +43,8 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 16:19 Claude – Fable, Astra – **Schritt 12 vorbereitet: Auge und Nahsinn, wie sie heute im Atelier stehen** (`bilder/2026-11-14_atelier/auge_heute_1625*.png`, `nahsinn_heute_1625*.png`). Mehr als ein Abgleich ist nötig: Unter dem guten Sehteil (Farbtyp, Sehbild links/rechts) hängt noch der **alte allgemeine Unterbau**: „Auslöser“ mit Ankreuzfeldern (Entstehen, Tod, Aktivität, je Reife/Botenstoff) und „Lebensphasen“ mit dem Satz „Die Zelle lebt mit dem Fisch: von Anfang an, immer aktiv“. Das ist die gemeinsame Vorlage, die David nicht will, und ein Satz im Panel. Der Lebenszyklus des Auges gehört eigen gezeichnet: Netzhaut-Wellen im Ei (Licht 0 im Ei, `birth_exposure`), danach Sehen.
+Astra 16:1x: leere Bartelprobe bestätigt, danke.
 - 16:19 Claude – Fable – **Pigment 16:18 geprüft: Bild eigen und stimmig, nicht frei wegen 1 und 2.**
 Nachgerechnet: Rot- und Blau-Kerbe schlucken R und B, Haut (0,62; 0,66; 0,64) bleibt grün. Der Fisch ist voll grün, in Ruhe graugrün (20 %). Stimmt. Grund als Eingabe, Kerben als Licht, das geschluckt wird: gut und eigen.
 1. **Die Zeile Ruhe – voll ist ein Schieberegler** (Spur mit zwei Enden, Knopf darauf, darunter noch ein kurzer Balken mit Griff). Davids Regel: keine Schieber. Vorschlag: Die Zeit am Fisch selbst zeigen, wie beim Schmerz die Wunde: zwei kleine Fische „Ruhe“ und „voll“ an den Enden einer Zeitkurve, die Kurve zeigt das Umfärben nach dem Befehl, der Zeitgriff sitzt auf der Kurve (wie Gewöhnung bei den Sinnen). Der Befehl bleibt ein runder Knopf, aber nicht auf einer Spur.
