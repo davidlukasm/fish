@@ -87,6 +87,15 @@ constexpr double MIN_PACE_PERIOD = TIME_CONSTANT_PACE_MIN;
 // as strong as this, so a weak drive moves only the small units.
 constexpr float MUSCLE_RECRUITMENT = 1;
 constexpr std::array<double, 3> PHASE_SALT{7.31, 3.17, 1.93};
+// A cell's own beat: its phase from where it grew (each side half a turn apart), its period its
+// cell time. Pacemaker nerves swing with it; sense cells that answer a rhythm fire on its crests.
+double own_beat(const Neuron &c, std::uint64_t ticks, double tau) {
+  const double phase =
+      (c.x > 0 ? PI_F : 0.) +
+      2 * PI_F *
+          std::fmod(std::abs(c.x) * PHASE_SALT[0] + c.y * PHASE_SALT[1] + c.z * PHASE_SALT[2], 1.);
+  return std::sin(phase + 2 * PI_F * double(ticks) / std::max(MIN_PACE_PERIOD, tau));
+}
 constexpr std::uint64_t PCG_MULTIPLIER = 6364136223846793005ull,
                         PCG_INCREMENT = 1442695040888963407ull;
 
@@ -747,6 +756,18 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
     if (!inactive(r.neuron))
       signal_[r.neuron] += (1 - signal_[r.neuron]) * retinal_activity_[r.neuron] *
                            (.5f * (1 + hormone_effect_[Output][r.neuron]));
+  // Spontaneous activity of a sense cell, as far as its rhythm answer is positive: bursts on the
+  // crests of its own beat. Cells of one kind share the beat's period (their cell time) but not
+  // its timing (their place). Without an answer the cell only reports its stimulus; the organ
+  // decides when its cells fire on their own, e.g. inside the egg to grow their wiring.
+  for (auto i : active_sensors_) {
+    const float drive = hormone_effect_[Rhythm][i];
+    if (drive <= 0 || inactive(i))
+      continue;
+    const double burst =
+        drive * std::max(0., own_beat(tissue->neurons[i], neural_ticks_, topology->tau[i]));
+    signal_[i] += float((1 - signal_[i]) * burst * .5 * (1 + hormone_effect_[Output][i]));
+  }
   for (const auto &s : stimuli_)
     signal_[s.neuron] = std::max(signal_[s.neuron], pulse_[s.neuron]);
   const auto n = tissue->neurons.size();
@@ -786,16 +807,9 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
     const float rm = std::min(mean_decay, float(age_[i]) / float(age_[i] + 1));
     synaptic_mean_[i] +=
         float((input - synaptic_mean_[i]) / (SYNAPTIC_ADAPTATION_SPAN * topology->tau[i]));
-    const double phase =
-        (c.x > 0 ? PI_F : 0.) +
-        2 * PI_F *
-            std::fmod(std::abs(c.x) * PHASE_SALT[0] + c.y * PHASE_SALT[1] + c.z * PHASE_SALT[2],
-                      1.);
-    const double rhythm =
-        effector ? 0
-                 : cl.pace * .5 * (1 + hormone_effect_[Rhythm][i]) *
-                       std::sin(phase + 2 * PI_F * neural_ticks_ /
-                                            std::max(MIN_PACE_PERIOD, topology->tau[i]));
+    const double rhythm = effector ? 0
+                                   : cl.pace * .5 * (1 + hormone_effect_[Rhythm][i]) *
+                                         own_beat(c, neural_ticks_, topology->tau[i]);
     const float response = effector ? 0 : std::clamp(c.parameters.quality2, 0.f, 1.f);
     const float level = std::min(1.f, 2 * response), memory = std::max(0.f, 2 * response - 1);
     const float drive = (1 - memory) * input + (memory + level - 1) * synaptic_mean_[i];

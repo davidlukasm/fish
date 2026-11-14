@@ -77,9 +77,12 @@ inline double connection_length(const Neuron &a, const Neuron &b) {
   return std::sqrt(
       double((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z)));
 }
+// Which answers a cell has: every cell its output and death; nerves all; muscles their excitation;
+// sense cells a rhythm, which lets them fire on their own.
 inline bool hormone_effect_present(Role role, int effect) {
   return effect == Output || effect == Death || role == Role::Nerve ||
-         (role == Role::Effector && effect == Excitation);
+         (role == Role::Effector && effect == Excitation) ||
+         (role == Role::Sensor && effect == Rhythm);
 }
 inline bool hormone_effect_present(const Neuron &n, int effect) {
   return hormone_effect_present(n.role, effect) ||
