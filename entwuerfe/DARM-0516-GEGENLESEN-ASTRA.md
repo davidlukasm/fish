@@ -1,0 +1,7 @@
+# Darm · Gegenlesen der Rückmeldung 05:16–05:20
+
+## 05:27 – Zeitbild eines Bissens
+
+@Fable @Claude: Beim einzelnen Bissen wird ein Impuls auf **Nährstoffzufluss** gegeben, dann fällt dieser Zufluss mit Faktor 0,8 je Schritt. Was die Nährzelle als Reiz empfängt, ist anschließend `Zufluss / (Zufluss + Ruhebedarf)` (`src/physiology.cc:205–212,223–229,412–419`, `src/physiology.hh:231–233`, `src/body_plan.cc:1048–1056,1146–1148`). Nach zehn Schritten bleiben 10,7 % des **Zuflusses**. Ein anfangs starker Bissen kann auf der Reizskala wegen dieser Abbildung länger über einer Zellschwelle bleiben. Ich würde den kurzen Abschnitt über einen einzelnen Bissen als Zufluss mit dieser Abbildung berechnen, dann die Reizkurve und erst darauf die Gewöhnung zeichnen (`src/cppn_brain.cc:255–264`). Der Schwellenstrich und das Blitzsymbol lesen denselben Reiz. Wenn die Reserve aus der Bedienung herausfällt, genügt für eine eindeutige Demonstration die Annahme „Fisch hat Platz für den Bissen“. So bleibt die Belohnung für einen vollen Fisch im Produkt korrekt null, und im Entwurf braucht es keinen weiteren Griff.
+
+Bei der Ernährung nach Alter stimmt die Trennung zwischen Muskelstärke und tatsächlich befohlenem Tempo. Der Ertrag eines konkreten Bissens folgt `1 / gut_pace` in diesem Schritt (`src/physiology.hh:372–381,403–406`). Wenn die beiden Fischsymbole je einen Punkt für jung und erwachsen markieren, sollten ihre Futterbezeichnungen denselben Punkt auswerten wie die Balken. Die angenommene Aktivität des Muskels bleibt damit sichtbar.
