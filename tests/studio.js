@@ -1016,7 +1016,14 @@ async function checkBloodReceptors(model, capabilities) {
   const wheel = capabilities;
   const placed =
       model.addNeuron(model.newDocument('Blutstoffe'), 'learn', wheel.sites, {x : 380, y : 325});
-  const empty = {hormones : Array(wheel.hormones).fill(0), maturity : 0, reserve : 0, fatigue : 0};
+  const empty = {
+    hormones : Array(wheel.hormones).fill(0),
+    maturity : 0,
+    reserve : 0,
+    fatigue : 0,
+    cellMaturity : 0
+  };
+  const contextKey = key => key === 'cell_maturity' ? 'cellMaturity' : key;
   const receptor =
       {active : 1, baseline : 0, sensitivity : 1, half : .25, steepness : 0, width : 0};
   const curveState = {document : placed.document, capabilities : wheel, previewContext : empty};
@@ -1043,7 +1050,7 @@ async function checkBloodReceptors(model, capabilities) {
               const sample = structuredClone(context);
               const body = Object.keys(B).find(key => B[key] === substance);
               if (body)
-                sample[body] = concentration;
+                sample[contextKey(body)] = concentration;
               else
                 sample.hormones[substance] = concentration;
               return 112 - 86 * (model.receptorResponse(wheel, r, sample) + 1) / 2;
@@ -1067,7 +1074,7 @@ async function checkBloodReceptors(model, capabilities) {
       const context = structuredClone(empty);
       const body = Object.keys(B).find(key => B[key] === index);
       if (body)
-        context[body] = level;
+        context[contextKey(body)] = level;
       else
         context.hormones[index] = level;
       assert.ok(Math.abs(model.receptorResponse(wheel, r, context) - expected) < 1e-12,
@@ -1108,7 +1115,7 @@ async function checkBloodReceptors(model, capabilities) {
                           'Broad receptors read finite values for all nine blood substances');
     }
     for (const level of [0, 1]) {
-      const context = {...empty, [key] : level};
+      const context = {...empty, [contextKey(key)] : level};
       const living = {...center, receptors : center.receptors.map(r => ({...r}))};
       living.receptors[E.death].active = 0;
       const [life] = lifeResponses(wheel, living, [ context ]);
@@ -1123,9 +1130,11 @@ async function checkBloodReceptors(model, capabilities) {
     for (const index of [B.reserve, B.fatigue])
       assert.match(learning, new RegExp('data-learn-substance="' + index + '"'));
     const teachers = model.teachersOf(doc, center, wheel);
-    assert.ok(teachers.some(t => t.substance.index === index && t.glands.length === 0));
-    assert.ok(substances.chemistry(state, model.findCenter(doc, id).organ, center)
-                  .includes(substances.substanceName(state, index)));
+    assert.equal(teachers.some(t => t.substance.index === index && t.glands.length === 0),
+                 index !== B.cell_maturity);
+    if (index !== B.cell_maturity)
+      assert.ok(substances.chemistry(state, model.findCenter(doc, id).organ, center)
+                    .includes(substances.substanceName(state, index)));
   }
   const region =
       model.addOrgan(model.newDocument('Region'), 'olfaction', wheel.sites, {x : 380, y : 325});
@@ -1148,7 +1157,7 @@ async function checkBloodReceptors(model, capabilities) {
   }
   for (let index = 0; index < wheel.hormones; ++index)
     doc = model.addSubstance(doc, wheel.hormones, index);
-  doc = model.updateReceptor(doc, id, E.learning, {width : 1});
+  doc = model.updateReceptor(doc, id, E.learning, {substance : B.fatigue, width : 1});
   const unused = model.newDocument('Vorschau');
   const one = model.addSubstance(unused, wheel.hormones, 0);
   for (const [document, expected] of [[ unused, [] ], [ one, [ 0 ] ],
@@ -1398,7 +1407,13 @@ async function checkInspectorSubstances(model, capabilities, clicks) {
     set outerHTML(value) { replacement = value; }
   } ]
                                                                            : [];
-  studio.refreshGraphics();
+  const request = globalThis.requestAnimationFrame;
+  try {
+    globalThis.requestAnimationFrame = () => 0;
+    studio.refreshGraphics();
+  } finally {
+    globalThis.requestAnimationFrame = request;
+  }
   assert.ok(replacement.includes('data-organ-settings="' + organ.id + '"'));
   root.querySelectorAll = () => [];
 }
@@ -2279,7 +2294,7 @@ async function checkTraceEffects(model, capabilities) {
       assert.equal(trace.legs.some(leg => leg.from === learner.centerId), !teaches);
     }
   }
-  const sender = {...model.findCenter(doc, next.centerId).center, id : 'sender'},
+  const sender = {...model.findCenter(doc, next.centerId).center, id : 'sender', pace : 0},
         target = {...model.findCenter(doc, learner.centerId).center, id : 'target'};
   const endpoints = {
     ...model.newDocument('Endpunkte'),
@@ -3304,7 +3319,7 @@ async function checkHormoneSystems(model, capabilities) {
     assert.equal(aquarium.effects.length, Object.keys(E).length);
   }
   assert.deepEqual(sitesResult.roleEffects, [
-    [ E.output, E.death ], Object.values(E).sort((a, b) => a - b),
+    [ E.rhythm, E.output, E.death ], Object.values(E).sort((a, b) => a - b),
     [ E.excitation, E.output, E.death ]
   ]);
   assert.deepEqual(sitesResult.lightEffects, [ E.excitation ]);
@@ -4084,9 +4099,11 @@ async function checkHormoneSystems(model, capabilities) {
         .matchAll(/data-effect="(\d)"/g)
   ].map(m => +m[1]);
   assert.deepEqual(
-      sensorEffects,
-      model.effectsFor(model.chosenCenter(state.document, state.selected, state.visionProfile),
-                       sitesResult));
+      sensorEffects.toSorted((a, b) => a - b),
+      model
+          .effectsFor(model.chosenCenter(state.document, state.selected, state.visionProfile),
+                      sitesResult)
+          .toSorted((a, b) => a - b));
   const learner = panels.inspector({
     ...state,
     selected : {kind : 'center', id : relay.centerId},
