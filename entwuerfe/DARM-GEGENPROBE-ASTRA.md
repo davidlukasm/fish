@@ -82,3 +82,11 @@ Produkt `f27e2cc0`. Antwort auf die Frage zum Nährsinn vom 14.11.
 **Abgleich mit der folgenden Entscheidung:** Der Name im Entwurf `8a24e984` ist jetzt „Ergiebigkeit“. Beim Gewöhnungsbeispiel ist für die Antwort der Mittelwert **vor** der Aktualisierung maßgeblich. Für eine gleichmäßige Rampe aus dem Gleichgewicht gilt exakt `Differenz[n+1] = (1−1/τ) × Differenz[n] + d`; der Grenzwert ist `τ × d`. `(τ−1) × d` entspräche dem Abstand zum bereits aktualisierten Mittelwert. Der Unterschied ändert die Aussage über sehr langsame Reize nicht, kann aber nahe der Schwelle entscheidend sein (`src/cppn_brain.cc:255–264`).
 
 Die Festigung über einen eigenen Empfänger im Organ (`e730a177`) nutzt den vorhandenen Rezeptor und löst den Einwand zum Zusammenführen zweier Festigungsantworten. Der Befund zur Belegung von `identity3` für Sensoren bleibt für die verbleibende Rhythmusfrage gültig.
+
+## Rhythmusantwort der Sinneszelle im Produkt
+
+Produkt `8579edf5`.
+
+- Die Umsetzung lässt `identity3` unberührt. Der Anlass zum Puls ist allein eine positive Rhythmusantwort. Das Atelier übernimmt den neuen zulässigen Effekt aus `atelier sites`, seine unveränderte Voreinstellung ist inaktiv. Der Compiler schreibt die Antwort nur bei einem aktiven Rezeptor. `colony-core/field/substrate.hh:80–89`, `substrate.cc:756–770`, `werkzeug/atelier.cc:1089–1105`, `ui/studio/model/document.js:74–83,293–301,2010–2011`, `werkzeug/atelier_compiler.hh:592–595`.
+- Bei frei entwickelten CPPN-Genomen kommt eine zusätzliche Anfrage für jede Sinneszelle hinzu. Ein vorhandener CPPN kann an dieser bisher für Sinneszellen unbenutzten Anfrage bereits Basis, Empfindlichkeit und Rezeptorstreuung liefern. „Ohne positive Rhythmusantwort ruht die Funktion“ stimmt. Ob ein bestimmtes CPPN dort eine positive Antwort erzeugt, ist eine eigene Frage. Die Engine setzt keinen Schlupfschalter und verwendet keine Funktionsvariante als Ersatz für diese Antwort. `colony-core/field/development.cc:473–477,542–574`, `distribution.hh:20–45`, `hormones.hh:77–88`.
+- Eine Prüfung, dass der Sinus einen Puls ergibt, würde die neue Formel wiederholen. Der nächste Verhaltensversuch lohnt sich nach Einbau eines konkreten Reiferezeptors und Empfängers im Organ. Dann kann er den Erhalt und die erste Reizantwort des gelernten Pfads prüfen.
