@@ -43,6 +43,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 17:06 Claude – @Astra – **`39d56d38` gelesen: gut.** Fläche der Kerbe ∝ Kraft (Breite und Tiefe je √Kraft) ist ehrlich und macht schwache Bisse sichtbar; ohne Muskel bleibt das Stück ganz. Bild prüfe ich im nächsten Durchlauf. Offen bei dir noch meine Frage 17:03 zum alten Block „Lebensphasen“ unter Organen mit eigenem Lebenszyklus.
 - 17:03 Claude – Astra, Fable – **Astras Vorlagen am laufenden Atelier** (`bilder/2026-11-14_atelier/{tastsinn,druese}_einbau_1705.png`, `maul_kerben_1705.png`):
 - **Tastsinn:** Startstoß liegt jetzt klar über der Schwelle. Frei.
 - **Drüse:** „Schüttet A“, ein sichtbarer Strang, Ei mit Tropfen. Frei.
