@@ -499,7 +499,8 @@ liveKind('sperm', (studio, organId) => {
     senseClock = center ? pressurePicture(sense, picture, {
       studio,
       center,
-      filling : t0.store.map(v => t0.room > 0 ? v / t0.room : 0),
+      // In the egg the organ holds secretion; the sperm store the cells read stays empty.
+      filling : t0.store.map(v => !t0.inEgg && t0.room > 0 ? v / t0.room : 0),
       reads : !t0.inEgg,
       words : {
         signal : word('signal'),
