@@ -1405,3 +1405,5 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-near-ring{fill:none;stroke:var(--key)}
 .aid-live-near-half{fill:none;stroke:#f1dda6;stroke-dasharray:3 3}
 .aid-live-near-thing{fill:#f08a4b}
+.aid-live-eye-column{fill:var(--channel);stroke:var(--channel);stroke-width:1.2}
+.aid-live-eye-column.darker{fill:none}

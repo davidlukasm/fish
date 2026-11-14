@@ -14,13 +14,13 @@
 // NOT read: the waves over the retina in the egg (retinal_tissue takes the cells with a share of
 // light); the response curve's own lines (here contrast / (contrast + half contrast)).
 // The strip is the engine's own: the light at the eye for the fish panel's test light, round the
-// field of the cell of the chosen colour type that answers it most; the columns are that cell's
-// report colour by colour, the scale beside them its contrast, the mark its answer (the plan
-// report's sight, as the sight pictures below use it). Nothing is worked out again here.
-// UNVERIFIED: that a growing angle lies to the right in the strip.
+// field of the cell of the chosen colour type that answers it most; the columns are the light of
+// its field against its surround's colour by colour, the scale beside them its contrast, the
+// mark its answer (the plan report's sight, as the sight pictures below use it). Nothing is
+// worked out again here.
 // ASSUMED: the cell's time steps are those of its time constant (ui/tuning.js,
 // timeConstantSteps).
-import {IMAGE_BAND, RECEPTOR, TUNING, VISUAL_SAMPLE} from '../../../schema.js';
+import {IMAGE_BAND, RECEPTOR, SENSE_KIND, TUNING, VISUAL_SAMPLE} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {
   LONGEST_TIME_CONSTANT,
@@ -116,21 +116,33 @@ liveKind('eye', (studio, organId) => {
     },
        live);
     el('path', {d : `M${X(-3)} ${top + high + 2} v6 H${X(3)} v-6`, class : 'aid-live-hatch'}, live);
-    // What the cell makes of it, colour by colour: a column for each, its area as large as that
-    // colour's part of what the cell reports (the engine's numbers).
-    el('path', {d : `M${L} ${PB} H${R}`, class : 'aid-live-rim'}, live);
-    const parts = sample ? [ VISUAL_SAMPLE.red, VISUAL_SAMPLE.green, VISUAL_SAMPLE.blue ].map(
-                               k => clamp(sample[k] / scale))
-                         : [ 0, 0, 0 ];
-    parts.forEach((v, c) => {
-      const side = EYE.column * Math.sqrt(v);
-      if (side > .5)
+    // Field against surround, colour by colour, as the engine has them (the sight report's
+    // retinalLight, the row of this eye). The dashed stroke is the surround's light, the column
+    // on it how far the field's light lies from it: filled where the field is brighter, hollow
+    // where it is darker. A column is as high as the root of the difference, so that a small one
+    // still shows.
+    const eye = organ.side < 0 ? 0 : 1,
+          lights = cell && sight.retinalLight?.find(
+                               row => row[0] === cell.receptor[RECEPTOR.neuron] && row[1] === eye);
+    EYE.channels.forEach((colour, c) => {
+      const x = X(0) + (c - 1) * (EYE.column + 6);
+      el('path', {
+        d : `M${x - EYE.column / 2} ${PB} h${EYE.column}`,
+        class : 'aid-live-eye-level around',
+        style : `stroke:${colour}`
+      },
+         live);
+      if (!lights)
+        return;
+      const gap = lights[2][c] - lights[3][c], tall = (PB - PT) * Math.sqrt(clamp(Math.abs(gap)));
+      if (tall > .5)
         el('rect', {
-          x : X(0) + (c - 1) * (EYE.column + 3) - side / 2,
-          y : PB - side * (PB - PT) / EYE.column,
-          width : side,
-          height : side * (PB - PT) / EYE.column,
-          fill : EYE.channels[c]
+          x : x - EYE.column / 2 + 3,
+          y : PB - tall,
+          width : EYE.column - 6,
+          height : tall,
+          class : 'aid-live-eye-column' + (gap < 0 ? ' darker' : ''),
+          style : `--channel:${colour}`
         },
            live);
     });
@@ -138,7 +150,10 @@ liveKind('eye', (studio, organId) => {
     // set to (below) to the full one (above), each step as many times the one before. The grip
     // on the scale is the contrast at which the cell answers half.
     const gx = X(3.5) + 20, half = halfOf(profile),
-          contrast = sample ? sample[VISUAL_SAMPLE.light] / scale : 0,
+          // The cell's contrast after the cells' mutual inhibition and before the answer's curve:
+          // the stimulus without the cell's share of sight.
+        gain = cell?.receptor[RECEPTOR.senses]?.[SENSE_KIND.light] || 1,
+          contrast = sample ? sample[VISUAL_SAMPLE.stimulus] / gain / scale : 0,
           G = v => PB - (PB - PT) * (1 + Math.log(clamp(v, 1 / range, 1)) / Math.log(range));
     el('path', {d : `M${gx} ${PT} V${PB}`, class : 'aid-live-rim'}, live);
     if (contrast > 1 / range)
