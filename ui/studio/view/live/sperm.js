@@ -39,6 +39,8 @@ const FULL = ATELIER_LIMITS.max_copies, STEPS = 900, ROUND_MS = 12000, HATCH = .
 // travel: how far the cells' grip moves from the thinnest to the fullest cells.
 const CLOUD =
     Object.freeze({reach : 14, fade : 260, grow : 90, plant : 34, thick : 12, travel : 24});
+// The shell's stroke: what is left of it at nothing, and what a whole shell adds.
+const SHELL = Object.freeze({least : .8, most : 9});
 const SCENE = Object.freeze({
   height : 144,
   fishX : 92,
@@ -224,6 +226,16 @@ liveKind('sperm', (studio, organId) => {
                      ? el('ellipse',
                           {cx : 150, cy : by, rx : 66, ry : 46, class : 'aid-live-eggshell'}, under)
                      : null;
+    // Where the whole shell's outer edge was (dotted), to see how much is gone.
+    if (t0.inEgg)
+      el('ellipse', {
+        cx : 150,
+        cy : by,
+        rx : 66 + (SHELL.least + SHELL.most) / 2,
+        ry : 46 + (SHELL.least + SHELL.most) / 2,
+        class : 'aid-live-bellyroom'
+      },
+         under);
     el('path', {d : FISH, class : 'aid-live-body'}, g);
     el('circle', {cx : -62, cy : -6, r : 3.4, class : 'aid-live-eye'}, g);
     // The room at this maturity with every cell that counts (dotted), and the organ in it.
@@ -357,7 +369,9 @@ liveKind('sperm', (studio, organId) => {
        live);
     if (t0.room > 0) {
       el('path', {d : `M${L} ${Y(t0.room)} H${R}`, class : 'aid-live-ending'}, live);
-      txt(live, 4, Y(t0.room) + 3, word('full'));
+      // A small room's mark lies on the floor; then the word would lie on the one below.
+      if (Y(t0.room) < base - 12)
+        txt(live, 4, Y(t0.room) + 3, word('full'));
     }
     if (t0.inEgg) {
       el('path', {d : path(t0.shell.map((v, st) => [X(st), SY(v)])), class : 'aid-live-shellline'},
@@ -556,7 +570,9 @@ liveKind('sperm', (studio, organId) => {
     }
     if (!shown)
       film.cloud.setAttribute('opacity', 0);
-    film.shell?.setAttribute('stroke-width', (1 + 7 * (t0.shell[at] ?? 1)).toFixed(1));
+    // The shell as thick as it still is; the square makes a half-thinned shell plainly thinner.
+    film.shell?.setAttribute('stroke-width',
+                             (SHELL.least + SHELL.most * (t0.shell[at] ?? 1) ** 2).toFixed(1));
     if (!film.egg)
       return;
     film.plant.setAttribute('opacity', (1 - .85 * dim).toFixed(2));
