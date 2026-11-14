@@ -138,14 +138,14 @@ const cellStrength = (cell, gut) => cell.copies / ATELIER_LIMITS.max_copies * (g
 // How strongly a food irritates the pain cells over the stays from `reach[0]` to `reach[1]`: at
 // least, and at most.
 function acheIn(curve, reach) {
-  const ks = AXIS.map((stay, k) => k).filter(k => AXIS[k] >= reach[0] && AXIS[k] <= reach[1]), aches = (ks.length ? ks : [ AXIS.length - 1 ]).map(k => curve.aches[k]);
+  const aches = [ reach[0], ...AXIS.filter(stay => stay > reach[0] && stay < reach[1]), reach[1] ].map(stay => gutAche(curve.food, stay));
   return [ Math.min(...aches), Math.max(...aches) ];
 }
 // What a food gives and how it hurts over the stays from `reach[0]` to `reach[1]`.
+// The reach's own two ends count exactly, and the picture's stays between them.
 function rangeIn(curve, reach) {
-  const inside = AXIS.map((stay, k) => k).filter(k => AXIS[k] >= reach[0] && AXIS[k] <= reach[1]);
-  const ks = inside.length ? inside : [ AXIS.findIndex(stay => stay >= reach[1]) ].map(k => k < 0 ? AXIS.length - 1 : k);
-  const gains = ks.map(k => curve.gains[k]), sore = ks.filter(k => curve.aches[k] > 0).map(k => curve.gains[k]);
+  const stays = [ reach[0], ...AXIS.filter(stay => stay > reach[0] && stay < reach[1]), reach[1] ];
+  const gains = stays.map(stay => gutUse(curve.food, stay)), sore = gains.filter((gain, k) => gutAche(curve.food, stays[k]) > 0);
   return {min : Math.min(...gains), max : Math.max(...gains), sore : sore.length ? [ Math.min(...sore), Math.max(...sore) ] : null};
 }
 
@@ -301,7 +301,7 @@ liveKind('gut', (studio) => {
     tried[id].chosen = keysOf(id).length;
     change(added.document);
   }
-  const film = {wall : null, tube : null, segs : [], bits : [], crumbs : [], way : null, share : null, stomach : null, keys : null};
+  const film = {wall : null, tube : null, segs : [], bits : [], crumbs : [], way : null, share : null, stomach : null, keys : null, named : []};
   let state = studio.state, curves = null, curvesFor = null, model = null, step = 0, wave = 0;
   const draft = doc => doc && studio.draftDesign(doc, 'live:gut', 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -326,11 +326,14 @@ liveKind('gut', (studio) => {
     const strength = cells.reduce((sum, c) => sum + cellStrength(c, diet.gut), 0), row = diet.gut.speed, most = diet.gut.speedMaxStrength;
     const pace = row && most > 0 ? sampled(row, strength / most) : state.anatomy?.gutSpeed ?? 1;
     const fastest = rest / pace, reach = [ fastest, rest ];
+    // The most the grip can reach: every cell of this muscle at its fullest.
+    const fullest = cells.reduce((sum, c) => sum + cellStrength({...c, copies : ATELIER_LIMITS.max_copies}, diet.gut), 0);
+    const quickest = row && most > 0 ? Math.max(pace, sampled(row, fullest / most)) : pace;
     const best = stay => {
       const got = curves.map(c => ({c, gain : gutUse(c.food, stay)})).sort((a, b) => b.gain - a.gain);
       return got.filter(g => g.gain >= DIET_SHARE * got[0].gain).length >= 3 ? 'all' : got[0].c.name;
     };
-    return {length, rest, pace, fastest, reach, muscle, strength, ranges : curves.map(c => rangeIn(c, reach)), diet : best(fastest)};
+    return {length, rest, pace, quickest, fastest, reach, muscle, strength, ranges : curves.map(c => rangeIn(c, reach)), diet : best(fastest)};
   }
 
   function buildFish(fixed) {
@@ -427,9 +430,9 @@ liveKind('gut', (studio) => {
          p => draft(setGutLength(studio.state.document, clamp((p.x - right - GUT.right[0]) / (GUT.right[1] - GUT.right[0])))),
          'gutend', 'grip', settle);
     // The muscle, under the fish on the yield's own scale of stays: the wedge lies from the gut
-    // at rest (no muscle) to the fastest any muscle makes it; the grip stands exactly above the
-    // muscle's grip in the yield and moves with it.
-    const wy = FISH.height - 9, wx1 = xOfStay(m.rest), wide = xOfStay(m.rest / DIGESTION.fastest), wx0 = xOfStay(m.fastest);
+    // at rest (no muscle) to the fastest this muscle's cells can make it at their fullest; the
+    // grip stands exactly above the muscle's grip in the yield and moves with it.
+    const wy = FISH.height - 9, wx1 = xOfStay(m.rest), wide = xOfStay(m.rest / m.quickest), wx0 = xOfStay(m.fastest);
     el('path', {d : `M${wx1} ${wy} L${wide} ${wy - 5.5} v11 Z`, class : 'aid-live-muscle'}, live);
     txt(live, wide - 9, wy + 4, word('muscle'), {'text-anchor' : 'end'});
     if (m.muscle && state.capabilities.diet.gut.speed)
@@ -463,8 +466,13 @@ liveKind('gut', (studio) => {
       flush();
       return {name : c.name, words : word('food.' + c.name), pts};
     });
-    // Names: each on its own curve, where neither another name nor another curve sits.
-    const taken = [];
+    film.named = drawn;
+  }
+  function drawYield() {
+    const {svg, under, live} = picture(yields, Y.height, buildYield), {top, row} = Y, m = model, x1 = xOfStay(m.rest), x0 = xOfStay(m.fastest);
+    // Names: each on its own curve, where neither another name, another curve nor the line of the
+    // gut at rest sits.
+    const {L, R, base} = Y, drawn = film.named, taken = [ {x0 : x1 - 10, x1 : x1 + 10, y0 : top - 16, y1 : base} ];
     const free = (box, i) => !taken.some(b => box.x0 < b.x1 + 2 && box.x1 > b.x0 - 2 && box.y0 < b.y1 + 1 && box.y1 > b.y0 - 1) &&
                              drawn.every((c, j) => j === i || c.pts.every(([ x, y ]) => x < box.x0 - 1 || x > box.x1 + 1 || y < box.y0 - 2 || y > box.y1 + 2)) &&
                              box.x0 > L + 2 && box.x1 < R && box.y0 > top - 14 && box.y1 < base - 14;
@@ -475,16 +483,13 @@ liveKind('gut', (studio) => {
           const box = {x0 : x - w / 2, x1 : x + w / 2, y0 : y + lift - 10, y1 : y + lift + 1};
           if (free(box, i)) {
             taken.push(box);
-            txt(fixed, x, y + lift, c.words, {'text-anchor' : 'middle', class : 'aid-live-food-word', 'data-food' : c.name});
+            txt(live, x, y + lift, c.words, {'text-anchor' : 'middle', class : 'aid-live-food-word', 'data-food' : c.name});
             return;
           }
         }
     });
-  }
-  function drawYield() {
-    const {svg, under, live} = picture(yields, Y.height, buildYield), {top, row} = Y, m = model, x1 = xOfStay(m.rest), x0 = xOfStay(m.fastest);
     el('rect', {x : x0, y : top, width : x1 - x0, height : row + 6 - top, class : 'aid-live-reach'}, under);
-    el('path', {d : `M${x1} ${top - 6} V${row}`, class : 'aid-live-rest'}, live);
+    el('path', {d : `M${x1} ${top - 6} V${Y.base} M${x1} ${Y.base + 19} V${row}`, class : 'aid-live-rest'}, live);
     el('path', {d : `M${x0} ${row} H${x1}`, class : 'aid-live-musclebar'}, live);
     if (m.muscle && state.capabilities.diet.gut.speed)
       drag(svg, el('rect', {x : x0 - 5, y : row - 7, width : 10, height : 14, rx : 3}, live), muscleTo, 'fastest', 'grip', settle);
@@ -496,7 +501,7 @@ liveKind('gut', (studio) => {
   // What each food gives this gut: every bar's full length is the best that food can give in any
   // gut, all on one scale; the filled range is every stay this gut reaches; a red frame where a
   // full gut of it hurts.
-  const legendY = BARS.top + FOODS.length * BARS.row + 8;
+  const legendY = BARS.top + FOODS.length * BARS.row + 14;
   function buildBars(fixed) {
     el('rect', {x : BARS.x0, y : legendY - 8, width : 16, height : 11, rx : 3, class : 'aid-live-sore'}, fixed);
     txt(fixed, BARS.x0 + 22, legendY + 1, word('ache'));
@@ -511,7 +516,8 @@ liveKind('gut', (studio) => {
       el('rect', {x : x(r.min), y, width : Math.max(2, x(r.max) - x(r.min)), height : 12, rx : 3, class : 'aid-live-food-fill', 'data-food' : c.name, opacity : .5}, live);
       if (r.sore)
         el('rect', {x : x(r.sore[0]) - 3, y : y - 3, width : Math.max(6, x(r.sore[1]) - x(r.sore[0]) + 6), height : 18, rx : 3, class : 'aid-live-sore'}, live);
-      txt(live, 294, y + 10, word('span', {from : Math.round(100 * r.min), to : percent(r.max)}), {'text-anchor' : 'end', class : 'aid-live-value'});
+      // One number where the gut reaches no span.
+      txt(live, 294, y + 10, Math.round(100 * r.min) === Math.round(100 * r.max) ? percent(r.max) : word('span', {from : Math.round(100 * r.min), to : percent(r.max)}), {'text-anchor' : 'end', class : 'aid-live-value'});
     });
   }
   // The nerve cells above a sense's diagram (see NERVE). A cell is chosen by touching it; if the
