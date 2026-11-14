@@ -14,15 +14,17 @@ import {activationLevel, activationQuality, adaptationOf, adaptationSteps, LONGE
 import {
   addOrganType,
   gutLength,
+  lifePhase,
   organTypes,
   removeOrganType,
   setGutLength,
+  setLifePhase,
   setNodeCopies,
   updateCellDistribution,
   updateCenter
 } from '../../model/document.js';
 import {label} from '../kit.js';
-import {chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {chip, clamp, drag, el, fishIcon, liveKind, path, picture, txt} from './kit.js';
 
 const word = (key, values) => t('studio.live.gut.' + key, values);
 // The foods, in the pictures' order, by their names in the engine's report.
@@ -161,8 +163,20 @@ const CELLS = 7, LEVELS = [ activationLevel(0), activationLevel(1) ], LEVEL_SPAN
 const USED = [ adaptationSteps(0), LONGEST_ADAPTATION ];
 const SENSES = Object.freeze({
   full : {cells : 'fullness', tires : false, after : 260, row : false},
-  ache : {cells : 'ache', tires : true, after : 120, row : true}
+  ache : {cells : 'ache', tires : true, after : 120, row : true},
+  feed : {cells : 'food'}
 });
+// The reward signal: at each swallow the engine adds a share of what the bite will give this gut
+// to a flow that fades step by step; the cells feel the flow against the resting need, flow /
+// (flow + need) (physiology.cc, take_nutrition; physiology.hh, nutrient_signal). The share and what
+// is kept each step come from the engine's report. A schema's assumptions: the bite tried is
+// worth BITE resting needs if all of it were used, and the picture gives each bite BITE_STEPS
+// steps before the next is swallowed.
+const BITE = 16.5, BITE_STEPS = 10;
+const REWARD = Object.freeze({L : 62, R : 246, top : 34, row : 19, star : 274, height : 168});
+const STAR = 'M0 -7 L1.7 -1.7 L7 0 L1.7 1.7 L0 7 L-1.7 1.7 L-7 0 L-1.7 -1.7 Z';
+// The life picture: across, the fish's maturity; up, how fast the muscle makes the gut.
+const LIFE = Object.freeze({L : 44, R : 226, top : 20, base : 92, icons : 110, height : 124, zones : 72, beside : 16, whole : .015, least : .08, hatch : .5});
 const SENSE_BOX = Object.freeze({L : 92, R : 292, LX : 44, I0 : 150, I1 : 254, row : 34, rowL : 6, rowR : 294, rowGap : 10});
 const KEY_X = 9;
 const cellGates = k => Array.from({length : CELLS}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5), LEVELS[0], LEVELS[1]));
@@ -263,11 +277,17 @@ liveKind('gut', (studio) => {
   const pictures = {full : svgOf()};
   heading(word('aching'));
   pictures.ache = svgOf();
+  heading(word('reward'));
+  const rewards = svgOf();
+  heading(word('life'));
+  const life = svgOf();
   // What is tried on each sense and which of its keys is chosen: not part of the fish.
   const tried = {
     full : {chosen : 0, input : {rise : 120, height : .8, stop : 520}},
-    ache : {chosen : 0, input : {rise : 60, height : .7, stop : 600}}
+    ache : {chosen : 0, input : {rise : 60, height : .7, stop : 600}},
+    feed : {chosen : 0}
   };
+  let rewarded = [];
   const play = {stim : {}, sent : {}, lines : {}, levels : [], glow : [], nerves : {}, time : 0};
   const change = doc => doc && studio.changeDocument(doc, studio.state.selected);
   const gutOf = doc => doc.organs.find(o => o.type === 'gut') ?? null;
@@ -307,6 +327,12 @@ liveKind('gut', (studio) => {
   const settle = () => studio.drafted && studio.settleGraphic();
   const muscleOf = doc => doc.organs.find(o => o.type === 'gutmuscle') ?? null;
 
+  // What a gut is built for at a stay: the food that gives most there; everything where three or
+  // more foods give nearly as much.
+  function bestAt(stay) {
+    const got = curves.map(c => ({c, gain : gutUse(c.food, stay)})).sort((a, b) => b.gain - a.gain);
+    return got.filter(g => g.gain >= DIET_SHARE * got[0].gain).length >= 3 ? 'all' : got[0].c.name;
+  }
   // Everything the pictures show, from the document and the engine's report.
   function derive() {
     const caps = state.capabilities, diet = caps?.diet, doc = state.document;
@@ -329,11 +355,7 @@ liveKind('gut', (studio) => {
     // The most the grip can reach: every cell of this muscle at its fullest.
     const fullest = cells.reduce((sum, c) => sum + cellStrength({...c, copies : ATELIER_LIMITS.max_copies}, diet.gut), 0);
     const quickest = row && most > 0 ? Math.max(pace, sampled(row, fullest / most)) : pace;
-    const best = stay => {
-      const got = curves.map(c => ({c, gain : gutUse(c.food, stay)})).sort((a, b) => b.gain - a.gain);
-      return got.filter(g => g.gain >= DIET_SHARE * got[0].gain).length >= 3 ? 'all' : got[0].c.name;
-    };
-    return {length, rest, pace, quickest, fastest, reach, muscle, strength, ranges : curves.map(c => rangeIn(c, reach)), diet : best(fastest)};
+    return {length, rest, pace, quickest, fastest, reach, muscle, strength, ranges : curves.map(c => rangeIn(c, reach)), diet : bestAt(fastest)};
   }
 
   function buildFish(fixed) {
@@ -684,6 +706,15 @@ liveKind('gut', (studio) => {
       l.show(now(l.sense));
     for (const g of play.glow)
       g.line.setAttribute('opacity', now(g.sense) >= g.gate ? 1 : .45);
+    // The bite swallowed now: its dot swells and settles; its star is what the cells send for
+    // what is left of its flow.
+    const turn = step / STEPS * rewarded.length, since = turn % 1, keep = state.capabilities.diet.nutrientKeep;
+    rewarded.forEach((r, j) => {
+      const mine = j === Math.floor(turn), flow = r.flow * Math.pow(keep, since * BITE_STEPS), felt = flow / (flow + 1);
+      const signal = mine ? r.gates.reduce((sum, gate) => sum + answer(felt, gate, 0), 0) / r.gates.length : 0;
+      r.dot.setAttribute('r', (4.5 + (mine ? 2.5 * Math.exp(-5 * since) : 0)).toFixed(1));
+      r.mark.setAttribute('transform', `translate(${r.at}) scale(${(signal > .01 ? .45 + .9 * signal : 0).toFixed(2)})`);
+    });
   }
   // The nerve cells' pulses and what irritates them, throbbing as strongly as the input is.
   function showNerves(dt) {
@@ -745,6 +776,114 @@ liveKind('gut', (studio) => {
         }
     }
   }
+  // Which food rewards this fish: a row for each food. Across: how much a bite of it rewards in
+  // this gut, little to much; the dot is the bite with the muscle at its best for it, the short
+  // line behind it how far the muscle moves it. The upright dashed lines are the keys'
+  // thresholds, each dragged sideways by its grip above; the band is how far its cells spread,
+  // set by the round grip with a tail below. The clock swallows one bite after the other: its dot
+  // swells, and at the right its star is as big as the signal the chosen key's cells send for it
+  // now; it fades with the bite's flow and is gone once that is below the cells' thresholds.
+  function drawReward() {
+    const {svg, live} = picture(rewards, REWARD.height), diet = state.capabilities.diet, keys = keysOf('feed'), own = tried.feed;
+    rewarded = [];
+    if (!keys.length || !(diet.nutrientShare > 0) || !(diet.nutrientKeep > 0))
+      return;
+    own.chosen = clamp(own.chosen, 0, keys.length - 1);
+    live.setAttribute('class', 'aid-live-sense-feed');
+    const {L, R, top, row, star} = REWARD, base = top + row * curves.length;
+    const X = v => L + (R - L) * clamp(v), vOf = x => clamp((x - L) / (R - L));
+    const reward = gain => { const flow = diet.nutrientShare * BITE * gain; return flow / (flow + 1); };
+    const gates = cellGates(keys[own.chosen]);
+    el('rect', {x : L, y : top, width : R - L, height : base - top, class : 'aid-live-ground'}, live);
+    keys.forEach((k, i) => {
+      const g = cellGates(k), x0 = X(Math.min(...g)), x1 = X(Math.max(...g));
+      el('rect', {x : x0, y : top, width : Math.max(x1 - x0, 3), height : base - top, class : 'aid-live-keyband k' + i % 3 + (i === own.chosen ? ' on' : '')}, live);
+    });
+    txt(live, star, top - 8, word('signal'), {'text-anchor' : 'middle'});
+    rewarded = curves.map((c, j) => {
+      const y = top + row * (j + .5), least = reward(model.ranges[j].min), most = reward(model.ranges[j].max);
+      txt(live, 6, y + 4, word('food.' + c.name), {class : 'aid-live-food-word', 'data-food' : c.name});
+      el('path', {d : `M${L} ${y} H${R}`, class : 'aid-live-rowline'}, live);
+      if (most - least > .004)
+        el('path', {d : `M${X(least)} ${y} H${X(most)}`, class : 'aid-live-food-whisker', 'data-food' : c.name}, live);
+      el('circle', {cx : star, cy : y, r : 1.2, class : 'aid-live-rowline'}, live);
+      return {
+        dot : el('circle', {cx : X(most), cy : y, r : 4.5, class : 'aid-live-food-fill', 'data-food' : c.name}, live),
+        mark : el('path', {d : STAR, class : 'aid-live-sense-fill'}, live),
+        at : [ star, y ],
+        flow : diet.nutrientShare * BITE * model.ranges[j].max,
+        gates
+      };
+    });
+    el('path', {d : `M${L} ${top} V${base} H${R}`, class : 'aid-live-axis'}, live);
+    txt(live, L, base + 28, word('little'));
+    txt(live, (L + R) / 2, base + 28, word('perBite'), {'text-anchor' : 'middle'});
+    txt(live, R, base + 28, word('much'), {'text-anchor' : 'end'});
+    keys.forEach((k, i) => {
+      const on = i === own.chosen, x = X(k.gate), far = Math.max(X(Math.max(...cellGates(k))), x + 4);
+      el('path', {d : `M${x} ${top - 6} V${base}`, class : 'aid-live-keyline k' + i % 3 + (on ? ' on' : '')}, live);
+      drag(svg, el('rect', {x : x - 4, y : top - 20, width : 8, height : 16, rx : 2, class : keyGrip(i, on)}, live), p => {
+        own.chosen = i;
+        draft(setGate(k, vOf(p.x)));
+      }, 'feedkey' + i, 'grip', settle);
+      el('path', {d : `M${x} ${base + 8} H${far}`, class : 'aid-live-spread'}, live);
+      drag(svg, el('circle', {cx : far, cy : base + 8, r : 4.5}, live), p => {
+        own.chosen = i;
+        draft(setSpread(k, clamp(2 * (vOf(p.x) - k.gate), 0, .8)));
+      }, 'feedspread' + i, 'grip', settle);
+    });
+    chip(live, star - 8, base + 10, '−', () => fewer('feed', keys[own.chosen]), keys.length > 1, 6);
+    chip(live, star + 8, base + 10, '+', () => more('feed', clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95)), keys.length < 3, 6);
+  }
+  // Life cycle: across, the fish's maturity from the egg to the grown fish; up, how fast the
+  // muscle makes the gut, from rest at the bottom to the fastest it can be. The ground's bands
+  // are the food this gut is built for at that pace. The line is the fish: at rest where the
+  // muscle does not work, at the muscle's pace where it does, from the maturity at which its
+  // cells begin to work to the one at which they die; a grip at each of the two.
+  function buildLife(fixed) {
+    const {L, R, top, base, icons, hatch} = LIFE, at = L + (R - L) * hatch;
+    el('path', {d : `M${L - 14} ${base} L${L - 19.5} ${top} h11 Z`, class : 'aid-live-muscle'}, fixed);
+    txt(fixed, 4, top - 8, word('muscle'));
+    el('ellipse', {cx : L + 8, cy : icons, rx : 6, ry : 5, class : 'aid-live-egg'}, fixed);
+    el('circle', {cx : L + 8, cy : icons, r : 1.8, class : 'aid-live-eye'}, fixed);
+    fishIcon(fixed, at, icons, .5);
+    fishIcon(fixed, R - 16, icons, .8);
+    el('path', {d : `M${L + 22} ${icons} H${at - 16} m-6 -3.5 l6 3.5 l-6 3.5 M${at + 18} ${icons} H${R - 40} m-6 -3.5 l6 3.5 l-6 3.5`, class : 'aid-live-arrow'}, fixed);
+  }
+  function drawLife() {
+    const {svg, under, live} = picture(life, LIFE.height, buildLife), {L, R, top, base, zones} = LIFE, m = model, caps = state.capabilities;
+    const span = DIGESTION.fastest - 1, yOf = pace => base - (base - top) * clamp((pace - 1) / span), X = r => L + (R - L) * clamp(r), rOf = x => clamp((x - L) / (R - L));
+    // The bands: runs of the same food, from rest up to the fastest pace.
+    const runs = [];
+    for (let k = 0; k < zones; k++) {
+      const food = bestAt(m.rest / (1 + span * (k + .5) / zones)), last = runs.at(-1);
+      if (last?.food === food)
+        last.to = k + 1;
+      else
+        runs.push({food, from : k, to : k + 1});
+    }
+    for (const {food, from, to} of runs)
+      el('rect', {x : L, y : yOf(1 + span * to / zones), width : R - L, height : yOf(1 + span * from / zones) - yOf(1 + span * to / zones), class : 'aid-live-zone', 'data-food' : food}, under);
+    // Their names beside them, top down, each at its band or as near as the others leave room.
+    let free = top + 2;
+    for (const {food, from, to} of runs.toReversed()) {
+      const y = Math.max(free, (yOf(1 + span * to / zones) + yOf(1 + span * from / zones)) / 2 - 1);
+      free = y + 12;
+      txt(under, R + 6, y + 5, word(food === 'all' ? 'everything' : 'food.' + food), {class : 'aid-live-food-word', 'data-food' : food});
+    }
+    el('path', {d : `M${X(LIFE.hatch)} ${top} V${base + 5}`, class : 'aid-live-hatch'}, live);
+    el('path', {d : `M${L} ${top} V${base} H${R}`, class : 'aid-live-axis'}, live);
+    if (!m.muscle)
+      return;
+    // The muscle's cells share one life: from when they work to when they die.
+    const cell = m.muscle.centers[0], phase = lifePhase(cell), from = phase.start ?? 0, until = Math.min(1, phase.end ?? 1), works = until > from;
+    const high = yOf(m.pace), low = yOf(1);
+    el('path', {d : works ? `M${L} ${low} H${X(from)} V${high} H${X(until)} V${low} H${R}` : `M${L} ${low} H${R}`, class : 'aid-live-course'}, live);
+    const set = change => setLifePhase(studio.state.document, cell.id, change, caps.sensitivitySpan, caps.steepnessSpan);
+    const grip = (x, name, move) => drag(svg, el('rect', {x : x - 5, y : (high + low) / 2 - 7, width : 10, height : 14, rx : 3}, live), p => draft(move(rOf(p.x))), name, 'grip', settle);
+    grip(from > 0 ? X(from) : L - LIFE.beside, 'gutfrom', to => set({start : to < LIFE.whole ? null : Math.min(to, until - LIFE.least)}));
+    grip(until < 1 ? X(until) : R + LIFE.beside + 44, 'gutuntil', to => set({end : to > 1 - LIFE.whole ? null : Math.max(to, from + LIFE.least)}));
+  }
   function show(next) {
     state = next;
     model = derive();
@@ -757,6 +896,8 @@ liveKind('gut', (studio) => {
     drawFish();
     drawYield();
     drawBars();
+    drawReward();
+    drawLife();
     tick(0);
   }
   // The gut's waves: its own, calm, always; the muscle's on top in the second half of each round,

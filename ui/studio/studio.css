@@ -1302,3 +1302,9 @@
 .aid-live-soma.on{stroke:var(--aid-handle);stroke-width:2.5}
 .aid-live-pulse{fill:#f4efd8}
 .aid-live-irritant{fill:currentColor}
+.aid-live-sense-feed{color:#e3cf94}
+.aid-live-rowline{fill:var(--aid-panel-edge);stroke:var(--aid-panel-edge)}
+.aid-live-food-whisker{fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;opacity:.55}
+.aid-live-zone{fill:currentColor;opacity:.22}
+.aid-live [data-food=all]{color:#e9e2c6}
+.aid-live-course{fill:none;stroke:#f4efd8;stroke-width:2;stroke-linejoin:round}

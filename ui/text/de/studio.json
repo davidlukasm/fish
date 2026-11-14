@@ -1809,6 +1809,13 @@
       "used": "an Schmerz gewöhnt",
       "sated": "satt",
       "acheRow": "Reizschwelle für Bauchweh nach Futterart",
+      "reward": "Belohnungssignal",
+      "signal": "Signal",
+      "little": "wenig",
+      "perBite": "Belohnung je Bissen",
+      "much": "viel",
+      "life": "Lebenszyklus",
+      "everything": "Alles",
       "food": {
         "plant": "Blatt",
         "algae": "Alge",
