@@ -269,6 +269,7 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   const auto &binding = b.active_interface(g);
   b.perception_.visual_contributions.clear();
   b.perception_.visual_samples.clear();
+  b.perception_.retinal_light.clear();
   b.perception_.visual_image.clear();
   auto water = world.water().velocity(b.x, b.y);
   b.motor_.water_vx = water.x;
@@ -947,13 +948,17 @@ void Body::set_probe(SensoryProbe probe) {
   perception_.probe = probe;
 }
 
-bool Body::set_inspection(bool vision, bool retina, int neuron) {
+bool Body::set_inspection(bool vision, bool retina, int neuron, bool retinal_light) {
   const bool fresh =
       (vision && (!perception_.inspect_vision || perception_.inspection_neuron != neuron)) ||
-      (retina && !perception_.inspect_retina);
+      (retina && !perception_.inspect_retina) ||
+      (vision && retinal_light && !perception_.inspect_retinal_light);
   perception_.inspection_neuron = vision ? neuron : -1;
   perception_.inspect_retina = retina;
   perception_.inspect_vision = vision;
+  perception_.inspect_retinal_light = vision && retinal_light;
+  if (!perception_.inspect_retinal_light)
+    perception_.retinal_light.clear();
   if (!vision) {
     perception_.visual_contributions.clear();
     perception_.visual_samples.clear();

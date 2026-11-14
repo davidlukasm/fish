@@ -32,6 +32,11 @@ struct PerceptionState {
     double light, stimulus, response;
     Color color;
   };
+  struct RetinalLight {
+    std::uint32_t neuron;
+    int eye;
+    Color field, surround;
+  };
   struct ImageBand {
     double left, right;
     Color color;
@@ -41,6 +46,7 @@ struct PerceptionState {
 
   SensoryProbe probe;
   bool inspect_vision = false, inspect_retina = false;
+  bool inspect_retinal_light = false;
   int inspection_neuron = -1;
   struct EyeSample {
     double x = 0, y = 0, exposure = 0, left = 0, right = 0;
@@ -54,6 +60,7 @@ struct PerceptionState {
   std::array<std::array<double, nose_sample_column::odor + odor_kind::count>, 2> nose_samples{};
   std::vector<VisualContribution> visual_contributions;
   std::vector<VisualSample> visual_samples;
+  std::vector<RetinalLight> retinal_light;
   std::vector<ImageBand> visual_image;
   std::array<double, BODY_SECTORS> touch_ring{};
   std::array<double, BODY_SECTORS> impact_ring{};

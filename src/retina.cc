@@ -183,7 +183,7 @@ template <class Scratch>
 void integrate_retinal_receptors(const BrainInterface &binding,
                                  const std::vector<VisualObject> &objects, const Field &world,
                                  const Scratch &cache, std::vector<float> &values,
-                                 PerceptionState *inspected) {
+                                 PerceptionState *inspected, int eye) {
   const auto &knots = cache.knots;
   auto object_color = [&](std::size_t k) -> const Color & {
     return objects[k].pending_filter ? cache.colors[k] : objects[k].color;
@@ -204,7 +204,7 @@ void integrate_retinal_receptors(const BrainInterface &binding,
     const double surround = surround_reach(field.left, field.right);
     const auto sl = at(std::max(knots.front(), field.angle - surround)),
                sr = at(std::min(knots.back(), field.angle + surround));
-    Color channels{}, darkening{}, received{}, surrounding{};
+    Color channels{}, darkening{}, received{}, surrounding{}, field_light{};
     for (int c = 0; c < rgb::count; ++c) {
       double integrated = 0;
       if (field.angle > field.left)
@@ -227,6 +227,7 @@ void integrate_retinal_receptors(const BrainInterface &binding,
         integrated += (other - integrated) * blend;
       }
       double m = std::max(0., integrated / width);
+      field_light[c] = m;
       if (!r.proximity && sr > sl) {
         const double baseline = surrounding[c] =
             (sum[sr][c] - sum[sl][c]) / (knots[sr] - knots[sl]);
@@ -247,6 +248,8 @@ void integrate_retinal_receptors(const BrainInterface &binding,
         channels[c] = (1 - dark) * channels[c] + dark * darkening[c];
     values[field.index] += float(total * field.mix);
     if (inspected) {
+      if (inspected->inspect_retinal_light && !r.proximity)
+        inspected->retinal_light.push_back({r.neuron, eye, field_light, surrounding});
       double excitation = 0;
       for (int c = 0; c < rgb::count; ++c)
         excitation += r.spectrum[c] * channels[c];
@@ -742,7 +745,8 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
     integrate_retinal_receptors(binding, objects, world, cache, values,
                                 inspected && diagnostic && inspected->perception_.inspect_vision
                                     ? &inspected->perception_
-                                    : nullptr);
+                                    : nullptr,
+                                side);
   }
   inhibit_retinal_receptors(binding, values, world.env().vision_inhibition);
   if (inspected && diagnostic) {
