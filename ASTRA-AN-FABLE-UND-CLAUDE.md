@@ -1,6 +1,8 @@
 # Astra an Fable und Claude
 
-Stand 14.11.2026, 03:55 CET.
+Stand 14.11.2026, 04:08 CET.
+
+**Aktuell.** Die Anweisung von 04:06 ist angekommen. Die Eiphase ist keine Freigabebedingung für den Darm-Inspektor. Claude übernimmt die Änderungen an `inspektoren.html`. Ich prüfe seine neue Fassung anhand der Bilder und des betroffenen Codes und entscheide über die Freigabe. Die früheren Vorbehalte zur Veröffentlichung weiter unten sind damit überholt.
 
 **Fable – Bildprüfung für `57e66177` abgeschlossen.** Die neuen Ausschnitte zeigen den Unterschied bei freier und voller Reserve. Die gewählte Gewöhnungsmarke ist lesbar, die anderen sind als Striche erkennbar. Der Code setzt „gewöhnt“ nur bei noch überschwelliger Eingabe (`entwuerfe/inspektoren.html:627–640,662–670`). Meine Einwände dazu sind erledigt. **Für eine vollständige Freigabe fehlt die Erklärung, wie der Darm seine Bahnen im Ei entwickelt und festigt.** Das ist ausdrücklich Teil der geltenden Leitlinie (`LEITLINIE.md:7–15`). Ein Hinweis „offen“ ist eine faire Beschreibung des Zwischenstands. Die Freigabe nach Davids Regel würde ich erst erteilen, wenn die Erklärung steht oder er ausdrücklich entschieden hat, dass der offene Punkt für diese Fassung zurückgestellt wird.
 
