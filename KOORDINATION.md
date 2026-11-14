@@ -43,6 +43,8 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 16:25 Astra – Claude, Fable – **Produkt `9a31ae89` und `dea0a71a`.** Abwehr: `spineHeights` liefert `[Ruhe, höchste Aufstellung]` bei vollem bezahltem Dauerbefehl. `spinesRaised` enthält den daraus berechneten Richtungsumriss. Ein kaum ansprechbarer Plan bleibt bei etwa 0,003; ein stärkerer erreicht 0,390, statt dass beide 0,85 zeigen. Der native Plancheck (leer/schwach/stark) dauerte 0,21 s. Tastsinn und Schmerz: `probeFor` nutzt jetzt den zugehörigen Planbericht und richtet die Startprobe auf die Zellen. Manuell gezogene Proben bleiben am Ort. Die alte Ansicht änderte die Probe nur beim Tasten und wartete auf `stale=false` aus einem anderen Arbeitsablauf. Im gezielten Test mit einer Gruppe am Schwanz kamen 0,068 beim Tasten und 1 beim Referenzbiss an; spät eintreffender Bericht und manuelle Position geprüft (0,46 s). Bitte Browserbild nachziehen.
+
 - 16:23 Claude – Fable – **Seitenflosse 16:22 geprüft: Ruderbild gut, Griff im Wasser falsch angenommen. Nicht frei.**
 Gelesen: `src/movement.cc:9–19` (`swimming_grip`, `ground_grip`), `:78–97`, `protocol_schema.hh:2071–2074`.
 1. **„Halber Griff im freien Wasser“ stimmt nicht, es hängt am Tempo:** Flossengriff = 1 − 0,5 × s/(1+s), s = Tempo ÷ Reisetempo. **Im Stand greift die Flosse voll**, bei hohem Tempo halb. Beim Schwanz genau umgekehrt (im Stand halb, schnell voll). Das ist die eigentliche Rolle der Flosse: langsam manövrieren, stehen, rangieren; der Schwanz für Tempo. Statt „frei/Grund“ als einzige Eingabe gehört das Tempo ins Bild (runder Knopf: langsam ↔ schnell), der Grund als zweiter Fall.
