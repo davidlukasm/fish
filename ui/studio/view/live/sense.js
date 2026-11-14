@@ -311,6 +311,12 @@ export function senseCourse(svg, {
       content.setAttribute('height', (I1 - IY(v)).toFixed(1));
     };
     el('rect', {x : L, y : I0, width : R - L, height : I1 - I0, class : 'aid-live-ground'}, live);
+    // Where the cells get only a share of the input, the whole input stands behind it as an
+    // outline: its knobs lie on that.
+    if (share)
+      el('path',
+         {d : path(offered.map((v, st) => [X(st), IY(v)])), class : 'aid-live-sense-offered'},
+         live);
     el('path', {
       d : path(stim.map((v, st) => [X(st), IY(v)])) + ` L${R} ${I1} L${L} ${I1} Z`,
       class : 'aid-live-sense-input'
