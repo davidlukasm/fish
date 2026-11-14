@@ -421,8 +421,10 @@ liveKind('gut', (studio) => {
           full = ATELIER_LIMITS.max_copies, places = kindLimit(m.muscle, studio.state.sites);
     // Cells are only ever added here: taking one away would take its wires with it.
     const cells = clamp(2 * Math.ceil(wanted / (one * full) / 2), m.muscle.centers.length, Math.max(m.muscle.centers.length, places));
-    const sized = cells === m.muscle.centers.length ? studio.state.document : setOrganNodes(studio.state.document, m.muscle.id, cells, studio.state.sites) ?? studio.state.document;
-    draft(setNodeCopies(sized, m.muscle.id, clamp(Math.round(wanted / (one * cells)), 1, full)));
+    const grown = cells === m.muscle.centers.length ? null : setOrganNodes(studio.state.document, m.muscle.id, cells, studio.state.sites);
+    // Where no further cell finds a place, the cells there are carry the strength alone.
+    const have = grown ? cells : m.muscle.centers.length;
+    draft(setNodeCopies(grown ?? studio.state.document, m.muscle.id, clamp(Math.round(wanted / (one * have)), 1, full)));
   }
   function drawFish() {
     const {svg, live} = picture(fish, FISH.height, buildFish), {down, right} = FISH, m = model;
