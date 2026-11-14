@@ -277,7 +277,7 @@ const S = {
   // The sense of balance: hair: where the cells' hair points, in degrees from the snout over the flank (90) to the tail (180); tilt: where the snout points, the posture tried (0 = to the right, 90 = down).
   balance : {keys : [{gate : .06}], hair : 90, tilt : 25},
   // Pigment. Each type of cells swallows the light round a hue (0-360) with a width, and has cells (how much it swallows) and its span of life; time: how many steps recolouring takes; command: how far the brain has the pigment spread (0-1); ground: what lies behind the fish (0 deep water - 1 sand).
-  pigment : {keys : [{hue : 240, width : .3, cells : 5}, {hue : 20, width : .2, cells : 3, from : .6}], chosen : 0, time : 60, command : 1, ground : .35},
+  pigment : {keys : [{hue : 240, width : .3, cells : 5}, {hue : 20, width : .2, cells : 3, from : .6}], chosen : 0, time : 60, command : 1, stop : 450, ground : .35},
   // The defence: cells (their capacity: the resting height), field (the width of what they guard), up (how far the brain has them raised, 0-1 of the most); mouth: the predator tried (bearing: where it bites from, gape: how wide its mouth opens, in body radii).
   spine : {keys : [{}], cells : 6, field : .35, up : .4, mouth : {bearing : 60, gape : 1.2}},
   // The blood sense. Each type of cells has a place among the substances (x, y: the substances lie on the unit circle) and a width; levels: what is in the blood now, the input tried.
@@ -2814,8 +2814,8 @@ function drawSpineLife() {
 //   the body's colour is the skin (0.62, 0.66, 0.64) x 0.5 / (0.5 + what is swallowed), channel
 //   by channel; only other fishes' eyes see it.
 // ASSUMED for the picture: what one cell swallows (CELL), and the grounds behind the fish.
-const PIG = {height : 150, fish : {x : 150, y : 62, s : 2.3}, skin : [.62, .66, .64], half : .5, rest : .2, cell : .22, most : 4, cells : [1, 12], time : [4, 200],
-             track : {L : 70, R : 230, y : 128}, ground : [[14, 42, 54], [47, 111, 106], [185, 166, 120]],
+const PIG = {height : 206, fish : {x : 150, y : 56, s : 2.3}, course : {L : 60, R : 256, top : 128, base : 178}, skin : [.62, .66, .64], half : .5, rest : .2, cell : .22, most : 4, cells : [1, 12], time : [4, 200],
+             ground : [[14, 42, 54], [47, 111, 106], [185, 166, 120]],
              strip : {height : 100, L : 16, R : 284, top : 10, base : 58, deep : 44}};
 const PIG_PARTS = ['skincolour', 'pigments', 'pigmentlife'];
 const hueTakes = (hue, width) => { const sigma = 12 + 168 * width * width, wide = width ** 4; return [0, 120, 240].map(c => { const d = turnTo(hue - c); return wide + (1 - wide) * Math.exp(-d * d / (2 * sigma * sigma)); }); };
@@ -2824,37 +2824,39 @@ const pigSwallow = (maturity = 1) => S.pigment.keys.filter(k => maturity >= (k.f
 const pigColour = (spread, maturity = 1) => { const all = pigSwallow(maturity); return 'rgb(' + PIG.skin.map((v, c) => Math.round(255 * v * PIG.half / (PIG.half + all[c] * (PIG.rest + (1 - PIG.rest) * spread)))).join(',') + ')'; };
 const groundColour = g => { const [a, b] = g < .5 ? [PIG.ground[0], PIG.ground[1]] : [PIG.ground[1], PIG.ground[2]], f = g < .5 ? g * 2 : g * 2 - 2 + 1 - 0; const u = g < .5 ? g * 2 : (g - .5) * 2; return 'rgb(' + a.map((v, c) => Math.round(v + (b[c] - v) * u)).join(',') + ')'; };
 const hueLight = hue => `hsl(${hue.toFixed(0)} 85% 60%)`;
-// The fish before a ground, as another eye sees it. Below it the way from rest to all the pigment
-// spread: the round knob is the brain's command, the mark follows it in the cells' time, and the
-// fish has the mark's colour. The grip under the way sets that time; the knob in the corner what
-// lies behind the fish.
+// The fish before a ground, as another eye sees it; the knob in the corner is what lies behind
+// it. Below, the recolouring over time, from rest (the lower fish) to all the pigment spread (the
+// upper fish): the round knob is the brain's command, how far it has the pigment spread and
+// when it lets go; the curve is what the cells make of it in their own time, and the grip on the
+// curve sets that time. The fish above has the colour of the clock's step.
 function drawSkinColour() {
-  const cell = S.pigment, {svg, under, live} = picture('skincolour', PIG.height), {L, R, y} = PIG.track, f = PIG.fish, X = v => L + (R - L) * clamp(v, 0, 1);
+  const cell = S.pigment, {svg, under, live} = picture('skincolour', PIG.height), {L, R, top, base} = PIG.course, f = PIG.fish, X = st => L + (R - L) * st / 900, Y = v => base - (base - top) * clamp(v, 0, 1);
   el('rect', {x : 0, y : 0, width : 300, height : 108, rx : 6, fill : groundColour(cell.ground)}, under);
   const body = el('g', {}, live);
   fishSide(body, f.x, f.y, f.s);
   const skin = body.firstChild, fin = skin.nextSibling;
-  // The way from rest to all: its two ends in their colours.
-  el('path', {d : `M${L} ${y} H${R}`, stroke : COLOUR.trackEdge, 'stroke-width' : 2}, live);
-  for (const [v, word, anchor] of [[0, 'Ruhe', 'end'], [1, 'voll', 'start']]) {
-    el('circle', {cx : X(v), cy : y, r : 7, fill : pigColour(v), stroke : COLOUR.axis}, live);
-    txt(live, X(v) + (v ? 13 : -13), y + 4, word, {'text-anchor' : anchor, style : 'font-size:10px'});
-  }
-  const mark = el('circle', {cy : y, r : 4, fill : 'none', stroke : COLOUR.line, 'stroke-width' : 2}, live);
-  drag(svg, el('circle', {cx : X(cell.command), cy : y - 13, r : 5.5, fill : COLOUR.icon}, live), p => { cell.command = clamp((p.x - L) / (R - L), 0, 1); draw(PIG_PARTS); }, 'pigcommand', 'knob');
-  el('path', {d : `M${X(cell.command)} ${y - 8} V${y - 2}`, stroke : COLOUR.icon}, live);
-  // The time recolouring takes: a bar under the way, as long as the time.
-  const long = (R - L) * (cell.time - PIG.time[0]) / (PIG.time[1] - PIG.time[0]) * .5 + 10;
-  el('path', {d : `M${L} ${y + 14} h${long}`, stroke : keyColour(0), 'stroke-width' : 3, 'stroke-linecap' : 'round'}, live);
-  drag(svg, el('rect', {x : L + long - 4, y : y + 9, width : 8, height : 10, rx : 2, style : `fill:${keyColour(0)}`}, live), p => { cell.time = clamp(PIG.time[0] + (p.x - L - 10) / ((R - L) * .5) * (PIG.time[1] - PIG.time[0]), PIG.time[0], PIG.time[1]); draw(PIG_PARTS); }, 'pigtime');
-  // What lies behind the fish.
   drag(svg, el('circle', {cx : 14 + 60 * cell.ground, cy : 98, r : 5, fill : groundColour(cell.ground), stroke : COLOUR.line, 'stroke-width' : 1.5}, live), p => { cell.ground = clamp((p.x - 14) / 60, 0, 1); draw(PIG_PARTS); }, 'pigground', 'knob');
-  // The clock: the brain commands in the first half of the round and lets go in the second.
+  // The two ends of the scale as the fish itself: at rest and with all its pigment spread.
+  el('rect', {x : L, y : top, width : R - L, height : base - top, fill : COLOUR.track}, under);
+  for (const [v, word] of [[0, 'Ruhe'], [1, 'voll']]) {
+    const g = el('g', {}, live); fishSide(g, L - 22, Y(v), .3);
+    for (const part of [g.firstChild, g.firstChild.nextSibling]) part.setAttribute('fill', pigColour(v));
+    txt(live, R + 5, Y(v) + 4, word, {style : 'font-size:10px'});
+  }
+  const spreadAt = st => st < cell.stop ? cell.command * (1 - Math.exp(-st / cell.time)) : cell.command * (1 - Math.exp(-cell.stop / cell.time)) * Math.exp(-(st - cell.stop) / cell.time);
+  // The command, dashed, and what the cells make of it.
+  el('path', {d : `M${L} ${Y(cell.command)} H${X(cell.stop)} V${base}`, stroke : COLOUR.icon, 'stroke-dasharray' : '2 3', fill : 'none', opacity : .8}, live);
+  el('path', {d : path(Array.from({length : 181}, (_, n) => [X(n * 5), Y(spreadAt(n * 5))])), stroke : COLOUR.line, 'stroke-width' : 2, fill : 'none'}, live);
+  el('path', {d : `M${L} ${top - 2} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+  txt(live, L, base + 14, 'Schritte'); txt(live, R, base + 14, 900, {'text-anchor' : 'end'});
+  const now = el('path', {stroke : COLOUR.line, opacity : .55}, live);
+  // The cells' time: the grip on the curve where they have done most of the way.
+  drag(svg, el('rect', {x : X(cell.time) - 4, y : Y(spreadAt(cell.time)) - 5, width : 8, height : 10, rx : 2, style : `fill:${keyColour(0)}`}, live), p => { cell.time = clamp((p.x - L) / (R - L) * 900, PIG.time[0], Math.min(PIG.time[1], cell.stop)); draw(PIG_PARTS); }, 'pigtime');
+  drag(svg, el('circle', {cx : X(cell.stop), cy : Y(cell.command), r : 5.5, fill : COLOUR.icon}, live), p => { cell.stop = clamp(Math.round((p.x - L) / (R - L) * 900), 100, 800); cell.command = clamp((base - p.y) / (base - top), 0, 1); draw(PIG_PARTS); }, 'pigcommand', 'knob');
   play.levels = play.levels.filter(l => l.owner !== 'pigment');
   play.levels.push({owner : 'pigment', sense : 'full', show : () => {
-    const st = play.step / STEPS * 900, on = st < 450, since = on ? st : st - 450, end = cell.command * (1 - Math.exp(-450 / cell.time));
-    const spread = on ? cell.command * (1 - Math.exp(-since / cell.time)) : end * Math.exp(-since / cell.time), colour = pigColour(spread);
-    skin.setAttribute('fill', colour); fin.setAttribute('fill', colour); mark.setAttribute('cx', X(spread).toFixed(1));
+    const st = play.step / STEPS * 900, colour = pigColour(spreadAt(st));
+    skin.setAttribute('fill', colour); fin.setAttribute('fill', colour); now.setAttribute('d', `M${X(st).toFixed(1)} ${top} V${base}`);
   }});
 }
 // The light as a band of its hues; each type of cells swallows the light round its hue: a notch
@@ -2880,13 +2882,13 @@ function drawPigments() {
   });
   chip(live, R - 6, base + 16, '+', () => { keys.push({hue : 120, width : .2, cells : 3}); cell.chosen = keys.length - 1; }, PIG_PARTS, keys.length < PIG.most, 7);
 }
-// Its life: the chosen type's span; over it the fish at rest, young and grown, in the colour the
-// types alive then give it.
+// Its life: the chosen type's span; over it the fish with all its pigment spread, young and
+// grown, in the colour the types alive then give it.
 function drawPigmentLife() {
   const cell = S.pigment, {L, R, band, hatch, beside, whole, least, high} = SKIN.life, {svg, under, live} = picture('pigmentlife', SKIN.life.height), k = cell.keys[cell.chosen];
   const hx = L + (R - L) * hatch, y = band - 26;
   eggShape(live, (L + hx) / 2, y, 17, false);
-  for (const [x, m, s] of [[hx + 22, .55, .42], [R - 30, 1, .75]]) { const g = el('g', {}, live); fishSide(g, x, y, s); for (const part of [g.firstChild, g.firstChild.nextSibling]) part.setAttribute('fill', pigColour(0, m)); }
+  for (const [x, m, s] of [[hx + 22, .55, .42], [R - 30, 1, .75]]) { const g = el('g', {}, live); fishSide(g, x, y, s); for (const part of [g.firstChild, g.firstChild.nextSibling]) part.setAttribute('fill', pigColour(1, m)); }
   const X = r => L + (R - L) * clamp(r, 0, 1), rOf = x => clamp((x - L) / (R - L), 0, 1), from = k.from ?? 0, until = Math.min(1, k.until ?? 1);
   el('rect', {x : L, y : band, width : R - L, height : high, fill : COLOUR.track}, under);
   el('rect', {x : X(from), y : band + 1, width : X(until) - X(from), height : high - 2, fill : keyColour(cell.chosen), opacity : .7}, under);
