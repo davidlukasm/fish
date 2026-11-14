@@ -143,6 +143,13 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Lebenszyklus</h4>
     <svg id="touchlife"></svg>
   </section>
+  <section class="panel" aria-label="Gleichgewicht">
+    <h2>Organ</h2><h3>Gleichgewicht</h3>
+    <h4 class="first">Spürt, wo unten ist</h4>
+    <svg id="tilt"></svg>
+    <h4>Lebenszyklus</h4>
+    <svg id="tiltlife"></svg>
+  </section>
 </main>
 <script>
 'use strict';
@@ -232,7 +239,9 @@ const S = {
   // The lateral line and the sense of touch: one type of cells each. field: the width of their field on the skin (0-1); probe: where the water or the thing meets the body, as an angle from the snout.
   // probe: the current (where it comes from; near: 0 a broad current, 1 an eddy close by) and the thing (where on the skin, as an angle from the cells' place; off: lifted off).
   flow : {keys : [{gate : .3, spread : .1, used : 200}], chosen : 0, input : {rise : 80, height : .8, stop : 560}, field : .3, probe : {bearing : 60, near : .8}},
-  touch : {keys : [{gate : .2, spread : .1}], chosen : 0, input : {rise : 60, height : .7, stop : 520}, field : .1, probe : 0, off : false}
+  touch : {keys : [{gate : .2, spread : .1}], chosen : 0, input : {rise : 60, height : .7, stop : 520}, field : .1, probe : 0, off : false},
+  // The sense of balance: hair: where the cells' hair points, in degrees from the snout over the flank (90) to the tail (180); tilt: where the snout points, the posture tried (0 = to the right, 90 = down).
+  balance : {keys : [{gate : .06}], hair : 90, tilt : 25}
 };
 
 // ===== The model: the one source for every picture and number =====
@@ -2446,6 +2455,64 @@ function drawTouchLife() {
   skinLife('touch', svg, under, live, TOUCH_PARTS);
 }
 
+// ----- The sense of balance: the fish, turned -----
+// Read in the engine (src/body_plan.hh:29-33, hair_direction; src/body_plan.cc:329-335, 1098-1101,
+// 1185-1187; src/brain_interface.hh:18-24, 51-53; ui/studio/model/organs.js:138-146):
+//   hair cells inside the body; their hair points from the snout (quality -1) over the flank (0)
+//   to the tail (1), the other side mirrors it; the stimulus is how far the hair points down (the
+//   positive downward part of its direction), whatever the fish does; the answer is bounded, the
+//   cells do not get used to it (gravity does not fade), and they feel it in the egg as outside.
+// No time here: a posture holds its report for as long as it lasts.
+// Round the fish a rose of postures: for every direction the snout can point, a petal as long
+// as the cells report there. The round knob turns the fish; the grip at the hair's tip sets where
+// the hair points; the grip at the rose's end sets the threshold (how far down the hair must
+// point before the cells report).
+const TILT = {height : 218, cx : 150, cy : 108, hair : 30, ring : 70, petal : 22, knob : 100, least : .03, most : .95};
+const TILT_PARTS = ['tilt', 'tiltlife'];
+const hairDown = snout => Math.max(0, Math.sin(rad(snout + S.balance.hair)));
+function fishSide(parent, x, y, s) {
+  el('path', {d : `M${x + 30 * s} ${y} Q${x + 12 * s} ${y - 15 * s} ${x - 22 * s} ${y - 2 * s} l${-11 * s} ${-9 * s} q${3 * s} ${11 * s} 0 ${22 * s} l${11 * s} ${-9 * s} Q${x + 12 * s} ${y + 15 * s} ${x + 30 * s} ${y} Z`, fill : HEAD, stroke : COLOUR.axis, 'stroke-width' : 1.3}, parent);
+  el('path', {d : `M${x + 6 * s} ${y - 9.5 * s} q${-6 * s} ${-8 * s} ${-16 * s} ${-5 * s} l${4 * s} ${6.5 * s}`, fill : HEAD, stroke : COLOUR.axis, 'stroke-width' : 1}, parent);
+  el('circle', {cx : x + 20 * s, cy : y - 3 * s, r : 2 * s, fill : COLOUR.icon}, parent);
+}
+function drawTilt() {
+  const cell = S.balance, k = cell.keys[0], {svg, live} = picture('tilt', TILT.height, fixed => {
+    // Down: where the weight pulls.
+    el('path', {d : `M278 ${TILT.height - 46} v26 m-5 -7 l5 7 l5 -7`, stroke : COLOUR.icon, 'stroke-width' : 1.6, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'}, fixed);
+    txt(fixed, 278, TILT.height - 8, 'unten', {'text-anchor' : 'middle', style : 'font-size:10px'});
+  }), {cx, cy, ring, petal} = TILT, at = (angle, r) => [cx + r * Math.cos(rad(angle)), cy + r * Math.sin(rad(angle))];
+  el('circle', {cx, cy, r : ring, fill : 'none', stroke : COLOUR.trackEdge}, live);
+  // The rose: for every way the snout can point, what the cells report there.
+  const outline = [], inner = [];
+  for (let a = 0; a <= 360; a += 3) { const r = answer(hairDown(a), k.gate, 0); outline.push(at(a, ring + petal * r)); inner.unshift(at(a, ring)); }
+  el('path', {d : path(outline) + ' L' + inner.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(' L') + 'Z', fill : keyColour(0), opacity : .75, 'fill-rule' : 'evenodd'}, live);
+  // The fish in the posture tried, its cell and the cell's hair.
+  const body = el('g', {transform : `rotate(${cell.tilt} ${cx} ${cy})`}, live);
+  fishSide(body, cx, cy, 1.25);
+  const report = answer(hairDown(cell.tilt), k.gate, 0), [hx, hy] = at(cell.tilt + cell.hair, TILT.hair);
+  el('path', {d : `M${cx} ${cy} L${hx} ${hy}`, stroke : keyColour(0), 'stroke-width' : 2.4, 'stroke-linecap' : 'round'}, live);
+  el('circle', {cx, cy, r : 5.5, fill : keyColour(0), stroke : COLOUR.chosen, 'stroke-width' : 2}, live);
+  if (report > 0) el('path', {d : IRRITANT, fill : COLOUR.line, transform : `translate(${cx - 16} ${cy - 12}) scale(${(.45 + .9 * report).toFixed(2)})`}, live);
+  const angleOf = p => deg(Math.atan2(p.y - cy, p.x - cx));
+  // The hair's grip: from the snout over the flank to the tail, on this side.
+  drag(svg, el('rect', {x : hx - 4.5, y : hy - 4.5, width : 9, height : 9, rx : 2.5, style : `fill:${keyColour(0)}`}, live), p => { cell.hair = clamp(turnTo(angleOf(p) - cell.tilt), 0, 180); draw(TILT_PARTS); }, 'tilthair');
+  // The threshold: at the end of the rose, where the hair points just far enough down.
+  const edge = deg(Math.asin(k.gate)) - cell.hair, [ex, ey] = at(edge, ring - 8);
+  drag(svg, el('circle', {cx : ex, cy : ey, r : 4.5}, live), p => { k.gate = clamp(Math.sin(rad(clamp(turnTo(angleOf(p) + cell.hair), 0, 90))), TILT.least, TILT.most); draw(TILT_PARTS); }, 'tiltgate');
+  // The posture tried: the knob where the snout points.
+  const [kx, ky] = at(cell.tilt, TILT.knob);
+  drag(svg, el('circle', {cx : kx, cy : ky, r : 5.5, fill : COLOUR.icon}, live), p => { cell.tilt = angleOf(p); draw(TILT_PARTS); }, 'tiltknob', 'knob');
+}
+// Its life: the same in the egg as outside.
+function drawTiltLife() {
+  const {L, R, band, hatch} = SKIN.life, {svg, under, live} = picture('tiltlife', SKIN.life.height, fixed => {
+    const ex = (L + L + (R - L) * hatch) / 2, fx = (L + (R - L) * hatch + R) / 2, y = band - 26, arrow = {stroke : keyColour(0), 'stroke-width' : 1.6, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'};
+    eggShape(fixed, ex, y, 19, false); fishSide(fixed, fx, y, .62);
+    for (const x of [ex, fx]) el('path', {d : `M${x + 30} ${y - 9} v18 m-4 -6 l4 6 l4 -6`, ...arrow}, fixed);
+  });
+  skinLife('balance', svg, under, live, TILT_PARTS);
+}
+
 // ===== The clock =====
 // Shows the present moment: the lines, what the holders hold, the keys the input has passed, what
 // irritants at the nerve cells.
@@ -2558,9 +2625,10 @@ const PAINT = {fish : drawFish, yield : drawYield, bars : drawBars, life : drawL
                scentmap : () => drawScentMap(), smell : () => drawSense('smell'), noselife : drawNoseLife,
                barbels : drawBarbels, tastemap : () => drawScentMap('tastemap', S.taste, BARB_PARTS, {kind : 'barb-kind', verb : 'Schmeckt', sample : 'was die Spitze berührt', stone : true, fresh : {feel : .3, gate : .3}}), tastes : drawTastes, barblife : drawBarbLife,
                flowrose : drawRose, flow : () => drawSense('flow'), flowlife : drawFlowLife,
-               touchskin : drawSkinCut, touch : () => drawSense('touch'), touchlife : drawTouchLife};
+               touchskin : drawSkinCut, touch : () => drawSense('touch'), touchlife : drawTouchLife,
+               tilt : drawTilt, tiltlife : drawTiltLife};
 // The senses first: the fish's stomach follows the fullness input.
-for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife', 'flow', 'flowrose', 'flowlife', 'touch', 'touchskin', 'touchlife']) dirty.add(part);
+for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife', 'flow', 'flowrose', 'flowlife', 'touch', 'touchskin', 'touchlife', 'tilt', 'tiltlife']) dirty.add(part);
 repaint();
 showGut(0);
 // Nothing moves while the panel is off the screen, or for someone who has asked for less motion:
