@@ -34,3 +34,11 @@ Stand: Produktzweig `bb46eeb8`. Fable prüft gegen den Code und zeichnet daraus;
 ## Was David schon gesagt hat
 - „Schmerz: Siehe Stacheln, Tastsinn, Seitenlinie“ (FEEDBACK, Musterverbot): Stacheln, Schmerz, Tasten und Seitenlinie teilen den Keil. Abwehr braucht also ein eigenes Bild, nicht wieder Rose oder Ring mit Punkten.
 - Vorschlag fürs eigene Bild: ein Räuber (Maul als Knopf, Eingabe) beißt aus einer Richtung; man sieht, wie viel vom Biss die Stacheln dort abhalten und was es an Reserve kostet. Zweiter Zustand: kleiner Fisch vor großem Maul, aufgestellt passt er nicht mehr hinein.
+
+## Entwurf (Fable, Panel Abwehr in `entwuerfe/inspektoren.html`)
+Gegen den Code geprüft (selbst gelesen): `body_plan.cc:838–877`, `:1640–1642`, `material.hh:171–173`, `physiology_parameters.hh:34, 38, 42`, `simulation_types.hh:41`, `feeding.cc:24–32, 360–364, 386–389`. Stimmt mit der Seite überein. Nicht nachgelesen: Zusammenstoß, Bremsen im Wasser und im Sand, Ei-Schaden, Unterhalt, Atelier-Bericht.
+1. **Stacheln gegen ein Maul** (gibt es nur hier): Der Fisch von oben mit seinen Stacheln, an jedem Sektor so lang wie der Schutz dort; hell, was in Ruhe steht, in der Zellfarbe, was das Gehirn darüber hinaus aufgestellt hat. Ein Maul beißt aus einer Richtung: Der Biss endet an den Stacheln, soweit sie ihn abhalten, der Rest geht in den Körper; daneben ein Tropfen Reserve, so groß wie das Abgehaltene. Gestrichelter Kreis: wie groß der Fisch mit seinen Stacheln für ein Maul ist; rot, wenn das Maul weit genug aufgeht, um ihn ganz zu schlucken.
+2. Eingaben (rund): das Maul um den Fisch ziehen, den Kiefer öffnen, die Stacheln an einer Spitze aufstellen (Befehl des Gehirns). Einstellungen (Griffe): Feldbreite am Feldrand, Zellen an der Zellstelle.
+3. Leben: im Ei stoßen aufgestellte Stacheln an die Schale (rot), draußen stehen sie frei.
+
+Nicht im Bild: dass ein hungriger Fisch weniger abhält; Bremsen im Wasser und im Sand; Fasertyp (wie lange sie stehen); Schwelle.
