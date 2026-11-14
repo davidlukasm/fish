@@ -23,8 +23,6 @@ const COMMAND = Object.freeze({
   samples : 40,
   handle : 5.5
 });
-// How far a command runs either way, for every picture that shows one.
-export const COMMAND_SPAN = COMMAND.span;
 const text = (x, y, content, anchor = 'start') => '<text class="aid-handle-word" x="' + fixed(x) +
                                                   '" y="' + fixed(y) + '" text-anchor="' + anchor +
                                                   '">' + escapeText(content) + '</text>';

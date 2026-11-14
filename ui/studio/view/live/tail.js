@@ -2,8 +2,9 @@
 // over a swim at the command tried.
 // A bundle is one type of the muscle's cells (organTypes): its cells share strength (copies),
 // fibres (time constant) and threshold. A muscle whose cells have no type is one bundle.
-// Force: each bundle pulls with tanh(command - threshold) (the effector output, substrate.cc; the
-// threshold is the cell's own times the bias scale, command_line.js) times its cells' strength and
+// Force: each bundle pulls with tanh(command - threshold): a muscle cell's dead zone is its own
+// threshold, max(0, 2 x unit threshold - 1), which is the plan's threshold where that is positive
+// (substrate.cc, MUSCLE_RECRUITMENT; not the bias scale that gates glands and bladders). Times its cells' strength and
 // their fibres' force, as far as its fast fibres are rested (ui/fibre.js, fibreCourse).
 // A muscle saved with a sprint share shows its sprint nodes as bundles of their own, as they pull
 // in the fish; the first edit makes them so in the document (splitSprint), node by node.
@@ -26,7 +27,6 @@ import {
   updateCenter
 } from '../../model/document.js';
 import {label} from '../kit.js';
-import {COMMAND_SPAN} from '../command_line.js';
 import {chip, clamp, drag, el, fishIcon, liveKind, path, picture, txt} from './kit.js';
 
 const word = (key, values) => t('studio.live.tail.' + key, values);
@@ -50,6 +50,9 @@ const TAIL = Object.freeze({
   nose : 20,
   body : 220,
   swing : .25,
+  // The command tried runs this far: beyond a sprint bundle's threshold (1), so that it can be
+  // made to pull.
+  command : 2,
   // How far a square on a band is pulled for one more unit of strength.
   pull : 5,
   // The speed picture.
@@ -74,7 +77,7 @@ const wriggleAt = x =>
 
 // The muscle's bundles as the document has them.
 function bundlesOf(state, organ) {
-  const scale = state.capabilities?.biasScale ?? 0, kind = organ.centers[0]?.key;
+  const kind = organ.centers[0]?.key;
   // A sprint node's threshold is replaced when the plan is compiled (document.js, compile), so a
   // type's sprint nodes are a bundle apart from its other nodes.
   const sprints = c => isSprintNode(organ, organ.centers.indexOf(c));
@@ -87,7 +90,7 @@ function bundlesOf(state, organ) {
     strength : cells.reduce((sum, c) => sum + c.copies, 0),
     copies : cells[0].copies,
     fast : fastShare(cells[0].tau),
-    gate : Math.max(0, sprint ? SPRINT_THRESHOLD : cells[0].threshold) * scale
+    gate : Math.max(0, sprint ? SPRINT_THRESHOLD : cells[0].threshold)
   });
   return organTypes(organ).filter(type => type.centers[0].key === kind).flatMap(type => [
     [ type.centers.filter(c => !sprints(c)), false ], [ type.centers.filter(sprints), true ]
@@ -132,10 +135,17 @@ function derive(bundles, input, wriggle, tail) {
   const mass = tail ? massAt(input.maturity, tail) : 1, drag = tail?.sedimentDrag;
   const water = tail ? speedOf(under, (1 - tail.undulationLoss * wriggle) / mass, TAIL.lag.water) : null,
         sand = drag ? speedOf(under, 1 / (drag.stiff * (drag.wriggling / drag.stiff) ** wriggle) / mass, TAIL.lag.sand) : null;
+  // The picture's scale: this muscle's water speed at a full command in the lightest body. So the
+  // water's curve keeps its height while the muscle or the wriggling is set (David 13.11.: it
+  // changes its shape only, the sand's curve stands against it), and it falls with a weaker
+  // command or a heavier body, which are tried, not set.
+  const best = tail ? bundles.reduce((sum, b) => sum + b.strength * fibreForce(b.fast) * driveOf(b, TAIL.command), 0) *
+                          (1 - tail.undulationLoss * wriggle) / tail.thrustFloor
+                    : 1;
   return {
     water,
     sand,
-    fastest : water ? Math.max(1e-9, ...water) : 1,
+    fastest : Math.max(1e-9, best),
     bands,
     total : under,
     tired : fastAll > 0 ? spent.map(v => v / fastAll) : null,
@@ -169,7 +179,7 @@ liveKind('tail', (studio, organId) => {
   heading(word('life'));
   const life = svgOf();
   // What is tried on the muscle, and which bundle is chosen: not part of the fish.
-  const input = {height : COMMAND_SPAN, stop : 200, maturity : 1};
+  const input = {height : TAIL.command, stop : 200, maturity : 1};
   const lines = {force : null, speed : null};
   const film = {body : null, eye : null, spine : null, marks : null, paths : [], amp : 0, phase : 0, level : null};
   let chosen = 0, state = studio.state, bundles = [], model = null, wriggle = 0, step = 0, pulled = null;
@@ -258,9 +268,9 @@ liveKind('tail', (studio, organId) => {
   }
   function drawForce() {
     const {svg, live} = picture(force, 168), {L, R, top, base, holder, steps} = TAIL, m = model,
-          most = ATELIER_LIMITS.max_copies, scale = state.capabilities?.biasScale ?? 0, cb = bundles[chosen];
+          most = ATELIER_LIMITS.max_copies, cb = bundles[chosen];
     const X = st => L + (R - L) * st / steps, Y = v => base - (base - top) * v / m.scale,
-          CY = v => base - (base - top) * clamp(v / COMMAND_SPAN), vOf = y => COMMAND_SPAN * clamp((base - y) / (base - top));
+          CY = v => base - (base - top) * clamp(v / TAIL.command), vOf = y => TAIL.command * clamp((base - y) / (base - top));
     // The holder of the command, filling with it while it lasts.
     txt(live, holder, top - 10, word('command'), {'text-anchor' : 'middle'});
     el('rect', {x : holder - 5, y : top, width : 10, height : base - top, rx : 5, class : 'aid-live-track'}, live);
@@ -297,8 +307,7 @@ liveKind('tail', (studio, organId) => {
     txt(live, X(input.stop) + (input.stop > 215 ? -9 : 9), top - 8, word('off'), {'text-anchor' : input.stop > 215 ? 'end' : 'start'});
     lines.force = {line : el('path', {class : 'aid-live-now'}, live), x : X, top, base};
     // The grips: each bundle's threshold on the holder, the chosen bundle's strength on its band.
-    if (scale > 0)
-      bundles.forEach((b, i) => {
+    bundles.forEach((b, i) => {
         const on = i === chosen;
         drag(svg, el('rect', {
                x : holder - 9,
@@ -313,10 +322,10 @@ liveKind('tail', (studio, organId) => {
                       live),
              p => {
                chosen = i;
-               draft(edit(b, {threshold : clamp(vOf(p.y) / scale)}));
+               draft(edit(b, {threshold : clamp(vOf(p.y))}));
              },
              'gate' + i, 'grip', settle);
-      });
+    });
     if (chosenBand) {
       const st = Math.min(20, Math.max(1, input.stop - 2)), y = Y(chosenBand.b.over[st]);
       // Pulled by its own measure, not read off the scale, which follows.
@@ -342,9 +351,9 @@ liveKind('tail', (studio, organId) => {
     lines.speed = null;
     if (!m.water)
       return;
-    txt(live, 4, VT + 12, word('water'), {class : 'aid-live-water-word', opacity : egg ? .3 : 1});
+    txt(live, L + 4, VT - 12, word('water'), {class : 'aid-live-water-word', opacity : egg ? .3 : 1});
     if (m.sand)
-      txt(live, 4, VT + 28, word('sand'), {class : 'aid-live-sand-word', opacity : egg ? .3 : 1});
+      txt(live, R, VT - 12, word('sand'), {'text-anchor' : 'end', class : 'aid-live-sand-word', opacity : egg ? .3 : 1});
     el('path', {d : `M${L} ${VT - 6} V${VB} H${R}`, class : 'aid-live-axis', opacity : egg ? .4 : 1}, live);
     txt(live, L, VB + 15, word('steps'));
     for (const st of [ 100, 200, 300 ])
@@ -369,7 +378,7 @@ liveKind('tail', (studio, organId) => {
   // knob on the curve chooses the maturity at which the pictures above show the fish.
   function buildLife(fixed) {
     const {L, R, top, icons} = LIFE, hatch = L + (R - L) * TAIL.hatch;
-    txt(fixed, L + 4, top + 2, word('push'));
+    txt(fixed, L + 4, top - 4, word('push'));
     el('ellipse', {cx : L + 8, cy : icons, rx : 6, ry : 5, class : 'aid-live-egg'}, fixed);
     el('circle', {cx : L + 8, cy : icons, r : 1.8, class : 'aid-live-eye'}, fixed);
     fishIcon(fixed, hatch, icons, .5);
@@ -386,7 +395,7 @@ liveKind('tail', (studio, organId) => {
     const {svg, live} = picture(life, LIFE.height, buildLife), {L, R, top, base, samples, edge} = LIFE;
     const X = r => L + (R - L) * clamp(r), rOf = x => clamp((x - L) / (R - L));
     const order = bundles.map((b, i) => i).sort((p, q) => bundles[p].gate - bundles[q].gate);
-    const share = (b, r) => works(b, r) ? b.strength * fibreForce(b.fast) / massAt(r, tail) : 0;
+    const share = (b, r) => works(b, r) ? b.strength * fibreForce(b.fast) * driveOf(b, TAIL.command) / massAt(r, tail) : 0;
     const pushAt = r => bundles.reduce((sum, b) => sum + share(b, r), 0);
     const layer = (i, r) => {
       let under = 0;
@@ -403,6 +412,9 @@ liveKind('tail', (studio, organId) => {
     const breaks = [ tail.thrustFloor, ...bundles.flatMap(b => [ b.from, Math.min(1, b.until) ]) ].flatMap(r => [ r - edge, r ]);
     for (const i of order) {
       const b = bundles[i], until = Math.min(1, b.until);
+      // A bundle set elsewhere to die before it works has no layer; its grips stay.
+      if (until <= b.from)
+        continue;
       const at = [ ...Array.from({length : samples + 1}, (_, k) => b.from + (until - b.from) * k / samples), ...breaks ]
                      .filter(r => r >= b.from && r <= until)
                      .map(r => Math.min(r, until - edge))
@@ -431,9 +443,9 @@ liveKind('tail', (studio, organId) => {
         const [under, over] = layer(i, at);
         return Y((under + over) / 2);
       };
-      grip(b.from > 0 ? X(b.from) : L - LIFE.beside, b.from > 0 ? middle(b.from + edge) : beside, 'from',
+      grip(b.from > 0 ? X(b.from) : L - LIFE.beside, b.from > 0 && until > b.from ? middle(b.from + edge) : beside, 'from',
            to => phase({start : to < LIFE.whole ? null : Math.min(to, until - LIFE.least)}));
-      grip(until < 1 ? X(until) : R + LIFE.beside, until < 1 ? middle(until - 2 * edge) : beside, 'until',
+      grip(until < 1 ? X(until) : R + LIFE.beside, until < 1 && until > b.from ? middle(until - 2 * edge) : beside, 'until',
            to => phase({end : to > 1 - LIFE.whole ? null : Math.max(to, b.from + LIFE.least)}));
     });
     drag(svg, el('circle', {cx : X(r), cy : Y(pushAt(r)), r : 5.5}, live), p => {
@@ -467,7 +479,7 @@ liveKind('tail', (studio, organId) => {
       return;
     step = (step + dt * TAIL.steps / ROUND_MS) % TAIL.steps;
     const {fishY, base, top} = TAIL, on = step < input.stop, at = Math.floor(step),
-          push = model.total[at] ?? 0, share = input.height / COMMAND_SPAN;
+          push = model.total[at] ?? 0, share = input.height / TAIL.command;
     film.level?.setAttribute('y', (on ? base - (base - top) * share : base).toFixed(1));
     film.level?.setAttribute('height', (on ? (base - top) * share : 0).toFixed(1));
     for (const now of Object.values(lines))
