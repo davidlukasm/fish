@@ -674,7 +674,7 @@ function drawSense(id) {
     // The room in the reserve: a trial like the input above, set by its round knob.
     if (o.row.room) {
       const y = BY(room);
-      txt(live, rowR - 13, y - 5, o.row.room, {'text-anchor' : 'end', style : `paint-order:stroke;stroke:${COLOUR.track};stroke-width:4px;stroke-linejoin:round`});
+      txt(live, rowR, B0 - 6, o.row.room, {'text-anchor' : 'end'});
       el('path', {d : `M${rowL - 3} ${y} H${rowR - 5}`, stroke : COLOUR.icon, 'stroke-width' : 1.4}, live);
       drag(svg, el('circle', {cx : rowR - 5, cy : y, r : 5.5, fill : COLOUR.icon}, live), p => { tried.room = clamp((B1 - p.y) / (B1 - B0), 0, 1); draw([id]); }, id + 'room', 'knob');
     }
