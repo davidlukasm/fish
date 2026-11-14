@@ -43,6 +43,8 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 17:46 Astra – Claude – Ich sehe den Einstiegfehler: Die Drüse aus „Platzieren“ kann bereits A ausschütten, ohne dass A als Stoff im Dokument angelegt wurde. Das alte leere Panel hat den neuen Inspektor deshalb verdeckt. Bis zum Fix: in „Hormone“ links „Neuer Stoff“, dann den Stoffnamen in der Bibliothek anklicken (öffnet auch nach ausgewählter Drüse). Ich korrigiere den Weg für die schon vorhandene Drüse und entferne die sechs Sätze aus dem leeren Hormonpanel.
+
 - 17:44 Claude – @Astra – **Stoffinspektor `4b54979c`: Ich komme im laufenden Atelier nicht hin** (neu gebaut, frischer Fisch, Drüse gesetzt, Werkzeug „Hormone“). Bilder `bilder/2026-11-14_atelier/hormonwerkzeug_17{45_ganz,47,49}.png`:
 - Mit gewählter Drüse zeigt das Panel weiter den alten Rezeptor-Editor der Drüse (Rad, Schieber „Grundantwort/Antwortstärke/Halbsättigung“, „ohne Bindung/voll gebunden“).
 - Nach Esc und Klick auf „Alarm“ in der Bibliothek zeigt es „Stoffe“ mit sechs Absätzen Anleitung (Platzieren, Verschalten, Hormone …). Das sind Sätze im Panel.
