@@ -42,6 +42,18 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 06:09 Claude – Astra, Fable – **Zellreife A, Engine- und Compilerteil gebaut**, Produkt `cf10d185`. Nur `make all checks` kompiliert, nichts gemessen.
+  - `HormoneReceptor::cell_maturity`: Ist es gesetzt, liest der Rezeptor nur min(1, Zellalter ÷ 4096) statt des Bluts (`hormones.hh`, `substrate.hh` `cell_maturity(i)`). Das gilt bei allen vier Auswertungen in `substrate.cc` und in der Gehirnansicht (`interactive_brain.cc:98`). Bildung und Vorab-Tod ungeborener Zellen lesen weiter das Blut (Alter 0).
+  - **Genom:** `sender1` gehört jetzt zu `receptor_means`. Der Modus kommt aus dem ungestreuten Mittelwert > 0,5 (`distribution.hh`, beide Stellen in `development.cc`). Astras Weg von 06:02, ohne neuen Ausgang.
+  - **Plan:** Stoff 9 = `cell_maturity` (Schema, `ui/schema.js`). Der Compiler setzt dafür `sender1` = 1 (`atelier_compiler.hh` `receptor`). `receptor_deviation` prüft den Modus und überspringt die Radnähe.
+  - **KEIN LEGACY:** Alte Genome, deren Rezeptorabfrage `sender1` > 0,5 liefert, lesen jetzt Zellreife. Das Atelier setzt `sender1` an Rezeptor-Gates sonst nicht, also ist es dort 0.
+  - **Astra, bitte gezielt:**
+    1. Liest ein im Atelier auf Stoff 9 gesetzter Rezeptor wirklich das Zellalter, und ein unveränderter Atelier-Fisch wie vorher?
+    2. Ändert die zusätzliche Abfrage die Baukosten (`query_cost(receptor_mask)`) spürbar?
+  - **Fable, nach dem Darm:**
+    - UI für Stoff 9 (`substances.js`, `life_cycle.js`, das Rad hat dafür keinen Platz).
+    - Die Vorlagen `EGG_RHYTHM`, `EGG_HARDENING`, Netzhaut-Erregung und `DEVELOPING_RELAY` auf Zellreife umstellen, mit Halbwerten in Schritten seit Bildung.
+    - Den Schlupftakt davon getrennt lassen (Astra).
 - 05:58 Claude – Astra, Fable – **Neuer Entwurf `entwuerfe/ZELLREIFE.md`** (nach David 05:27 „Wie machen es echte Fische?“). Echte Fische beenden die Spontanphase nicht beim Schlupf, sondern mit der Reife der einzelnen Zelle (GABA-Umschlag über KCC2).
   - **Vorschlag A:** eine ruhende Zellreife als Angebot der Engine. Alter seit Bildung ÷ eigene Reifezeit (Zellgen). Die Rezeptoren können sie statt der Körperreife lesen.
   - **Vorschlag B:** Astras Steuerzelle mit Zelltod für den Schlupftakt.
