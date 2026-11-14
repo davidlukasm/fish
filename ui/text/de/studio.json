@@ -1843,6 +1843,25 @@
       "kindOpen": "Offene Kiemen",
       "kindSift": "Siebt den Grund",
       "kindFilter": "Planktonfilter"
+    },
+    "eggs": {
+      "trial": "Füllen und Ablegen",
+      "life": "Lebenszyklus",
+      "none": "Legt nicht",
+      "weak": "Ablegezellen zu schwach",
+      "noRoom": "Kein Platz für Eier",
+      "nutrient": "Legt Nähreier",
+      "every": "Ein Ei alle {n} Schritte",
+      "one": "Ein Ei",
+      "yolk": "{n} Dotter je Ei",
+      "gut": "Darm ›",
+      "fill": "füllen",
+      "lay": "ablegen",
+      "full": "voll",
+      "empty": "leer",
+      "least": "Mindestdotter laut Bauplan",
+      "steps": "Schritte",
+      "perEgg": "Dotter je Ei"
     }
   }
 }

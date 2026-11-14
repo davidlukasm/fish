@@ -1327,3 +1327,12 @@
 .aid-live-met{fill:#f4efd8;opacity:.12}
 .aid-live-picture rect.aid-live-met{opacity:.3}
 .aid-live-wide{fill:none;stroke:#f4efd8;stroke-width:1;stroke-dasharray:1 3;opacity:.8}
+.aid-live-eggs .aid-live-body{fill:#1f4852}
+.aid-live-yolk{fill:#e8c66a;stroke:var(--aid-chip);stroke-width:1}
+.aid-live-yolk.thin{opacity:.45}
+.aid-live-yolksac{fill:var(--aid-chip);stroke:#e8c66a;stroke-width:1.4}
+.aid-live-yolkgrip{fill:#e8c66a}
+.aid-live-yolkfill{fill:#e8c66a73;stroke:#e8c66a;stroke-width:1.6}
+.aid-live-laying{fill:#f4efd8;opacity:.3}
+.aid-live-chamber{fill:none;stroke:var(--aid-chip);stroke-width:1}
+.aid-live-bellyroom{fill:none;stroke:#e9e2c6;stroke-dasharray:2 4;opacity:.55}
