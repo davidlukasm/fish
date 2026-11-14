@@ -8,6 +8,7 @@
 // at rest is the world's gut time times the gut's size at its length (physiology.hh, gut_stay).
 import {ATELIER_LIMITS, BODY_UNIT, DIGESTION} from '../../../schema.js';
 import {gutAche, gutUse} from '../../../fish_organs.js';
+import {fastShare, fibreForce} from '../../../fibre.js';
 import {percent, t} from '../../../strings.js';
 import {gutLength, setGutLength, setNodeCopies} from '../../model/document.js';
 import {clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
@@ -121,6 +122,8 @@ function shareFor(row, value) {
   }
   return hi;
 }
+// A gut muscle cell's capacity (see derive).
+const cellStrength = (cell, gut) => cell.copies / ATELIER_LIMITS.max_copies * (gut.muscleCellForce ?? 0) * fibreForce(fastShare(cell.tau));
 // What a food gives and how it hurts over the stays from `reach[0]` to `reach[1]`.
 function rangeIn(curve, reach) {
   const inside = AXIS.map((stay, k) => k).filter(k => AXIS[k] >= reach[0] && AXIS[k] <= reach[1]);
@@ -166,7 +169,9 @@ liveKind('gut', (studio) => {
     // grip is dragged the pace comes from the engine's row over the strength; else from the last
     // design run.
     const muscle = muscleOf(doc), cells = muscle ? muscle.centers : [];
-    const strength = cells.reduce((sum, c) => sum + c.copies, 0) / ATELIER_LIMITS.max_copies, row = diet.gut.speed, most = diet.gut.strongest;
+    // Its capacity as the engine adds it up: copies / 16 x the muscle cell's force x its fibres'
+    // force, over all its cells (body_plan.cc, add_effectors).
+    const strength = cells.reduce((sum, c) => sum + cellStrength(c, diet.gut), 0), row = diet.gut.speed, most = diet.gut.speedMaxStrength;
     const pace = row && most > 0 ? sampled(row, strength / most) : state.anatomy?.gutSpeed ?? 1;
     const fastest = rest / pace, reach = [ fastest, rest ];
     const best = stay => {
@@ -203,11 +208,13 @@ liveKind('gut', (studio) => {
   // The muscle's one grip, under the fish and in the yield: dragged to a stay, it sets the
   // strength whose pace makes the gut that fast at full drive.
   function muscleTo(p) {
-    const m = model, row = state.capabilities.diet.gut.speed, most = state.capabilities.diet.gut.strongest;
+    const m = model, gut = state.capabilities.diet.gut, row = gut.speed, most = gut.speedMaxStrength;
     if (!m.muscle || !row || !(most > 0))
       return;
-    const wanted = shareFor(row, m.rest / Math.min(stayOfX(p.x), m.rest)) * most, nodes = m.muscle.centers.length;
-    draft(setNodeCopies(studio.state.document, m.muscle.id, clamp(Math.round(wanted * ATELIER_LIMITS.max_copies / nodes), 1, ATELIER_LIMITS.max_copies)));
+    // The strength wanted, shared alike among the muscle's cells as they are.
+    const wanted = shareFor(row, m.rest / Math.min(stayOfX(p.x), m.rest)) * most,
+          each = m.muscle.centers.reduce((sum, c) => sum + cellStrength({...c, copies : 1}, gut), 0);
+    draft(setNodeCopies(studio.state.document, m.muscle.id, clamp(Math.round(wanted / each), 1, ATELIER_LIMITS.max_copies)));
   }
   function drawFish() {
     const {svg, live} = picture(fish, FISH.height, buildFish), {down, right} = FISH, m = model;
@@ -230,7 +237,7 @@ liveKind('gut', (studio) => {
     const wy = FISH.height - 9, wx1 = xOfStay(m.rest), wide = xOfStay(m.rest / DIGESTION.fastest), wx0 = xOfStay(m.fastest);
     el('path', {d : `M${wx1} ${wy} L${wide} ${wy - 5.5} v11 Z`, class : 'aid-live-muscle'}, live);
     txt(live, wide - 9, wy + 4, word('muscle'), {'text-anchor' : 'end'});
-    if (m.muscle)
+    if (m.muscle && state.capabilities.diet.gut.speed)
       drag(svg, el('rect', {x : wx0 - 5, y : wy - 7, width : 10, height : 14, rx : 3}, live), muscleTo, 'wall', 'grip', settle);
   }
   function buildYield(fixed) {
@@ -284,7 +291,7 @@ liveKind('gut', (studio) => {
     el('rect', {x : x0, y : top, width : x1 - x0, height : row + 6 - top, class : 'aid-live-reach'}, under);
     el('path', {d : `M${x1} ${top - 6} V${row}`, class : 'aid-live-rest'}, live);
     el('path', {d : `M${x0} ${row} H${x1}`, class : 'aid-live-musclebar'}, live);
-    if (m.muscle)
+    if (m.muscle && state.capabilities.diet.gut.speed)
       drag(svg, el('rect', {x : x0 - 5, y : row - 7, width : 10, height : 14, rx : 3}, live), muscleTo, 'fastest', 'grip', settle);
     // The round grip on the dashed line: the gut's length, as the stay it has at rest.
     const size = state.capabilities.diet.gut.size, time = state.capabilities.gutTime;
