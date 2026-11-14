@@ -205,6 +205,20 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Lebenszyklus</h4>
     <svg id="glandlife"></svg>
   </section>
+  <section class="panel" aria-label="Auge">
+    <h2>Organ</h2><h3>Auge</h3>
+    <h4 class="first">Sieht Unterschiede</h4>
+    <svg id="eye"></svg>
+    <h4>Lebenszyklus</h4>
+    <svg id="eyelife"></svg>
+  </section>
+  <section class="panel" aria-label="Nahsinn">
+    <h2>Organ</h2><h3>Nahsinn</h3>
+    <h4 class="first">Spürt, wie nah etwas ist</h4>
+    <svg id="near"></svg>
+    <h4>Lebenszyklus</h4>
+    <svg id="nearlife"></svg>
+  </section>
 </main>
 <script>
 'use strict';
@@ -298,6 +312,10 @@ const S = {
   // The sense of balance: hair: where the cells' hair points, in degrees from the snout over the flank (90) to the tail (180); tilt: where the snout points, the posture tried (0 = to the right, 90 = down).
   balance : {keys : [{gate : .06}], hair : 90, tilt : 25},
   // The gland: place (which hormone it pours, 0 = A ... 5 = F, between two a mix), width (how many it pours into), cells (how high the level gets), rise and stay (steps the level takes to rise and to fade); the command tried: how strongly (-1 binding ... 1 pouring) and at which step it stops.
+  // The eye: the cell's hue and how wide it takes colours, how much the opponent colour takes away, its dark share, the contrast for half a report, its time (steps to fade in after hatching); what is tried: the light all round and the thing (place in field widths, brightness, hue).
+  eye : {keys : [{}], hue : 30, wide : .35, opponent : 0, dark : 0, half : .12, time : 14, ground : .3, thing : {at : 0, bright : .85, hue : 25}},
+  // The near sense: its reach (units at which the signal halves), its threshold; the thing's distance tried.
+  near : {keys : [{gate : .2}], reach : 30, far : 40},
   gland : {keys : [{}], place : 1, width : .1, cells : 9, rise : 60, stay : 220, command : 1, stop : 380},
   // The mouth, two organs as one: the jaw muscle (bite: its cells; long: the jaw's length; blunt: the teeth's form, 0 sharp - 1 blunt) and the mouth opener (suck: its cells).
   mouth : {keys : [{}], bite : 8, suck : 5, long : .5, blunt : .15},
@@ -3165,6 +3183,175 @@ function drawGlandLife() {
   skinLife('gland', svg, under, live, GLAND_PARTS);
 }
 
+// ----- The eye: a cell's field against its surround -----
+// Read in the engine (src/retina.cc:10-33, 166-180, 239-247; src/cppn_brain.cc:404-418;
+// src/physiology.hh:437-441; src/body_plan.cc:318-327):
+//   a sight cell compares the light in its field with a surround reaching three of its field's
+//   widths to either side; it reports how much brighter its field is, or, for its dark share, how
+//   much darker; even light reports nothing;
+//   the light counts in the cell's colours; the opponent colour takes away from it;
+//   the threshold is the contrast at which the cell answers half;
+//   in the egg there is no contrast; after hatching what is seen fades in over the cell's time.
+// NOT read: the waves over the retina in the egg (Astra 16:26: retinal_tissue takes the cells
+// with a share of light), the response curve's own lines.
+// The strip is the view as the cell has it: its field in the middle, the surround beside it. The
+// round knob in the strip is the thing looked at (where it is, how bright), the round knob on
+// the colours its colour: both stand in for the fish panel's sight probe. Where the field lies
+// on the fish, how wide it is and how dense the cells stand is set on the fish.
+// ASSUMED for the picture: the cell weighs colours as a bell round its hue; the thing is as wide
+// as four fifths of the field.
+const EYE = {height : 204, L : 26, R : 250, mid : 138, field : 28, top : 24, high : 34, thing : .8, PT : 86, PB : 142, band : 176, least : .01, star : [284, 92],
+             time : [4, 48], wedge : 70};
+const EYE_PARTS = ['eye', 'eyelife'];
+const hueRgb = (hue, light = 1) => [0, 120, 240].map(c => light * clamp(1 - Math.abs(turnTo(hue - c)) / 120, 0, 1));
+const css = rgb => `rgb(${rgb.map(v => Math.round(255 * clamp(v, 0, 1))).join(',')})`;
+// How the cell weighs the three colours, and what a light is worth to it.
+const eyeWeights = cell => [0, 120, 240].map(c => Math.exp(-((turnTo(cell.hue - c) / (30 + 150 * cell.wide)) ** 2)));
+function eyeDrive(cell, light) {
+  const w = eyeWeights(cell), peak = Math.max(...w);
+  let excite = 0, inhibit = 0, untuned = 0;
+  w.forEach((v, c) => { excite += v * light[c]; const rest = 1 - v / peak; untuned += rest; inhibit += rest * light[c]; });
+  return Math.max(0, excite - (untuned > 0 ? cell.opponent * inhibit / untuned : 0));
+}
+// The light at a place of the strip (in field widths from the field's middle).
+function eyeLight(cell, at) {
+  const t = cell.thing, ground = [cell.ground, cell.ground, cell.ground];
+  return Math.abs(at - t.at) <= EYE.thing / 2 ? hueRgb(t.hue, t.bright).map(v => v + (1 - Math.max(...hueRgb(t.hue))) * t.bright) : ground;
+}
+// The cell's field and surround: what each holds, and the report.
+function eyeReport(cell) {
+  const mean = (from, to) => { let sum = 0, n = 0; for (let a = from + .025; a < to; a += .05) { sum += eyeDrive(cell, eyeLight(cell, a)); n++; } return sum / n; };
+  const field = mean(-.5, .5), around = (mean(-3.5, -.5) + mean(.5, 3.5)) / 2, full = eyeDrive(cell, [1, 1, 1]) || 1;
+  const brighter = Math.max(0, field - around) / full, darker = Math.max(0, around - field) / full, contrast = (1 - cell.dark) * brighter + cell.dark * darker;
+  return {field : field / full, around : around / full, contrast, report : contrast / (contrast + cell.half)};
+}
+function drawEye() {
+  const cell = S.eye, {svg, live} = picture('eye', EYE.height), {L, R, mid, field, top, high, PT, PB, band} = EYE, X = at => mid + field * at, r = eyeReport(cell);
+  // The strip: the view by its angle, as bright and as coloured as it is.
+  el('rect', {x : L, y : top, width : R - L, height : high, fill : css([cell.ground, cell.ground, cell.ground])}, live);
+  el('rect', {x : X(cell.thing.at - EYE.thing / 2), y : top, width : field * EYE.thing, height : high, fill : css(eyeLight(cell, cell.thing.at))}, live);
+  // The field and its surround.
+  el('rect', {x : X(-.5), y : top - 3, width : field, height : high + 6, fill : 'none', stroke : COLOUR.line, 'stroke-width' : 1.6}, live);
+  for (const side of [-1, 1]) el('path', {d : `M${X(side * .5)} ${top + high + 7} H${X(side * 3.5)} v-5`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3', fill : 'none'}, live);
+  // What the cell makes of the light: its worth along the strip, and what field and surround hold.
+  const Y = v => PB - (PB - PT) * clamp(v, 0, 1), pts = [];
+  for (let a = -4; a <= 4.001; a += .05) pts.push([X(a), Y(eyeDrive(cell, eyeLight(cell, a)) / (eyeDrive(cell, [1, 1, 1]) || 1))]);
+  el('path', {d : `M${L} ${PB} H${R}`, stroke : COLOUR.axis}, live);
+  el('path', {d : path(pts), stroke : hueLight(cell.hue), 'stroke-width' : 1.4, fill : 'none', opacity : .8}, live);
+  el('path', {d : `M${X(-.5)} ${Y(r.field)} H${X(.5)}`, stroke : COLOUR.line, 'stroke-width' : 3, 'stroke-linecap' : 'round'}, live);
+  for (const side of [-1, 1]) el('path', {d : `M${X(side * .5)} ${Y(r.around)} H${X(side * 3.5)}`, stroke : COLOUR.icon, 'stroke-width' : 2, 'stroke-dasharray' : '5 3'}, live);
+  // The gap between the two is what the cell could report: bright where its field is brighter,
+  // blue where it is darker; as far as the cell's shares take it, it does.
+  const gx = X(3.5) + 20, up = r.field >= r.around;
+  if (Math.abs(r.field - r.around) > .004) el('path', {d : `M${gx} ${Y(r.around)} V${Y(r.field)}`, stroke : up ? COLOUR.line : '#9cc8f0', 'stroke-width' : 5, opacity : (up ? 1 - cell.dark : cell.dark) * .85 + .15}, live);
+  el('path', {d : IRRITANT, fill : COLOUR.line, transform : `translate(${EYE.star[0]} ${EYE.star[1]}) scale(${(r.report > .01 ? .5 + 1.5 * r.report : 0).toFixed(2)})`}, live);
+  // The grip beside the gap: the difference at which the cell answers half.
+  const hy = Y(r.around) + (up ? -1 : 1) * (PB - PT) * cell.half;
+  el('path', {d : `M${gx - 7} ${hy} h14`, stroke : COLOUR.handle, 'stroke-width' : 1.4}, live);
+  drag(svg, el('circle', {cx : gx + 12, cy : hy, r : 4.5}, live), p => { cell.half = clamp(Math.abs(p.y - Y(eyeReport(cell).around)) / (PB - PT), EYE.least, 1); draw(EYE_PARTS); }, 'eyehalf');
+  // The shares: how much of the cell answers brighter, how much darker.
+  const sx = 12, st = PT + 4, sb = PB - 4, sy = st + (sb - st) * cell.dark;
+  el('path', {d : `M${sx} ${st} V${sy}`, stroke : '#9cc8f0', 'stroke-width' : 5}, live);
+  el('path', {d : `M${sx} ${sy} V${sb}`, stroke : COLOUR.line, 'stroke-width' : 5}, live);
+  drag(svg, el('rect', {x : sx - 5.5, y : sy - 4, width : 11, height : 8, rx : 2}, live), p => { cell.dark = clamp((p.y - st) / (sb - st), 0, 1); draw(EYE_PARTS); }, 'eyedark');
+  // The colours: the cell's own as a hill over them, the opponent's as a dip; the thing's colour
+  // as a round knob.
+  const HX = hue => L + (R - L) * hue / 360, w = eyeWeights(cell);
+  for (let h = 0; h < 360; h += 6) el('rect', {x : HX(h), y : band, width : (R - L) / 60 + .4, height : 8, fill : hueLight(h)}, live);
+  const hill = [];
+  for (let h = 0; h <= 360; h += 4) hill.push([HX(h), band - 3 - 16 * Math.exp(-((turnTo(h - cell.hue) / (30 + 150 * cell.wide)) ** 2))]);
+  el('path', {d : path(hill), stroke : COLOUR.line, 'stroke-width' : 1.3, fill : 'none'}, live);
+  const against = (cell.hue + 180) % 360;
+  if (cell.opponent > .02) el('path', {d : `M${HX(against) - 12} ${band + 10} q12 ${22 * cell.opponent} 24 0`, stroke : COLOUR.line, 'stroke-width' : 1.3, fill : 'none'}, live);
+  drag(svg, el('rect', {x : HX(cell.hue) - 4.5, y : band - 26, width : 9, height : 9, rx : 2.5, style : `fill:${hueLight(cell.hue)}`}, live), p => { cell.hue = clamp((p.x - L) / (R - L), 0, .999) * 360; draw(EYE_PARTS); }, 'eyehue');
+  const wx = HX(cell.hue) + (cell.hue > 250 ? -1 : 1) * (10 + 50 * cell.wide);
+  drag(svg, el('circle', {cx : wx, cy : band - 8, r : 4}, live), p => { cell.wide = clamp((Math.abs(p.x - HX(cell.hue)) - 10) / 50, 0, 1); draw(EYE_PARTS); }, 'eyewide');
+  drag(svg, el('rect', {x : HX(against) - 4, y : band + 11 + 11 * cell.opponent, width : 8, height : 8, rx : 2}, live), p => { cell.opponent = clamp((p.y - band - 15) / 11, 0, 1); draw(EYE_PARTS); }, 'eyeopponent');
+  drag(svg, el('circle', {cx : HX(cell.thing.hue), cy : band + 4, r : 5.5, fill : hueLight(cell.thing.hue)}, live), p => { cell.thing.hue = clamp((p.x - L) / (R - L), 0, .999) * 360; draw(EYE_PARTS); }, 'eyethinghue', 'knob');
+  // The thing in the strip: along it where it is, up and down how bright.
+  drag(svg, el('circle', {cx : X(cell.thing.at), cy : top + high * (1 - cell.thing.bright), r : 5.5, fill : COLOUR.icon}, live), p => {
+    cell.thing.at = clamp((p.x - mid) / field, -3.6, 3.6); cell.thing.bright = clamp(1 - (p.y - top) / high, 0, 1); draw(EYE_PARTS); }, 'eyething', 'knob');
+  // The light all round: a round knob at the strip's end, up and down.
+  drag(svg, el('circle', {cx : R + 9, cy : top + high * (1 - cell.ground), r : 5, fill : css([cell.ground, cell.ground, cell.ground])}, live), p => { cell.ground = clamp(1 - (p.y - top) / high, 0, 1); draw(EYE_PARTS); }, 'eyeground', 'knob');
+}
+// Its life: in the egg waves run over the retina; after hatching what is seen fades in over the
+// cell's time; then it sees.
+function drawEyeLife() {
+  const {L, R, band, hatch} = SKIN.life, cell = S.eye, hx = L + (R - L) * hatch, y = band - 26, {svg, under, live} = picture('eyelife', SKIN.life.height, fixed => {
+    eggShape(fixed, (L + hx) / 2, y, 19, false);
+    const g = el('g', {transform : `translate(${2 * (R - 34)} 0) scale(-1 1)`}, fixed);
+    fishSide(g, R - 34, y, .7);
+  });
+  // The retina in the egg: a row of cells; the clock sends a wave over them.
+  const ex = (L + hx) / 2 + 34, cells = Array.from({length : 6}, (_, n) => el('circle', {cx : ex, cy : y - 15 + 6 * n, r : 2.4, fill : keyColour(0)}, live));
+  // After hatching: what is seen grows from nothing to all of it, over the cell's time.
+  const wide = 8 + (EYE.wedge - 8) * (cell.time - EYE.time[0]) / (EYE.time[1] - EYE.time[0]);
+  el('path', {d : `M${hx + 4} ${y + 12} L${hx + 4 + wide} ${y - 12} V${y + 12} Z`, fill : keyColour(0), opacity : .8}, live);
+  drag(svg, el('rect', {x : hx + 4 + wide - 4, y : y - 23, width : 8, height : 10, rx : 2, style : `fill:${keyColour(0)}`}, live), p => { cell.time = clamp(EYE.time[0] + (p.x - hx - 12) / (EYE.wedge - 8) * (EYE.time[1] - EYE.time[0]), EYE.time[0], EYE.time[1]); draw(EYE_PARTS); }, 'eyetime');
+  play.levels = play.levels.filter(l => l.owner !== 'eyelife');
+  play.levels.push({owner : 'eyelife', sense : 'full', show : () => { const at = (play.step / STEPS * 3) % 1 * 8 - 1; cells.forEach((c, n) => c.setAttribute('opacity', (.25 + .75 * Math.exp(-((n - at) ** 2) / 1.2)).toFixed(2))); }});
+  skinLife('eye', svg, under, live, EYE_PARTS);
+}
+
+// ----- The near sense: halving rings -----
+// Read in the engine (src/retina.cc:28-33, 728-735; src/cppn_brain.cc:404-418;
+// src/body_plan.cc:318):
+//   a near cell's signal for a thing before it is 2^(-distance / reach), times the thing's
+//   brightness up to one; the reach is 8 x 16^(the cell's setting), 8 to 128 units; the answer
+//   is bounded and the cell does not get used to it; from hatching on it reports at once.
+// NOT read: the cell's rhythm in the egg (Astra 16:26).
+// The fish from above, looking to the left. Before its cell the rings: each one reach further,
+// each half as bright as the one before. The round knob is the thing at its distance (standing
+// in for the fish panel's sight probe). Below, the report over the distance.
+// ASSUMED for the picture: a bright thing; one and a quarter pixels to the unit.
+const NEAR = {height : 206, cx : 214, cy : 70, unit : 1.25, reach : [8, 128], far : 150, CT : 128, CB : 178, rings : 8, least : .02, most : .9};
+const NEAR_PARTS = ['near', 'nearlife'];
+const nearSignal = (cell, far) => Math.pow(2, -far / cell.reach);
+// The distance at which the cell answers half: where the signal is 2 x gate / (1 + gate).
+const nearHalf = cell => cell.reach * Math.log2((1 + cell.keys[0].gate) / (2 * cell.keys[0].gate));
+function drawNear() {
+  const cell = S.near, gate = cell.keys[0].gate, {svg, live} = picture('near', NEAR.height, fixed => fishAbove(fixed, NEAR.cx + 30, NEAR.cy, 1.3)), {cx, cy, unit, CT, CB} = NEAR, X = far => cx - 10 - unit * far, L = X(NEAR.far);
+  // The rings: one reach apart, each half as bright.
+  for (let k = 1; k <= NEAR.rings && k * cell.reach <= NEAR.far; k++) {
+    const r = unit * k * cell.reach + 10, a = Math.asin(Math.min(Math.sin(rad(38)), 54 / r));
+    el('path', {d : `M${cx - r * Math.cos(a)} ${cy - r * Math.sin(a)} A${r} ${r} 0 0 0 ${cx - r * Math.cos(a)} ${cy + r * Math.sin(a)}`, stroke : keyColour(0), 'stroke-width' : 1 + 5 * Math.pow(.5, k - 1), opacity : .25 + .75 * Math.pow(.5, k - 1), fill : 'none'}, live);
+  }
+  // The ring at which the cell answers half.
+  const half = nearHalf(cell);
+  if (half > 0 && half <= NEAR.far) { const r = unit * half + 10; el('path', {d : `M${cx - r * Math.cos(rad(46))} ${cy - r * Math.sin(rad(46))} A${r} ${r} 0 0 0 ${cx - r * Math.cos(rad(46))} ${cy + r * Math.sin(rad(46))}`, stroke : COLOUR.handle, 'stroke-dasharray' : '3 3', fill : 'none'}, live); }
+  // The report over the distance.
+  const Y = v => CB - (CB - CT) * v, pts = [];
+  for (let far = 0; far <= NEAR.far; far += 2) pts.push([X(far), Y(answer(nearSignal(cell, far), gate, 0))]);
+  el('path', {d : path(pts) + ` L${L} ${CB} L${X(0)} ${CB} Z`, fill : keyColour(0), opacity : .55}, live);
+  el('path', {d : `M${L} ${CB} H${X(0)}`, stroke : COLOUR.axis}, live);
+  txt(live, X(0), CB + 13, 0, {'text-anchor' : 'middle'}); txt(live, L, CB + 13, NEAR.far, {'text-anchor' : 'middle'});
+  // The thing, the line down to its report, and the star at the cell.
+  const report = answer(nearSignal(cell, cell.far), gate, 0), tx = X(cell.far);
+  el('path', {d : `M${tx} ${cy + 9} V${Y(report)}`, stroke : COLOUR.line, 'stroke-dasharray' : '2 3', opacity : .7}, live);
+  el('circle', {cx : tx, cy : Y(report), r : 3, fill : COLOUR.line}, live);
+  el('path', {d : IRRITANT, fill : COLOUR.line, transform : `translate(${cx + 4} ${cy - 22}) scale(${(report > .01 ? .5 + 1.3 * report : 0).toFixed(2)})`}, live);
+  drag(svg, el('circle', {cx : tx, cy, r : 7, fill : '#f08a4b'}, live), p => { cell.far = clamp((cx - 10 - p.x) / unit, 0, NEAR.far); draw(NEAR_PARTS); }, 'nearthing', 'knob');
+  // The grips: the reach on the first ring, the threshold on the ring of the half report.
+  const up = (far, angle) => { const r = unit * far + 10; return [cx - r * Math.cos(rad(angle)), cy - r * Math.sin(rad(angle))]; };
+  const [rx, ry] = up(cell.reach, 38);
+  drag(svg, el('rect', {x : rx - 4.5, y : ry - 4.5, width : 9, height : 9, rx : 2.5, style : `fill:${keyColour(0)}`}, live), p => { cell.reach = clamp((Math.hypot(p.x - cx, p.y - cy) - 10) / unit, NEAR.reach[0], NEAR.reach[1]); draw(NEAR_PARTS); }, 'nearreach');
+  const [gx, gy] = up(Math.min(half, NEAR.far), -46);
+  drag(svg, el('circle', {cx : gx, cy : gy, r : 4.5}, live), p => { const x = nearSignal(cell, clamp((Math.hypot(p.x - cx, p.y - cy) - 10) / unit, 0, NEAR.far)); cell.keys[0].gate = clamp(x / (2 - x), NEAR.least, NEAR.most); draw(NEAR_PARTS); }, 'neargate');
+}
+// Its life: in the egg the cell reports its own rhythm; from hatching on, how near things are.
+function drawNearLife() {
+  const {L, R, band, hatch} = SKIN.life, hx = L + (R - L) * hatch, y = band - 26, {svg, under, live} = picture('nearlife', SKIN.life.height, fixed => {
+    eggShape(fixed, (L + hx) / 2, y, 19, false);
+    fishAbove(fixed, (hx + R) / 2 + 14, y, .62);
+    for (const k of [1, 2]) { const r = 9 * k + 8, x = (hx + R) / 2 - 6; el('path', {d : `M${x - r * .8} ${y - r * .6} A${r} ${r} 0 0 0 ${x - r * .8} ${y + r * .6}`, stroke : keyColour(0), 'stroke-width' : 3 / k, fill : 'none'}, fixed); }
+  });
+  // The rhythm in the egg: a dot that beats with the clock.
+  const beat = el('circle', {cx : (L + hx) / 2 + 32, cy : y, r : 4, fill : keyColour(0)}, live);
+  play.levels = play.levels.filter(l => l.owner !== 'nearlife');
+  play.levels.push({owner : 'nearlife', sense : 'full', show : () => beat.setAttribute('opacity', (.2 + .8 * Math.max(0, Math.sin(play.step / STEPS * 2 * Math.PI * 6))).toFixed(2))});
+  skinLife('near', svg, under, live, NEAR_PARTS);
+}
+
 // ===== The clock =====
 // Shows the present moment: the lines, what the holders hold, the keys the input has passed, what
 // irritants at the nerve cells.
@@ -3285,9 +3472,9 @@ const PAINT = {fish : drawFish, yield : drawYield, bars : drawBars, life : drawL
                skincolour : drawSkinColour, pigments : drawPigments, pigmentlife : drawPigmentLife,
                fin : drawFin, finlife : drawFinLife,
                mouth : drawMouth, mouthlife : drawMouthLife,
-               gland : drawGland, glandlife : drawGlandLife};
+               gland : drawGland, glandlife : drawGlandLife, eye : drawEye, eyelife : drawEyeLife, near : drawNear, nearlife : drawNearLife};
 // The senses first: the fish's stomach follows the fullness input.
-for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife', 'flow', 'flowrose', 'flowlife', 'touch', 'touchskin', 'touchlife', 'tilt', 'tiltlife', 'pain', 'wound', 'painlife', 'blood', 'bloodrows', 'bloodlife', 'spines', 'spinelife', 'skincolour', 'pigments', 'pigmentlife', 'fin', 'finlife', 'mouth', 'mouthlife', 'gland', 'glandlife']) dirty.add(part);
+for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife', 'flow', 'flowrose', 'flowlife', 'touch', 'touchskin', 'touchlife', 'tilt', 'tiltlife', 'pain', 'wound', 'painlife', 'blood', 'bloodrows', 'bloodlife', 'spines', 'spinelife', 'skincolour', 'pigments', 'pigmentlife', 'fin', 'finlife', 'mouth', 'mouthlife', 'gland', 'glandlife', 'eye', 'eyelife', 'near', 'nearlife']) dirty.add(part);
 repaint();
 showGut(0);
 // Nothing moves while the panel is off the screen, or for someone who has asked for less motion:
