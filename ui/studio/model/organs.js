@@ -148,7 +148,7 @@ export const ORGANS = Object.freeze([
     key : 'touch',
     category : 'senses',
     skin : true,
-    centers : [ sensor('contact', SENSE_KIND.touch, 3, 'outer') ]
+    centers : [ {...sensor('contact', SENSE_KIND.touch, 3, 'outer'), threshold : -.85} ]
   },
   {
     key : 'pain',
