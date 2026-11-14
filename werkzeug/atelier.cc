@@ -643,6 +643,8 @@ std::vector<int> anatomy_report(const field::Substrate &t,
   adult.tissue = fishsim::BODY_TISSUE;
   adult.gut_strength = a.capacities[fishsim::organ_port::gut];
   adult.gut_length = a.gut_length;
+  adult.gill_strength = a.capacities[fishsim::organ_port::gills];
+  adult.jaw_length = a.jaw_length;
   const fishsim::PhysiologyParameters physiology;
   const fishsim::EvolutionParameters evolution;
   const double basal = fishsim::basal_cost(adult.tissue, physiology),
@@ -655,17 +657,20 @@ std::vector<int> anatomy_report(const field::Substrate &t,
                yolk =
                    std::min(evolution.egg_capacity, evolution.egg_organ_capacity *
                                                         a.motor_counts[fishsim::organ_port::eggs]);
-  double tail_maintenance = 0, bladder_maintenance = 0;
+  double tail_maintenance = 0, bladder_maintenance = 0, gill_maintenance = 0;
   for (const auto &effector : a.effectors) {
     if (effector.port == fishsim::organ_port::forward)
       tail_maintenance += fishsim::effector_upkeep(effector);
     if (effector.port == fishsim::organ_port::bladder)
       bladder_maintenance += fishsim::effector_upkeep(effector);
+    if (effector.port == fishsim::organ_port::gills)
+      gill_maintenance += fishsim::effector_upkeep(effector);
   }
   const double rest = basal + gut_upkeep + muscle_upkeep + cell_upkeep,
                tail_upkeep = fishsim::muscle_upkeep(tail_maintenance, adult.tissue, physiology),
                bladder_upkeep =
-                   fishsim::muscle_upkeep(bladder_maintenance, adult.tissue, physiology);
+                   fishsim::muscle_upkeep(bladder_maintenance, adult.tissue, physiology),
+               gill_upkeep = fishsim::muscle_upkeep(gill_maintenance, adult.tissue, physiology);
   std::cout << "],\"budget\":{\"rest\":{\"basal\":" << basal << ",\"gut\":" << gut_upkeep
             << ",\"muscles\":" << muscle_upkeep << ",\"cells\":" << cell_upkeep
             << "},\"mass\":{\"tissue\":" << adult.tissue / fishsim::BODY_TISSUE
@@ -673,7 +678,10 @@ std::vector<int> anatomy_report(const field::Substrate &t,
             << ",\"organs\":" << a.organ_mass << "},\"yolk\":{\"organ\":" << yolk
             << ",\"store\":" << fishsim::belly_room(adult) * yolk << "}}"
             << ",\"tail\":{\"restShare\":" << tail_upkeep / rest << '}'
-            << ",\"bladder\":{\"restShare\":" << bladder_upkeep / rest << '}';
+            << ",\"bladder\":{\"restShare\":" << bladder_upkeep / rest << '}'
+            << ",\"gills\":{\"restShare\":" << gill_upkeep / rest
+            << ",\"pumpArea\":" << fishsim::gill_area(adult)
+            << ",\"mouthAperture\":" << fishsim::maximum_mouth_aperture(adult) << '}';
   const auto &growth = t.growth_receptor;
   std::cout << ",\"gutSpeed\":" << fishsim::gut_speed(adult, physiology)
             << ",\"growth\":{\"sensitivity\":" << growth.sensitivity << ",\"half\":" << growth.half
