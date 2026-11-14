@@ -83,6 +83,17 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Lebenszyklus</h4>
     <svg id="gilllife"></svg>
   </section>
+  <section class="panel" aria-label="Eier">
+    <h2>Organ</h2><h3>Eier</h3>
+    <h4 id="egg-kind" class="first">Eier</h4>
+    <svg id="eggs"></svg>
+    <h4>Füllen und Ablegen</h4>
+    <svg id="eggfill"></svg>
+    <h4>Füllgefühl</h4>
+    <svg id="eggfull"></svg>
+    <h4>Lebenszyklus</h4>
+    <svg id="egglife"></svg>
+  </section>
 </main>
 <script>
 'use strict';
@@ -159,7 +170,9 @@ const S = {
   feed : {keys : [{gate : .25, spread : .1}], chosen : 0},
   // The swim bladder's depth cells: their keys; what they are offered is the depth the fish
   // reaches in the bladder's trial.
-  depth : {keys : [{gate : .5, spread : .1}], chosen : 0, input : null}
+  depth : {keys : [{gate : .5, spread : .1}], chosen : 0, input : null},
+  // The egg organ's pressure cells; what they are offered is its filling in the organ's trial.
+  eggfull : {keys : [{gate : .8, spread : .1}], chosen : 0, input : null}
 };
 
 // ===== The model: the one source for every picture and number =====
@@ -274,7 +287,8 @@ const SENSE = {
   ache : {title : 'Signalverlauf bei Bauchweh', used : 'an Schmerz gewöhnt', colour : COLOUR.sore, tires : true, steps : 900, after : 120, shows : ['ache'],
           row : {word : 'Reizschwelle für Bauchweh nach Futterart', of : r => r.ache, any : c => c.aches.some(a => a > 0)}},
   // The swim bladder's depth cells; their picture is its own (drawDepth).
-  depth : {title : 'Tiefe und Meldung ans Gehirn', colour : '#9cc8f0', tires : false, steps : 900}
+  depth : {title : 'Tiefe und Meldung ans Gehirn', colour : '#9cc8f0', tires : false, steps : 900},
+  eggfull : {title : 'Füllung und Meldung ans Gehirn', colour : '#e8c66a', tires : false, steps : 900}
 };
 // The reward signal (David 14.11.): at each swallow the engine adds what the bite will give this
 // gut at its present pace to a flow that fades within some ten steps (take_nutrition,
@@ -340,7 +354,7 @@ let queued = 0;
 // A setting has changed: its pictures are repainted in the next frame, however often this is
 // called before.
 function draw(parts = EVERY) {
-  model = tailModel = bladderModel = null;
+  model = tailModel = bladderModel = eggModel = null;
   for (const part of parts) dirty.add(part);
   queued ||= requestAnimationFrame(repaint);
 }
@@ -350,7 +364,7 @@ function repaint() {
   document.getElementById('tail-kind').textContent = T.wriggle > .5 ? 'Schlängler' : 'Schwanzschläger';
   for (const part of dirty) PAINT[part]();
   dirty.clear();
-  showMoment(); showNerves(0); showTail(0); showBladder(); showGills(0);
+  showMoment(); showNerves(0); showTail(0); showBladder(); showGills(0); showEggs();
 }
 
 // ===== What moves: one clock =====
@@ -1584,6 +1598,186 @@ function drawGillLife() {
   drag(svg, el('circle', {cx : X(r), cy : Y(level(r)), r : 5.5, fill : COLOUR.line}, live), p => { GI.input.maturity = rOf(p.x); draw(GILL_PARTS); }, 'gillmaturity', 'knob');
 }
 
+// ===== The egg organ: yolk from the fish's reserve, an egg when it is full =====
+// Read in the engine (reproduction.cc:20-128; physiology.cc:61-63, 93-98, 116-128; physiology.hh:
+// 56, 224-227; body_plan.cc:1451-1461; ecology_types.hh:66-71):
+//   room      = belly room x body size x min(160, 10 x cells); the belly room falls with the
+//               gut's length (1 - 0.25 x its share between shortest and longest)
+//   filling   = command x 2 x body size a step, while the fish is hatched, is not laying and has
+//               reserve to spare; never beyond the room
+//   laying    = a stroke of the laying cells while the organ is at least 95 % full: the egg
+//               takes all the yolk
+//   an egg with less yolk than a young of this plan needs is a nutrient egg without a young.
+// ASSUMED for the picture: the body's size is its maturity; the fish has reserve to spare; the
+// command of the filling cells is taken as the share e / (1 + e) they reach; what a young needs
+// (EGG.need) is a number set here, the engine works it out for each plan (egg_energy_needed);
+// a full population, eggs lying too close and no free place behind the fish are left out.
+const EGG = {perCell : 10, most : 160, rate : 2, full : .95, need : 60, cells : 16, hatch : .5, belly : .25,
+             F : {height : 132, fishX : 118, fishY : 62, ground : 120},
+             C : {L : 64, R : 290, c0 : 16, c1 : 46, top : 78, base : 148, height : 172},
+             LIFE : {L : 44, R : 264, top : 18, base : 88, icons : 106, height : 120, beside : 16, whole : .015, least : .08}};
+const EGG_PARTS = ['eggs', 'eggfill', 'eggfull', 'egglife'];
+const EG = {cells : 12, from : 0, until : 1, input : {fill : .3, lay : 200, maturity : 1}};
+const YOLK = '#e8c66a';
+const eggWorks = r => r >= Math.max(EG.from, EGG.hatch) && (EG.until >= 1 || r < EG.until);
+const bellyRoom = () => 1 - EGG.belly * lengthShare();
+const eggRoom = (r = EG.input.maturity, cells = EG.cells) => eggWorks(r) ? bellyRoom() * r * Math.min(EGG.most, EGG.perCell * cells) : 0;
+// One trial: the yolk step by step, and the eggs laid in it.
+function deriveEggs() {
+  const inp = EG.input, room = eggRoom(), yolk = [], filling = [], laid = []; let y = 0;
+  for (let st = 0; st <= STEPS; st++) {
+    yolk.push(y); filling.push(room > 0 ? y / room : 0);
+    if (room <= 0) continue;
+    if (st >= inp.lay && y >= EGG.full * room) { laid.push({step : st, yolk : y, young : y >= EGG.need}); y = 0; continue; }
+    y = Math.min(room, y + inp.fill * EGG.rate * inp.maturity);
+  }
+  return {room, yolk, filling, laid, every : laid.length > 1 ? Math.round((laid.at(-1).step - laid[0].step) / (laid.length - 1)) : 0};
+}
+let eggModel = null;
+const EM = () => eggModel ??= deriveEggs();
+const eggFilm = {yolk : null, eggs : null, sac : null};
+const EGG_FISH = 'M-86 0 Q-52 -42 10 -34 Q52 -28 76 -4 L104 -30 Q98 0 104 30 L76 4 Q52 30 10 36 Q-52 42 -86 0 Z';
+function buildEggs(fixed) {
+  const {fishX, fishY, ground} = EGG.F, g = el('g', {transform : `translate(${fishX} ${fishY})`}, fixed);
+  el('path', {d : EGG_FISH, fill : HEAD, stroke : COLOUR.axis, 'stroke-width' : 1.4}, g);
+  el('circle', {cx : -62, cy : -6, r : 3.4, fill : COLOUR.icon}, g);
+  el('path', {d : `M0 ${ground} H300`, stroke : SAND, 'stroke-width' : 2, opacity : .6}, fixed);
+  eggFilm.eggs = el('g', {}, fixed);
+}
+// The belly: the gut above, as thick as it is long, the egg organ below it in the room left.
+function drawEggs() {
+  const {svg, live} = picture('eggs', EGG.F.height, buildEggs), {fishX, fishY} = EGG.F, m = EM(), share = lengthShare();
+  const kind = !m.laid.length ? (m.room > 0 ? 'Legt nicht' : 'Kein Platz für Eier') : m.laid.every(e => !e.young) ? 'Legt Nähreier' : m.every ? `Ein Ei alle ${m.every} Schritte` : 'Ein Ei';
+  document.getElementById('egg-kind').textContent = kind;
+  if (m.laid.length) txt(live, 4, 10, `${Math.round(m.laid[0].yolk)} Dotter je Ei`, {style : 'font-size:10px'});
+  // The gut: a tube through the belly, the longer the more of it.
+  const coils = 2 + Math.round(4 * share), gx0 = fishX - 38, gx1 = fishX + 52, gy = fishY - 8 - 6 * share, amp = 3 + 7 * share;
+  el('path', {d : path(Array.from({length : 61}, (_, k) => [gx0 + (gx1 - gx0) * k / 60, gy + amp * Math.sin(2 * Math.PI * coils * k / 60)])), stroke : COLOUR.tube, 'stroke-width' : 5, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'}, live);
+  const link = txt(live, gx1 + 4, gy - amp - 4, 'Darm ›', {'text-anchor' : 'end', style : 'font-size:10px', class : 'chip'});
+  link.addEventListener('click', () => document.querySelector('.panel[aria-label="Darm"]').scrollIntoView({behavior : 'smooth'}));
+  // The organ: as long as its room; its yolk rises in it.
+  const most = EGG.most, long = 14 + 62 * Math.sqrt(m.room / most), high = 5 + 9 * Math.sqrt(m.room / most), cx = fishX + 4, cy = fishY + 17 - 3 * share;
+  eggFilm.sac = {cx, cy, long, high};
+  el('ellipse', {cx, cy, rx : long / 2, ry : high, fill : COLOUR.track, stroke : YOLK, 'stroke-width' : 1.4, opacity : m.room > 0 ? 1 : .35}, live);
+  eggFilm.yolk = el('ellipse', {cx, cy, fill : YOLK, opacity : .9}, live);
+  // Its size: the grip at its rear end.
+  drag(svg, el('rect', {x : cx + long / 2 - 4, y : cy - 5.5, width : 8, height : 11, rx : 2, style : `fill:${YOLK}`}, live), p => {
+    const wanted = clamp((2 * (p.x - cx) - 14) / 62, 0, 1) ** 2 * most, each = bellyRoom() * EG.input.maturity * EGG.perCell;
+    EG.cells = clamp(Math.round(each > 0 ? wanted / each : EG.cells), 1, EGG.cells); draw(EGG_PARTS); }, 'eggsize');
+}
+// Filling and laying: above, the commands tried with their round knobs (how hard the organ is
+// told to fill; from which step on the laying cells beat); below, the yolk over the steps, the
+// mark at which the organ is full enough to lay, and the yolk a young needs. On top the eggs
+// laid: with a young in it, or a nutrient egg.
+function drawEggFill() {
+  const {svg, live} = picture('eggfill', EGG.C.height), {L, R, c0, c1, top, base} = EGG.C, m = EM(), inp = EG.input, mid = (c0 + c1) / 2;
+  const X = st => L + (R - L) * st / STEPS, scale = Math.max(EGG.most * .5, m.room, EGG.need * 1.2), Y = v => base - (base - top) * clamp(v / scale, 0, 1);
+  txt(live, 4, c0 + 10, 'füllen'); txt(live, 4, c1 + 3, 'ablegen');
+  el('path', {d : `M${L} ${mid} H${R}`, stroke : COLOUR.trackEdge}, live);
+  el('path', {d : `M${L} ${mid} V${mid - (mid - c0) * inp.fill} H${R} V${mid} Z`, fill : COLOUR.line, opacity : .3, stroke : COLOUR.line, 'stroke-width' : 1.4}, live);
+  el('path', {d : `M${X(inp.lay)} ${mid} V${c1} H${R} V${mid} Z`, fill : COLOUR.line, opacity : .3, stroke : COLOUR.line, 'stroke-width' : 1.4}, live);
+  el('rect', {x : L, y : top, width : R - L, height : base - top, fill : COLOUR.track}, live);
+  el('path', {d : path(m.yolk.map((v, st) => [X(st), Y(v)])) + ` L${R} ${base} L${L} ${base} Z`, fill : YOLK, opacity : .45, stroke : YOLK, 'stroke-width' : 1.6}, live);
+  if (m.room > 0) {
+    el('path', {d : `M${L} ${Y(EGG.full * m.room)} H${R}`, stroke : COLOUR.line, 'stroke-dasharray' : '5 4', 'stroke-width' : 1.2}, live);
+    txt(live, 4, Y(EGG.full * m.room) + 3, 'voll');
+  }
+  el('path', {d : `M${L} ${Y(EGG.need)} H${R}`, stroke : COLOUR.sore, 'stroke-dasharray' : '2 3', 'stroke-width' : 1.2}, live);
+  txt(live, R - 3, Y(EGG.need) - 4, 'reicht für ein Junges', {'text-anchor' : 'end', style : `font-size:10px;paint-order:stroke;stroke:${COLOUR.track};stroke-width:3px`, fill : COLOUR.sore});
+  for (const e of m.laid) eggMark(live, X(e.step), top - 8, 4.5, e.young);
+  el('path', {d : `M${L} ${top - 2} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+  txt(live, 4, base, 'leer');
+  txt(live, L, base + 15, 'Schritte');
+  for (const st of [STEPS / 3, 2 * STEPS / 3]) txt(live, X(st), base + 15, st, {'text-anchor' : 'middle'});
+  txt(live, R, base + 15, STEPS, {'text-anchor' : 'end'});
+  play.lines.eggfill = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : c0, base, steps : STEPS};
+  drag(svg, el('circle', {cx : (L + X(Math.max(60, inp.lay))) / 2, cy : mid - (mid - c0) * inp.fill, r : 5.5, fill : COLOUR.line}, live), p => { inp.fill = clamp((mid - p.y) / (mid - c0), 0, 1); draw(EGG_PARTS); }, 'eggcmd', 'knob');
+  drag(svg, el('circle', {cx : X(inp.lay), cy : c1, r : 5.5, fill : COLOUR.line}, live), p => { inp.lay = clamp(Math.round((p.x - L) / (R - L) * STEPS), 0, STEPS); draw(EGG_PARTS); }, 'egglay', 'knob');
+}
+// An egg: with a young in it (an eye), or a nutrient egg (yolk only, paler).
+function eggMark(parent, x, y, r, young) {
+  el('circle', {cx : x, cy : y, r, fill : YOLK, opacity : young ? 1 : .45, stroke : COLOUR.track, 'stroke-width' : 1}, parent);
+  if (young) el('circle', {cx : x - r * .25, cy : y - r * .1, r : r * .32, fill : COLOUR.track}, parent);
+}
+// The pressure sense: the nerve cells, and under them over the steps how full the organ is in
+// the trial (the fine line) and, for each key, what its cells report to the brain. The
+// thresholds are the dashed lines; each has its grip at the left and its spread at the right.
+function drawEggFull() {
+  const id = 'eggfull', cell = S.eggfull, keys = cell.keys, stim = play.stim.eggfull = EM().filling, {I0, I1} = SENSE_BOX, {L, R} = DEPTH, {svg, live} = picture('eggfull', I1 + 34);
+  const X = st => L + (R - L) * st / STEPS, IY = v => I1 - (I1 - I0) * clamp(v, 0, 1), vOf = y => clamp((I1 - y) / (I1 - I0), 0, 1);
+  const choose = i => () => { cell.chosen = i; draw(EGG_PARTS); };
+  play.glow = play.glow.filter(g => g.owner !== id);
+  play.levels = play.levels.filter(l => l.owner !== id);
+  const runs = keys.map(k => run(id, k, stim));
+  play.sentBy[id] = runs.map(r => r.sent);
+  nerves(svg, live, id, cell, choose);
+  txt(live, L, I0 - 9, SENSE[id].title);
+  el('rect', {x : L, y : I0, width : R - L, height : I1 - I0, fill : COLOUR.track}, live);
+  keys.forEach((k, i) => {
+    const chosen = i === cell.chosen, gates = cellGates(k);
+    el('path', {d : path(runs[i].sent.map((v, st) => [X(st), IY(v)])) + ` L${R} ${I1} L${L} ${I1} Z`, fill : COLOUR.line, 'fill-opacity' : chosen ? .22 : 0, stroke : keyColour(i), 'stroke-width' : chosen ? 1.8 : 1, class : 'chip'}, live).addEventListener('pointerdown', choose(i));
+    el('path', {d : `M${L} ${IY(k.gate)} H${R}`, stroke : keyColour(i), 'stroke-dasharray' : '4 3', 'stroke-width' : chosen ? 1.8 : 1.1}, live);
+    drag(svg, el('rect', {x : L - 15, y : IY(k.gate) - 4, width : 11, height : 8, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2.5 : 1}`}, live),
+      p => { k.gate = clamp(vOf(p.y), .03, .97); cell.chosen = i; draw(EGG_PARTS); }, 'eggline' + i);
+    spreadGrip(svg, live, R - 8 - 13 * i, IY(Math.max(...gates)), IY(k.gate), p => { k.spread = clamp(2 * (vOf(p.y) - k.gate), 0, .8); cell.chosen = i; draw(EGG_PARTS); }, 'eggspread' + i);
+  });
+  el('path', {d : path(stim.map((v, st) => [X(st), IY(v)])), fill : 'none', stroke : YOLK, 'stroke-width' : 1.3}, live);
+  el('path', {d : `M${L} ${I0 - 2} V${I1} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+  txt(live, L - 18, I0 + 3, 'voll', {'text-anchor' : 'end'}); txt(live, L - 18, I1, 'leer', {'text-anchor' : 'end'});
+  txt(live, L, I1 + 16, 'Schritte');
+  for (const st of [STEPS / 3, 2 * STEPS / 3]) txt(live, X(st), I1 + 16, st, {'text-anchor' : 'middle'});
+  txt(live, R, I1 + 16, STEPS, {'text-anchor' : 'end'});
+  chip(live, L + 6, I1 + 27, '−', () => { keys.splice(cell.chosen, 1); cell.chosen = 0; }, EGG_PARTS, keys.length > 1, 6);
+  chip(live, L + 22, I1 + 27, '+', () => { keys.push({gate : clamp(keys.at(-1).gate - .25, .05, .95), spread : .1}); cell.chosen = keys.length - 1; }, EGG_PARTS, keys.length < 3, 6);
+  play.lines[id] = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : I0, base : I1, steps : STEPS};
+}
+// Life cycle: across, the fish's maturity; up, the yolk the organ holds when full. It grows
+// with the body, from hatching on; its cells work from one maturity and die at another. Where
+// the full organ holds less than a young needs, its eggs are nutrient eggs.
+function buildEggLife(fixed) {
+  const {L, R, top, icons} = EGG.LIFE, hatch = L + (R - L) * EGG.hatch, arrow = {stroke : COLOUR.icon, 'stroke-width' : 1.3, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'};
+  txt(fixed, L, top - 4, 'Dotter je Ei');
+  el('ellipse', {cx : L + 8, cy : icons, rx : 6, ry : 5, fill : 'none', stroke : COLOUR.icon, 'stroke-width' : 1.4}, fixed);
+  el('circle', {cx : L + 8, cy : icons, r : 1.8, fill : COLOUR.icon}, fixed);
+  fishIcon(fixed, hatch, icons, AGE_SIZE.young, COLOUR.icon); fishIcon(fixed, R - 36, icons, AGE_SIZE.grown, COLOUR.icon);
+  el('path', {d : `M${L + 22} ${icons} H${hatch - 16} m-6 -3.5 l6 3.5 l-6 3.5 M${hatch + 18} ${icons} H${R - 60} m-6 -3.5 l6 3.5 l-6 3.5`, ...arrow}, fixed);
+}
+function drawEggLife() {
+  const {svg, under, live} = picture('egglife', EGG.LIFE.height, buildEggLife), {L, R, top, base, beside, whole, least} = EGG.LIFE, until = Math.min(1, EG.until);
+  const X = r => L + (R - L) * clamp(r, 0, 1), rOf = x => clamp((x - L) / (R - L), 0, 1), Y = v => base - (base - top) * clamp(v / EGG.most, 0, 1), egg = r => EGG.full * eggRoom(r);
+  el('rect', {x : L, y : top, width : R - L, height : base - top, fill : COLOUR.track}, under);
+  const from = Math.max(EG.from, EGG.hatch), pts = until > from ? Array.from({length : 41}, (_, k) => { const r = from + (until - from - .0005) * k / 40; return [X(r), Y(egg(r))]; }) : [];
+  if (pts.length) {
+    el('path', {d : path(pts) + ` L${X(until)} ${base} L${X(from)} ${base} Z`, fill : YOLK, opacity : .4}, under);
+    el('path', {d : path(pts), stroke : YOLK, 'stroke-width' : 2, fill : 'none'}, live);
+  }
+  el('path', {d : `M${L} ${Y(EGG.need)} H${R}`, stroke : COLOUR.sore, 'stroke-dasharray' : '2 3', 'stroke-width' : 1.2}, live);
+  txt(live, L + 4, Y(EGG.need) - 4, 'reicht für ein Junges', {style : 'font-size:10px', fill : COLOUR.sore});
+  el('path', {d : `M${X(EGG.hatch)} ${top} V${base + 5}`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3'}, live);
+  el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+  const grip = (r, inside, name, move) => {
+    const x = inside ? X(r) : name === 'eggfrom' ? L - beside : R + beside, y = inside ? clamp(Y(egg(r + (name === 'eggfrom' ? .001 : -.001))), top + 6, base - 6) : base - 7;
+    drag(svg, el('rect', {x : x - 4, y : y - 5.5, width : 8, height : 11, rx : 2, style : `fill:${YOLK}`}, live), p => { move(rOf(p.x)); draw(EGG_PARTS); }, name);
+  };
+  grip(EG.from, EG.from > EGG.hatch, 'eggfrom', to => { EG.from = to <= EGG.hatch + whole ? 0 : Math.min(to, until - least); });
+  grip(until, until < 1, 'egguntil', to => { EG.until = to > 1 - whole ? 1 : Math.max(to, Math.max(EG.from, EGG.hatch) + least); });
+  const r = EG.input.maturity;
+  el('path', {d : `M${X(r)} ${top} V${base}`, stroke : COLOUR.line, 'stroke-dasharray' : '2 4', 'stroke-width' : 1.2}, live);
+  drag(svg, el('circle', {cx : X(r), cy : Y(egg(r)), r : 5.5, fill : COLOUR.line}, live), p => { EG.input.maturity = rOf(p.x); draw(EGG_PARTS); }, 'eggmaturity', 'knob');
+  eggMark(live, X(r) + 12, Math.min(base - 8, Y(egg(r)) - 8), 4.5, egg(r) >= EGG.need);
+}
+// The organ at this moment: its yolk, and the eggs laid so far on the ground behind the fish.
+function showEggs() {
+  if (!eggFilm.yolk || !eggFilm.sac) return;
+  const m = EM(), level = between(m.filling, play.step), {long, high} = eggFilm.sac, {ground} = EGG.F;
+  eggFilm.yolk.setAttribute('rx', (long / 2 * Math.sqrt(level)).toFixed(1)); eggFilm.yolk.setAttribute('ry', (high * Math.sqrt(level)).toFixed(1));
+  const done = m.laid.filter(e => e.step <= play.step);
+  if (eggFilm.eggs.childElementCount !== done.length) {
+    eggFilm.eggs.replaceChildren();
+    done.forEach((e, i) => eggMark(eggFilm.eggs, 292 - 13 * (i % 6) - 6 * (Math.floor(i / 6) % 2), ground - 6 - 9 * Math.floor(i / 6), 3 + 3 * Math.sqrt(e.yolk / EGG.most), e.young));
+  }
+}
+
 // ===== The clock =====
 // Shows the present moment: the lines, what the holders hold, the keys the input has passed, what
 // irritants at the nerve cells.
@@ -1681,7 +1875,7 @@ function tick(now) {
   const dt = play.last ? Math.min(50, now - play.last) : 16; play.last = now;
   // The clock stands while the grip that rides on the bladder's fish is held.
   if (held?.name !== 'sacsize') play.step = (play.step + dt * STEPS / ROUND_MS) % STEPS;
-  showMoment(); showGut(dt); showNerves(dt); showTail(dt); showBladder(); showGills(dt);
+  showMoment(); showGut(dt); showNerves(dt); showTail(dt); showBladder(); showGills(dt); showEggs();
 }
 
 // ===== Everything from the model =====
@@ -1690,9 +1884,10 @@ const PRESETS = [['Räuber', .6, 0, 0], ['Planktonfresser', .8, 0, 0], ['Allesfr
 choiceList(document.getElementById('presets'), 'Vorlage', PRESETS.map(p => p[0]), i => { const [, length, young, grown] = PRESETS[i]; Object.assign(S, {length, young, grown}); draw(); });
 const PAINT = {fish : drawFish, yield : drawYield, bars : drawBars, life : drawLife, full : () => drawSense('full'), ache : () => drawSense('ache'), feed : drawReward, tail : drawTail, tailforce : drawTailForce, tailspeed : drawTailSpeed, taillife : drawTailLife,
                bladder : drawBladder, bladderfill : drawBladderFill, depth : drawDepth, bladderlife : drawBladderLife,
-               gills : drawGills, rakers : drawRakers, gillwater : drawGillWater, gilllife : drawGillLife};
+               gills : drawGills, rakers : drawRakers, gillwater : drawGillWater, gilllife : drawGillLife,
+               eggs : drawEggs, eggfill : drawEggFill, eggfull : drawEggFull, egglife : drawEggLife};
 // The senses first: the fish's stomach follows the fullness input.
-for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS]) dirty.add(part);
+for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife']) dirty.add(part);
 repaint();
 showGut(0);
 // Nothing moves while the panel is off the screen, or for someone who has asked for less motion:
