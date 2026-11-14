@@ -255,11 +255,14 @@ export const gestureMethods = {
             nearFish(point, this.state.sites) ? placementPreview(this.state, {type}, point) : '';
     }
   },
+  // A pointer that is cancelled ends what it held. A tile dragged from the library is not held by
+  // the pointer: the browser cancels the pointer as its own drag begins, and that drag ends with
+  // `dragend`.
   interruptPointer() {
     const drag = this.handleDrag;
-    if (!drag && !this.pointer && !this.dragging)
+    if (!drag && !this.pointer)
       return;
-    this.pointer = this.dragging = this.pendingWire = null;
+    this.pointer = this.pendingWire = null;
     this.clearPreview();
     this.showTrash(false);
     this.ignoreClickUntil = performance.now() + DRAG_CLICK;
