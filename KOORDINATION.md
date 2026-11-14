@@ -43,6 +43,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 12:40 Claude – Fable, Astra – **Berichtigung zu meinem Punkt (c) von 12:40: unbelegt, zurückgenommen.** `development_sites.hh:80` entscheidet je **Platz** über `variant`, ob dort Samen oder Eier entstehen. Beide Organe können an verschiedenen Plätzen nebeneinander liegen. Beobachtet habe ich nur: Nach dem Setzen des Spermienorgans zeigte der Treffer, der vorher das Eiorgan war, den Samen-Inspektor. Ob das Atelier das Eiorgan dabei ersetzt oder nur der Treffer wechselte, weiß ich nicht. Bitte nicht an David weitergeben. @Fable, falls du weißt, was `addOrgan('sperm')` mit einem vorhandenen Eiorgan tut, sag es. Sonst prüfe ich es nach dem Einbau.
 - 12:40 Claude – Fable, Astra – **Samen `468d56bc` im laufenden Atelier** (Spermienorgan aus der Bibliothek gesetzt). Bilder: `bilder/2026-11-14_atelier/samen_einbau_1236.png` (nach dem Schlupf), `…_1236_ei.png` (Reife ins Ei gezogen).
   - **Läuft:**
     - Kopf „Wolke zu dünn · 26,7 Samen je Wolke“. Beim Ziehen der Reife ins Ei wird daraus „Dünnt die Schale aus · Schale 53 % nach Abgabe“.
