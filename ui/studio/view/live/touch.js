@@ -12,7 +12,7 @@
 import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
-import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
+import {findOrgan, updateCenter} from '../../model/document.js';
 import {clamp, drag, el, liveKind, path, picture} from './kit.js';
 import {BOUNDED, keysOf, senseCourse, STEPS} from './sense.js';
 import {eggShape, fishAbove, lifeBand, lifePlaces, LIFE, placeOf, sectorOf, wedge} from './skin.js';
@@ -44,8 +44,8 @@ liveKind('touch', (studio, organId) => {
   const press = svgOf();
   heading(word('life'));
   const life = svgOf();
-  const own = {chosen : 0, input : {rise : 60, height : .7, stop : 520}};
-  let step = 0, share = 0;
+  const own = {chosen : 0};
+  let step = 0, share = 0, pressure = 0;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -54,11 +54,11 @@ liveKind('touch', (studio, organId) => {
     name : 'touch',
     own,
     tires : false,
-    after : 60,
     most : 1,
     scale : BOUNDED,
     words : {course : word('course'), used : '', steps : word('steps')},
     keys : () => keysOf([ {id : '', centers : organ().centers} ], BOUNDED),
+    held : () => pressure,
     share : () => share,
     doc : () => studio.state.document,
     draft,
@@ -73,10 +73,12 @@ liveKind('touch', (studio, organId) => {
                        {L, R, skin, deep, cells, thing, dent} = CUT, place = placeOf(studio, cell),
                        weights = wedge(place, contactHalfAngle(cell.field ?? 0)),
                        most = Math.max(...weights), count = weights.length;
-    const probe = studio.state.senseProbe?.kind === 'touch' ? studio.state.senseProbe : null,
-          pressure = probe ? pressureOf(probe.strength) : 0, X = a => L + (R - L) * (a + 180) / 360,
+    const active = studio.state.senseProbe,
+          probe = active?.kind === 'touch' && active.organ === organId ? active : null,
+          X = a => L + (R - L) * (a + 180) / 360,
           aOf = x => clamp((x - L) / (R - L) * 360 - 180, -179, 179),
           tx = probe ? X(turnTo(probe.bearing - place)) : 0;
+    pressure = probe ? pressureOf(probe.strength) : 0;
     const dip = x => probe ? pressure * deep * Math.exp(-(((x - tx) / dent) ** 2)) : 0,
           line = Array.from({length : 69}, (_, n) => {
             const x = L + (R - L) * n / 68;
