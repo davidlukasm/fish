@@ -1924,6 +1924,14 @@
       "grown": "schmeckt und tastet",
       "touching": "berührt",
       "apart": "berührt nichts"
+    },
+    "lateral": {
+      "feels": "Spürt Wasser, das gegen die Haut strömt",
+      "cells": "Strömungszellen",
+      "life": "Lebenszyklus",
+      "course": "Signalverlauf bei Strömung",
+      "used": "an Strömung gewöhnt",
+      "steps": "Schritte"
     }
   }
 }

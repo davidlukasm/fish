@@ -298,8 +298,11 @@ export function senseCourse(svg, {
     const newGate = () => clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95);
     nerves(live, keys, i => X(clamp(ends[i], 0, STEPS)), tire);
     // The same pair twice: at the cells and at the keys (under their holder).
-    chip(live, R - 22, I0 - 54, '−', () => fewer(keys[own.chosen]), keys.length > 1, 6);
-    chip(live, R - 6, I0 - 54, '+', () => more(newGate()), keys.length < most, 6);
+    // A sense with one type of cells only has no pair.
+    if (most > 1) {
+      chip(live, R - 22, I0 - 54, '−', () => fewer(keys[own.chosen]), keys.length > 1, 6);
+      chip(live, R - 6, I0 - 54, '+', () => more(newGate()), keys.length < most, 6);
+    }
     txt(live, L, I0 - 9, words.course);
     // What holds the thresholds, filling with the input.
     el('rect', {x : LX - 5, y : I0, width : 10, height : I1 - I0, rx : 5, class : 'aid-live-track'},
@@ -428,8 +431,10 @@ export function senseCourse(svg, {
              name + part, 'knob');
     knob(inp.rise, 'rise', st => { inp.rise = clamp(st, 1, inp.stop - 1); });
     knob(inp.stop, 'stop', st => { inp.stop = clamp(st, inp.rise + 1, STEPS - 10); });
-    chip(live, LX - 9, I1 + 10, '−', () => fewer(keys[own.chosen]), keys.length > 1, 6);
-    chip(live, LX + 9, I1 + 10, '+', () => more(newGate()), keys.length < most, 6);
+    if (most > 1) {
+      chip(live, LX - 9, I1 + 10, '−', () => fewer(keys[own.chosen]), keys.length > 1, 6);
+      chip(live, LX + 9, I1 + 10, '+', () => more(newGate()), keys.length < most, 6);
+    }
   }
   // The present moment: the line, what the holder holds, the keys the input has passed.
   function moment(step) {
