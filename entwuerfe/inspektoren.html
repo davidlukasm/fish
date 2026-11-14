@@ -237,10 +237,11 @@ const SENSE = {
   full : {title : 'Signalverlauf bei Magenfüllung', colour : COLOUR.stomachEdge, tires : false, after : 260, shows : ['fish', 'full'], row : null},
   ache : {title : 'Signalverlauf bei Bauchweh', used : 'an Schmerz gewöhnt', colour : COLOUR.sore, tires : true, after : 120, shows : ['ache'], row : {word : 'Bauchweh bei vollem Darm durch', of : r => r.ache, any : c => c.aches.some(a => a > 0)}},
   // The reward for eating (David 14.11.): what a swallowed bite will give this gut, as far as
-  // the fish can still store it (a sated fish gets none): at each swallow the engine adds what the bite is worth to
+  // the fish can still store it (with a full reserve it gets none, take_nutrition,
+  // src/physiology.cc): at each swallow the engine adds what the bite is worth to
   // this gut, and it fades within a few steps (take_nutrition, src/physiology.cc:205-222,
   // nutrient_keep .8 per step).
-  feed : {title : 'Signalverlauf bei lohnendem Fressen', used : 'an Belohnung gewöhnt', colour : COLOUR.morsel, tires : true, after : 5, shows : ['feed'], row : {word : 'Belohnung für einen Bissen, hungrig', of : r => [r.min, r.max], any : () => true}}
+  feed : {title : 'Signalverlauf bei lohnendem Fressen', used : 'an Belohnung gewöhnt', colour : COLOUR.morsel, tires : true, after : 5, shows : ['feed'], row : {word : 'Belohnung für einen Bissen, Reserve frei', none : 'Reserve voll', of : r => [r.min, r.max], any : () => true}}
 };
 const cellGates = k => Array.from({length : CELLS}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5), .02, .98));
 const answer = (x, gate, used) => { const over = (clamp(x, 0, 1) - used - gate) / (1 - gate); return over > 0 ? over / (over + gate * (1 - over)) : 0; };
@@ -558,7 +559,7 @@ const IRRITANT = {full : stomachPath({x : 0, y : 0, rx : 6, ry : 6}), ache : 'M2
 // ends below it, a short fibre swinging up to the right. A fibre runs into the bundle in the
 // bundle's own direction, so that there is no corner where they meet; the bundle leaves the
 // picture at its upper edge, towards the brain.
-const NERVE = {somas : [[62, 72], [38, 66], [84, 84]], join : [100, 46], bundle : [[100, 46], [114, 34], [134, 28], [152, -2]], irritant : [40, 106],
+const NERVE = {somas : [[62, 72], [38, 66], [84, 84]], join : [100, 46], bundle : [[100, 46], [114, 34], [134, 28], [152, -2]],
                speed : .0026, rate : .006, merge : .15, pulses : 4};
 const cubic = (a, b, c, d, t) => { const u = 1 - t; return [0, 1].map(n => u * u * u * a[n] + 3 * u * u * t * b[n] + 3 * u * t * t * c[n] + t * t * t * d[n]); };
 function nerves(svg, parent, id, cell, choose, gripX, tire) {
@@ -575,11 +576,12 @@ function nerves(svg, parent, id, cell, choose, gripX, tire) {
     if (o.tires && chosen) drag(svg, el('rect', {x : gripX(k) - 5, y : SENSE_BOX.I0 - 36, width : 10, height : 10, rx : 3, style : 'stroke:' + colour}, parent), p => tire(k, i, p), id + 'tire');
   });
   const merged = Array.from({length : 6}, () => ({t : 1, n : 0, e : el('circle', {r : 0, fill : COLOUR.line}, parent)}));
-  play.nerves[id] = {cells, bundle : merged, irritant : el('path', {d : IRRITANT[id], fill : o.colour}, parent)};
+  const shown = NERVE.somas.slice(0, cell.keys.length);
+  play.nerves[id] = {cells, bundle : merged, at : [shown.reduce((a, s) => a + s[0], 0) / shown.length - 8, Math.max(...shown.map(s => s[1])) + 26], irritant : el('path', {d : IRRITANT[id], fill : o.colour}, parent)};
 }
 function drawSense(id) {
   const cell = S[id], o = SENSE[id], keys = cell.keys, inp = cell.input, stim = play.stim[id] = stimulus(id);
-  const {L, R, LX, I0, I1, row} = SENSE_BOX, {svg, live} = picture(id, I1 + 22 + (o.row ? row + 50 : 0));
+  const {L, R, LX, I0, I1, row} = SENSE_BOX, {svg, live} = picture(id, I1 + 22 + (o.row ? row + 50 + (o.row.none ? 32 : 0) : 0));
   const IY = v => I1 - (I1 - I0) * clamp(v, 0, 1), vOf = y => clamp((I1 - y) / (I1 - I0), 0, 1);
   const X = st => L + (R - L) * st / STEPS, stOf = x => clamp(Math.round((x - L) / (R - L) * STEPS), 0, STEPS);
   const choose = i => () => { cell.chosen = i; draw(o.shows); };
@@ -621,18 +623,18 @@ function drawSense(id) {
   for (const st of [300, 600]) txt(live, X(st), I1 + 14, st, {'text-anchor' : 'middle'});
   txt(live, R, I1 + 14, STEPS, {'text-anchor' : 'end'});
   play.lines[id] = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : I0, base : I1};
-  // Where each key's cells have got used to the input: a mark for each standing on the step axis,
-  // clear of the words below it (not for
-  // cells that never send), dragged along it; the chosen one's with its dashed upright.
-  if (o.tires) keys.forEach((k, i) => {
-    const at = ends[i], x = X(Math.min(at, STEPS)), chosen = i === cell.chosen, left = x > (L + R) / 2;
+  // Where each key's cells send nothing more: a thin mark for each standing on the step axis (not
+  // for cells that never send); the chosen one's is a grip, with its dashed upright that leads up
+  // to the cell's grip above. It is called got used to only where the input alone would still
+  // make the cells send; where the input itself has ended, it has no word.
+  if (o.tires) keys.map((k, i) => i).sort((a, b) => (a === cell.chosen) - (b === cell.chosen)).forEach(i => {
+    const k = keys[i], at = ends[i], x = X(Math.min(at, STEPS)), left = x > (L + R) / 2;
     if (at < 1) return;
-    if (chosen) {
-      el('path', {d : `M${x} ${I0} V${I1}`, stroke : keyColour(i), 'stroke-dasharray' : '2 3'}, live);
-      // The word stands clear of the marks, on a ground of its own so that no line runs through it.
-      if (at <= STEPS) txt(live, x + (left ? -7 : 7), I1 - 15, o.used, {'text-anchor' : left ? 'end' : 'start', style : `font-size:10px;paint-order:stroke;stroke:${COLOUR.track};stroke-width:4px;stroke-linejoin:round`});
-    }
-    drag(svg, el('rect', {x : x - 4, y : I1 - 11, width : 8, height : 10, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2 : 1}`}, live), p => tire(k, i, p), id + 'used' + i);
+    if (i !== cell.chosen) { el('path', {d : `M${x} ${I1 - 9} V${I1}`, stroke : keyColour(i), 'stroke-width' : 2.5}, live); return; }
+    el('path', {d : `M${x} ${I0 - 26} V${I0 - 22} M${x} ${I0} V${I1}`, stroke : keyColour(i), 'stroke-dasharray' : '2 3'}, live);
+    // The word stands clear of the marks, on a ground of its own so that no line runs through it.
+    if (at <= STEPS && stim[at] > Math.min(...cellGates(k))) txt(live, x + (left ? -7 : 7), I1 - 15, o.used, {'text-anchor' : left ? 'end' : 'start', style : `font-size:10px;paint-order:stroke;stroke:${COLOUR.track};stroke-width:4px;stroke-linejoin:round`});
+    drag(svg, el('rect', {x : x - 4, y : I1 - 11, width : 8, height : 10, rx : 2, style : `fill:${keyColour(i)};stroke:${COLOUR.chosen};stroke-width:2`}, live), p => tire(k, i, p), id + 'used');
   });
   // The grips, above everything they could be hidden by: every key and its spread (side by
   // side), the input's knobs (when it is fully there and how strong, and when it stops).
@@ -660,6 +662,11 @@ function drawSense(id) {
       el('rect', {x, y : BY(lo), width : wide, height : B1 - BY(lo), rx : 2, fill : c.colour, opacity : .9}, live);
       txt(live, x + wide / 2, B1 + 12, c.name, {'text-anchor' : 'middle', style : 'fill:' + c.colour});
     });
+    // The same bites when there is no room: nothing.
+    if (o.row.none) {
+      txt(live, rowL, B1 + 30, o.row.none);
+      foods.forEach((_, j) => el('rect', {x : rowL + (wide + rowGap) * j, y : B1 + 36, width : wide, height : 7, rx : 2, fill : COLOUR.track, stroke : COLOUR.trackEdge}, live));
+    }
     keys.forEach((k, i) => el('path', {d : `M${rowL - 3} ${BY(k.gate)} H${rowR + 3}`, stroke : keyColour(i), 'stroke-dasharray' : '4 3', 'stroke-width' : i === cell.chosen ? 1.6 : 1}, live));
   }
 }
@@ -701,7 +708,7 @@ function showNerves(dt) {
   for (const [id, n] of Object.entries(play.nerves)) {
     const felt = play.stim[id]?.[st] ?? 0;
     // In full size and throbbing while the input is there, gone when it is not.
-    n.irritant.setAttribute('transform', `translate(${NERVE.irritant}) scale(${(1.2 * (1 + .22 * Math.sin(play.time / 110))).toFixed(2)})`);
+    n.irritant.setAttribute('transform', `translate(${n.at}) scale(${(1.2 * (1 + .22 * Math.sin(play.time / 110))).toFixed(2)})`);
     n.irritant.setAttribute('opacity', felt > .02 ? (.5 + .5 * felt).toFixed(2) : 0);
     n.cells.forEach((c, i) => {
       const sent = play.sentBy[id]?.[i]?.[st] ?? 0, idle = c.pulses.find(p => p.t >= 1);
