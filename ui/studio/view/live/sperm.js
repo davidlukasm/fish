@@ -17,7 +17,7 @@
 // rules; that it dims what lies behind it is shown, not counted. Hatching is marked at a
 // schematic place; that the embryo also needs force, development, tissue and reserve to hatch is
 // not shown.
-import {ATELIER_LIMITS} from '../../../schema.js';
+import {ATELIER_LIMITS, BODY_UNIT} from '../../../schema.js';
 import {formatNumber, percent, t} from '../../../strings.js';
 import {
   findOrgan,
@@ -86,15 +86,8 @@ liveKind('sperm', (studio, organId) => {
   const life = svgOf();
   // What is tried on the organ: not part of the fish.
   const input = {fill : .8, lay : 300, egg : .45, maturity : 1};
-  const film = {
-    store : null,
-    sac : null,
-    clouds : null,
-    egg : null,
-    plant : null,
-    shell : null,
-    line : null
-  };
+  const film =
+      {store : null, sac : null, cloud : null, egg : null, plant : null, shell : null, line : null};
   // native: the drives and the store of the last plan its report belonged to; pull: where a
   // grip was taken.
   let state = studio.state, m = null, step = 0, native = null, pull = null;
@@ -114,7 +107,7 @@ liveKind('sperm', (studio, organId) => {
       return null;
     const cells = list => list.reduce((sum, c) => sum + c.copies, 0), phase = lifePhase(filling[0]);
     // The egg this plan's egg organ lays, for the shell's radius: its room from the report.
-    const yolk = state.anatomy?.budget?.yolk?.store;
+    const yolkRoom = state.anatomy?.budget?.yolk?.store;
     // What the cells give at a full command, and the room, come from the plan's report. While
     // a grip is dragged they follow the cells' copies from the last plan the report belonged to.
     const report = state.anatomy?.gonads?.sperm, exact = studio.shownDesign === state.document;
@@ -143,8 +136,13 @@ liveKind('sperm', (studio, organId) => {
       fillDrive : native ? scaled(native.fill, cells(filling), native.fillCells) : 0,
       releaseDrive : native ? scaled(native.release, cells(laying), native.layCells) : 0,
       threshold : G.release,
-      // 4 x root(yolk / 300), never counted below 1 (egg_radius, reproduction.cc).
-      shellRadius : Math.max(1, Number.isFinite(yolk) && yolk > 0 ? 4 * Math.sqrt(yolk / 300) : 1),
+      // The radius of the egg this plan's egg organ lays, never counted below 1 (egg_radius,
+      // reproduction.cc): a preview from the same plan. Without it the shell has no measure.
+      shellRadius :
+          exact && Number.isFinite(yolkRoom) && yolkRoom > 0 && G.eggs
+              ? Math.max(1, BODY_UNIT.radius * Math.sqrt(G.eggs.spawnShare * yolkRoom /
+                                                         BODY_UNIT.reserve_energy_per_mass))
+              : null,
       from : phase.start ?? 0,
       until : phase.end ?? 1
     };
@@ -164,7 +162,7 @@ liveKind('sperm', (studio, organId) => {
         continue;
       if (lays() && st === input.lay && (inEgg ? s > 0 : s >= m.least)) {
         if (inEgg)
-          sh = Math.max(0, sh - s / m.shellRadius);
+          sh = Math.max(0, sh - s / (m.shellRadius ?? 1));
         clouds.push({step : st, amount : s, fertile : !inEgg});
         s = 0;
         continue;
@@ -197,14 +195,25 @@ liveKind('sperm', (studio, organId) => {
                             : t0.reached        ? 'reaches'
                                                 : 'thin');
     if (t0.inEgg)
-      txt(live, 4, 10, t0.thin < 1 ? word('shell', {p : percent(t0.thin)}) : word('unchanged'),
+      txt(live, 4, 10,
+          t0.thin >= 1             ? word('unchanged')
+          : m.shellRadius === null ? word('thinner')
+                                   : word('shell', {p : percent(t0.thin)}),
           {class : 'aid-live-small'});
     else if (t0.clouds.length)
       txt(live, 4, 10, word('amount', {n : formatNumber(t0.clouds[0].amount, 1)}),
           {class : 'aid-live-small'});
     const frame = el('clipPath', {id : 'aid-live-spermframe-' + organId}, under);
     el('rect', {x : 0, y : 14, width : 300, height : SCENE.height - 14}, frame);
-    film.clouds = el('g', {'clip-path' : `url(#aid-live-spermframe-${organId})`}, under);
+    // The one cloud of the trial: made here, spread and thinned by the clock.
+    const clouds = el('g', {'clip-path' : `url(#aid-live-spermframe-${organId})`}, under);
+    film.cloud =
+        t0.inEgg
+            ? el('ellipse', {cx : 150, cy : SCENE.fishY + 6, class : 'aid-live-ink', opacity : 0},
+                 clouds)
+            : el('circle',
+                 {cx : SCENE.vent, cy : SCENE.fishY + 16, class : 'aid-live-milt', opacity : 0},
+                 clouds);
     // The body: the embryo in its shell, or the fish; the organ in its belly.
     const scale = t0.inEgg ? .5 : .82, bx = t0.inEgg ? 150 : fishX,
           by = t0.inEgg ? fishY + 6 : fishY,
@@ -494,8 +503,7 @@ liveKind('sperm', (studio, organId) => {
     film.store.setAttribute('ry', (high * Math.sqrt(level)).toFixed(1));
     film.line?.e.setAttribute(
         'd', `M${film.line.X(step).toFixed(1)} ${film.line.top} V${film.line.base}`);
-    film.clouds.replaceChildren();
-    let dim = 0, done = false;
+    let dim = 0, done = false, shown = false;
     for (const cloud of t0.clouds) {
       const age = step - cloud.step, reach = CLOUD.reach * Math.sqrt(cloud.amount);
       if (age < 0)
@@ -506,29 +514,21 @@ liveKind('sperm', (studio, organId) => {
         continue;
       const grown = Math.min(1, age / CLOUD.grow), radius = 6 + reach * grown,
             dense = (1 - age / CLOUD.fade) * (cloud.fertile ? 1 : .5);
-      if (t0.inEgg)
-        el('ellipse', {
-          cx : 150,
-          cy : fishY + 6,
-          rx : 70 + 16 * grown,
-          ry : 50 + 12 * grown,
-          class : 'aid-live-ink',
-          'stroke-width' : 2 + .5 * Math.sqrt(cloud.amount),
-          opacity : (.6 * dense).toFixed(2)
-        },
-           film.clouds);
-      else
-        el('circle', {
-          cx : vent,
-          cy : fishY + 16,
-          r : radius,
-          class : 'aid-live-milt',
-          opacity : (.28 * dense).toFixed(2)
-        },
-           film.clouds);
+      shown = true;
+      if (t0.inEgg) {
+        film.cloud.setAttribute('rx', (70 + 16 * grown).toFixed(1));
+        film.cloud.setAttribute('ry', (50 + 12 * grown).toFixed(1));
+        film.cloud.setAttribute('stroke-width', (2 + .5 * Math.sqrt(cloud.amount)).toFixed(1));
+        film.cloud.setAttribute('opacity', (.6 * dense).toFixed(2));
+      } else {
+        film.cloud.setAttribute('r', radius.toFixed(1));
+        film.cloud.setAttribute('opacity', (.28 * dense).toFixed(2));
+      }
       if (radius >= CLOUD.plant)
         dim = Math.max(dim, dense * Math.min(1, cloud.amount / CLOUD.thick));
     }
+    if (!shown)
+      film.cloud.setAttribute('opacity', 0);
     film.shell?.setAttribute('stroke-width', (1 + 7 * (t0.shell[at] ?? 1)).toFixed(1));
     if (!film.egg)
       return;
