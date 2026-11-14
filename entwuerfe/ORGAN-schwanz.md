@@ -31,6 +31,18 @@ Der Schwanzmuskel schiebt den Fisch. Er besteht aus Bündeln; jedes hat seine Fa
 - **Einstellbar im Inspektor:** heute nichts zum Leben.
 - **@Astra, @Claude: Wer von euch hat den Pfad „Muskelzelle über das Leben“ schon gelesen? Bitte Stellen nennen.** Ohne das zeichne ich für den Schwanz keinen Lebenszyklus, sondern bringe nur die offenen Punkte unten zu Ende.
 
+## Nachtrag 07:48: Lebenszyklus und Einbau, aus Astras und Claudes Fundstellen
+
+Selbst nachgelesen: `src/movement.cc:89-99` (Schub = `stroke_push` × Schwäche ÷ Masse), `src/physiology.cc:130-138` (Masse aus Gewebe, Reserve, Organen), `ui/studio/model/document.js:1533-1566` (`lifePhase`, `setLifePhase`). Den Rest unten habe ich von Astra (`SCHWANZFLOSSE-GEGENLESEN-ASTRA.md`) und Claude (KOORD 07:44) übernommen, **nicht selbst gelesen**.
+
+- **Automatisch:** Die Kraft eines Bündels wächst nicht mit dem Körper, die Masse schon. Derselbe Muskel schiebt den kleinen Fisch stärker als den großen. Im Ei kann der Schwanz schon zucken; das wirkt auf Ei und Schale und hilft beim Schlupf (`movement.cc:52-64`, `embryo.cc:7-25`).
+- **Bestimmt das Organ:** welche Bündel wann arbeiten (Ausgabe-Rezeptor) und wann sie sterben (Todesrezeptor). Ein Bündel ohne lebende Zellen fällt aus Kraft und Unterhalt.
+- **Einstellbar:** je Bündel „arbeitet ab Reife“ und „stirbt bei Reife“ (`setLifePhase`: `start` schreibt die Ausgabe, `end` den Tod; Astra 07:45: später arbeiten ist nicht dasselbe wie später gebildet werden).
+- **Bildidee, noch nicht gezeichnet:** quer das Leben, je Bündel ein Band von „arbeitet ab“ bis „stirbt“ mit Griffen an den Enden; darüber der Schub des Fisches (Kraft der arbeitenden Bündel ÷ Masse). **Was mir dafür fehlt:** wie „Reife“ (der Stoff, auf den die Rezeptoren hören) mit der Körpermasse zusammenhängt. Ohne das wäre die Schubkurve erfunden. **@Astra: Wo wird der Reifewert gesetzt, und woran hängt er (Alter, Gewebe)?**
+- **Berichtigung (Astra 07:44):** Stärkere Antwortschläge im Wechsel dürfen seit `7c0e5aaa` lenken (`body_plan.cc:1562-1569, 1593-1598`); die Zeile „Lenken“ oben gibt den Stand von gestern wieder.
+- **Einbau, was bleibt (Claude 07:44, Astra 07:45):** Seitenschalter links/gleich/rechts, die vier Wirkungsknöpfe (sie versetzen das Organ, `events.js:265-271`) und „Hormone einstellen“ **bleiben**. Mein Entwurf ersetzt nur die beiden Muskelbilder darunter (Kraft je Knoten, Ausdauer; `muscle_effect.js`).
+- **Behelf, im Code so benannt:** Die Geschwindigkeit ist eine Näherung mit festem Nachlauf (`speedOf`), nicht die Rechnung der Engine.
+
 ## Was David schon gesagt hat
 
 - „Zwei sehr gut ausgearbeitete, verschiedene Konzepte“ (Darm und Schwanzflosse), `FEEDBACK-1311.md:109`. Das Panel bleibt, wie es ist.

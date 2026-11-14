@@ -809,8 +809,11 @@ function bundleSwim(n, drive, stop) {
   }
   return {force, reserve};
 }
-// The fish's speed follows the push with some lag and rolls on when it stops; buried in sand it
-// stops much sooner (drag 12 against 1, 3 when wriggling).
+// STOPGAP, not the engine's way: the fish's speed follows the push with a fixed lag and rolls on
+// when it stops; buried in sand it stops much sooner (drag 12 against 1, 3 when wriggling,
+// src/environment.hh:24-44). The engine counts each twitch's course, the grip on the water at the
+// present speed, mass, and drag along and across (src/movement.cc:78-99, 115-140; Astra 14.11.
+// 07:43). For the atelier the curves must come from that calculation or a reference run.
 function speedOf(push, share, lag) { const out = []; let v = 0; for (const p of push) { v += (p * share - v) / lag; out.push(v); } return out; }
 // Everything the tail's pictures show, from its settings and the command tried.
 function deriveTail() {
