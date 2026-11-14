@@ -278,7 +278,8 @@ export const ORGANS = Object.freeze([
     key : 'gland',
     category : 'internal',
     types : HORMONES.levels,
-    centers : [ motor('secretion', MOTOR_KIND.gland, GLAND_COPIES) ]
+    // Substance A lies at zero turns. A new gland starts narrowly tuned to that position.
+    centers : [ {...motor('secretion', MOTOR_KIND.gland, GLAND_COPIES), q1 : 1, qwidth : 0} ]
   },
   {
     key : 'tectum',
