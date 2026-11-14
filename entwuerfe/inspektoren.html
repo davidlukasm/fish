@@ -144,7 +144,7 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const path = pts => 'M' + pts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(' L');
 const COLOUR = {axis : '#3b6a6c', track : '#0f2c34', trackEdge : '#2d5059', line : '#f4efd8', handle : '#f1dda6', chosen : '#f1dda6', unchosen : '#0d262c',
                 sore : '#ef8f8f', stomach : '#c98f55', stomachEdge : '#e6b47c', stomachBack : '#5a4232', tube : '#6b6f5f', muscle : '#9a6a48', morsel : '#e3cf94',
-                body : '#16363e', icon : '#e9e2c6', chipEdge : '#5d8384', chipSign : '#d7e6e3', remove : '#e8a2b5', keys : ['#c2f5e9', '#5fb8a6', '#1c6e63']};
+                body : '#16363e', icon : '#e9e2c6', chipEdge : '#5d8384', chipSign : '#d7e6e3', remove : '#e8a2b5', keys : ['#c2f5e9', '#5fb8a6', '#1c6e63', '#e7d2a0']};
 const keyColour = i => COLOUR.keys[i % COLOUR.keys.length];
 // Two kinds of things are dragged, and they look different. A grip ('grip') sets the organ: dark
 // with a yellow edge. A knob ('knob') shapes an input the organ receives: a light dot in the
@@ -210,7 +210,7 @@ const S = {
   smell : {keys : [{gate : .25, spread : .1, used : 200, lat : 35, lon : 25, width : .25}], chosen : 0, input : {rise : 80, height : .8, stop : 560}, probe : {lat : 35, lon : 25}},
   // The barbels' types: a place and width on the same map, and feel: their share of mere touch;
   // probe: what the thing at the tip tastes of, or a stone.
-  taste : {keys : [{gate : .3, lat : 35, lon : 155, width : .25, feel : .3}], chosen : 0, probe : {lat : 35, lon : 155}}
+  taste : {keys : [{gate : .2, lat : 35, lon : 155, width : .25, feel : .3}], chosen : 0, probe : {lat : 35, lon : 155}}
 };
 
 // ===== The model: the one source for every picture and number =====
@@ -330,7 +330,7 @@ const SENSE = {
   spermfull : {title : 'Füllung und Meldung ans Gehirn', colour : '#dfe8f2', tires : false, steps : 900},
   // The nose: each type meets of the sample what it takes of its scents; a new type starts at the sample.
   smell : {title : 'Signalverlauf bei der Duftprobe', used : 'an Duft gewöhnt', get colour() { return sampleColour(); }, tires : true, steps : 900, after : 120, shows : ['scentmap', 'smell', 'noselife'], row : null,
-           share : k => smellShare(k), fresh : () => ({...S.smell.probe, width : .25}), most : 3}
+           share : k => smellShare(k), fresh : () => ({...S.smell.probe, width : .25}), most : 4}
 };
 // The reward signal (David 14.11.): at each swallow the engine adds what the bite will give this
 // gut at its present pace to a flow that fades within some ten steps (take_nutrition,
@@ -703,7 +703,7 @@ const IRRITANT = 'M2 -8 L-4 1 H1 L-2 8 L5 -2 H0 Z';
 // tilt: the whole drawing is turned this many degrees to the right about `about`. tips: where a
 // cell's three receiving ends fork, from its body. From the flash tiny dots run into those forks,
 // the more the stronger the input: what the irritant sets free there.
-const NERVE = {somas : [[150, 72], [124, 64], [176, 82]], join : [170, 38], bundle : [[170, 38], [186, 22], [166, 18], [178, 8]], tilt : 14, about : [150, 62], flash : 104,
+const NERVE = {somas : [[150, 72], [124, 64], [176, 82], [100, 80]], join : [170, 38], bundle : [[170, 38], [186, 22], [166, 18], [178, 8]], tilt : 14, about : [150, 62], flash : 104,
                tips : [[-13, 5], [-7, 14], [4, 13]], speed : .0026, rate : .006, merge : .15, pulses : 4, dots : 7, dotSpeed : .004};
 const cubic = (a, b, c, d, t) => { const u = 1 - t; return [0, 1].map(n => u * u * u * a[n] + 3 * u * u * t * b[n] + 3 * u * t * t * c[n] + t * t * t * d[n]); };
 function nerves(svg, parent, id, cell, choose, gripX, tire) {
@@ -2032,7 +2032,7 @@ function showSperm() {
 //   in the egg both nostrils give the same; the difference between left and right grows after
 //   hatching.
 // ASSUMED for the picture: the sample between two scents is a mix of the scents near it (the
-// engine knows only the eight); three types here, the atelier allows four.
+// engine knows only the eight).
 const SNIFF = {sigma : [12, 168], wide : 4, mix : 15, snap : 12, hatch : .5,
               M : {height : 252, cx : 150, cy : 122, R : 106, ball : [5, 10], samples : 72, margin : 62},
               LIFE : {L : 44, R : 264, top : 14, base : 64, icons : 82, height : 96, beside : 16, whole : .015, least : .08}};
@@ -2065,6 +2065,7 @@ const sampleColour = (cell = S.smell) => { const mix = sampleMix(cell); return c
 // each type of cells as the patch in which it takes at least half, with a grip at its place and
 // one on its edge for its width; the sample as a red cross.
 function drawScentMap(id = 'scentmap', cell = S.smell, NOSE_PARTS = ['scentmap', 'smell', 'noselife'], words = {kind : 'nose-kind', verb : 'Riecht', sample : 'Duftprobe', stone : false, fresh : {}}) {
+  const MOST_TYPES = 4;
   const {svg, live} = picture(id, SNIFF.M.height), {cx, cy, R, ball, samples} = SNIFF.M, keys = cell.keys;
   const taken = SCENTS.map((_, j) => Math.max(...keys.map(k => typeShares(k)[j]))), best = keys.map(k => { const s = typeShares(k); return SCENTS[s.indexOf(Math.max(...s))][0]; });
   document.getElementById(words.kind).textContent = words.verb + ' ' + [...new Set(best)].join(', ');
@@ -2084,10 +2085,21 @@ function drawScentMap(id = 'scentmap', cell = S.smell, NOSE_PARTS = ['scentmap',
     // A scent near the picture's edge has its name on the inner side.
     const [x, y] = mapPoint(lat, lon), right = x < SNIFF.M.margin || (x >= cx && x <= 2 * cx - SNIFF.M.margin);
     el('circle', {cx : x, cy : y, r : ball[0] + (ball[1] - ball[0]) * taken[j], fill : colour, opacity : .35 + .65 * taken[j], 'pointer-events' : 'none'}, live);
-    txt(live, x + (right ? 14 : -14), y + 4, name, {'text-anchor' : right ? 'start' : 'end', fill : colour, style : 'font-size:10.5px', opacity : .55 + .45 * taken[j], 'pointer-events' : 'none'});
+    txt(live, x + (right ? 14 : -14), y + 4, name, {'text-anchor' : right ? 'start' : 'end', fill : colour, style : `font-size:10.5px;paint-order:stroke;stroke:${COLOUR.track};stroke-width:3px;stroke-linejoin:round`, opacity : .55 + .45 * taken[j], 'pointer-events' : 'none'});
   });
   el('path', {d : `M8 ${SNIFF.M.height - 13} l7 7 m0 -7 l-7 7`, stroke : '#ff5a4d', 'stroke-width' : 2, 'stroke-linecap' : 'round'}, live);
   txt(live, 20, SNIFF.M.height - 6, words.sample, {style : 'font-size:10.5px'});
+  // The sample: a red cross under the grips, its arms long enough to show round one that lies on it.
+  // A stone has no place among the scents: it lies beside the map, and the sample can lie on it.
+  const stoneAt = [2 * cx - 26, 22];
+  if (words.stone) {
+    el('path', {d : `M${stoneAt[0] - 9} ${stoneAt[1] + 4} l3 -9 l8 -3 l7 5 l-2 8 l-10 3 Z`, fill : STONE, opacity : cell.probe.stone ? 1 : .6, class : 'chip'}, live).addEventListener('pointerdown', () => { cell.probe = {...cell.probe, stone : true}; draw(NOSE_PARTS); });
+    txt(live, stoneAt[0], stoneAt[1] + 22, 'Stein', {'text-anchor' : 'middle', style : 'font-size:10.5px', fill : STONE});
+  }
+  const [sx, sy] = cell.probe.stone ? stoneAt : mapPoint(cell.probe.lat, cell.probe.lon), cross = el('g', {}, live);
+  el('circle', {cx : sx, cy : sy, r : 11, fill : 'transparent'}, cross);
+  el('path', {d : `M${sx - 8} ${sy - 8} l16 16 m0 -16 l-16 16`, stroke : '#ff5a4d', 'stroke-width' : 2.6, 'stroke-linecap' : 'round'}, cross);
+  drag(svg, cross, p => { cell.probe = words.stone && Math.hypot(p.x - stoneAt[0], p.y - stoneAt[1]) < 16 ? {...cell.probe, stone : true} : snapped(p); draw(NOSE_PARTS); }, id + 'sample', 'knob');
   // The types' grips: at their place; the chosen one's width on its patch's edge, and its (×).
   keys.forEach((k, i) => {
     const chosen = i === cell.chosen, [x, y] = mapPoint(k.lat, k.lon);
@@ -2101,20 +2113,11 @@ function drawScentMap(id = 'scentmap', cell = S.smell, NOSE_PARTS = ['scentmap',
       let lo = 0, hi = .8;
       for (let n = 0; n < 22; n++) { const mid = (lo + hi) / 2; if (scentHalf(mid) < wanted) lo = mid; else hi = mid; }
       k.width = lo; draw(NOSE_PARTS); }, id + 'typewidth');
-    if (keys.length > 1) chip(live, x + 11, y - 11, '×', () => { keys.splice(i, 1); cell.chosen = 0; }, NOSE_PARTS, true, 6);
+    // Its (×) stands on the side away from a scent's name.
+    const named = x < SNIFF.M.margin || (x >= cx && x <= 2 * cx - SNIFF.M.margin);
+    if (keys.length > 1) chip(live, x + (named ? -12 : 12), y - 12, '×', () => { keys.splice(i, 1); cell.chosen = 0; }, NOSE_PARTS, true, 6);
   });
-  // The sample: a red cross, above the grips so that it shows where it lies on one.
-  // A stone has no place among the scents: it lies beside the map, and the sample can lie on it.
-  const stoneAt = [2 * cx - 26, 22];
-  if (words.stone) {
-    el('path', {d : `M${stoneAt[0] - 9} ${stoneAt[1] + 4} l3 -9 l8 -3 l7 5 l-2 8 l-10 3 Z`, fill : STONE, opacity : cell.probe.stone ? 1 : .6, class : 'chip'}, live).addEventListener('pointerdown', () => { cell.probe = {...cell.probe, stone : true}; draw(NOSE_PARTS); });
-    txt(live, stoneAt[0], stoneAt[1] + 22, 'Stein', {'text-anchor' : 'middle', style : 'font-size:10.5px', fill : STONE});
-  }
-  const [sx, sy] = cell.probe.stone ? stoneAt : mapPoint(cell.probe.lat, cell.probe.lon), cross = el('g', {}, live);
-  el('circle', {cx : sx, cy : sy, r : 9, fill : 'transparent'}, cross);
-  el('path', {d : `M${sx - 5} ${sy - 5} l10 10 m0 -10 l-10 10`, stroke : '#ff5a4d', 'stroke-width' : 2.6, 'stroke-linecap' : 'round'}, cross);
-  drag(svg, cross, p => { cell.probe = words.stone && Math.hypot(p.x - stoneAt[0], p.y - stoneAt[1]) < 16 ? {...cell.probe, stone : true} : snapped(p); draw(NOSE_PARTS); }, id + 'sample', 'knob');
-  chip(live, 2 * cx - 12, SNIFF.M.height - 10, '+', () => { keys.push({gate : .25, spread : .1, used : 200, lat : cell.probe.lat, lon : cell.probe.lon, width : .25, ...words.fresh}); cell.chosen = keys.length - 1; }, NOSE_PARTS, keys.length < 3, 7);
+  chip(live, 2 * cx - 12, SNIFF.M.height - 10, '+', () => { keys.push({gate : .25, spread : .1, used : 200, lat : cell.probe.lat, lon : cell.probe.lon, width : .25, ...words.fresh}); cell.chosen = keys.length - 1; }, NOSE_PARTS, keys.length < MOST_TYPES, 7);
 }
 // Life cycle: across, the fish's maturity. A type's band: from where its cells work to where
 // they die (a grip at each end). In the egg the cells smell already, both nostrils the same; from
@@ -2159,13 +2162,14 @@ function drawNoseLife() {
 // No time here: a tip touches or does not.
 const BARB = {least : 1, most : 16, spread : .45, short : .22, long : .35, half : 3, reach : 9, hatch : .5,
               H : {height : 150, mouthX : 150, mouthY : 78, radius : 150},
-              B : {L : 70, R : 280, top : 12, row : 26, height : 100},
+              B : {L : 84, R : 280, top : 14, row : 26},
               LIFE : {L : 44, R : 264, top : 14, base : 64, icons : 82, height : 96, beside : 16, whole : .015, least : .08}};
 const BARB_PARTS = ['barbels', 'tastemap', 'tastes', 'barblife'];
 const BA = {cells : 3, thing : {x : 44, y : 44}};
 const barbLength = cells => BARB.H.radius * (BARB.short + BARB.long * Math.sqrt(cells) / (Math.sqrt(cells) + BARB.half));
 const barbTip = (side, cells = BA.cells) => { const {mouthX, mouthY} = BARB.H, long = barbLength(cells); return [mouthX - long * Math.cos(BARB.spread), mouthY + side * (10 + long * Math.sin(BARB.spread))]; };
-const barbTouches = () => [-1, 1].some(side => { const [x, y] = barbTip(side); return Math.hypot(x - BA.thing.x, y - BA.thing.y) <= BARB.reach + 7; });
+// The side whose tip touches the thing (-1 above, 1 below), or 0: each side's cells feel their own tip.
+const barbTouches = () => [-1, 1].find(side => { const [x, y] = barbTip(side); return Math.hypot(x - BA.thing.x, y - BA.thing.y) <= BARB.reach + 7; }) ?? 0;
 // What a type's cells get: taste of the thing touched, and its mere touch.
 function barbStimulus(k) {
   const touched = barbTouches() ? 1 : 0, taste = Math.min(1, smellShare(k, S.taste)) * touched;
@@ -2179,11 +2183,13 @@ function buildBarbels(fixed) {
 }
 function drawBarbels() {
   const {svg, live} = picture('barbels', BARB.H.height, buildBarbels), {mouthX, mouthY} = BARB.H, touching = barbTouches();
-  txt(live, 4, 10, touching ? 'berührt' : 'berührt nichts', {style : 'font-size:10px'});
   for (const side of [-1, 1]) {
     const [x, y] = barbTip(side), from = [mouthX + 8, mouthY + side * 10];
     el('path', {d : `M${from[0]} ${from[1]} Q${(from[0] + x) / 2} ${(from[1] + y) / 2 + side * 6} ${x} ${y}`, stroke : COLOUR.icon, 'stroke-width' : 3, fill : 'none', 'stroke-linecap' : 'round'}, live);
-    el('circle', {cx : x, cy : y, r : BARB.reach, fill : 'none', stroke : COLOUR.icon, 'stroke-dasharray' : '2 3', opacity : .6}, live);
+    // Its reach at the tip: drawn full where it touches the thing.
+    el('circle', {cx : x, cy : y, r : BARB.reach, fill : 'none', stroke : touching === side ? sampleColour(S.taste) : COLOUR.icon, 'stroke-width' : touching === side ? 2 : 1, 'stroke-dasharray' : touching === side ? 'none' : '2 3', opacity : touching === side ? 1 : .6}, live);
+    // A stroke across the barbel for each of its cells.
+    for (let c = 1; c <= BA.cells; c++) { const t = c / (BA.cells + 1), mx = (from[0] + x) / 2, my = (from[1] + y) / 2 + side * 6, bx = (1 - t) ** 2 * from[0] + 2 * t * (1 - t) * mx + t * t * x, by = (1 - t) ** 2 * from[1] + 2 * t * (1 - t) * my + t * t * y; el('path', {d : `M${bx - 1.5} ${by - 4} l3 8`, stroke : COLOUR.track, 'stroke-width' : 1.2}, live); }
   }
   // The cells: the grip at the upper tip, pulled out for more of them.
   const [gx, gy] = barbTip(-1);
@@ -2194,21 +2200,25 @@ function drawBarbels() {
   // The thing a tip may touch: in the colour of what it tastes of, pushed about freely.
   drag(svg, el('circle', {cx : BA.thing.x, cy : BA.thing.y, r : 7, fill : sampleColour(S.taste)}, live), p => { BA.thing = {x : clamp(p.x, 8, 292), y : clamp(p.y, 20, BARB.H.height - 8)}; draw(BARB_PARTS); }, 'barbthing', 'knob');
 }
-// What each type reports of the thing at the tip: its taste (in the taste's colour) and, beside
-// it, its mere touch (light). The dashed mark is the type's threshold; the grip between taste and
-// touch sets how much of the cell is given to touch.
+// For each type a row: the stimulus the thing at the tip gives its cells, its taste (in the
+// taste's colour) and beside it its mere touch (light), with the type's threshold as a dashed
+// mark; before the row the type's nerve cell with what it reports of that (answer, as every
+// sense's cells). The round grip sets taste against touch, the square one the threshold.
 function drawTastes() {
-  const keys = S.taste.keys, {L, R, top, row} = BARB.B, {svg, live} = picture('tastes', top + row * 3 + 22), X = v => L + (R - L) * clamp(v, 0, 1), colour = sampleColour(S.taste);
-  txt(live, L, top + row * 3 + 16, 'nichts'); txt(live, R, top + row * 3 + 16, 'voll', {'text-anchor' : 'end'});
+  const keys = S.taste.keys, {L, R, top, row} = BARB.B, {svg, live} = picture('tastes', top + row * keys.length + 22), X = v => L + (R - L) * clamp(v, 0, 1), colour = sampleColour(S.taste);
+  txt(live, L, top + row * keys.length + 10, 'nichts'); txt(live, R, top + row * keys.length + 10, 'voll', {'text-anchor' : 'end'});
   keys.forEach((k, i) => {
     const chosen = i === S.taste.chosen, y = top + row * i, got = barbStimulus(k), sum = got.taste + got.touch, pick = () => { S.taste.chosen = i; draw(BARB_PARTS); };
     el('rect', {x : L, y, width : R - L, height : row - 8, rx : 4, fill : COLOUR.track, stroke : chosen ? keyColour(i) : COLOUR.trackEdge, 'stroke-width' : chosen ? 1.8 : 1, class : 'chip'}, live).addEventListener('pointerdown', pick);
     el('rect', {x : L, y : y + 1, width : X(got.taste) - L, height : row - 10, rx : 3, fill : colour, opacity : .85, 'pointer-events' : 'none'}, live);
     el('rect', {x : X(got.taste), y : y + 1, width : X(sum) - X(got.taste), height : row - 10, rx : 3, fill : COLOUR.line, opacity : .55, 'pointer-events' : 'none'}, live);
-    el('circle', {cx : L - 16, cy : y + row / 2 - 4, r : 6, fill : keyColour(i), stroke : chosen ? COLOUR.chosen : COLOUR.unchosen, 'stroke-width' : chosen ? 2.5 : 1, class : 'chip'}, live).addEventListener('pointerdown', pick);
+    // The type's nerve cell before its row: what it reports of this stimulus, as a flash as big as the report.
+    const cy = y + row / 2 - 4, report = answer(sum, k.gate, 0);
+    el('path', {d : `M${L - 16} ${cy} q-10 -2 -16 -10 M${L - 16} ${cy} l8 0`, stroke : keyColour(i), 'stroke-width' : 1.4, fill : 'none', 'stroke-linecap' : 'round'}, live);
+    el('circle', {cx : L - 16, cy, r : 6, fill : keyColour(i), stroke : chosen ? COLOUR.chosen : COLOUR.unchosen, 'stroke-width' : chosen ? 2.5 : 1, class : 'chip'}, live).addEventListener('pointerdown', pick);
+    if (report > 0) el('path', {d : IRRITANT, fill : COLOUR.line, transform : `translate(${L - 42} ${cy - 8}) scale(${(.45 + .9 * report).toFixed(2)})`}, live);
     // It reports where its stimulus passes its threshold.
     el('path', {d : `M${X(k.gate)} ${y - 2} v${row - 4}`, stroke : keyColour(i), 'stroke-dasharray' : '3 2', 'stroke-width' : 1.6}, live);
-    if (sum > k.gate) txt(live, L - 30, y + row / 2, '⚡', {'text-anchor' : 'end', fill : COLOUR.line, style : 'font-size:11px'});
     if (!chosen) return;
     drag(svg, el('rect', {x : X(k.gate) - 4, y : y + row - 12, width : 8, height : 10, rx : 2, style : `fill:${keyColour(i)}`}, live), p => { k.gate = clamp((p.x - L) / (R - L), .03, .97); draw(BARB_PARTS); }, 'tastegate');
     // Taste against touch: the grip on the row's upper edge, from all taste (left) to all touch.
@@ -2353,7 +2363,7 @@ const PAINT = {fish : drawFish, yield : drawYield, bars : drawBars, life : drawL
                eggs : drawEggs, eggfill : drawEggFill, eggfull : drawEggFull, egglife : drawEggLife,
                sperm : drawSperm, spermfill : drawSpermFill, spermfull : drawSpermFull, spermlife : drawSpermLife,
                scentmap : () => drawScentMap(), smell : () => drawSense('smell'), noselife : drawNoseLife,
-               barbels : drawBarbels, tastemap : () => drawScentMap('tastemap', S.taste, BARB_PARTS, {kind : 'barb-kind', verb : 'Schmeckt', sample : 'was die Spitze berührt', stone : true, fresh : {feel : .3}}), tastes : drawTastes, barblife : drawBarbLife};
+               barbels : drawBarbels, tastemap : () => drawScentMap('tastemap', S.taste, BARB_PARTS, {kind : 'barb-kind', verb : 'Schmeckt', sample : 'was die Spitze berührt', stone : true, fresh : {feel : .3, gate : .3}}), tastes : drawTastes, barblife : drawBarbLife};
 // The senses first: the fish's stomach follows the fullness input.
 for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife']) dirty.add(part);
 repaint();
