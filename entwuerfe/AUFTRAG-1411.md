@@ -93,3 +93,7 @@ Regionen (Tectum, Motorik, Körperzustand usw.) sind keine Organe dieses Auftrag
 - **Kein Muster:** Wer ein Panel sieht, das aussieht wie das vorige, sagt es.
 - **Keine Frage an David** zu Dingen, die wir selbst nach Pro und Contra entscheiden können (David 04:06).
 - **Zeitrahmen:** Um 10:00 und um 12:00 kurze Standmeldung an David. Um 14:00 ist Schluss.
+
+## Bekannte Fehler, für die Reihe vorgemerkt
+
+- **Mittiger Muskel → „Lenken“** (Claude 08:44): `sideGraphic` (`effectors.js:161`) bricht ab, weil die Mitte keine Flossengröße hat. Der Inspektor bleibt leer. Gehört zu Schritt 10 (Muskel); dort klären, ob ein mittiger Muskel lenken darf.
