@@ -228,11 +228,8 @@ async function checkDraggedInspector(model, capabilities, root) {
       const source =
           JSON.parse(readFileSync(join(root, 'genomes/entwuerfe', fish + '.fish.json'), 'utf8'));
       const cases = [
-        [ 'eggs', '[data-sac]' ], [ 'nose', '[data-sense-field]' ],
-        [ 'muscle', '[data-effector-graphic]' ], [ 'gut', '[data-effector-graphic]' ],
-        [ 'eye', '[data-spectrum]' ], [ 'touch', '[data-skin-field]' ],
-        [ 'motor', '[data-region-picture]' ], [ 'spine', '[data-region-picture]' ],
-        [ 'gland', '[data-vector-pad]' ], [ 'choice', '[data-response]', true ],
+        [ 'eye', '[data-spectrum]' ], [ 'motor', '[data-region-picture]' ],
+        [ 'spine', '[data-region-picture]' ], [ 'choice', '[data-response]', true ],
         [ 'choice', '[data-nerve-tissue]', true ], [ 'choice', '[data-variation]', true ],
         [ 'choice', '[data-preview-bars]', true ]
       ];
@@ -374,57 +371,6 @@ async function checkProbeSettling(model, capabilities, root) {
           assert.equal(count, initial, 'An unchanged probe requests no further design');
         }
       }
-}
-
-async function checkGonadRoom(model, sites, capabilities) {
-  const near = (a, b) => Math.abs(a - b) < 1e-9;
-  const {gonadStore, gonadGraphic, sacPatch} = await import('../ui/studio/view/sacs.js');
-  const {DIGESTION} = await import('../ui/schema.js');
-  const added = model.addOrgan(model.newDocument('Gonad room'), 'eggs', sites, {x : 708, y : 380});
-  const small = model.setOrganNodes(added.document, added.organId, 2, sites);
-  const gut = model.addOrgan(small, 'gut', sites, {x : 650, y : 300});
-  assert.ok(gut);
-  const organ = model.findOrgan(gut.document, added.organId);
-  const wheel = {
-    ...capabilities,
-    gonads : {...capabilities.gonads, eggs : {...capabilities.gonads.eggs, perCell : 5}}
-  };
-  const state = (length, adultScale = 1, stale = false) => ({
-    document : model.setGutLength(gut.document, length),
-    sites,
-    capabilities : wheel,
-    stale,
-    report : {adultScale, eggMinimum : 17, eggIncubation : 111},
-    anatomy : {budget : {yolk : {organ : 20, store : 20}}}
-  });
-  const short = state(0), long = state(1);
-  assert.ok(gonadStore(short, organ).spawn > 17 && gonadStore(long, organ).spawn < 17,
-            'The long gut turns an otherwise viable egg into a food egg at the same motor count');
-  assert.doesNotMatch(gonadGraphic(short, organ), /class="aid-sac-egg food"/);
-  assert.match(gonadGraphic(long, organ), /class="aid-sac-egg food"/);
-  for (const stale of [false, true])
-    for (const adultScale of [.5, 1, 2]) {
-      const full = state(0, adultScale, stale), cramped = state(1, adultScale, stale);
-      const normal = gonadStore(full, organ), less = gonadStore(cramped, organ);
-      const scale = stale ? 1 : adultScale;
-      assert.ok(near(normal.room, 20 * scale) &&
-                    near(less.room, 20 * scale * (1 - DIGESTION.belly)),
-                'Capacity follows the current gut even while an older anatomy report is shown');
-      assert.equal(less.own.fill, normal.own.fill, 'The gut reduces room, not the transfer rate');
-      assert.equal(less.minimum, stale ? null : 17,
-                   'Old incubation verdicts stay hidden after edits');
-      const sperm = {...organ, type : 'sperm'};
-      assert.deepEqual(gonadStore(full, sperm), gonadStore(cramped, sperm),
-                       'The sperm store is not reduced by the gut');
-      for (const current of [full, cramped]) {
-        const picture = gonadGraphic(current, organ);
-        const grip = picture.match(/data-sac-handle="cells"[^>]*cy="([^"]+)"/);
-        const height = picture.match(/viewBox="0 0 [^ ]+ ([^"]+)"/);
-        assert.ok(grip && height);
-        assert.equal(sacPatch(current, organ, Number(grip[1]) / Number(height[1])).nodes, 2,
-                     'Picking up the capacity handle preserves its growth cells');
-      }
-    }
 }
 
 async function checkLightSnapshots(model, sites) {
@@ -1205,65 +1151,113 @@ async function checkBloodReceptors(model, capabilities) {
 
 async function checkGonadInspector(model, capabilities) {
   const {OrganStudio} = await import('../ui/studio/controller.js');
-  const {gonadStore} = await import('../ui/studio/view/sacs.js');
-  const {inspector, organSettingsBlock} = await import('../ui/studio/view/panels.js');
-  const {HORMONE_EFFECT} = await import('../ui/schema.js');
-  for (const type of ['eggs', 'sperm']) {
-    const placed =
-        model.addOrgan(model.newDocument(type), type, capabilities.sites, {x : 708, y : 380});
-    let markup = '', redraws = 0;
-    const block = {
-      dataset : {senseBlock : placed.organId},
-      set outerHTML(value) {
-        markup = value;
-        ++redraws;
-      }
-    };
-    const studio = new OrganStudio({
-      querySelectorAll : selector =>
-          selector === '[data-sense-block]' && markup.includes('data-sense-block=') ? [ block ] : []
-    });
-    Object.assign(studio.state, {
-      document : placed.document,
-      sites : capabilities.sites,
-      capabilities,
-      selected : {kind : 'organ', id : placed.organId}
-    });
-    const organ = model.findOrgan(placed.document, placed.organId);
-    markup = organSettingsBlock(studio.state, organ);
-    for (const threshold of [.1, .7]) {
-      const pressure = organ.centers.find(c => c.key === 'pressure');
-      studio.state.document = model.updateCenter(studio.state.document, pressure.id, {threshold});
-      studio.refreshSense();
+  const {inspector} = await import('../ui/studio/view/panels.js');
+  class LiveElement extends EventTarget {
+    constructor(tag = 'div') {
+      super();
+      this.tag = tag;
+      this.attributes = new Map();
+      this.classList = {
+        add : name => this.setAttribute('class', `${this.getAttribute('class') ?? ''} ${name}`)
+      };
+      this.dataset = {};
+      this.style = {};
+      this.children = [];
     }
-    assert.equal(redraws, 2, type + ': repeated pressure changes retain their redraw target');
-    const growth = organ.centers.find(c => c.key === 'growth');
-    studio.refreshInspector = () => assert.fail('Dragging does not rebuild the whole inspector');
-    studio.draftDesign = (doc, batch, redraw = 'refreshDragged') => {
-      studio.state.document = doc;
-      studio[redraw]();
-    };
-    for (const fx of [.7, .8])
-      studio.effectorPointer({
-        id : organ.id,
-        name : 'command:gate',
-        marks : {frame : '300,76', scale : '1', center : growth.id}
-      },
-                             fx, .5);
-    assert.equal(redraws, 4, type + ': successive command changes redraw the organ directly');
-    for (const previewInput of [0, -1, 1]) {
-      const state = {...studio.state, previewInput};
-      assert.doesNotMatch(inspector(state), /NaN|Infinity|undefined/,
-                          type + ': a stopped filling drive remains drawable');
+    setAttribute(name, value) { this.attributes.set(name, String(value)); }
+    getAttribute(name) { return this.attributes.get(name); }
+    appendChild(child) {
+      this.children.push(child);
+      child.parentNode = this;
     }
-    let stopped = studio.state.document;
-    for (const c of organ.centers.filter(c => c.key === 'growth'))
-      stopped = model.updateReceptor(stopped, c.id, HORMONE_EFFECT.output,
-                                     {active : 1, baseline : -1, sensitivity : 0});
-    const state = {...studio.state, document : stopped};
-    assert.equal(gonadStore(state, model.findOrgan(stopped, organ.id)).steps, Infinity);
-    assert.doesNotMatch(inspector(state), /NaN|Infinity|undefined/,
-                        'A substance may stop filling without breaking the inspector');
+    replaceChildren(...children) {
+      this.children = [];
+      children.forEach(child => this.appendChild(child));
+    }
+    get firstChild() { return this.children[0]; }
+    get childElementCount() { return this.children.length; }
+  }
+  const document = globalThis.document, window = globalThis.window;
+  const request = globalThis.requestAnimationFrame, cancel = globalThis.cancelAnimationFrame;
+  const frames = new Map();
+  let nextFrame = 0, active;
+  globalThis.requestAnimationFrame = callback => {
+    frames.set(++nextFrame, callback);
+    return nextFrame;
+  };
+  globalThis.cancelAnimationFrame = id => frames.delete(id);
+  const flush = () => {
+    const pending = [...frames.values() ];
+    frames.clear();
+    pending.forEach(callback => callback(16));
+  };
+  const svgElement = (_, tag) => Object.assign(new LiveElement(tag), {
+    createSVGPoint : () => ({matrixTransform() { return this; }}),
+    getScreenCTM : () => ({inverse : () => null})
+  });
+  globalThis.document = {createElement : tag => new LiveElement(tag), createElementNS : svgElement};
+  globalThis.window = new EventTarget();
+  const pointer = (target, name, x, y) => {
+    const event = new Event(name, {cancelable : true});
+    Object.assign(event, {clientX : x, clientY : y});
+    target.dispatchEvent(event);
+  };
+  try {
+    for (const type of ['eggs', 'sperm']) {
+      const placed =
+          model.addOrgan(model.newDocument(type), type, capabilities.sites, {x : 708, y : 380});
+      const host = new LiveElement();
+      host.dataset = {live : type, liveOrgan : placed.organId};
+      const studio = new OrganStudio(
+          {querySelectorAll : selector => selector === '[data-live]' ? [ host ] : []});
+      for (const method of ['refreshScene', 'refreshHeader', 'refreshTools', 'refreshToolLibrary',
+                            'persist', 'requestDesign'])
+        studio[method] = () => {};
+      studio.refreshInspector = () => studio.refreshLive();
+      Object.assign(studio.state, {
+        document : placed.document,
+        sites : capabilities.sites,
+        capabilities,
+        selected : {kind : 'organ', id : placed.organId}
+      });
+      assert.ok(inspector(studio.state).includes(`data-live="${type}"`));
+      studio.refreshLive();
+      active = host.firstChild;
+      active.isConnected = true;
+      const live = active.children.find(child => child.tag === 'svg').children.at(-1);
+      const grip = live.children.find(
+          child => child.getAttribute('class')?.split(' ').includes('aid-live-grip'));
+      assert.ok(grip, `${type}: mounted filling grip`);
+      const x = Number(grip.getAttribute('x')) + Number(grip.getAttribute('width')) / 2;
+      const y = Number(grip.getAttribute('y')) + Number(grip.getAttribute('height')) / 2 + 2;
+      const copies = () => model.findOrgan(studio.state.document, placed.organId)
+                               .centers.find(c => c.key === 'growth')
+                               .copies;
+      const initial = copies();
+      pointer(grip, 'pointerdown', x, y);
+      pointer(globalThis.window, 'pointermove', x + 1, y);
+      assert.equal(copies(), initial, `${type}: picking up the edge does not change filling`);
+      pointer(globalThis.window, 'pointermove', x, y - 20);
+      flush();
+      assert.ok(copies() > initial, `${type}: drag changes filling`);
+      pointer(globalThis.window, 'pointermove', x, y + 20);
+      flush();
+      assert.ok(copies() < initial, `${type}: drag survives the redraw and can reverse`);
+      pointer(globalThis.window, 'pointerup', x, y + 20);
+      assert.equal(studio.undoHistory.length, 1, `${type}: one undo entry for the drag`);
+      assert.ok(studio.stepHistory('undo'));
+      assert.equal(copies(), initial, `${type}: undo restores filling`);
+      active.isConnected = false;
+      flush();
+    }
+  } finally {
+    if (active)
+      active.isConnected = false;
+    flush();
+    globalThis.document = document;
+    globalThis.window = window;
+    globalThis.requestAnimationFrame = request;
+    globalThis.cancelAnimationFrame = cancel;
   }
 }
 
@@ -1272,7 +1266,7 @@ async function checkInspectorSubstances(model, capabilities, clicks) {
   const {newFishDocument} = await import('../ui/studio/canvas_placement.js');
   const {inspector} = await import('../ui/studio/view/panels.js');
   const {HORMONE_EFFECT, HORMONES} = await import('../ui/schema.js');
-  const {receptorBody, glandProfile, hormonePad} = await import('../ui/studio/view/substances.js');
+  const {receptorBody} = await import('../ui/studio/view/substances.js');
   const root = {querySelector : () => null, querySelectorAll : () => []};
   const studio = new OrganStudio(root), sites = capabilities.sites;
   Object.assign(
@@ -1338,19 +1332,6 @@ async function checkInspectorSubstances(model, capabilities, clicks) {
   studio.refreshGraphics();
   assert.ok(replacement.includes('data-organ-settings="' + organ.id + '"'));
   root.querySelectorAll = () => [];
-  for (const [kind, draw] of [[ 'gland', glandProfile ], [ 'blood', hormonePad ]]) {
-    const placed = model.addOrgan(model.newDocument(kind), kind, sites, {x : 550, y : 300});
-    const organ = model.findOrgan(placed.document, placed.organId), center = organ.centers[0];
-    studio.state.document = placed.document;
-    studio.state.selected = {kind : 'organ', id : organ.id};
-    const chosen = studio.state.selected;
-    assert.match(draw(studio.state, organ, center), /data-wheel-substance="1"/);
-    click('wheel-substance', 1, {centerId : center.id});
-    const updated = model.findCenter(studio.state.document, center.id).center;
-    assert.deepEqual([ updated.q1, updated.q2 ], model.wheelPlace(capabilities, 1));
-    assert.equal(studio.state.document.substances[0].index, 1);
-    assert.deepEqual(studio.state.selected, chosen);
-  }
 }
 
 // The life cycle of a cell: ticks, choices and grips change the cell's three receptors as the
@@ -3109,6 +3090,11 @@ async function checkHormoneSystems(model, capabilities) {
     console.log('Atelier: native Reserve- und Geruchsverläufe mit fortlaufendem Lernen: OK');
     return;
   }
+  await checkGonadInspector(model, sitesResult);
+  if (process.argv.includes('--gonad-inspector')) {
+    console.log('Ei-/Sameninspektor: Greifen, Ziehen, Loslassen und Rückgängig: OK');
+    return;
+  }
   await checkDraggedInspector(model, sitesResult, root);
   await checkAsyncActions(model, sitesResult);
   await checkProbeSettling(model, sitesResult, root);
@@ -3126,11 +3112,6 @@ async function checkHormoneSystems(model, capabilities) {
   await checkBloodReceptors(model, sitesResult);
   if (process.argv.includes('--blood-receptors')) {
     console.log('Atelier: neun Blutstoffe, Zellleben, Lernen und Vorschaugriffe: OK');
-    return;
-  }
-  await checkGonadInspector(model, sitesResult);
-  if (process.argv.includes('--gonad-inspector')) {
-    console.log('Ei-/Sameninspektor: stillstehender Vorrat und wiederholtes Ziehen: OK');
     return;
   }
   if (process.argv.includes('--spine') || process.argv.includes('--fin') ||
@@ -3684,22 +3665,6 @@ async function checkHormoneSystems(model, capabilities) {
   const profile = model.findOrgan(doc, id).field.profiles[0].id;
   doc = model.updateField(
       doc, id, {profile : {id : profile, q1 : -1, qwidth : .08, q2 : -1, threshold : -.8}}, sites);
-  {
-    let edited = null;
-    const studio = {
-      state : {document : doc, selected : {id}, visionProfile : profile},
-      editField : (organ, patch) => { edited = model.updateField(doc, organ, patch, sites); }
-    };
-    const choose = clicks.find(([ selector ]) => selector === '[data-vision-polarity]')[1];
-    choose(studio, {dataset : {visionPolarity : String(CONTRAST_POLARITY.dark)}});
-    const groups =
-        model.compileDocument(edited, sites).groups.filter(g => g.name.startsWith('eye:'));
-    assert.ok(groups.length && groups.every(g => g.polarity === CONTRAST_POLARITY.dark),
-              'The dark button makes both eyes report what is darker than its surround');
-    assert.ok(model.compileDocument(doc, sites)
-                  .groups.every(g => g.polarity === CONTRAST_POLARITY.bright),
-              'New cells report what is brighter than their surround');
-  }
   const retinalRelaySite = sites.find(s => s.zone === 2 && !s.outer && s.v >= .5 && s.w === 0);
   const relay = model.addNeuron(doc, 'relay', sites,
                                 geometry.sitePoint(retinalRelaySite, geometry.NERVE_ROLE));
@@ -3983,11 +3948,6 @@ async function checkHormoneSystems(model, capabilities) {
           spectrum.spectrumPatch(tuned, 'centre', spectrum.huePoint(tuning.HUE_CIRCLE / 2, 1)).q1) <
       1e-9);
   // The pictures that replaced sliders set their values from where the handle is let go.
-  const visionView = await import('../ui/studio/view/vision.js');
-  assert.equal(visionView.sensitivityShare({x : 0, y : 0}), 0,
-               'The left end of the light ramp answers the faintest light');
-  assert.equal(visionView.sensitivityShare({x : 1e3, y : 0}), 1,
-               'The right end answers only bright light');
   const developmentView = await import('../ui/studio/view/development.js');
   assert.deepEqual(developmentView.previewPatch('situation', {x : 0, y : 0}, {}),
                    {maturity : 0, input : 1}, 'The young corner holds the strongest input');
@@ -4002,16 +3962,6 @@ async function checkHormoneSystems(model, capabilities) {
                1, 'The wedge drawn out to its end allows the strongest contact');
   assert.equal(
       planView.contactCapacityPatch('electrical_limit', {x : 0, y : 0}, {}).electrical_limit, 0);
-  const scents = await import('../ui/studio/view/scents.js'), M = scents.SCENT_MAP;
-  const tunedAt = p => scents.scentMapTuning(p.x / M.size, p.y / M.height);
-  for (let k = 0; k < TUNING.scent_latitudes.length; ++k) {
-    const aim = tuning.scentTuning(k), affinity = tuning.scentAffinities(aim.q1, aim.q2, .25);
-    assert.equal(affinity.indexOf(Math.max(...affinity)), k);
-    const back = tunedAt(scents.scentMapPoint(aim.q1, aim.q2));
-    assert.ok(Math.abs(back.q1 - aim.q1) < 1e-9 && Math.abs(back.q2 - aim.q2) < 1e-9);
-  }
-  const between = {q1 : .3, q2 : -.2}, back = tunedAt(scents.scentMapPoint(between.q1, between.q2));
-  assert.ok(Math.abs(back.q1 - between.q1) < 1e-9 && Math.abs(back.q2 - between.q2) < 1e-9);
   const half = tuning.tuningHalfOffset(.3);
   assert.ok(Math.abs(tuning.tuningAffinity(half, .3) - .5) < 1e-9);
   const pigmentSite =
@@ -4020,9 +3970,7 @@ async function checkHormoneSystems(model, capabilities) {
   assert.equal(model.findOrgan(pigment.document, pigment.organId).pair, null);
   const pigmentPanel = panels.inspector(
       {...state, document : pigment.document, selected : {kind : 'organ', id : pigment.organId}});
-  assert.match(pigmentPanel, /data-pigment-wheel=/);
-  assert.match(pigmentPanel, /data-pigment-amount=/);
-  assert.match(pigmentPanel, /data-add-type=/);
+  assert.match(pigmentPanel, /data-live="pigment"/);
   {
     const barbelSite =
         sites.find(s => eligible(ORGANS.find(o => o.key === 'barbels').centers[0], s));
@@ -4031,8 +3979,7 @@ async function checkHormoneSystems(model, capabilities) {
     assert.equal(cell.field, .5, 'A new barbel tip both tastes and feels');
     const barbelPanel = panels.inspector(
         {...state, document : barbels.document, selected : {kind : 'center', id : cell.id}});
-    assert.equal((barbelPanel.match(/data-set-field="field"/g) ?? []).length, 3);
-    assert.match(barbelPanel, /class="active" data-set-field="field" data-value="0.5"/);
+    assert.match(barbelPanel, /data-live="barbels"/);
   }
   const skinOrgan = model.findOrgan(pigment.document, pigment.organId);
   const kinds =
@@ -4853,15 +4800,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.deepEqual(driven('beat'), [ 'swim', 'swim' ], 'The beat reaches the tail of both sides');
     assert.deepEqual(driven('pump'), [ 'bite', 'bite', 'mouth', 'mouth' ],
                      'The pump opens and closes the whole mouth');
-    // The balance organ's hair direction is dragged in a picture: toward the head, the flank or
-    // the tail; both sides take it, and the plan carries it to the engine as quality 1.
-    const {hairPatch, hairVector} = await import('../ui/studio/view/balance.js');
+    // Both sides carry the linked hair direction into the native plan.
     const near = (a, b) => Math.abs(a - b) < 1e-9;
-    assert.ok(near(hairPatch(0, .5).q1, -1) && near(hairPatch(104 / 300, 1).q1, 0) &&
-                  near(hairPatch(1, .5).q1, 1),
-              'The hair follows the pointer from the head over the flank to the tail');
-    assert.ok(near(hairVector(0, 1).y, 1) && near(hairVector(0, -1).y, -1),
-              'A flank hair points to its own side');
     const balanced =
         model.addOrgan(model.newDocument('Lage'), 'balance', sites, {x : 300, y : 300});
     const sides = [ balanced.organId, model.findOrgan(balanced.document, balanced.organId).pair ];
@@ -4904,31 +4844,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.deepEqual(keys.filter(k => k !== 'growth'),
                      [ 'release', 'release', 'pressure', 'pressure' ]);
     assert.equal(model.compileDocument(fertile, sites).groups.length, keys.length);
-    const sacs = await import('../ui/studio/view/sacs.js');
-    await checkGonadRoom(model, sites, sitesResult);
-    const initial = model.findOrgan(ovary.document, ovary.organId);
-    const initialStore =
-        sacs.gonadStore({document : ovary.document, sites, capabilities : sitesResult}, initial);
-    assert.equal(initialStore.room, initialStore.own.most,
-                 'Pressure cells do not subtract chambers from the ovary storage ceiling');
     const fewer = model.setOrganNodes(fertile, gonad.id, 2, sites);
     assert.deepEqual(model.findOrgan(fewer, gonad.id).centers.map(c => c.key).sort(),
                      [ 'growth', 'growth', 'pressure', 'pressure', 'release', 'release' ]);
-    const small = model.findOrgan(fewer, gonad.id);
-    const sacState = {document : fewer, sites, capabilities : sitesResult};
-    const store = sacs.gonadStore(sacState, small);
-    assert.equal(store.room, store.own.perCell * 4);
-    assert.ok(Number.isFinite(store.steps),
-              'The plan shows filling for an assumed input before CPPN compilation');
-    assert.equal(sacs.gonadStore({...sacState, previewInput : 0}, small).steps, Infinity);
-    const sac = sacs.gonadGraphic(sacState, small);
-    assert.equal(sac.match(/aid-sac-chamber growth"/g).length, 2);
-    assert.ok(sac.includes('data-sac-handle="cells"'));
-    assert.ok(sacs.sacPatch(sacState, small, .2).nodes > 2);
-    assert.equal(sacs.sacPatch(sacState, small, .9).nodes, 2);
     const testis =
         model.addOrgan(model.newDocument('Spermien'), 'sperm', sites, {x : 708, y : 380});
-    const testisState = {document : testis.document, sites, capabilities : sitesResult};
     const testisOrgan = model.findOrgan(testis.document, testis.organId);
     for (const key of ['growth', 'release', 'pressure'])
       assert.deepEqual(new Set(testisOrgan.centers.filter(c => c.key === key)
@@ -4953,18 +4873,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
           model.wireContactPairs(wired, wired.wires.find(w => w.id === gonadWire.wireId), sites),
           new Set(links.map(c => c.from + ':' + c.to)));
     }
-    assert.match(sacs.gonadGraphic(testisState, model.findOrgan(testis.document, testis.organId)),
-                 /aid-gonad-graphic/);
-    // What the store makes is told in the tooltip of its release cells.
-    const facts = state => sacs.gonadGraphic(state, small);
-    assert.equal(sacs.gonadStore(sacState, small).minimum, null);
-    assert.ok(facts({
-                ...sacState,
-                stale : false,
-                report : {eggMinimum : store.room * 2, eggIncubation : 111}
-              })
-                  .includes(t('studio.inspector.gonad.food',
-                              {least : Math.round(store.room * 2), duration : 111})));
     const group = model.assemble(grown, [ organ.id, twin.id ], '');
     const renamed = model.renameAssembly(group, group.assemblies[0].id, 'Schwanz');
     assert.equal(renamed.assemblies[0].name, 'Schwanz');
@@ -5048,11 +4956,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const markup = await import('../ui/studio/view/markup.js');
     assert.equal(markup.dataAttribute('probeBlock'), 'data-probe-block');
     const substancesView = await import('../ui/studio/view/substances.js');
-    const wheelMarks = substancesView.wheelMarks({q1 : .4, q2 : -.3});
-    const wheelMark = Object.values(wheelMarks)[0];
-    const W = substancesView.WHEEL;
-    const wheelBack = substancesView.wheelPatch(wheelMark.cx / W.size, wheelMark.cy / W.height);
-    assert.ok(Math.abs(wheelBack.q1 - .4) < 1e-9 && Math.abs(wheelBack.q2 + .3) < 1e-9);
     const learningView = await import('../ui/studio/view/learning.js');
     const layersView = await import('../ui/studio/view/layers.js');
     const far = {tool : 'wire', camera : {zoom : .5}, layers : {}};
@@ -5149,18 +5052,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                             HORMONE_EFFECT.teaching + '"'),
                  'The bound teaching substance is selected in the learning tool');
     assert.match(taughtPanel, /aid-episode-arrow teach"/);
-    const skinView = await import('../ui/studio/view/skin.js');
-    const touched = model.addOrgan(model.newDocument('Haut'), 'touch', sites, {x : 400, y : 265});
-    const touchOrgan = model.findOrgan(touched.document, touched.organId),
-          touchCell = touchOrgan.centers[0], skinState = {document : touched.document, sites};
-    const skinMarkup = skinView.skinField(skinState, touchOrgan, touchCell);
-    const skinAim = Number(/data-skin-aim="([^"]+)"/.exec(skinMarkup)[1]);
-    const skinBack = name => {
-      const [, cx, cy] =
-          new RegExp('data-skin-handle="' + name + '" cx="([^"]+)" cy="([^"]+)"').exec(skinMarkup);
-      const box = /viewBox="0 0 (\S+) (\S+)"/.exec(skinMarkup);
-      return skinView.skinPatch(skinState, skinAim, name, cx / box[1], cy / box[2]);
-    };
     const probesView = await import('../ui/studio/view/probes.js');
     const {probeFor} = await import('../ui/studio/model/probe.js');
     for (const [type, at] of [[ 'nose', {x : 200, y : 330} ], [ 'touch', {x : 400, y : 265} ]]) {
@@ -5183,22 +5074,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       const amount = probe.kind === 'smell' ? 'distance' : 'strength';
       assert.ok(Math.abs(back[amount] - probe[amount]) / probe[amount] < .1, type + ' reads back');
       assert.equal(probesView.senseProbeSvg({...probeState, selected : null}), '');
-    }
-    assert.ok(Math.abs(skinBack('field').field - touchCell.field) < .05);
-    // The touch cells' sensitivity sits on their report curve below the skin and reads back.
-    {
-      const marks = await import('../ui/studio/view/sense_marks.js');
-      const [, least, most, cx, cy] =
-          /data-sense-mark="sensitivity" data-least="([^"]+)" data-most="([^"]+)" cx="([^"]+)" cy="([^"]+)"/
-              .exec(skinMarkup);
-      const read = marks.senseMarkPatch(skinState, {
-        handle : 'sensitivity',
-        marks : {least, most},
-        start : marks.senseStart(skinState, touchCell)
-      },
-                                        {x : Number(cx), y : Number(cy)});
-      assert.ok(Math.abs(read.threshold - touchCell.threshold) < .05,
-                'touch sensitivity reads back');
     }
     const layout = await import('../ui/studio/model/layout.js');
     assert.deepEqual(layout.centroid([ {x : 0, y : 0}, {x : 4, y : 2} ]), {x : 2, y : 1});

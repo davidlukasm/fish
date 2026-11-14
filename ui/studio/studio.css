@@ -158,8 +158,6 @@
 .aid-center-tabs{display:flex;flex-wrap:wrap;gap:5px;padding-bottom:10px}
 .aid-center-tabs button,.aid-effect-chips button{flex:0 0 auto;padding:7px 11px;border:1px solid #3a5c66;border-radius:9px;background:#1e4249;font-size:12px}
 .aid-center-tabs button.selected,.aid-effect-chips button.active{background:#c5d7bb;color:#123432;border-color:#c5d7bb}
-.aid-gonad-graphic{width:100%;color:#13333b}
-.aid-gonad-graphic text{fill:#e1e9e2;font-size:12px;font-weight:700;pointer-events:none}
 .aid-wire-parameters{border-top:1px solid #365860;padding-top:15px}
 .aid-substance-swatch{height:16px;width:16px;border-radius:50%;background:var(--substance);border:2px solid #dfe7dc}
 .aid-inspector-head .aid-substance-swatch{flex:0 0 auto;align-self:center}
@@ -483,28 +481,6 @@
 .aid-response-polarity circle{fill:var(--aid-control);stroke:var(--aid-control-edge)}
 .aid-response-polarity:focus-visible{outline:none;stroke:white}
 .aid-response [data-response-handle]:focus-visible{stroke:#fff;stroke-width:3;outline:none}
-.aid-sac{display:block;width:100%;height:auto;margin:6px 0 4px;touch-action:none;color:#c2d6d2}
-.aid-sac-chamber{fill:#f1c08c33;stroke:#f1c08c;stroke-width:1}
-.aid-sac-chamber.release{fill:color-mix(in srgb,var(--aid-motor) 22%,transparent)}
-.aid-sac.sperm .aid-sac-chamber{fill:#e6f0f633;stroke:#e6f0f6}
-.aid-sac-egg{fill:#f2ad62;stroke:#ffe9c9;stroke-width:1}
-.aid-sac-egg.food{fill:#8f7a64;stroke:#e9a07a;stroke-dasharray:3 2}
-.aid-sac-least{fill:none;stroke:#ffe9c9;stroke-width:1.2;stroke-dasharray:1 3;stroke-linecap:round}
-.aid-sac-sperm-head{fill:var(--aid-sperm)}
-.aid-sac-sperm{fill:none;stroke:var(--aid-sperm);stroke-width:1.2;stroke-linecap:round;opacity:.85}
-.aid-sac-line{stroke:#c9b5f0;stroke-width:3;stroke-dasharray:6 3}
-.aid-sac-axis{stroke:#9fb6b2;stroke-width:1;fill:none}
-.aid-sac-fill{fill:none;stroke:#f1c08c;stroke-width:2.4;stroke-linejoin:round}
-.aid-sac.sperm .aid-sac-fill{stroke:#e6f0f6}
-.aid-sac-fill.idle{stroke-dasharray:3 3;opacity:.6}
-.aid-sac-room{stroke:#f1c08c;stroke-width:1.2;stroke-dasharray:5 3;opacity:.8}
-.aid-sac.sperm .aid-sac-room{stroke:#e6f0f6}
-.aid-sac-ceiling{stroke:#e9a07a;stroke-width:1.2}
-.aid-sac text{fill:#c2d6d2;font:11px system-ui}
-.aid-sac-part{cursor:pointer}
-.aid-sac-part.selected .aid-sac-chamber{stroke:var(--aid-handle)}
-.aid-sac-part.selected .aid-sac-line{stroke:var(--aid-handle)}
-.aid-sac [data-sac-handle]{cursor:ns-resize}
 .aid-muscle-kind{margin:10px 0 4px;border-top:1px solid #24484d;padding-top:8px}
 .aid-muscle-functions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:8px 0}
 .aid-muscle-function{display:grid;justify-items:center;gap:3px;min-width:0;border:1px solid var(--aid-control-edge);background:var(--aid-control);border-radius:9px;padding:7px 0;color:var(--aid-control-text)}

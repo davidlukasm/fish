@@ -7,16 +7,6 @@ import {
   spectrumEditor,
   visionFan
 } from './view/vision.js';
-import {spineField} from './view/effectors.js';
-import {lateralField} from './view/lateral.js';
-import {hairField} from './view/balance.js';
-// Organs whose sense pictures are drawn again while one of their handles is dragged.
-const SENSE_PICTURES = Object.freeze({
-  lateral : lateralField,
-  balance : (state, organ, held) => hairField(state, organ, selectedCenter(state, organ), held),
-  blood : (state, organ, held) => hormonePad(state, organ, selectedCenter(state, organ), held),
-  gland : (state, organ) => glandProfile(state, organ, selectedCenter(state, organ))
-});
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
 import {
@@ -27,9 +17,6 @@ import {
   probeWater,
   senseProbeSvg
 } from './view/probes.js';
-import {scentMap} from './view/scents.js';
-import {pigmentInspector} from './view/pigments.js';
-import {skinField} from './view/skin.js';
 import {eyeSight, eyeTypeAnswers} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
 import {SENSE_TISSUE} from '../tissue.js';
@@ -39,7 +26,6 @@ import {
   allCenters,
   centerIndex,
   compileDocument,
-  findCenter,
   findOrgan,
   pressureSites,
   organOf,
@@ -48,10 +34,10 @@ import {
 } from './model/document.js';
 import {sideOf} from './model/layout.js';
 import {dataAttribute} from './view/markup.js';
-import {organSettingsBlock, selectedCenter} from './view/panels.js';
+import {organSettingsBlock} from './view/panels.js';
 import {mountLive} from './view/live/kit.js';
 import {label} from './view/kit.js';
-import {glandProfile, hormonePad, hormoneTime} from './view/substances.js';
+import {hormoneTime} from './view/substances.js';
 import {requestBody} from './requests.js';
 import {BODY_MAP, PROBE_LAYER} from './view/scene.js';
 import {newFishDocument} from './canvas_placement.js';
@@ -120,33 +106,6 @@ export const designMethods = {
         this.notice(error.message);
     }
     return false;
-  },
-  refreshPigment() {
-    const selected = this.state.selected;
-    this.redrawBlocks('pigmentBlock', findOrgan, organ => {
-      const chosen = selected?.kind === 'center' && organ.centers.find(c => c.id === selected.id);
-      return pigmentInspector(this.state, organ, chosen || organ.centers[0]);
-    });
-  },
-  refreshSkin() {
-    // A dragged sensitivity sits in the report below the skin.
-    const drag = this.heldHandle('sense');
-    this.redrawBlocks('skinBlock', findCenter,
-                      found => skinField(this.state, found.organ, found.center,
-                                         drag?.id === found.center.id ? drag.sensitive : null));
-  },
-  refreshSense() {
-    const drag = this.heldHandle('sense');
-    this.redrawBlocks('senseBlock', findOrgan, organ => {
-      const draw = SENSE_PICTURES[organ.type];
-      return draw ? draw(this.state, organ, drag?.organ === organ.id ? drag.sensitive : null) : '';
-    });
-  },
-  refreshScentMaps() {
-    const drag = this.heldHandle('sense');
-    this.redrawBlocks('scentBlock', findCenter,
-                      found => scentMap(found.organ, found.center, this.state,
-                                        drag?.id === found.center.id ? drag.sensitive : null));
   },
   bringProbes() {
     const id = this.state.selected?.id, doc = this.state.document;
@@ -286,10 +245,8 @@ export const designMethods = {
     if (!this.handleDrag)
       this.redrawBlocks('organSettings', findOrgan, organ => organSettingsBlock(this.state, organ));
     else {
-      this.refreshSkin();
       this.refreshSpectrum();
       this.refreshEffectors();
-      this.refreshPigment();
       this.refreshProbeControls();
     }
     this.drawSight();
@@ -339,19 +296,12 @@ export const designMethods = {
     const block = this.root.querySelector('[data-spectrum-block]');
     const editor = block?.querySelector('[data-spectrum]');
     const target = editor && this.spectrumTarget(editor.dataset);
-    // A dragged sensitivity shows its new edge before the design run answers.
-    const held = this.heldHandle('spectrum');
     if (target)
-      block.outerHTML =
-          held?.handle === 'sensitivity' && held.answer
-              ? spectrumEditor(this.state, target.organ, target.tuning, held.shift, held.answer)
-              : spectrumEditor(this.state, target.organ, target.tuning);
+      block.outerHTML = spectrumEditor(this.state, target.organ, target.tuning);
   },
   refreshEffectors() {
     if (this.handleDrag?.graphic?.closest('[data-effector-block],[data-effector-graphic]'))
       this.refreshDragged();
-    this.refreshSense();
-    this.redrawBlocks('spineBlock', findOrgan, organ => spineField(this.state, organ));
   },
   redrawBlocks(key, find, render, within = '') {
     const selector = `[${dataAttribute(key)}]`;

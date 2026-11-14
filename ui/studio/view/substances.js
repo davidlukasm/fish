@@ -18,93 +18,24 @@ import {
   organOf,
   growsWith,
   NOTICEABLE_AFFINITY,
-  organTypes,
   producers,
   receivers,
   regulatorySubstances,
   receptorEnds,
   receptorAffinity,
   SUBSTANCE_NAME_LENGTH,
-  substanceRead,
   teachersOf,
-  typeOfCenter,
   wheelAffinity,
   wheelPlace,
   wheelSigma,
-  shownSubstance,
-  mainHormone
+  shownSubstance
 } from '../model/document.js';
-import {escapeText, fixed, glyph, pointMarks} from './markup.js';
+import {escapeText, fixed, glyph} from './markup.js';
 import {formatNumber, joinParts, namedText, percent, t, tList} from '../../strings.js';
 import {bandGlyph, heading, icon, ICON, iconSwitch, label, SWITCH_SYMBOL} from './kit.js';
 import {BIRTH_ICON, DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON, TOOL_ICON} from './icons.js';
 import {EFFECT_ORDER, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
-import {typeChips} from './types.js';
-import {senseSensitivity} from './sense_marks.js';
-import {boundedRow, sensePicture} from './sense_curves.js';
-import {glandPictures, pouredShares} from './gland_effect.js';
-
-const centerWheel = (state, center, choices, reads) =>
-    substanceWheel(state, {x : center.q1, y : center.q2, width : center.qwidth, active : true}, {
-      choices,
-      reads,
-      attribute : 'data-wheel-substance',
-      extra : ' data-center-id="' + escapeText(center.id) + '"',
-      pad : center.id,
-      role : center.role === 'motor' ? 'gland' : 'sense'
-    });
-// A chip names its substance as the wheel does: its mark in its colour, the full name beside it.
-const substanceChip = (state, index) => {
-  const mark = substanceMark(state, index), name = substanceName(state, index);
-  return '<i class="aid-substance-mark" style="--substance:' + substanceColor(index) + '">' +
-         escapeText(mark) + '</i>' + (name !== mark ? escapeText(name) : '');
-};
-// The gland: its wheel says which substances it pours, the pictures below what it does to the
-// blood.
-export function glandProfile(state, organ, center) {
-  const substances = state.document.substances, wheel = state.capabilities;
-  // Each node of the gland pours its own substances; a chip chooses the node, by what it pours
-  // most.
-  const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
-  const chips = wheel ? typeChips(organ, chosen, type => {
-    const index = mainHormone(wheel, type.centers[0]);
-    return {icon : substanceChip(state, index), name : substanceName(state, index)};
-  }, {add : label('inspector.addGlandType'), remove : label('inspector.removeGlandType')}) : '';
-  const add = substances.length ? ''
-                                : '<button class="aid-add" data-add-substance>' +
-                                      label('sections.newSubstance') + '</button>';
-  // Nothing of the gland reaches past the wheel's points, so its picture shows the wheel close
-  // up.
-  return chips + '<div class="aid-wheel-close" data-sense-block="' + escapeText(organ.id) + '">' +
-         centerWheel(state, center, Array.from({length : wheel?.hormones ?? 0}, (_, i) => i),
-                     state.capabilities?.hormones) +
-         '</div>' + add + glandPictures(state, organ, center, index => substanceName(state, index));
-}
-// The blood sense: its wheel says which substance the cells read, the curve below how high a
-// level they report (bounded, half at their threshold; blood is no sense that gets used to what
-// it feels, brain_interface.hh).
-export function hormonePad(state, organ, center, held = null) {
-  const wheel = state.capabilities;
-  const all = Array.from({length : wheel?.bloodSubstances ?? 0}, (_, i) => i);
-  const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
-  const chips = wheel ? typeChips(organ, chosen, type => {
-    const index = substanceRead(wheel, type.centers[0]);
-    return {icon : substanceChip(state, index), name : substanceName(state, index)};
-  }, {add : label('inspector.addBloodType'), remove : label('inspector.removeBloodType')}) : '';
-  const sensitive = held ?? senseSensitivity(state, center) ?? 0;
-  const words = key => t('studio.bloodSense.' + key);
-  return '<div data-sense-block="' + escapeText(organ.id) + '">' + chips +
-         centerWheel(state, center, all, Infinity) +
-         sensePicture(center, words('title'), [ boundedRow(sensitive, {
-                        report : words('report'),
-                        from : words('none'),
-                        to : words('full'),
-                        half : t('studio.bloodSense.half', {p : percent(1 - sensitive)}),
-                        handle : words('handle')
-                      }) ]) +
-         '</div>';
-}
 // What the cell's substances do, only where it binds or learns from one: the substance chips with
 // what they change, and buttons to the hormone and learning tools. Release and birth stand in the
 // gland's and the life picture already.
@@ -356,11 +287,6 @@ export function effectCurve(state, receptor, effect, target = null) {
 export const WHEEL =
     Object.freeze({size : 240, height : 240, centre : 120, radius : 62, point : 10, ring : 14});
 const wheelX = x => WHEEL.centre + x * WHEEL.radius, wheelY = y => WHEEL.centre - y * WHEEL.radius;
-export const wheelPatch = (fx, fy) => ({
-  q1 : clamp((fx * WHEEL.size - WHEEL.centre) / WHEEL.radius, -1),
-  q2 : clamp((WHEEL.centre - fy * WHEEL.height) / WHEEL.radius, -1)
-});
-export const wheelMarks = center => pointMarks({x : wheelX(center.q1), y : wheelY(center.q2)});
 export function wheelWidthPatch(wheel, profile, fx, fy) {
   const distance =
       Math.hypot(fx * WHEEL.size - wheelX(profile.x), fy * WHEEL.height - wheelY(profile.y));
@@ -370,30 +296,28 @@ export function wheelWidthPatch(wheel, profile, fx, fy) {
 const substanceDefined = (state, index) =>
     index >= HORMONES.levels || state.document.substances.some(sub => sub.index === index);
 export function substanceMark(state, index) {
-  return index === BLOOD_SUBSTANCE.maturity  ? label('inspector.maturityMark')
-         : index === BLOOD_SUBSTANCE.reserve ? label('inspector.reserveMark')
-         : index === BLOOD_SUBSTANCE.fatigue ? label('inspector.fatigueMark')
+  return index === BLOOD_SUBSTANCE.maturity        ? label('inspector.maturityMark')
+         : index === BLOOD_SUBSTANCE.reserve       ? label('inspector.reserveMark')
+         : index === BLOOD_SUBSTANCE.fatigue       ? label('inspector.fatigueMark')
          : index === BLOOD_SUBSTANCE.cell_maturity ? label('inspector.cellMaturityMark')
-                                             : Array.from(substanceName(state, index))[0];
+                                                   : Array.from(substanceName(state, index))[0];
 }
 export function substanceName(state, index) {
   const named = state.document.substances.find(sub => sub.index === index)?.name;
-  return named ||
-         (index === BLOOD_SUBSTANCE.maturity  ? label('inspector.maturity')
-          : index === BLOOD_SUBSTANCE.reserve ? label('inspector.reserve')
-          : index === BLOOD_SUBSTANCE.fatigue ? label('inspector.fatigue')
-          : index === BLOOD_SUBSTANCE.cell_maturity ? label('inspector.cellMaturity')
-                                              : tList('studio.inspector.substanceLetters')[index]);
+  return named || (index === BLOOD_SUBSTANCE.maturity  ? label('inspector.maturity')
+                   : index === BLOOD_SUBSTANCE.reserve ? label('inspector.reserve')
+                   : index === BLOOD_SUBSTANCE.fatigue ? label('inspector.fatigue')
+                   : index === BLOOD_SUBSTANCE.cell_maturity
+                       ? label('inspector.cellMaturity')
+                       : tList('studio.inspector.substanceLetters')[index]);
 }
 export function substanceWheel(state, profile, {
   choices = [],
   attribute = '',
   extra = '',
-  pad = null,
   selected = null,
   reads = Infinity,
   widthTarget = null,
-  role = 'receptor',
   legend = true
 }) {
   const wheel = state.capabilities;
@@ -426,13 +350,7 @@ export function substanceWheel(state, profile, {
                                     py(profile.y) + '" r="' +
                                     fixed(wheelSigma(wheel, profile.width) * WHEEL.radius) + '"/>'
                               : '';
-  // The profile's point as a ring around it, under the substances, so their marks stay readable.
-  const marker = pad ? '<circle class="aid-vector-point" cx="' + px(profile.x) + '" cy="' +
-                           py(profile.y) + '" r="' + WHEEL.ring + '"/>'
-                     : '';
-  const attributes = pad           ? 'data-graphic-handle="width"'
-                     : widthTarget ? 'data-wheel-width="' + escapeText(widthTarget) + '"'
-                                   : '';
+  const attributes = widthTarget ? 'data-wheel-width="' + escapeText(widthTarget) + '"' : '';
   const norm = Math.hypot(profile.x, profile.y);
   const direction = norm > .001 ? {x : -profile.x / norm, y : -profile.y / norm} : {x : -1, y : 0};
   const radius = wheelSigma(wheel, profile.width) * WHEEL.radius;
@@ -452,19 +370,15 @@ export function substanceWheel(state, profile, {
                          px(mx) + '" y="' + py(my) + '" dy=".35em" text-anchor="middle">' +
                          escapeText(substanceMark(state, selected)) + '</text></g>'
                    : '';
-  // A gland's output is split among the substances it pours; a receptor or sense answers each
-  // substance by its own fit.
-  const poured = role === 'gland' && profile.active ? pouredShares(wheel, profile) : null;
   const names =
       Array
           .from({length : Math.min(reads, wheel.bloodSubstances)},
                 (_, index) => {
                   if (index < HORMONES.levels && !named.has(index))
                     return '';
-                  const affinity =
-                      !profile.active ? 0
-                      : poured        ? poured[index] ?? 0
-                               : wheelAffinity(wheel, profile.x, profile.y, profile.width, index);
+                  const affinity = profile.active ? wheelAffinity(wheel, profile.x, profile.y,
+                                                                  profile.width, index)
+                                                  : 0;
                   return '<span class="aid-wheel-name"><i style="--substance:' +
                          substanceColor(index) + '">' + escapeText(substanceMark(state, index)) +
                          '</i><span>' + escapeText(substanceName(state, index)) + '</span><small>' +
@@ -472,14 +386,13 @@ export function substanceWheel(state, profile, {
                 })
           .join('');
   // The list says what the shares are: what a receptor binds, a sense reads, a gland gives off.
-  const list = legend ? '<p class="aid-wheel-names-title">' + escapeText(label('wheel.' + role)) +
+  const list = legend ? '<p class="aid-wheel-names-title">' + escapeText(label('wheel.receptor')) +
                             '</p><div class="aid-wheel-names">' + names + '</div>'
                       : '';
   return '<div class="aid-wheel-figure" data-wheel-figure><div class="aid-wheel-map"><svg class="aid-substance-wheel"' +
-         (pad ? ' data-vector-pad="' + escapeText(pad) + '" data-wheel tabindex="0"' : '') +
          ' viewBox="0 0 ' + WHEEL.size + ' ' + WHEEL.height + '" role="img" aria-label="' +
          label('inspector.hormoneProfile') + '"><circle cx="' + WHEEL.centre + '" cy="' +
-         WHEEL.centre + '" r="' + WHEEL.radius + '" class="aid-wheel-ring"/>' + halo + marker +
+         WHEEL.centre + '" r="' + WHEEL.radius + '" class="aid-wheel-ring"/>' + halo +
          points.join('') + handle + mark + '</svg></div>' + list + '</div>';
 }
 function receptorProfile(state, receptor) {

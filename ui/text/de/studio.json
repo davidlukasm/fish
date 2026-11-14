@@ -269,24 +269,9 @@
       "chiasm": "Sehkreuzung: Jedes Auge meldet an das Tectum der Gegenseite. Zellen, die über die Mitte hinweg sehen, melden auch an das eigene."
     },
     "kindCount": "{name} ×{n}",
-    "cellsHandle": "Ziehen: mehr oder weniger Füllzellen",
     "skin": {
       "field": "Hautfeld ±{degrees}°",
       "fieldHandle": "Ziehen: wie weit um den Körper die Zelle fühlt"
-    },
-    "gonad": {
-      "cells": "{cells} {cells:Zelle|Zellen}",
-      "fullIn": "beim Beispieleingang voll nach {n} {n:Schritt|Schritten}",
-      "driven": "Füllkommando fehlt",
-      "ceiling": "Platz höchstens für {most}",
-      "trigger": "wartet auf Auslösekommando",
-      "egg": "Ei mit {energy} Energie",
-      "food": "Schlupfbedarf etwa {least} bei {duration} Schritten",
-      "sperm": "{energy} Energie je Abgabe",
-      "developmentEnergy": "Ei mit {energy} Energie; Schlupfbedarf etwa {least} bei {duration} Schritten",
-      "releaseOn": "Auslösekommando liegt an",
-      "store": "Vorrat",
-      "time": "Zeit"
     },
     "curve": {
       "baseline": "ohne Stoff",
@@ -1696,18 +1681,6 @@
       "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
       "fadeHandle": "Ziehen: wie schnell alte Wunden in den Hintergrund treten"
     }
-  },
-  "pressureSense": {
-    "title": {
-      "bladder": "Druckzellen",
-      "eggs": "Dehnungszellen",
-      "sperm": "Dehnungszellen"
-    },
-    "report": "Meldung",
-    "empty": "leer",
-    "full": "voll",
-    "half": "melden ab {p} Füllung",
-    "handle": "Ziehen: bei welcher Füllung die Zellen melden"
   },
   "strand": {
     "bundle": "Nervenbündel",

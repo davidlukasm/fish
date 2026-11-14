@@ -40,8 +40,7 @@ import {
   updateCenter,
   updateGrowth,
   updateWire,
-  usedSites,
-  wheelPlace
+  usedSites
 } from './model/document.js';
 import {
   assembleSelection,
@@ -356,16 +355,6 @@ export const FISH_CLICKS = Object.freeze([
     }
   ],
   [
-    '[data-vision-polarity]',
-    (studio, e) => {
-      const chosen = chosenField(studio);
-      if (!chosen)
-        return PASS;
-      const polarity = Number(e.dataset.visionPolarity);
-      studio.editField(chosen.organ.id, {profile : {id : chosen.profile.id, polarity}});
-    }
-  ],
-  [
     '[data-vision-remove]',
     studio => {
       const chosen = chosenField(studio);
@@ -525,17 +514,6 @@ export const FISH_CLICKS = Object.freeze([
     '[data-set-field]',
     (studio, e) =>
         changeCenter(studio, e.dataset.centerId, {[e.dataset.setField] : Number(e.dataset.value)})
-  ],
-  [
-    '[data-wheel-substance]',
-    (studio, e) => {
-      if (!studio.state.capabilities)
-        return PASS;
-      const index = Number(e.dataset.wheelSubstance);
-      const [q1, q2] = wheelPlace(studio.state.capabilities, index);
-      keep(studio, updateCenter(withSubstance(studio.state.document, index), e.dataset.centerId,
-                                {q1, q2}));
-    }
   ],
   [
     '[data-mirror-organ]',

@@ -875,7 +875,7 @@ export class OrganStudio {
     // Clicks on the colour strip and the contrast scene are drags, except on the scene itself,
     // which turns the contrast, and on the other colour types, which choose one.
     if (event.target.closest?.('[data-vision-handle],[data-spectrum]') &&
-        !event.target.closest?.('[data-vision-polarity],[data-vision-profile]'))
+        !event.target.closest?.('[data-vision-profile]'))
       return;
     if (clickOn(this, event, ANYWHERE_CLICKS))
       return;

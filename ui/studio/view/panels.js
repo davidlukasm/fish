@@ -5,7 +5,7 @@ import {driveContext} from './preview.js';
 export {driveContext} from './preview.js';
 import {cellDevelopment, previewControls} from './development.js';
 import {visionInspector} from './vision.js';
-import {effectorGraphic, muscleSettings} from './effectors.js';
+import {muscleSettings} from './effectors.js';
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {
@@ -44,7 +44,7 @@ import {
 } from './kit.js';
 import {pairingChoice, regionSettings, slotsSection} from './circuit.js';
 import {strandInspector} from './nerve_inspector.js';
-import {chemistry, glandProfile, hormoneInspector} from './substances.js';
+import {chemistry, hormoneInspector} from './substances.js';
 import {learningInspector} from './learning.js';
 import {workflow} from './library.js';
 import {centerTitle, endpointTitle, familyTitle, moduleName, nodeFamilies} from './names.js';
@@ -120,7 +120,7 @@ const ORGAN_PANELS = Object.freeze({
            : code === MOTOR_KIND.turn  ? livePlace('fin', organ) + muscleSettings(state, organ)
            : code === MOTOR_KIND.suction || code === MOTOR_KIND.aggression
                ? livePlace('mouth', organ) + muscleSettings(state, organ)
-               : effectorGraphic(state, organ);
+               : '';
   },
   gills : (state, organ) => livePlace('gills', organ),
   // Gut and gut muscle are one organ to the eye: one live inspector for both.

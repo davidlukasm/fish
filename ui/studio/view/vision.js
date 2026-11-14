@@ -1,6 +1,6 @@
 import {labelledText, percent, t, tList} from '../../strings.js';
 import {CHANNEL_MAX, clamp, degrees, FULL_TURN, radians} from '../../units.js';
-import {CONTRAST_POLARITY, RECEPTOR, VISION, VISUAL_SAMPLE} from '../../schema.js';
+import {RECEPTOR, VISION, VISUAL_SAMPLE} from '../../schema.js';
 import {PIXEL, retinalRaster} from '../../vision_view.js';
 import {
   lightColor,
@@ -9,7 +9,6 @@ import {
   spectrumElement,
   spectrumValues
 } from './spectrum.js';
-import {stimulusOfShare, stimulusShare} from './sensitivity.js';
 import {livePlace} from './live/kit.js';
 import {escapeText, fixed, idSafe, pointText} from './markup.js';
 import {allCenters, findOrgan, isChosen, organOf} from '../model/document.js';
@@ -355,13 +354,10 @@ function otherTypes(organ, chosen, definition) {
            }))
       .filter(o => o.tuning.id !== chosen.id);
 }
-// `shift` and `start` show a sensitivity being dragged before the design run answers.
-export function spectrumEditor(state, organ, profile, shift = 1, start = null) {
+export function spectrumEditor(state, organ, profile) {
   const definition = state.capabilities?.visionSpectrum;
-  const light = start ?? nominalSpectrum(profile, definition);
+  const light = nominalSpectrum(profile, definition);
   const spread = profileLightSpread(state.document, state.lightSpread, organ.id, profile.id);
-  const least = state.anatomy?.contrastLeast, half = light?.half * shift;
-  const faint = least > 0 && half > 0 ? {share : stimulusShare(half, least), half, least} : null;
   const [centre, width, opponent] = spectrumValues(profile, true);
   const values = [
     labelledText(label('centre'), centre), labelledText(label('width'), width),
@@ -427,104 +423,6 @@ export const sightLegend = types => {
              .join('');
 };
 const section = body => `<section class="aid-eye-section">${body}</section>`;
-const CONTRAST_CHOICES = Object.freeze([ 'bright', 'dark', 'both' ]);
-// What the cells of a colour type report, as a scene. Above, a light and a dark thing on a grey
-// ground; below, what the cells make of them: a reported thing in the type's colour, an unreported
-// one as a dashed outline, both at half strength when the cells report both. A click turns to the
-// next choice. At the bottom, how faint a difference the cells notice: spots on the same ground,
-// from hardly brighter (or darker) than it to twice as bright (or black), on a log scale from the
-// keenest cell's half contrast to full contrast (retina.cc). The shaded spots are too faint for
-// half an answer; the handle between sets that.
-const SCENE = Object.freeze({
-  width : 300,
-  words : 4,
-  left : 92,
-  right : 292,
-  things : [ .3, .7 ],
-  radius : 10,
-  rows : [ 4, 40 ],
-  row : 30,
-  ramp : {top : 88, height : 22, spots : 7, radius : 6, ends : 122, mark : 82},
-  height : 128,
-  handle : 7
-});
-// The scene's ground, as the spots of the keenness row are measured against it.
-const GROUND = Object.freeze([ 127, 138, 134 ]);
-const sceneX = share => SCENE.left + (SCENE.right - SCENE.left) * share;
-// How faint a contrast the cells answer (0 the faintest, 1 full contrast) from a point on the row.
-export const sensitivityShare = p => clamp((p.x - SCENE.left) / (SCENE.right - SCENE.left));
-function keennessRow(tone, faint) {
-  const S = SCENE, R = S.ramp, mid = R.top + R.height / 2, edge = sceneX(faint.share);
-  const spot = k => {
-    const share = (k + .5) / R.spots, contrast = stimulusOfShare(share, faint.least);
-    const sign = tone === 'dark' ? -1 : 1;
-    const rgb = GROUND.map(v => Math.round(Math.min(CHANNEL_MAX, v * (1 + sign * contrast))));
-    return `<circle cx="${fixed(sceneX(share))}" cy="${fixed(mid)}" r="${R.radius}" fill="rgb(${
-        rgb.join(' ')})"/>`;
-  };
-  return `<text class="aid-scene-word" x="${S.words}" y="${fixed(mid)}" ` +
-         `dominant-baseline="central">${escapeText(label('sensitivity'))}</text>` +
-         `<rect class="aid-scene-ground" x="${S.left}" y="${R.top}" width="${
-             S.right - S.left}" height="${R.height}" rx="6"/>` +
-         Array.from({length : R.spots}, (_, k) => spot(k)).join('') +
-         `<rect class="aid-scene-faint" x="${S.left}" y="${R.top}" width="${
-             fixed(edge - S.left)}" height="${R.height}" rx="6"/>` +
-         `<rect class="aid-scene-answered" x="${fixed(edge)}" y="${R.top}" width="${
-             fixed(S.right - edge)}" height="${R.height}" rx="6"/>` +
-         `<text class="aid-scene-word" x="${S.left}" y="${R.ends}">${
-             escapeText(label('keenFrom.' + tone))}</text>` +
-         `<text class="aid-scene-word" x="${S.right}" y="${R.ends}" text-anchor="end">${
-             escapeText(label('keenTo.' + tone))}</text>` +
-         // The half answer is named above the middle of the row, where its words always fit.
-         `<text class="aid-scene-word" x="${fixed((S.left + S.right) / 2)}" y="${
-             R.mark}" text-anchor="middle">${escapeText(t('studio.vision.keenHalf', {
-           p : percent(faint.half, faint.half < .1 ? 1 : 0)
-         }))}` +
-         `</text><circle class="aid-spectrum-handle sensitivity" data-spectrum-handle=` +
-         `"sensitivity" cx="${fixed(edge)}" cy="${fixed(mid)}" r="${S.handle}"><title>${
-             escapeText(label('keenHandle'))}</title></circle>`;
-}
-function contrastScene(profile, faint, target, spread) {
-  const S = SCENE;
-  const k =
-      Math.max(0, CONTRAST_CHOICES.findIndex(key => CONTRAST_POLARITY[key] === profile.polarity));
-  const key = CONTRAST_CHOICES[k], next = CONTRAST_CHOICES[(k + 1) % CONTRAST_CHOICES.length];
-  const xs = S.things.map(sceneX), middle = top => top + S.row / 2;
-  const word = (text, top) => `<text class="aid-scene-word" x="${S.words}" y="${
-      fixed(top)}" dominant-baseline="central">${escapeText(text)}</text>`;
-  const thing = (cls, x, top, style = '') => `<circle class="${cls}" cx="${fixed(x)}" cy="${
-      fixed(middle(top))}" r="${S.radius}"${style}/>`;
-  const reported = tone => key === 'both' || key === tone;
-  const seen = (tone, x) => reported(tone)
-                                ? thing('aid-scene-report' + (key === 'both' ? ' half' : ''), x,
-                                        S.rows[1], ` style="fill:${profileColor(profile)}"`)
-                                : thing('aid-scene-missed', x, S.rows[1]);
-  const attributes =
-      Object.entries(target).map(([ name, value ]) => ` data-${name}="${idSafe(value)}"`).join('');
-  const band = (cls, top) => `<rect class="${cls}" x="${S.left}" y="${top}" width="${
-      S.right - S.left}" height="${S.row}" rx="6"/>`;
-  let variation = '';
-  if (faint && spread?.count > 0) {
-    const y = S.height + 14;
-    const at = key => fixed(sceneX(stimulusShare(spread.half[key], faint.least)));
-    const low = at('min'), high = at('max'), mean = at('mean');
-    variation = word(label('cellRange'), y) +
-                `<path class="aid-spectrum-mean" d="M${low} ${y}H${high}M${low} ${y - 3}v6` +
-                `M${high} ${y - 3}v6M${mean} ${y - 6}v12"/>`;
-  }
-  return `<svg class="aid-contrast-scene" data-spectrum="scene"${attributes} viewBox="0 0 ${
-             S.width} ${S.height + 28}" role="img" aria-label="${label('contrast')}">` +
-         `<g class="aid-contrast-choice" data-vision-polarity="${
-             CONTRAST_POLARITY[next]}" role="button"><title>${
-             label('contrastTitle.' + key)}</title>` +
-         word(label('scene'), middle(S.rows[0])) + band('aid-scene-ground', S.rows[0]) +
-         thing('aid-scene-thing bright', xs[0], S.rows[0]) +
-         thing('aid-scene-thing dark', xs[1], S.rows[0]) +
-         word(label('contrast'), middle(S.rows[1])) + band('aid-scene-seen', S.rows[1]) +
-         seen('bright', xs[0]) + seen('dark', xs[1]) + '</g>' +
-         (faint ? keennessRow(key === 'dark' ? 'dark' : 'bright', faint) : '') + variation +
-         '</svg>';
-}
 export function visionInspector(state, organ) {
   const profiles = organ.field.profiles;
   const p = profiles.find(p => p.id === state.visionProfile) ?? profiles[0];

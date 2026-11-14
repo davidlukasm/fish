@@ -1,34 +1,25 @@
 import {anatomyHandles, anatomyPatch} from './view/anatomy_handles.js';
-import {sensitivityShare, testLightMarkup, visionDragPatch} from './view/vision.js';
+import {testLightMarkup, visionDragPatch} from './view/vision.js';
 import {spectrumPatch} from './view/spectrum.js';
-import {stimulusOfShare} from './view/sensitivity.js';
 import {RESPONSE, responseHandle, responsePatch} from './view/response.js';
 import {REGION_PICTURE, regionHandle, regionPatch} from './view/region_controls.js';
 import {updateRegion} from './model/regions.js';
 import {RHYTHM_TAU} from './model/region_cells.js';
-import {hasColourTuning, nominalSpectrum} from './model/retina.js';
-import {effectorPatch, FIN_ANGLE_TRAIT, spinePatch} from './view/effectors.js';
+import {hasColourTuning} from './model/retina.js';
+import {effectorPatch} from './view/effectors.js';
 import {clamp} from '../units.js';
 import {kindLimit, kindNodes} from './model/organs.js';
-import {lateralPatch} from './view/lateral.js';
-import {hairPatch} from './view/balance.js';
 import {gutProbePatch, probeFlow, probeHandle, probePatch} from './view/probes.js';
-import {scentMapTuning, scentMapWidth} from './view/scents.js';
-import {pigmentAmount, pigmentWheelPatch} from './view/pigments.js';
-import {planOfUnit, thresholdQualityShift, unitOfPlan} from '../tuning.js';
 import {
   findCenter,
   findOrgan,
   groupReport,
   setBends,
-  setFinAngle,
-  setMuscleTrait,
   setMuscleSprint,
   setNodeCopies,
   setMuscleFibre,
   muscleFibre,
   setOrganNodes,
-  typeOfCenter,
   updateCenter,
   updateField,
   updateGrowth,
@@ -42,18 +33,9 @@ import {cameraCoordinates} from './view/frame.js';
 import {BODY_FRAME} from './model/layout.js';
 import {dataAttribute, fixed} from './view/markup.js';
 import {driveContext, wireMarks, wirePatch} from './view/panels.js';
-import {skinPatch} from './view/skin.js';
 import {senseMarkPatch, senseStart} from './view/sense_marks.js';
-import {sacPatch} from './view/sacs.js';
 import {PANEL_WIDTH, panelStyle} from './view/shell.js';
-import {
-  GROWTH,
-  BIRTH,
-  receptorCurvePatch,
-  wheelMarks,
-  wheelPatch,
-  wheelWidthPatch
-} from './view/substances.js';
+import {GROWTH, BIRTH, receptorCurvePatch, wheelWidthPatch} from './view/substances.js';
 import {learnMemoryPatch} from './view/learning.js';
 import {nerveTissuePatch} from './view/nerve_cell.js';
 import {variationPatch} from './view/cell_tissue.js';
@@ -90,7 +72,6 @@ const HANDLES = Object.freeze({
   spectrum : {follow : 'spectrumPointer', done : 'refreshInspector'},
   probe : {follow : 'probePointer'},
   bend : {follow : 'bendPointer', keepsClick : true},
-  skin : {follow : 'skinPointer', done : 'refreshSkin'},
   sense : {follow : 'sensePointer', done : 'refreshInspector'},
   vision : {follow : 'visionPointer', done : 'refreshInspector'},
   graphic : {follow : 'tuneGraphic', done : 'settleGraphic', keepsClick : true},
@@ -98,41 +79,10 @@ const HANDLES = Object.freeze({
   gutProbe : {follow : 'gutProbePointer'},
   ...CPPN_HANDLES
 });
-// How each sense picture turns its width handle into a reception width.
-const SENSE_WIDTH = Object.freeze({lateral : lateralPatch});
 const pointerShare = (event, rect) => (
     {fx : (event.clientX - rect.left) / rect.width, fy : (event.clientY - rect.top) / rect.height});
-const PADS = Object.freeze({
-  wire : {key : 'wirePad', wire : true, patch : wirePatch, marks : wireMarks},
-  vector : {
-    key : 'vectorPad',
-    patch : wheelPatch,
-    marks : wheelMarks,
-    handle : (fx, fy, element, state) => {
-      const center = findCenter(state.document, element.dataset.vectorPad)?.center;
-      return center ? {
-        qwidth : wheelWidthPatch(state.capabilities, {x : center.q1, y : center.q2}, fx, fy)
-      }
-                    : null;
-    }
-  },
-  compass : {
-    key : 'compass',
-    patch : scentMapTuning,
-    redraw : 'refreshScentMaps',
-    handle : (fx, fy, element, state) => {
-      const center = findCenter(state.document, element.dataset.compass)?.center;
-      return center ? {qwidth : scentMapWidth(center, fx, fy)} : null;
-    }
-  },
-  pigment : {key : 'pigmentWheel', patch : pigmentWheelPatch, redraw : 'refreshPigment'},
-  amount : {key : 'pigmentAmount', follow : 'pigmentAmountPointer'},
-  hair : {key : 'hairPad', handle : hairPatch},
-  spines : {
-    key : 'spinePad',
-    handle : (fx, fy, element) => spinePatch(fx, fy, Number(element.dataset.spineAim))
-  }
-});
+const PADS =
+    Object.freeze({wire : {key : 'wirePad', wire : true, patch : wirePatch, marks : wireMarks}});
 const PAD_SELECTOR = Object.values(PADS).map(pad => '[' + dataAttribute(pad.key) + ']').join(',');
 const padKind = element =>
     Object.keys(PADS).find(kind => element.hasAttribute(dataAttribute(PADS[kind].key)));
@@ -192,8 +142,7 @@ export const GRIPS = Object.freeze([
     start : (studio, g, h) => ({
       target : {...g.dataset},
       handle : h.dataset.spectrumHandle,
-      size : {width : g.viewBox.baseVal.width, height : g.viewBox.baseVal.height},
-      ...studio.sensitivityStart(g.dataset, h.dataset.spectrumHandle)
+      size : {width : g.viewBox.baseVal.width, height : g.viewBox.baseVal.height}
     })
   },
   {
@@ -257,19 +206,6 @@ export const GRIPS = Object.freeze([
     held : 'drive',
     start : (studio, g) => ({id : g.dataset.cellGroup, handle : 'copies'})
   },
-  {
-    graphic : '[data-skin-field]',
-    handle : '[data-skin-handle]',
-    held : 'skin',
-    start : (studio, g, h) => studio.skinGrip(g, h)
-  },
-  {
-    graphic : '[data-sac]',
-    handle : '[data-sac-handle]',
-    held : 'drive',
-    start : (studio, g) => ({id : g.dataset.sac, handle : 'sac'})
-  },
-
   {
     graphic : '[data-bend-index]',
     held : 'bend',
@@ -496,21 +432,6 @@ export const handleMethods = {
     if (patch)
       this.draftDesign(updateCenter(this.state.document, drag.id, patch), 'memory:' + drag.id);
   },
-  pigmentAmountPointer(control, fx, fy) {
-    const doc = this.state.document, found = findCenter(doc, control.id);
-    const type = found && typeOfCenter(found.organ, control.id);
-    if (!type)
-      return;
-    const count =
-        pigmentAmount(fx, fy, Number(control.element.dataset.room),
-                      Number(control.element.dataset.before), Number(control.element.dataset.most));
-    if (count === type.centers.length)
-      return;
-    const changed = setOrganNodes(doc, found.organ.id, count, this.state.sites, type.id);
-    if (!changed)
-      return this.notice(label('status.noRoom'));
-    this.draftDesign(changed, 'amount:' + control.id, 'refreshPigment');
-  },
   spectrumTarget({spectrumId : id, profileId}) {
     const organ = findOrgan(this.state.document, id);
     const profile = organ?.field?.profiles.find(p => p.id === profileId);
@@ -597,16 +518,14 @@ export const handleMethods = {
     const {fx, fy} = pointerShare(event, drag.rect);
     if (drag.handle === 'effector')
       return this.effectorPointer(drag, fx, fy);
-    if (drag.handle === 'sac')
-      return this.sacPointer(drag, fy);
     if (drag.handle === 'copies')
       return this.draftDesign(updateCenter(this.state.document, drag.id, cellPatch(fx, fy)),
                               'cells:' + drag.id);
   },
   effectorPointer(drag, fx, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id), sites = this.state.sites;
-    const patch = organ && effectorPatch(drag.code, drag.name, fx, fy, kindLimit(organ, sites),
-                                         organ, drag.marks);
+    const patch =
+        organ && effectorPatch(drag.name, fx, fy, kindLimit(organ, sites), organ, drag.marks);
     if (!patch)
       return;
     const cell = 'center' in patch ? findCenter(doc, patch.id)?.center : null;
@@ -620,29 +539,11 @@ export const handleMethods = {
             ? patch.sprint !== organ.sprint && setMuscleSprint(doc, organ.id, patch.sprint)
         : 'fibre' in patch
             ? patch.fibre !== muscleFibre(organ) && setMuscleFibre(doc, organ.id, patch.fibre)
-        : 'copies' in patch ? patch.copies !== kindNodes(organ)[0]?.copies &&
-                                  setNodeCopies(doc, organ.id, patch.copies)
-                            : this.muscleTrait(drag.code, patch.trait, patch.value, organ.id);
+            : patch.copies !== kindNodes(organ)[0]?.copies &&
+                  setNodeCopies(doc, organ.id, patch.copies);
     if (!changed)
       return;
-    this.draftDesign(changed, 'effector:' + drag.id,
-                     organ.type === 'pigment' ? 'refreshPigment' : 'refreshDragged');
-  },
-  muscleTrait(code, trait, value, organId) {
-    const doc = this.state.document;
-    return trait === FIN_ANGLE_TRAIT ? setFinAngle(doc, organId, value, this.state.sites)
-                                     : setMuscleTrait(doc, code, trait, value, this.state.sites);
-  },
-  sacPointer(drag, fy) {
-    const doc = this.state.document, organ = findOrgan(doc, drag.id);
-    const patch = organ && sacPatch(this.state, organ, fy);
-    if (!patch)
-      return;
-    const changed = patch.nodes !== kindNodes(organ).length &&
-                    setOrganNodes(doc, organ.id, patch.nodes, this.state.sites);
-    if (!changed)
-      return;
-    this.draftDesign(changed, 'sac:' + drag.id, 'refreshSense');
+    this.draftDesign(changed, 'effector:' + drag.id);
   },
   spectrumPointer(event) {
     const drag = this.handleDrag, target = this.spectrumTarget(drag.target);
@@ -651,8 +552,6 @@ export const handleMethods = {
     if ([ 'centre', 'opponent' ].includes(drag.handle) &&
         !hasColourTuning(target.organ, target.tuning))
       return;
-    if (drag.handle === 'sensitivity')
-      return this.sensitivityPointer(event, drag);
     const {fx, fy} = pointerShare(event, drag.rect);
     const patch = spectrumPatch(target.tuning, drag.handle,
                                 {x : fx * drag.size.width, y : fy * drag.size.height});
@@ -674,21 +573,6 @@ export const handleMethods = {
     this.draftDesign(updateField(this.state.document, id, {profile : {id : profileId, ...patch}},
                                  this.state.sites),
                      'spectrum:' + id, 'refreshSpectrum');
-  },
-  sensitivityPointer(event, drag) {
-    const least = this.state.anatomy?.contrastLeast;
-    if (!(least > 0) || !(drag.answer?.half > 0))
-      return;
-    const {fx, fy} = pointerShare(event, drag.rect);
-    drag.shift =
-        stimulusOfShare(sensitivityShare({x : fx * drag.size.width, y : fy * drag.size.height}),
-                        least) /
-        drag.answer.half;
-    const threshold = planOfUnit(unitOfPlan(drag.threshold) + thresholdQualityShift(drag.shift));
-    const {spectrumId : id, profileId} = drag.target;
-    this.draftDesign(updateField(this.state.document, id, {profile : {id : profileId, threshold}},
-                                 this.state.sites),
-                     'threshold:' + profileId, 'refreshSpectrum');
   },
   bendPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
@@ -858,32 +742,6 @@ export const handleMethods = {
     this.root.querySelector('.aid-workspace-main')
         ?.setAttribute('style', panelStyle(this.state.panels));
   },
-  // A drag of the eye's sensitivity starts from the design run's answer; the threshold then moves
-  // by as much as the half answer is dragged.
-  sensitivityStart(target, handle) {
-    const found = handle === 'sensitivity' && this.spectrumTarget(target);
-    const answer = found && nominalSpectrum(found.tuning, this.state.capabilities?.visionSpectrum);
-    return answer?.half > 0 ? {answer, threshold : found.tuning.threshold, shift : 1} : {};
-  },
-  skinGrip(graphic, handle) {
-    const found = findCenter(this.state.document, graphic.dataset.skinField);
-    if (!found)
-      return null;
-    return {
-      id : found.center.id,
-      name : handle.dataset.skinHandle,
-      aim : Number(graphic.dataset.skinAim)
-    };
-  },
-  skinPointer(event) {
-    const drag = this.handleDrag, found = findCenter(this.state.document, drag.id);
-    const {fx, fy} = pointerShare(event, drag.rect);
-    const patch = found && skinPatch(this.state, drag.aim, drag.name, fx, fy);
-    if (!patch)
-      return;
-    this.draftDesign(updateCenter(this.state.document, drag.id, patch), 'skin:' + drag.id,
-                     'refreshSkin');
-  },
   senseGrip(graphic, handle) {
     const found =
         findCenter(this.state.document, handle.dataset.senseCenter ?? graphic.dataset.senseField);
@@ -892,13 +750,10 @@ export const handleMethods = {
     const box = graphic.viewBox.baseVal;
     return {
       id : found.center.id,
-      organ : found.organ.id,
       handle : handle.dataset.senseMark,
       marks : {...handle.dataset},
-      aim : Number(graphic.dataset.senseAim),
       size : {width : box.width, height : box.height},
-      start : senseStart(this.state, found.center),
-      redraw : graphic.dataset.senseRedraw ?? 'refreshSense'
+      start : senseStart(this.state, found.center)
     };
   },
   sensePointer(event) {
@@ -906,10 +761,8 @@ export const handleMethods = {
     if (!found)
       return;
     const {fx, fy} = pointerShare(event, drag.rect);
-    const patch = drag.handle === 'width'
-                      ? SENSE_WIDTH[found.organ.type]?.(fx, fy, drag.aim)
-                      : senseMarkPatch(this.state, drag,
-                                       {x : fx * drag.size.width, y : fy * drag.size.height});
+    const patch =
+        senseMarkPatch(this.state, drag, {x : fx * drag.size.width, y : fy * drag.size.height});
     if (!patch)
       return;
     // A whole node more or less is the organ's change; everything else is the cells'.
@@ -918,6 +771,6 @@ export const handleMethods = {
                                                      patch.nodes, this.state.sites)
                                  : updateCenter(this.state.document, drag.id, patch);
     if (doc)
-      this.draftDesign(doc, 'sense:' + drag.id, drag.redraw);
+      this.draftDesign(doc, 'sense:' + drag.id);
   },
 };
