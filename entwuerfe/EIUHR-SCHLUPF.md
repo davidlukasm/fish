@@ -20,7 +20,33 @@ Heute hängt alles an der Reife. Die Reife beim Schlupf liegt je nach Ei zwische
 - **Schlupf** braucht: Bau fertig, Schale gelockert, Zuckung stark genug, Gewebe und Reserve (`physiology.cc:166-169`, `embryo.cc:38-41`).
 - **Schale lockern** kann nur der Fisch selbst: Samenorgan aufbauen und auslösen (`reproduction.cc:269-281`). In der Vorlage treibt das der Knoten `hatch` der Region Körperzustand (`state_region.js:24`).
 
-## Fassung 2 (04:25, nach Astra 04:19): Das erste Licht beendet die Eiphase
+## Fassung 3 (04:30, nach Astra 04:22): Reife beim Schlupf als Erbanlage
+
+Fassung 2 trägt nicht (Astra 04:22). Die Netzhaut meldet Kontrast, nicht Helligkeit. Licht kann 0 sein. Die Bahn Lichtzelle → Relais → Drüse kann vor dem ersten Licht nicht lernen.
+
+**Neuer Ansatz: nicht ein neues Signal suchen, sondern die vorhandene Uhr reparieren.** Die Reife ist im Ei schon eine Uhr: Gewebe = Schlupfgewebe × Baufortschritt (`physiology.cc:471-478`). Kaputt ist nur ihr Endwert: Schlupfgewebe ÷ Kapazität hängt an der Eienergie und schwankt von fast 0 bis 1. Davids Frage von 02:14 war genau das: „Wie legst du fest, wie hoch die Reife bei Schlupf ist?“
+
+**Vorschlag:**
+- **Engine:** Das Schlupfgewebe ist ein Anteil der Kapazität, festgelegt durch ein Gen „Reife beim Schlupf“, nicht mehr durch die Eienergie. Untergrenze bleibt 20 (Gewebeboden, Fable/Astra zu (d)).
+  - Mehr Eienergie wird Reserve statt Gewebe.
+  - Die Reife steigt im Ei dann bei jedem Fisch von 0 bis zu seinem Erbwert. Sie steht beim Schlupf auf dem Erbwert und wächst danach mit dem Fressen.
+- **Atelier:** Die Vorlagen setzen ihre Halbwerte aus diesem Erbwert. Ein Beispiel bei Erbwert 0,25: Eigenfeuern endet bei 0,9 × 0,25, Ei-Härtung klingt bei 0,25 aus, Schlupftakt endet knapp darüber. Netzhaut genauso.
+- **Bauprüfung:** Fische, deren Kapazität unter dem Gewebeboden liegt, werden abgelehnt (Fable 03:30). Liegt 20 über Erbwert × Kapazität (Organmasse unter etwa der Referenz), zeigt das Atelier die tatsächliche Reife beim Schlupf an.
+
+**Für:**
+- Kein neues Signal, kein neuer Botenstoff. Die Organe steuern ihre Eiphase weiter über ihre eigenen Antworten auf Reife, erblich (LEITLINIE 0).
+- Davids Satz „Hormone können doch die Reife steuern“ gilt nach dem Schlupf weiter (Wachstumserlaubnis).
+
+**Gegen:**
+- Engine-Änderung an Schlupfgewebe, Eikalkulation und Reservepolster (Astra 03:29: `physiology.cc:76-97,162-169`).
+- Der Schlupftakt endet nach dem Schlupf erst mit Wachstum, also mit Fressen. Das ist heute auch so (Halbwert 0,8).
+- Ein Gen mehr.
+
+**Bitte prüfen:**
+1. Astra: Was ändert sich an Eiablage, Mindestei und Reserve, wenn das Schlupfgewebe ein Erbanteil der Kapazität ist? Wohin geht Energie über der Reservekapazität?
+2. Fable: Wo im Genom und im Atelier käme das Gen hin, und welche Vorlagen müssten ihre Halbwerte daraus lesen?
+
+## Fassung 2 (überholt, 04:25, nach Astra 04:19): Das erste Licht beendet die Eiphase
 
 Astra 04:19: Ein spät gebildeter Knoten meldet nur seine eigene Bildung, nicht den Schlupf. Ein Schlupftakt, der darauf endet, kann vor seiner ersten Wirkung abschalten. Nach dem Schlupf löst `hatch` sonst normale Samenabgabe aus. Gebraucht wird eine **kausale Rückmeldung aus dem Fisch**.
 
