@@ -2106,16 +2106,18 @@ function drawScentMap(id = 'scentmap', cell = S.smell, NOSE_PARTS = ['scentmap',
     drag(svg, el('rect', {x : x - 5, y : y - 5, width : 10, height : 10, rx : 2.5, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2.5 : 1}`}, live),
       p => { Object.assign(k, snapped(p)); cell.chosen = i; draw(NOSE_PARTS); }, id + 'type' + i);
     if (!chosen) return;
-    const half = Math.min(scentHalf(k.width), 170), edge = (() => { const p = mapPoint(k.lat - half, k.lon); return Math.hypot(p[0] - cx, p[1] - cy) <= R + .5 ? p : mapPoint(k.lat + half > 90 ? 180 - k.lat - half : k.lat + half, k.lat + half > 90 ? k.lon + 180 : k.lon); })();
+    // Two places on the patch's edge, towards the map's rim and towards its middle: the width's
+    // grip takes the one inside the map, the (×) the other, never nearer the type's place than
+    // clear of its grip.
+    const half = Math.min(scentHalf(k.width), 170), over = k.lat + half > 90, outer = mapPoint(k.lat - half, k.lon), inner = mapPoint(over ? 180 - k.lat - half : k.lat + half, over ? k.lon + 180 : k.lon),
+          inside = pt => Math.hypot(pt[0] - cx, pt[1] - cy) <= R + .5, edge = inside(outer) ? outer : inner, other = edge === outer ? inner : outer, far = Math.hypot(other[0] - x, other[1] - y), away = far >= 17 ? other : far > .5 ? [x + (other[0] - x) * 17 / far, y + (other[1] - y) * 17 / far] : [x, y + 17];
     drag(svg, el('circle', {cx : edge[0], cy : edge[1], r : 4.5}, live), p => {
       // The width whose half angle is the pointer's angle from the type's place.
       const wanted = angleBetween(onSphere(k.lat, k.lon), (({lat, lon}) => onSphere(lat, lon))(mapPlace(p)));
       let lo = 0, hi = .8;
       for (let n = 0; n < 22; n++) { const mid = (lo + hi) / 2; if (scentHalf(mid) < wanted) lo = mid; else hi = mid; }
       k.width = lo; draw(NOSE_PARTS); }, id + 'typewidth');
-    // Its (×) stands on the side away from a scent's name.
-    const named = x < SNIFF.M.margin || (x >= cx && x <= 2 * cx - SNIFF.M.margin);
-    if (keys.length > 1) chip(live, x + (named ? -12 : 12), y - 12, '×', () => { keys.splice(i, 1); cell.chosen = 0; }, NOSE_PARTS, true, 6);
+    if (keys.length > 1) chip(live, away[0], away[1], '×', () => { keys.splice(i, 1); cell.chosen = 0; }, NOSE_PARTS, true, 6);
   });
   chip(live, 2 * cx - 12, SNIFF.M.height - 10, '+', () => { keys.push({gate : .25, spread : .1, used : 200, lat : cell.probe.lat, lon : cell.probe.lon, width : .25, ...words.fresh}); cell.chosen = keys.length - 1; }, NOSE_PARTS, keys.length < MOST_TYPES, 7);
 }
