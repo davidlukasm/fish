@@ -1862,6 +1862,27 @@
       "least": "Mindestdotter laut Bauplan",
       "steps": "Schritte",
       "perEgg": "Dotter je Ei"
+    },
+    "sperm": {
+      "trial": "Füllen und Abgeben",
+      "life": "Lebenszyklus",
+      "thins": "Dünnt die Schale aus",
+      "thick": "Schale bleibt dick",
+      "none": "Gibt nichts ab",
+      "weak": "Ablegezellen zu schwach",
+      "reaches": "Wolke erreicht das Ei",
+      "thin": "Wolke zu dünn",
+      "shell": "Schale {p} nach Abgabe",
+      "unchanged": "Schale unverändert",
+      "amount": "{n} Samen je Wolke",
+      "fill": "füllen",
+      "give": "abgeben",
+      "full": "voll",
+      "empty": "leer",
+      "steps": "Schritte",
+      "shellWord": "Schale",
+      "secretion": "Schlupfsekret",
+      "sperm": "Samen"
     }
   }
 }

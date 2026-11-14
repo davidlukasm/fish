@@ -1336,3 +1336,13 @@
 .aid-live-laying{fill:#f4efd8;opacity:.3}
 .aid-live-chamber{fill:none;stroke:var(--aid-chip);stroke-width:1}
 .aid-live-bellyroom{fill:none;stroke:#e9e2c6;stroke-dasharray:2 4;opacity:.55}
+.aid-live-sperm .aid-live-body{fill:#1f4852}
+.aid-live-milt{fill:#dfe8f2}
+.aid-live-miltsac{fill:var(--aid-chip);stroke:#dfe8f2;stroke-width:1.4}
+.aid-live-miltgrip{fill:#dfe8f2}
+.aid-live-miltfill{fill:#dfe8f266;stroke:#dfe8f2;stroke-width:1.6}
+.aid-live-laying.dark{fill:var(--aid-chip);opacity:.35}
+.aid-live-eggshell{fill:none;stroke:#e9e2c6}
+.aid-live-shellline{fill:none;stroke:#e9e2c6;stroke-width:2}
+.aid-live-plant{fill:none;stroke:#8fd16a;stroke-width:2.2;stroke-linecap:round}
+.aid-live-ink{fill:none;stroke:#dfe8f2}

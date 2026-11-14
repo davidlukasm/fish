@@ -10,7 +10,7 @@ import {
 import {effectorGraphic, spineField} from './view/effectors.js';
 import {lateralField} from './view/lateral.js';
 import {hairField} from './view/balance.js';
-import {gonadGraphic, gonadSense} from './view/sacs.js';
+import {gonadSense} from './view/sacs.js';
 // Organs whose sense pictures are drawn again while one of their handles is dragged.
 const SENSE_PICTURES = Object.freeze({
   lateral : lateralField,
@@ -18,7 +18,7 @@ const SENSE_PICTURES = Object.freeze({
   blood : (state, organ, held) => hormonePad(state, organ, selectedCenter(state, organ), held),
   gland : (state, organ) => glandProfile(state, organ, selectedCenter(state, organ)),
   eggs : (state, organ, held) => gonadSense(state, organ, held),
-  sperm : (state, organ, held) => gonadGraphic(state, organ, selectedCenter(state, organ), held)
+  sperm : (state, organ, held) => gonadSense(state, organ, held)
 });
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';

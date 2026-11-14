@@ -54,7 +54,7 @@ import {learningInspector} from './learning.js';
 import {workflow} from './library.js';
 import {centerTitle, endpointTitle, familyTitle, moduleName, nodeFamilies} from './names.js';
 import {organTitle} from './names.js';
-import {gonadGraphic, gonadSense} from './sacs.js';
+import {gonadSense} from './sacs.js';
 import {skinField} from './skin.js';
 import {gutProbeControls} from './probes.js';
 import {livePlace} from './live/kit.js';
@@ -63,6 +63,7 @@ import './live/gut.js';
 import './live/bladder.js';
 import './live/gills.js';
 import './live/eggs.js';
+import './live/sperm.js';
 
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
@@ -115,7 +116,7 @@ const ORGAN_PANELS = Object.freeze({
   defense : (state, organ) => spineField(state, organ),
   gland : (state, organ, center) => glandProfile(state, organ, center),
   eggs : (state, organ) => livePlace('eggs', organ) + gonadSense(state, organ),
-  sperm : gonadGraphic,
+  sperm : (state, organ) => livePlace('sperm', organ) + gonadSense(state, organ),
   lateral : (state, organ) => lateralField(state, organ),
   balance : (state, organ, center) => hairField(state, organ, center),
   touch : skinPanel,
