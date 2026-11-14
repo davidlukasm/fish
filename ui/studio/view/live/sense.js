@@ -558,8 +558,8 @@ export function typeLife(
     svg, {name, own, phases, egg, words, hatch : hatches, set, draft, settle, redraw}) {
   const {L, R, top, base, icons, beside, whole, least} = LIFE, hatchX = L + (R - L) * hatches;
   const {under, live} = picture(svg, LIFE.height, fixed => {
-    txt(fixed, L + 4, top + 11, words.egg, {class : 'aid-live-small'});
-    txt(fixed, hatchX + 5, top + 11, words.grown, {class : 'aid-live-small'});
+    txt(fixed, L - beside, top - 3, words.egg, {class : 'aid-live-small'});
+    txt(fixed, R + beside, top - 3, words.grown, {class : 'aid-live-small', 'text-anchor' : 'end'});
     el('ellipse', {cx : L + 8, cy : icons, rx : 6, ry : 5, class : 'aid-live-egg'}, fixed);
     el('circle', {cx : L + 8, cy : icons, r : 1.8, class : 'aid-live-eye'}, fixed);
     fishIcon(fixed, hatchX, icons, .5);
