@@ -1790,6 +1790,32 @@
       "rest": "{p} des Ruhebedarfs",
       "beater": "Schwanzschläger",
       "wriggler": "Schlängler"
+    },
+    "gut": {
+      "yield": "Ertrag",
+      "gain": "Ausbeute",
+      "short": "kurz",
+      "stay": "Verweildauer im Darm",
+      "long": "lang",
+      "muscle": "Muskel",
+      "ache": "Bauchweh",
+      "rest": "{p} des Ruhebedarfs",
+      "span": "{from}–{to}",
+      "food": {
+        "plant": "Blatt",
+        "algae": "Alge",
+        "flock": "Flocken",
+        "plankton": "Plankton",
+        "meat": "Fleisch"
+      },
+      "kind": {
+        "plant": "Pflanzenfresser",
+        "algae": "Algenfresser",
+        "flock": "Allesfresser",
+        "plankton": "Planktonfresser",
+        "meat": "Räuber",
+        "all": "Allesfresser"
+      }
     }
   }
 }

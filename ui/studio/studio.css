@@ -1251,3 +1251,24 @@
 .aid-live-picture text.aid-live-sand-word{fill:#c9b48c}
 .aid-live-dim{fill:var(--aid-chip);opacity:.55;pointer-events:none}
 .aid-live-hatch{fill:none;stroke:#e9e2c6;stroke-dasharray:3 3}
+.aid-live-picture text.aid-live-value{fill:var(--aid-control-text);font-variant-numeric:tabular-nums}
+.aid-live-gullet{fill:none;stroke:#6b6f5f;stroke-width:5}
+.aid-live-gutwall{stroke:#9a6a48}
+.aid-live-guttube{stroke:#6b6f5f}
+.aid-live-morsel{fill:#e3cf94}
+.aid-live-crumb{fill:#c98f55}
+.aid-live-stomach{fill:#5a4232;stroke:#e6b47c;stroke-width:1.6}
+.aid-live-muscle{fill:#9a6a48}
+.aid-live-musclebar{fill:none;stroke:#9a6a48;stroke-width:6;stroke-linecap:round}
+.aid-live-reach{fill:var(--aid-handle);opacity:.1}
+.aid-live-rest{fill:none;stroke:var(--aid-handle);stroke-width:1.4;stroke-dasharray:4 3}
+.aid-live-sore{fill:none;stroke:#ef8f8f;stroke-width:1.6;stroke-dasharray:3 2}
+.aid-live-sore.wide{stroke-width:4.5;opacity:.5}
+.aid-live [data-food=plant]{color:#8fd16a}
+.aid-live [data-food=algae]{color:#55c4a6}
+.aid-live [data-food=flock]{color:#e3cf94}
+.aid-live [data-food=plankton]{color:#9cc8f0}
+.aid-live [data-food=meat]{color:#ef8f8f}
+.aid-live-food-line{fill:none;stroke:currentColor;stroke-width:2}
+.aid-live-food-fill{fill:currentColor}
+.aid-live-picture text.aid-live-food-word{fill:currentColor}

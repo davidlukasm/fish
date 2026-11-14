@@ -340,6 +340,18 @@ export function gutMeal(food, stay, steps, full = false) {
   }
   return {held, taken};
 }
+// How much a full gut hurts that holds such a meal `stay` steps (physiology.hh, gut_ache): flesh
+// hurts once it stays past its span, a meal rough by more than a share hurts when it stays too
+// short; from 0 to 1, all it can once the limit is passed by the share `cramp`. Rough are fibre
+// and the soft stuff of algae (digestion::rough).
+export function gutAche(food, stay) {
+  const flesh = food.flesh || 0, rough = (food.fibre || 0) + (food.soft || 0);
+  const spoiling = flesh > 0 ? stay * flesh / (DIGESTION.ache_flesh * DIGESTION.flesh_spoil) - 1 : 0,
+        closed = rough > DIGESTION.ache_fibre
+                     ? 1 - stay / (DIGESTION.ache_fibre_stay * (rough - DIGESTION.ache_fibre))
+                     : 0;
+  return Math.min(1, Math.max(0, Math.max(spoiling, closed) / DIGESTION.cramp));
+}
 // The share of such a meal the fish takes up before it has passed.
 export const gutUse = (food, stay) => gutMeal(food, stay, Infinity).taken;
 export const gutTurns = gutLength => GUT.turns + GUT.turns_per_length * (gutLength || 0);

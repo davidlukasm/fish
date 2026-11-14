@@ -9,7 +9,6 @@ import {
   effectorGraphic,
   gillGraphic,
   gutGraphic,
-  gutMuscleGraphic,
   spineField
 } from './effectors.js';
 import {lateralField} from './lateral.js';
@@ -65,6 +64,7 @@ import {skinField} from './skin.js';
 import {gutProbeControls} from './probes.js';
 import {livePlace} from './live/kit.js';
 import './live/tail.js';
+import './live/gut.js';
 
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
@@ -112,7 +112,9 @@ const ORGAN_PANELS = Object.freeze({
                                  ? livePlace('tail', organ)
                                  : effectorGraphic(state, organ),
   gills : (state, organ) => gillGraphic(state, organ),
-  gutmuscle : (state, organ) => gutMuscleGraphic(state, organ),
+  // Gut and gut muscle are one organ to the eye: one live inspector for both. (The gut's own
+  // entry follows when its senses are in it.)
+  gutmuscle : () => livePlace('gut', {id : 'gut'}),
   defense : (state, organ) => spineField(state, organ),
   gland : (state, organ, center) => glandProfile(state, organ, center),
   eggs : gonadGraphic,
