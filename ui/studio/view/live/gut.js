@@ -20,9 +20,11 @@ import {
   setGutLength,
   setLifePhase,
   setNodeCopies,
+  setOrganNodes,
   updateCellDistribution,
   updateCenter
 } from '../../model/document.js';
+import {kindLimit} from '../../model/organs.js';
 import {label} from '../kit.js';
 import {chip, clamp, drag, el, fishIcon, liveKind, path, picture, txt} from './kit.js';
 
@@ -352,8 +354,8 @@ liveKind('gut', (studio) => {
     const strength = cells.reduce((sum, c) => sum + cellStrength(c, diet.gut), 0), row = diet.gut.speed, most = diet.gut.speedMaxStrength;
     const pace = row && most > 0 ? sampled(row, strength / most) : state.anatomy?.gutSpeed ?? 1;
     const fastest = rest / pace, reach = [ fastest, rest ];
-    // The most the grip can reach: every cell of this muscle at its fullest.
-    const fullest = cells.reduce((sum, c) => sum + cellStrength({...c, copies : ATELIER_LIMITS.max_copies}, diet.gut), 0);
+    // The most the grip can reach: every place of the gut wall with a full cell of these fibres.
+    const fullest = muscle ? Math.max(2, kindLimit(muscle, state.sites)) * cellStrength({...cells[0], copies : ATELIER_LIMITS.max_copies}, diet.gut) : 0;
     const quickest = row && most > 0 ? Math.max(pace, sampled(row, fullest / most)) : pace;
     return {length, rest, pace, quickest, fastest, reach, muscle, strength, ranges : curves.map(c => rangeIn(c, reach)), diet : bestAt(fastest)};
   }
@@ -408,10 +410,13 @@ liveKind('gut', (studio) => {
     const m = model, gut = state.capabilities.diet.gut, row = gut.speed, most = gut.speedMaxStrength;
     if (!m.muscle || !row || !(most > 0))
       return;
-    // The strength wanted, shared alike among the muscle's cells as they are.
-    const wanted = shareFor(row, m.rest / Math.min(stayOfX(p.x), m.rest)) * most,
-          each = m.muscle.centers.reduce((sum, c) => sum + cellStrength({...c, copies : 1}, gut), 0);
-    draft(setNodeCopies(studio.state.document, m.muscle.id, clamp(Math.round(wanted / each), 1, ATELIER_LIMITS.max_copies)));
+    // The strength wanted: first fuller cells, then more of them (as many as the gut wall has
+    // places), all with the fibres the muscle has.
+    const wanted = shareFor(row, m.rest / Math.min(stayOfX(p.x), m.rest)) * most, one = cellStrength({...m.muscle.centers[0], copies : 1}, gut),
+          full = ATELIER_LIMITS.max_copies, places = kindLimit(m.muscle, studio.state.sites);
+    const cells = clamp(2 * Math.ceil(wanted / (one * full) / 2), 2, Math.max(2, places));
+    const sized = cells === m.muscle.centers.length ? studio.state.document : setOrganNodes(studio.state.document, m.muscle.id, cells, studio.state.sites) ?? studio.state.document;
+    draft(setNodeCopies(sized, m.muscle.id, clamp(Math.round(wanted / (one * cells)), 1, full)));
   }
   function drawFish() {
     const {svg, live} = picture(fish, FISH.height, buildFish), {down, right} = FISH, m = model;
@@ -455,6 +460,8 @@ liveKind('gut', (studio) => {
     // at rest (no muscle) to the fastest this muscle's cells can make it at their fullest; the
     // grip stands exactly above the muscle's grip in the yield and moves with it.
     const wy = FISH.height - 9, wx1 = xOfStay(m.rest), wide = xOfStay(m.rest / m.quickest), wx0 = xOfStay(m.fastest);
+    // The way the grip can go, pale; on it the wedge.
+    el('path', {d : `M${wx1} ${wy} H${wide}`, class : 'aid-live-muscleway'}, live);
     el('path', {d : `M${wx1} ${wy} L${wide} ${wy - 5.5} v11 Z`, class : 'aid-live-muscle'}, live);
     txt(live, wide - 9, wy + 4, word('muscle'), {'text-anchor' : 'end'});
     if (m.muscle && state.capabilities.diet.gut.speed)
@@ -635,10 +642,10 @@ liveKind('gut', (studio) => {
       play.glow.push({owner : id, line, gate : k.gate, sense : id});
     });
     el('path', {d : `M${L} ${I0 - 2} V${I1} H${R}`, class : 'aid-live-axis'}, live);
-    txt(live, L, I1 + 14, word('steps'));
+    txt(live, L, I1 + 16, word('steps'));
     for (const st of [ STEPS / 3, 2 * STEPS / 3 ])
-      txt(live, X(st), I1 + 14, st, {'text-anchor' : 'middle'});
-    txt(live, R, I1 + 14, STEPS, {'text-anchor' : 'end'});
+      txt(live, X(st), I1 + 16, st, {'text-anchor' : 'middle'});
+    txt(live, R, I1 + 16, STEPS, {'text-anchor' : 'end'});
     play.lines[id] = {line : el('path', {class : 'aid-live-now'}, live), x : X, top : I0, base : I1};
     // Where each key's cells send nothing more: a thin mark for each on the step axis (not for
     // cells that never send); the chosen one's is a grip. It is called got used to only where the
@@ -654,8 +661,8 @@ liveKind('gut', (studio) => {
         }
         el('path', {d : `M${x} ${I0 - 23} V${I0 - 21} M${x} ${I0} V${I1}`, class : 'aid-live-keyline k' + i % 3}, live);
         if (at <= STEPS && stim[at] > Math.min(...cellGates(k)))
-          txt(live, x + (left ? -7 : 7), I1 - 15, word('used'), {'text-anchor' : left ? 'end' : 'start', class : 'aid-live-onground'});
-        drag(svg, el('rect', {x : x - 4, y : I1 - 11, width : 8, height : 10, rx : 2, class : keyGrip(i, true)}, live), p => tire(k, i, p), id + 'used', 'grip', settle);
+          txt(live, x + (left ? -7 : 7), I0 + 11, word('used'), {'text-anchor' : left ? 'end' : 'start', class : 'aid-live-onground'});
+        drag(svg, el('rect', {x : x - 4, y : I1 - 13, width : 8, height : 10, rx : 2, class : keyGrip(i, true)}, live), p => tire(k, i, p), id + 'used', 'grip', settle);
       });
     // The grips, above everything they could be hidden by: every key and its spread, the input's
     // two knobs (when it is fully there and how strong, and when it stops).
@@ -688,9 +695,12 @@ liveKind('gut', (studio) => {
       const BY = v => B1 - (B1 - B0) * clamp(v);
       txt(live, rowL, B0 - 6, word('acheRow'));
       foods.forEach(([ c, j ], n) => {
-        const [lo, hi] = acheIn(c, model.reach), x = rowL + (wide + rowGap) * n;
+        // Pale: the most this food hurts at any stay; stronger: what it does in this gut, at
+        // most and at least.
+        const [lo, hi] = acheIn(c, model.reach), x = rowL + (wide + rowGap) * n, any = Math.max(...c.aches);
         el('rect', {x, y : B0, width : wide, height : B1 - B0, rx : 2, class : 'aid-live-track'}, live);
-        el('rect', {x, y : BY(hi), width : wide, height : B1 - BY(hi), rx : 2, class : 'aid-live-food-fill', 'data-food' : c.name, opacity : .4}, live);
+        el('rect', {x, y : BY(any), width : wide, height : B1 - BY(any), rx : 2, class : 'aid-live-food-fill', 'data-food' : c.name, opacity : .15}, live);
+        el('rect', {x, y : BY(hi), width : wide, height : B1 - BY(hi), rx : 2, class : 'aid-live-food-fill', 'data-food' : c.name, opacity : .45}, live);
         el('rect', {x, y : BY(lo), width : wide, height : B1 - BY(lo), rx : 2, class : 'aid-live-food-fill', 'data-food' : c.name, opacity : .9}, live);
         txt(live, x + wide / 2, B1 + 12, word('food.' + c.name), {'text-anchor' : 'middle', class : 'aid-live-food-word', 'data-food' : c.name});
       });
@@ -716,7 +726,7 @@ liveKind('gut', (studio) => {
       r.mark.setAttribute('transform', `translate(${r.at}) scale(${(signal > .01 ? .45 + .9 * signal : 0).toFixed(2)})`);
     });
   }
-  // The nerve cells' pulses and what irritates them, throbbing as strongly as the input is.
+  // The nerve cells' pulses and what irritates them, as big as the input is.
   function showNerves(dt) {
     const {speed, rate, merge, bundle} = NERVE, place = (e, [ x, y ]) => {
       e.setAttribute('cx', x.toFixed(1));
@@ -725,7 +735,8 @@ liveKind('gut', (studio) => {
     play.time += dt;
     for (const [id, n] of Object.entries(play.nerves)) {
       const st = Math.round(step), felt = between(play.stim[id], step);
-      n.irritant.setAttribute('transform', `translate(${n.at}) scale(${((.4 + .9 * felt) * (1 + .12 * Math.sin(play.time / 110))).toFixed(2)})`);
+      // As big as the input is now: it changes only when the input does.
+      n.irritant.setAttribute('transform', `translate(${n.at}) scale(${(.4 + .9 * felt).toFixed(2)})`);
       n.irritant.setAttribute('opacity', felt > .02 ? 1 : 0);
       n.due += dt * .012 * felt;
       const still = n.dots.find(d => d.t >= 1);
