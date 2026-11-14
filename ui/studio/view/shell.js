@@ -128,13 +128,13 @@ function stationStage(s, cppn) {
 }
 const grip = panel => '<div class="aid-panel-grip" data-panel-grip="' + panel + '" title="' +
                       label('app.panelWidth') + '"></div>';
-export function stationShell(s) {
+export function stationShell(s, shownDesign) {
   const cppn = s.mode === 'cppn', offered = libraryOf(s);
   return '<div class="aid-station">' + stationHeader(s) + '<nav class="aid-modes">' +
          button('data-mode="fish"', label('app.modeFish'), {active : !cppn}) +
-         button('data-mode="cppn"', label('app.modeCppn'), {active : cppn}) + compilerPanel(s) +
-         '</nav><div class="aid-workspace-main" style="' + panelStyle(s.panels) +
-         '"><div class="aid-library">' + grip('library') +
+         button('data-mode="cppn"', label('app.modeCppn'), {active : cppn}) +
+         compilerPanel(s, shownDesign) + '</nav><div class="aid-workspace-main" style="' +
+         panelStyle(s.panels) + '"><div class="aid-library">' + grip('library') +
          '<div class="aid-library-scroll" data-library="' + offered.kind + '">' +
          (cppn ? '<h3>' + label('cppn.graph') + '</h3>' + cppnToolbar(s) : offered.html) +
          '</div></div><section class="aid-stage">' + stationStage(s, cppn) +

@@ -825,6 +825,16 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
   std::cout << ']';
   return group;
 }
+void readiness_report(const fishsim::BrainInterface &a, const field::Substrate &t, bool developed) {
+  std::cout << ",\"checks\":{\"sense\":" << (a.sensory_capacity > 0 ? "true" : "false")
+            << ",\"swim\":" << (a.capacities[fishsim::organ_port::forward] > 0 ? "true" : "false")
+            << ",\"mouth\":" << (a.suction_strength > 0 ? "true" : "false")
+            << ",\"eggs\":" << (a.egg_parts[0] > 0 && a.egg_parts[1] > 0 ? "true" : "false")
+            << ",\"sperm\":" << (a.sperm_parts[0] > 0 && a.sperm_parts[1] > 0 ? "true" : "false");
+  if (developed)
+    std::cout << ",\"connections\":" << (!t.edges.empty() ? "true" : "false");
+  std::cout << ",\"resources\":" << (!t.resource_limited ? "true" : "false") << '}';
+}
 void design_report(const Plan &plan, const std::optional<SightScene> &sight,
                    const std::optional<SenseScene> &sense, bool light_spread) {
   const auto &groups = plan.groups;
@@ -835,6 +845,7 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
   std::cout << std::setprecision(REPORT_DIGITS) << '{';
   std::cout << "\"neurons\":" << t.neurons.size()
             << ",\"limited\":" << (t.resource_limited ? "true" : "false");
+  readiness_report(*g.interface, t, false);
   anatomy_report(g, groups, false);
   if (light_spread) {
     const auto sample = light_example(plan);
@@ -875,13 +886,7 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
     std::cout << "]}";
   }
   const auto &a = *g.interface;
-  std::cout << ",\"checks\":{\"sense\":" << (a.sensory_capacity > 0 ? "true" : "false")
-            << ",\"swim\":" << (a.capacities[fishsim::organ_port::forward] > 0 ? "true" : "false")
-            << ",\"mouth\":" << (a.suction_strength > 0 ? "true" : "false")
-            << ",\"eggs\":" << (a.egg_parts[0] > 0 && a.egg_parts[1] > 0 ? "true" : "false")
-            << ",\"sperm\":" << (a.sperm_parts[0] > 0 && a.sperm_parts[1] > 0 ? "true" : "false")
-            << ",\"connections\":" << (!t.edges.empty() ? "true" : "false")
-            << ",\"resources\":" << (!t.resource_limited ? "true" : "false") << '}';
+  readiness_report(a, t, true);
   const auto incubation = incubation_probe(g);
   std::cout << ",\"eggIncubation\":";
   if (incubation)

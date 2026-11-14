@@ -17,8 +17,11 @@ export function compilerProgress(state) {
               ? ' · ' + t('studio.compiler.attempt', {count : progress.attempts})
               : '');
 }
-export function compilerPanel(state) {
+export function compilerPanel(state, shownDesign) {
   const report = state.stale ? null : state.report?.compiler;
+  const checks = !state.stale && state.report?.checks ? state.report.checks
+                 : shownDesign === state.document     ? state.anatomy?.checks
+                                                      : null;
   const options = compilerOptions(state.document);
   const centers = allCenters(state.document);
   const select = (key, values, suffix = '') =>
@@ -57,6 +60,14 @@ export function compilerPanel(state) {
                                       : '') +
                                  '</button>')
                    .join('');
+  }
+  if (checks) {
+    const missing = [ 'sense', 'swim', 'mouth', 'resources' ].filter(key => checks[key] === false);
+    if (checks.eggs === false && checks.sperm === false)
+      missing.push('reproduction');
+    if (missing.length)
+      content += '<ul class="aid-compiler-missing">' +
+                 missing.map(key => '<li>' + label('missing.' + key) + '</li>').join('') + '</ul>';
   }
   content += '<button data-action="check"' +
              (!acceptedGenome(state) || !report || state.busy ? ' disabled' : '') + '>' +

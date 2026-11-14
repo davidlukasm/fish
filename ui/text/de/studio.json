@@ -1223,6 +1223,13 @@
     "mutations": "Mutierte Nachkommen",
     "within": "innerhalb der Vorgaben",
     "openRegion": "eigene Synapsen in der Region",
+    "missing": {
+      "sense": "Sinneszellen fehlen",
+      "swim": "Vortrieb fehlt",
+      "mouth": "Maulöffner fehlt",
+      "reproduction": "Ein Organ zum Füllen und Abgeben von Eiern oder Samen fehlt",
+      "resources": "Zu viele Zellen für die Entwicklung"
+    },
     "issues": {
       "identity": "Andere Zellfunktion",
       "cells": "Zusätzliche Zellen außerhalb des Entwurfs",

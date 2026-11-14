@@ -349,7 +349,7 @@ export class OrganStudio {
     const menuControls = 'summary, button, select';
     const focused =
         options ? [...options.querySelectorAll(menuControls) ].indexOf(document.activeElement) : -1;
-    this.root.innerHTML = stationShell(s);
+    this.root.innerHTML = stationShell(s, this.shownDesign);
     const freshOptions = this.root.querySelector('.aid-scene-options');
     if (options && freshOptions) {
       freshOptions.open = options.open;
@@ -452,7 +452,7 @@ export class OrganStudio {
     const compiler = this.root.querySelector('.aid-compiler');
     if (compiler) {
       const opened = compiler.open;
-      compiler.outerHTML = compilerPanel(state);
+      compiler.outerHTML = compilerPanel(state, this.shownDesign);
       const updated = this.root.querySelector('.aid-compiler');
       if (updated)
         updated.open = opened || (!state.stale && state.report?.compiler?.ok === false);
