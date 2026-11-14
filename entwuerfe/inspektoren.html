@@ -298,7 +298,7 @@ const S = {
   // The sense of balance: hair: where the cells' hair points, in degrees from the snout over the flank (90) to the tail (180); tilt: where the snout points, the posture tried (0 = to the right, 90 = down).
   balance : {keys : [{gate : .06}], hair : 90, tilt : 25},
   // The gland: place (which hormone it pours, 0 = A ... 5 = F, between two a mix), width (how many it pours into), cells (how high the level gets), rise and stay (steps the level takes to rise and to fade); the command tried: how strongly (-1 binding ... 1 pouring) and at which step it stops.
-  gland : {keys : [{from : .5}], place : 1, width : .1, cells : 9, rise : 60, stay : 220, command : 1, stop : 380},
+  gland : {keys : [{}], place : 1, width : .1, cells : 9, rise : 60, stay : 220, command : 1, stop : 380},
   // The mouth, two organs as one: the jaw muscle (bite: its cells; long: the jaw's length; blunt: the teeth's form, 0 sharp - 1 blunt) and the mouth opener (suck: its cells).
   mouth : {keys : [{}], bite : 8, suck : 5, long : .5, blunt : .15},
   // The side fin: angle: where it beats, in degrees (0 straight back, 90 outward, -90 inward); speed: how fast the fish tried swims, over its cruising speed; bury: how deep it lies in the ground (0-1).
@@ -3096,8 +3096,10 @@ function drawMouthLife() {
 const GLAND = {height : 214, L : 62, R : 286, top : 44, row : 21, thick : 18, names : ['A', 'B', 'C', 'D', 'E', 'F'], colours : ['#d4a0ee', '#77d2bd', '#e9b66d', '#8daded', '#ee9f9a', '#b8d47a'],
                sigma : [.15, 2], step : .15, cells : [1, 12], rise : [4, 300], stay : [4, 600], held : .8, bind : .003, knob : [10, 26]};
 const GLAND_PARTS = ['gland', 'glandlife'];
-// What the gland pours of each hormone: by the distance of their places on the wheel.
-const glandTakes = g => GLAND.names.map((_, k) => { const a = 2 * Math.PI * GLAND.step * g.place, b = 2 * Math.PI * GLAND.step * k, sigma = GLAND.sigma[0] + (GLAND.sigma[1] - GLAND.sigma[0]) * g.width; return Math.exp(-((Math.cos(a) - Math.cos(b)) ** 2 + (Math.sin(a) - Math.sin(b)) ** 2) / (2 * sigma * sigma)); });
+// What the gland pours of each hormone: its share by the distance of their places on the wheel.
+// The shares of all six add up to one, so a wide gland spreads the same strength over more.
+const glandTakes = g => { const raw = glandRaw(g), sum = raw.reduce((x, y) => x + y, 0); return raw.map(v => v / sum); };
+const glandRaw = g => GLAND.names.map((_, k) => { const a = 2 * Math.PI * GLAND.step * g.place, b = 2 * Math.PI * GLAND.step * k, sigma = GLAND.sigma[0] + (GLAND.sigma[1] - GLAND.sigma[0]) * g.width; return Math.exp(-((Math.cos(a) - Math.cos(b)) ** 2 + (Math.sin(a) - Math.sin(b)) ** 2) / (2 * sigma * sigma)); });
 // A hormone's level over the steps: towards the height its glands pour it to, fading after.
 function glandCourse(g, take, bound = true) {
   const out = [], high = Math.min(1, g.cells / GLAND.cells[1] * take); let level = g.command < 0 ? GLAND.held * take : 0;
@@ -3112,7 +3114,7 @@ function glandCourse(g, take, bound = true) {
 function drawGland() {
   const g = S.gland, {svg, live} = picture('gland', GLAND.height), {L, R, top, row, thick} = GLAND, X = st => L + (R - L) * st / 900, Y = k => top + row * k + row / 2, takes = glandTakes(g), base = top + row * 6;
   const main = takes.indexOf(Math.max(...takes));
-  document.getElementById('gland-kind').textContent = (g.command < 0 ? 'Bindet ' : 'Schüttet ') + GLAND.names.filter((_, k) => takes[k] > .5).map(n => 'Stoff ' + n).join(', ');
+  document.getElementById('gland-kind').textContent = (g.command < 0 ? 'Bindet ' : 'Schüttet ') + GLAND.names.filter((_, k) => takes[k] > .5 * Math.max(...takes)).map(n => 'Stoff ' + n).join(', ');
   el('rect', {x : L, y : top - 2, width : R - L, height : row * 6 + 4, fill : COLOUR.track}, live);
   // The strands: each hormone's level along the steps.
   takes.forEach((take, k) => {
@@ -3137,6 +3139,7 @@ function drawGland() {
   drag(svg, el('rect', {x : X(after) - 4, y : edge(after) - 9, width : 8, height : 9, rx : 2, style : `fill:${GLAND.colours[main]}`}, live), p => { g.stay = clamp((p.x - L) / (R - L) * 900 - g.stop, GLAND.stay[0], GLAND.stay[1]); draw(GLAND_PARTS); }, 'glandstay');
   // The command: above the blood it pours, below it binds; the further from the blood, the stronger.
   const far = GLAND.knob[0] + (GLAND.knob[1] - GLAND.knob[0]) * Math.abs(g.command), ky = g.command >= 0 ? top - far : base + far;
+  for (const y of [top - 2, base + 2]) el('path', {d : `M${L} ${y} H${R}`, stroke : COLOUR.axis, 'stroke-width' : 1}, live);
   el('path', {d : `M${L} ${ky} H${X(g.stop)} V${g.command >= 0 ? top - 2 : base + 2}`, stroke : COLOUR.icon, 'stroke-dasharray' : '2 3', fill : 'none', opacity : .8}, live);
   drag(svg, el('circle', {cx : X(g.stop), cy : ky, r : 5.5, fill : COLOUR.icon}, live), p => {
     g.stop = clamp(Math.round((p.x - L) / (R - L) * 900), 60, 840);
@@ -3146,15 +3149,19 @@ function drawGland() {
   play.levels = play.levels.filter(l => l.owner !== 'gland');
   play.levels.push({owner : 'gland', sense : 'full', show : () => now.setAttribute('d', `M${X(play.step / STEPS * 900).toFixed(1)} ${top - 2} V${base + 2}`)});
 }
-// Its life: a gland that forms late brings its hormone late.
+// Its life: every age the gland lives in has its hormone; one that forms late brings it late.
 function drawGlandLife() {
   const {L, R, band, hatch} = SKIN.life, g = S.gland, takes = glandTakes(g), colour = GLAND.colours[takes.indexOf(Math.max(...takes))], {svg, under, live} = picture('glandlife', SKIN.life.height, fixed => {
     const hx = L + (R - L) * hatch, y = band - 26;
     eggShape(fixed, (L + hx) / 2, y, 17, false);
     fishSide(fixed, hx + 24, y, .42); fishSide(fixed, R - 40, y, .78);
   });
-  // The hormone in the fish that has the gland.
-  el('path', {d : `M${R - 40} ${band - 32} q5 6 0 9 q-5 -3 0 -9 Z`, fill : colour}, live);
+  // The hormone in every age whose place on the band the gland lives at.
+  const hx = L + (R - L) * hatch, k = g.keys[0], from = k.from ?? 0, until = Math.min(1, k.until ?? 1);
+  for (const [x, y] of [[(L + hx) / 2, band - 30], [hx + 24, band - 30], [R - 40, band - 32]]) {
+    const r = (x - L) / (R - L);
+    if (r >= from && r <= until) el('path', {d : `M${x} ${y} q5 6 0 9 q-5 -3 0 -9 Z`, fill : colour, stroke : COLOUR.panel ?? 'none', 'stroke-width' : .6}, live);
+  }
   skinLife('gland', svg, under, live, GLAND_PARTS);
 }
 
