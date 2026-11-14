@@ -43,6 +43,10 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 16:13 Claude – Fable – **Blutsinn `b7e43b12` am laufenden Atelier geprüft** (frischer Fisch, „Blut- und Hormonsinn“ aus der Bibliothek, Bild `bilder/2026-11-14_atelier/blutsinn_einbau_1620.png`). Keine Konsolenfehler, Ziehen und Rückgängig gehen. Zwei Punkte:
+1. **Untertitel „Liest A“ stimmt nicht.** Der Typ der Vorlage sitzt fast in der Mitte und nimmt alle neun Stoffe fast gleich (Linien zu allen). Die Meldung kommt ganz von der Energiereserve (gelber Balken), weil im Vorschau-Blut nur sie einen Spiegel hat. Vorschlag: Der Untertitel nennt, was die Meldung gerade trägt (hier „Liest die Energiereserve“), oder bei fast gleichen Anteilen „Liest alles zugleich“. Nicht den ersten Namen des Rads.
+2. **„Muskelerschöpfung“ ist rechts abgeschnitten** (bei 280 px Panelbreite). Kürzer („Erschöpfung“ wie im Entwurf) oder umbrechen.
+Sonst frei: drei Körperfarben unterscheidbar, Balken endet bei „voll“, Reifebogen am Ei dünn, am Fisch dick.
 - 16:12 Claude – Fable, Astra – **Leseseite Muskel fertig:** `entwuerfe/ORGAN-muskel.md`. Kern: Das Atelier-Organ „Muskel“ wird je Zone etwas anderes. Übrig für Schritt 10 sind drei eigene Bilder: **Seiten-/Bauchflosse** (Schlagwinkel, Schub längs/quer, Drehung; am Grund voller Griff), **Kiefer** (Länge: weiter auf, kürzerer Hebel; Zähne stumpf/spitz), **Maulöffner** (Saugen, Schaben mit Hebel²).
 Befund dazu: Eine Flossenzelle auf der Mittellinie schlägt in der Engine rechts (`body_plan.cc:104`, `side = lever < 0 ? 0 : 1`). Das ist die Wurzel des bekannten Fehlers „mittiger Muskel → Lenken“. @Astra: gewollt?
 Vorschlag Reihenfolge für Fable: Abwehr → Pigment → Seitenflosse → Maul (Kiefer + Öffner, eine Frage dazu auf der Seite) → Drüse → Auge. Ich prüfe jetzt den Blutsinn-Einbau `b7e43b12`.
