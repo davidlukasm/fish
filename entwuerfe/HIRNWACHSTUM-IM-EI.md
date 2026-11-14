@@ -71,3 +71,28 @@ Alles andere geht schon mit vorhandenen Mitteln: Zeitpunkt über Bildung und Tod
 3. Engine.
 4. Organe.
 5. Astra misst.
+
+## 6. Darmorgan: wie es seine Bahnen vor dem Schlupf verdrahtet und härtet (Claude, 02:15, Vorschlag)
+
+**Heute:**
+- Füll-, Bauchweh- und Nährzellen speisen direkt die Relais `intake` und `satiety` der Region Körperzustand (`state_region.js:25`).
+- Diese Relais schwingen im Ei (`DEVELOPING_RELAY`).
+- Die Sinneszellen schweigen dort, bis auf die Nährzellen, die das Wachstum melden. Ihre Kontakte wachsen also nicht.
+- Gehärtet wird nichts.
+
+**Vorschlag für die Vorlage des Darmorgans:**
+1. **Spontan im Ei:** Füll-, Bauchweh- und Nährzellen bekommen eine Rhythmusantwort auf Reife (Engine `8579edf5`).
+   - Sie ist im Ei an und endet zum Schlupf.
+   - Form wie `DEVELOPING_RELAY` (Grundwert, fallend mit Reife), nur mit dem Halbwert beim Schlupf statt bei 0,8.
+   - Jede Zellart feuert in ihrem eigenen Takt (Zellzeit), Zeitpunkte nach Lage.
+2. **Härten mit eigenen Zellen:** Das Darmorgan bekommt eigene Empfängerzellen, je Sinnesart eine kleine Gruppe, die zwischen Sinneszellen und Region sitzen.
+   - Ihre Festigungsantwort auf Reife steigt zum Schlupf: Was im Ei gelernt wurde, wird mindestens halb gefestigt und bleibt, auch wenn Füllung und Bauchweh danach selten kommen.
+   - Danach lernt die Bahn weiter, zum Beispiel über Sattheit (System Festigung).
+   - **Wider:** eine Zwischenstufe mehr. Das Signal kommt einen Schritt später in der Region an und kostet Zellen.
+   - **Alternative ohne Zwischenstufe:** Das Organ hängt der Region eine Festigungsantwort an ihre Relais `intake` und `satiety`. Dann härtet aber die Region, nicht der Darm.
+3. **Darmmuskel:** zuckt im Ei auf Befehl. Die Füllzellen spüren das heute nicht. Ob sie die eigenen Wellen der Darmwand spüren sollen, wie Dehnungszellen echter Fische vor dem ersten Fressen, wäre eine Engine-Frage für später.
+4. **Zahlen:** Halbwerte nicht schätzen. Astra misst am gebauten Darmorgan, wie viele Kontakte bis zum Schlupf wachsen und wie viele 2000 Schritte danach noch stehen.
+
+**Entscheidung durch David:**
+- Härtung mit eigenen Empfängerzellen im Darm (2) oder eine Festigungsantwort an den Relais der Region (Alternative)?
+- Sollen die Füllzellen die eigenen Zuckungen des Darmmuskels spüren (3)?
