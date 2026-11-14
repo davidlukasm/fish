@@ -150,6 +150,15 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Lebenszyklus</h4>
     <svg id="tiltlife"></svg>
   </section>
+  <section class="panel" aria-label="Schmerz">
+    <h2>Organ</h2><h3>Schmerz</h3>
+    <h4 class="first">Spürt Wunden, solange sie offen sind</h4>
+    <svg id="wound"></svg>
+    <h4>Schmerzzellen</h4>
+    <svg id="pain"></svg>
+    <h4>Lebenszyklus</h4>
+    <svg id="painlife"></svg>
+  </section>
 </main>
 <script>
 'use strict';
@@ -241,7 +250,9 @@ const S = {
   flow : {keys : [{gate : .3, spread : .1, used : 200}], chosen : 0, input : {rise : 80, height : .8, stop : 560}, field : .3, probe : {bearing : 60, near : .8}},
   touch : {keys : [{gate : .2, spread : .1}], chosen : 0, input : {rise : 60, height : .7, stop : 520}, field : .1, probe : 0, off : false},
   // The sense of balance: hair: where the cells' hair points, in degrees from the snout over the flank (90) to the tail (180); tilt: where the snout points, the posture tried (0 = to the right, 90 = down).
-  balance : {keys : [{gate : .06}], hair : 90, tilt : 25}
+  balance : {keys : [{gate : .06}], hair : 90, tilt : 25},
+  // Pain in the skin. input: the bite (rise: when, height: how much of the fish's health it takes); probe: where the wound is, as an angle from the cells' place; all: harm all through the body (hunger, illness, age) instead of a bite.
+  pain : {keys : [{gate : .25, spread : .1, used : 200}], chosen : 0, input : {rise : 90, height : .45, stop : 0}, field : .15, probe : 0, all : false}
 };
 
 // ===== The model: the one source for every picture and number =====
@@ -363,6 +374,7 @@ const SENSE = {
   smell : {title : 'Signalverlauf bei der Duftprobe', used : 'an Duft gewöhnt', get colour() { return sampleColour(); }, tires : true, intense : true, steps : 900, after : 120, shows : ['scentmap', 'smell', 'noselife'], row : null,
            share : k => smellShare(k), fresh : () => ({...S.smell.probe, width : .25}), most : 4},
   flow : {title : 'Signalverlauf bei Strömung', used : 'an Strömung gewöhnt', colour : '#9cc8f0', tires : true, intense : true, steps : 900, after : 120, shows : ['flowrose', 'flow', 'flowlife'], row : null, share : () => flowShare(), most : 1},
+  pain : {title : 'Signalverlauf bei einer Wunde', used : 'an Schmerz gewöhnt', colour : COLOUR.sore, tires : true, wound : true, steps : 900, after : 1, shows : ['wound', 'pain', 'painlife'], row : null, share : () => painShare(), most : 1},
   touch : {title : 'Signalverlauf bei Berührung', colour : '#d9b98c', tires : false, steps : 900, after : 60, shows : ['touchskin', 'touch', 'touchlife'], row : null, share : () => touchShare(), most : 1}
 };
 // The reward signal (David 14.11.): at each swallow the engine adds what the bite will give this
@@ -378,6 +390,8 @@ const cellGates = k => Array.from({length : CELLS}, (_, c) => clamp(k.gate + k.s
 const answer = (x, gate, used) => { const over = (clamp(x, 0, 1) - used - gate) / (1 - gate); return over > 0 ? over / (over + gate * (1 - over)) : 0; };
 function stimulus(id) {
   const o = SENSE[id];
+  // A wound: nothing, then the bite, then it closes at the engine's pace of healing.
+  if (o.wound) return Array.from({length : o.steps + 1}, (_, st) => st < S[id].input.rise ? 0 : Math.max(0, S[id].input.height - (st - S[id].input.rise) * HEAL));
   const i = S[id].input, top = i.height * clamp(i.stop / Math.max(1, i.rise), 0, 1);
   return Array.from({length : o.steps + 1}, (_, st) => st <= i.stop ? i.height * clamp(st / Math.max(1, i.rise), 0, 1) : top * Math.exp(-(st - i.stop) / o.after));
 }
@@ -389,6 +403,8 @@ function stimulus(id) {
 // (receptor_tuning.hh:49-51), so it lies at REACH x its quality; the cell answers nothing up to
 // its threshold and half at twice the threshold, and what it is used to raises the threshold by
 // as much (body_plan.cc:981-985, excess_response).
+// What a fed fish heals each step, as a share of its health (src/physiology_parameters.hh:31, heal_rate).
+const HEAL = .001;
 const FAINT = .0003, REACH = Math.log(333.333333) / -Math.log(FAINT);
 const SCALES = {
   bounded : {top : .97, pos : s => clamp(s, 0, 1), val : v => v, gates : k => cellGates(k), answer},
@@ -847,8 +863,8 @@ function drawSense(id) {
       p => { k.gate = clamp(vOf(p.y), .03, sc.top); cell.chosen = i; draw(o.shows); }, id + 'key' + i);
     spreadGrip(svg, live, R - 8 - 13 * i, IY(Math.max(...gates)), IY(Math.min(...gates)), p => { k.spread = clamp(2 * (vOf(p.y) - k.gate), 0, .8); cell.chosen = i; draw(o.shows); }, id + 'spread' + i);
   });
-  drag(svg, el('circle', {cx : X(inp.rise), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.rise = clamp(stOf(p.x), 1, inp.stop - 1); inp.height = vOf(p.y); draw(o.shows); }, id + 'rise', 'knob');
-  drag(svg, el('circle', {cx : X(inp.stop), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.stop = clamp(stOf(p.x), inp.rise + 1, steps - 10); inp.height = vOf(p.y); draw(o.shows); }, id + 'stop', 'knob');
+  drag(svg, el('circle', {cx : X(inp.rise), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.rise = clamp(stOf(p.x), 1, o.wound ? steps - 10 : inp.stop - 1); inp.height = vOf(p.y); draw(o.shows); }, id + 'rise', 'knob');
+  if (!o.wound) drag(svg, el('circle', {cx : X(inp.stop), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.stop = clamp(stOf(p.x), inp.rise + 1, steps - 10); inp.height = vOf(p.y); draw(o.shows); }, id + 'stop', 'knob');
   if (several) { chip(live, LX - 9, I1 + 10, '−', fewer, o.shows, keys.length > 1, 6); chip(live, LX + 9, I1 + 10, '+', more, o.shows, keys.length < (o.most ?? 3), 6); }
   // How strongly each food irritates these cells in this gut: only the foods that can at all.
   if (o.row) {
@@ -2513,6 +2529,51 @@ function drawTiltLife() {
   skinLife('balance', svg, under, live, TILT_PARTS);
 }
 
+// ----- Pain: the wound -----
+// Read in the engine (src/physiology.hh:66-81, harm_body; src/body_plan.cc:1146-1153, 988-992;
+// src/physiology.cc:351-357; src/physiology_parameters.hh:31; src/embryo.cc:32-37;
+// src/brain_interface.hh:18-24; callers of harm_body in feeding.cc, disease.cc, ecology_step.cc,
+// physiology.cc, movement.cc):
+//   every harm takes from the fish's health; a bite is booked on the sector it comes from (shared
+//   with the next one), harm without a place (hunger, illness, age, the egg's crowding) evenly
+//   on all 16; pain cells in the skin weigh the sectors like the other skin cells and feel
+//   16 x weight x what is booked there, at most all: a bite of a sixteenth of the health at the
+//   cells' own place is already full pain for a narrow field;
+//   a fed fish (reserve above 0.15) heals 0.001 of its health each step, and the booked wounds
+//   shrink with it; the answer is bounded and the cells get used to a wound that stays.
+// The knob is the wound, the fish panel's probe: dragged along the rim for where the bite lands,
+// into the body for harm all through it.
+const WOUND = {height : 132, cx : 150, cy : 66, s : 2.5, rx : 70, ry : 27, cells : 12, bite : 13};
+const PAIN_PARTS = ['wound', 'pain', 'painlife'];
+const painShare = () => { const cell = S.pain; return cell.all ? 1 : SKIN.sectors * skinWeights(cell.field)[sectorOf(SKIN.place + cell.probe)]; };
+function drawWound() {
+  const cell = S.pain, {svg, live} = picture('wound', WOUND.height, fixed => fishAbove(fixed, WOUND.cx, WOUND.cy, WOUND.s)), {cx, cy, rx, ry} = WOUND, w = skinWeights(cell.field), most = Math.max(...w), colour = SENSE.pain.colour;
+  const at = (angle, inset = 0) => [cx - 5 - (rx - inset) * Math.cos(rad(angle)), cy - (ry - inset * .6) * Math.sin(rad(angle))], angleOf = p => deg(Math.atan2((cy - p.y) / ry, (cx - 5 - p.x) / rx));
+  // The pain cells in the skin: at each sector as big as the group weighs it.
+  w.forEach((v, k) => { if (v > 0) { const [x, y] = at(sectorAngle(k), 7); el('circle', {cx : x, cy : y, r : 1.5 + 4 * v / most, fill : keyColour(0), opacity : .45 + .55 * v / most}, live); } });
+  const [gx, gy] = at(SKIN.place + Math.min(skinWidth(cell.field), 179), 7);
+  drag(svg, el('circle', {cx : gx, cy : gy, r : 4.5}, live), p => { cell.field = clamp((Math.abs(turnTo(angleOf(p) - SKIN.place)) - SKIN.width[0]) / SKIN.width[1], 0, 1); draw(PAIN_PARTS); }, 'painfield');
+  // The wound: a bite out of the rim, as big as it takes; or, inside, harm all through the body.
+  const size = .35 + cell.input.height, [wx, wy] = cell.all ? [cx + 8, cy] : at(SKIN.place + cell.probe, -2);
+  if (cell.all) el('ellipse', {cx : cx - 2, cy, rx : rx - 18, ry : ry - 9, fill : colour, opacity : .12 + .5 * cell.input.height}, live);
+  else el('path', {d : `M${wx - WOUND.bite * size} ${wy} a${WOUND.bite * size} ${WOUND.bite * size * .8} 0 0 0 ${2 * WOUND.bite * size} 0`, transform : `rotate(${90 - (SKIN.place + cell.probe)} ${wx} ${wy})`, fill : COLOUR.body, stroke : colour, 'stroke-width' : 2.2, 'stroke-dasharray' : '3 2.5'}, live);
+  // The knob stands clear of the bite, outside the rim.
+  const [kx, ky] = cell.all ? [wx, wy] : at(SKIN.place + cell.probe, -16);
+  drag(svg, el('circle', {cx : kx, cy : ky, r : 5.5, fill : colour}, live), p => {
+    cell.all = ((p.x - cx + 5) / rx) ** 2 + ((p.y - cy) / ry) ** 2 < .45; cell.probe = turnTo(angleOf(p) - SKIN.place); draw(PAIN_PARTS); }, 'painprobe', 'knob');
+}
+// Its life: in the egg what the tight shell harms, all round; after hatching bites and the rest.
+function drawPainLife() {
+  const {L, R, band, hatch} = SKIN.life, colour = SENSE.pain.colour, {svg, under, live} = picture('painlife', SKIN.life.height, fixed => {
+    const ex = (L + L + (R - L) * hatch) / 2, fx = (L + (R - L) * hatch + R) / 2, y = band - 26;
+    eggShape(fixed, ex, y, 17, true);
+    el('circle', {cx : ex, cy : y, r : 13, fill : colour, opacity : .3}, fixed);
+    fishAbove(fixed, fx, y, .62);
+    el('path', {d : `M${fx - 9} ${y - 7.5} a6 5 0 0 0 12 0`, fill : COLOUR.body, stroke : colour, 'stroke-width' : 1.6, 'stroke-dasharray' : '2.5 2'}, fixed);
+  });
+  skinLife('pain', svg, under, live, PAIN_PARTS);
+}
+
 // ===== The clock =====
 // Shows the present moment: the lines, what the holders hold, the keys the input has passed, what
 // irritants at the nerve cells.
@@ -2626,9 +2687,10 @@ const PAINT = {fish : drawFish, yield : drawYield, bars : drawBars, life : drawL
                barbels : drawBarbels, tastemap : () => drawScentMap('tastemap', S.taste, BARB_PARTS, {kind : 'barb-kind', verb : 'Schmeckt', sample : 'was die Spitze berührt', stone : true, fresh : {feel : .3, gate : .3}}), tastes : drawTastes, barblife : drawBarbLife,
                flowrose : drawRose, flow : () => drawSense('flow'), flowlife : drawFlowLife,
                touchskin : drawSkinCut, touch : () => drawSense('touch'), touchlife : drawTouchLife,
-               tilt : drawTilt, tiltlife : drawTiltLife};
+               tilt : drawTilt, tiltlife : drawTiltLife,
+               wound : drawWound, pain : () => drawSense('pain'), painlife : drawPainLife};
 // The senses first: the fish's stomach follows the fullness input.
-for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife', 'flow', 'flowrose', 'flowlife', 'touch', 'touchskin', 'touchlife', 'tilt', 'tiltlife']) dirty.add(part);
+for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife', 'flow', 'flowrose', 'flowlife', 'touch', 'touchskin', 'touchlife', 'tilt', 'tiltlife', 'pain', 'wound', 'painlife']) dirty.add(part);
 repaint();
 showGut(0);
 // Nothing moves while the panel is off the screen, or for someone who has asked for less motion:
