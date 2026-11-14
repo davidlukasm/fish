@@ -1,15 +1,20 @@
 import {BLOOD_SUBSTANCE, HORMONE_EFFECT, HORMONES} from '../../schema.js';
 
-// A learning cell hardens what it learns in the egg and in its first days: the paths that grew on
-// its inputs' activity before hatching stay when those inputs later fall silent for long. The
-// hardening fades with maturity (half at 0.3, near nothing from 0.4) and never turns into
-// softening; later hardening comes from the consolidation system, which replaces this answer.
+// How long a newly formed cell is in its early phase, as the share of the span the engine counts a
+// cell's maturity over (4096 steps): 0.5 is 2048 steps, one trial of a new contact into a cell
+// that learns at the regions' usual pace. A FIRST VALUE, NOT CALIBRATED: it holds for no fish in
+// particular, and an organ that needs another sets its own.
+export const YOUNG_CELL_HALF = .5;
+// A learning cell hardens what it learns while it is young: the paths that grew on its inputs'
+// early activity stay when those inputs later fall silent for long. The hardening fades with the
+// cell's own maturity and never turns into softening; later hardening comes from the
+// consolidation system, which replaces this answer.
 export const EGG_HARDENING = Object.freeze({
   active : 1,
   baseline : .5,
   sensitivity : -.5,
-  half : .3,
-  substance : BLOOD_SUBSTANCE.maturity,
+  half : YOUNG_CELL_HALF,
+  substance : BLOOD_SUBSTANCE.cell_maturity,
   steepness : 3
 });
 export const ACTIVE_LEARNING = Object.freeze({

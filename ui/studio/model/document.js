@@ -27,7 +27,7 @@ import {
   timeConstantOf,
   unitOfPlan
 } from '../../tuning.js';
-import {DEVELOPING_PACE, DEVELOPING_RELAY} from './region_cells.js';
+import {DEVELOPING_PACE, DEVELOPING_RELAY, YOUNG_CELL_HALF} from './region_cells.js';
 import {nextPigment} from './pigment.js';
 import {fastShare, fibreForce, fibreTau} from '../../fibre.js';
 import {
@@ -245,7 +245,11 @@ export function setBends(doc, wireIds, bends) {
   return draft;
 }
 export function wheelPlace(wheel, index) {
-  const angle = 2 * Math.PI * wheel.substanceTurns[index];
+  // What has no place on the wheel (the maturity of the cell itself) stands in its middle.
+  const turn = wheel.substanceTurns[index];
+  if (!Number.isFinite(turn))
+    return [ 0, 0 ];
+  const angle = 2 * Math.PI * turn;
   return [ Math.cos(angle), Math.sin(angle) ];
 }
 export function wheelSigma(wheel, width) {
@@ -443,14 +447,14 @@ export const isChosen = (selected, organ) =>
     !!organ && (selected?.id === organ.id || organ.centers.some(c => c.id === selected?.id));
 
 const NEW_CENTER = Object.freeze({sense_threshold : -.6, tau : .5, field : .3, qwidth : .35});
-// Silent from hatching on (answer 0 at maturity 0.2, the retina's value; a hatchling is at 0.22 or
-// more): a hatched fish must not feel pain, fullness or smell that is not there.
+// A sense cell fires on its own while it is young, so that its paths into the brain grow; it
+// falls silent with its own maturity, not with the body's, and so not exactly at hatching.
 export const EGG_RHYTHM = Object.freeze({
   active : 1,
   baseline : 1,
   sensitivity : -2,
-  half : .2,
-  substance : BLOOD_SUBSTANCE.maturity,
+  half : YOUNG_CELL_HALF,
+  substance : BLOOD_SUBSTANCE.cell_maturity,
   steepness : 3
 });
 export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
@@ -506,8 +510,8 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
                                  active : 1,
                                  baseline : 1,
                                  sensitivity : -2,
-                                 half : .2,
-                                 substance : HORMONES.levels,
+                                 half : YOUNG_CELL_HALF,
+                                 substance : BLOOD_SUBSTANCE.cell_maturity,
                                  steepness : 3
                                });
                              return receptor;

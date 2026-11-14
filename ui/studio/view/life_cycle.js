@@ -181,10 +181,13 @@ function menu(state, center, key, receptor) {
                                 escapeText(substanceName(state, i)) + '</span>',
                             source === String(i)))
              .join('') +
-         item('data-life-source="mix"',
-              substanceDot(state, receptor.substance, true) + '<span>' + escapeText(word('mix')) +
-                  '</span>',
-              source.startsWith('mix:')) +
+         // A receptor on its own cell's maturity reads nothing beside it: no mix to offer.
+         (receptor.substance === BLOOD_SUBSTANCE.cell_maturity
+              ? ''
+              : item('data-life-source="mix"',
+                     substanceDot(state, receptor.substance, true) + '<span>' +
+                         escapeText(word('mix')) + '</span>',
+                     source.startsWith('mix:'))) +
          '<hr><button type="button" data-open-tool="hormone" data-center-id="' +
          escapeText(center.id) + '"><span class="soft">' + escapeText(word('toHormones')) +
          '</span></button></div>';
