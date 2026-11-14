@@ -1103,7 +1103,8 @@ function showTail(dt) {
 // A SCHEMA'S ASSUMPTION: how fast the fish moves through the water is not the engine's sum of
 // forces; an empty bladder lets it sink through the column in BLADDER.fall steps, and its speed
 // follows the lift against the sinking.
-const BLADDER = {rate : .002, lift : .03, sinking : .012, fall : 150, groups : 5, full : 16, hatch : .5,
+// still: below this share of the sinking's push the fish all but hovers and has no arrow.
+const BLADDER = {rate : .002, lift : .03, sinking : .012, fall : 150, groups : 5, full : 16, hatch : .5, still : .08,
                  W : {L : 46, R : 290, top : 16, base : 168, sand : 9, fishX : 176, height : 196},
                  F : {L : 64, R : 290, c0 : 20, c1 : 44, top : 60, base : 126, height : 150},
                  LIFE : {L : 44, R : 264, top : 18, base : 88, icons : 106, height : 120, samples : 120, beside : 16, apart : 13, whole : .015, least : .08}};
@@ -1164,7 +1165,7 @@ function drawBladder() {
   document.getElementById('bladder-kind').textContent = m.hover <= 1 ? `Schwebt bei ${Math.round(100 * m.hover)} % Füllung` : 'Kann nicht schweben';
   bladderFilm.sac.setAttribute('rx', sacLength(m.capacity)); bladderFilm.sac.setAttribute('ry', 3 + 4 * clamp(m.capacity / BLADDER.groups, 0, 1));
   bladderFilm.at = DY;
-  txt(live, 4, 10, `+${comma(bladderCost())} % Ruhebedarf`, {style : 'font-size:10px'});
+  txt(live, 4, 10, `${comma(bladderCost())} % des Ruhebedarfs`, {style : 'font-size:10px'});
   // The depth cells' keys across the column: a line where each begins to report, lit while the
   // fish is deeper; its grip at the left edge, its band how far its cells spread.
   play.glow = play.glow.filter(g => g.owner !== 'bladder');
@@ -1281,7 +1282,15 @@ function drawBladderLife() {
     el('rect', {x : x0, y : top, width : x1 - x0, height : Y(hover) - top, fill : WATER, opacity : .14}, under);
     el('path', {d : `M${x0} ${Y(hover)} H${x1}`, stroke : COLOUR.line, 'stroke-width' : 2}, live);
   }
-  txt(live, R - 3, top + 11, 'steigt', {'text-anchor' : 'end'}); txt(live, R - 3, base - 4, 'sinkt', {'text-anchor' : 'end'});
+  // The words stand at the far end from the knob, so that it never lies on them.
+  const far = BL.input.maturity > (1 + BLADDER.hatch) / 2 ? {x : X(BLADDER.hatch) + 5, anchor : 'start', at : BLADDER.hatch + .01} : {x : R - 3, anchor : 'end', at : .99};
+  // Above the line the fish rises, below it sinks: the words stand at the line, as in the picture of filling.
+  const line = hoverAt(capacityAt(far.at));
+  if (line > 1) txt(live, far.x, top + 12, 'sinkt', {'text-anchor' : far.anchor});
+  else {
+    if (Y(line) - top > 15) txt(live, far.x, Y(line) - 5, 'steigt', {'text-anchor' : far.anchor});
+    if (base - Y(line) > 15) txt(live, far.x, Y(line) + 13, 'sinkt', {'text-anchor' : far.anchor});
+  }
   // In the egg the bladder can fill, but nothing swims: that part stands dimmed.
   el('rect', {x : L, y : top, width : X(BLADDER.hatch) - L, height : base - top, fill : COLOUR.track, opacity : .6, 'pointer-events' : 'none'}, live);
   el('path', {d : `M${X(BLADDER.hatch)} ${top} V${base + 5}`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3'}, live);
@@ -1307,8 +1316,10 @@ function drawBladderLife() {
   chip(live, R + beside - 8, BLADDER.LIFE.icons, '−', () => { groups.splice(BL.chosen, 1); BL.chosen = 0; }, BLADDER_PARTS, groups.length > 1, 6);
   chip(live, R + beside + 8, BLADDER.LIFE.icons, '+', () => { groups.push({cells : groups[0].cells, from : 0, until : 1}); BL.chosen = groups.length - 1; }, BLADDER_PARTS, groups.length < BLADDER.groups, 6);
   const r = BL.input.maturity;
+  // The knob rides on the hover line, or on the ground where the bladder cannot carry the fish.
+  const here = hoverAt(capacityAt(r)), ky = here > 1 ? base : Y(here);
   el('path', {d : `M${X(r)} ${top} V${base}`, stroke : COLOUR.line, 'stroke-dasharray' : '2 4', 'stroke-width' : 1.2}, live);
-  drag(svg, el('circle', {cx : X(r), cy : top, r : 5.5, fill : COLOUR.line}, live), p => { BL.input.maturity = rOf(p.x); draw(BLADDER_PARTS); }, 'blmaturity', 'knob');
+  drag(svg, el('circle', {cx : X(r), cy : ky, r : 5.5, fill : COLOUR.line}, live), p => { BL.input.maturity = rOf(p.x); draw(BLADDER_PARTS); }, 'blmaturity', 'knob');
 }
 // The fish in the water column at this moment: where it is, how full its bladder, and which way
 // the water pushes it. It stays at the surface and on the ground.
@@ -1320,8 +1331,8 @@ function showBladder() {
   const rx = +bladderFilm.sac.getAttribute('rx'), ry = +bladderFilm.sac.getAttribute('ry');
   bladderFilm.air.setAttribute('rx', (rx * Math.sqrt(level)).toFixed(1)); bladderFilm.air.setAttribute('ry', (ry * Math.sqrt(level)).toFixed(1));
   // The arrow beside the fish: up where the bladder lifts it, down where it sinks, as long as the push.
-  const long = 16 * clamp(Math.abs(push), 0, 1.5), dir = push > 0 ? -1 : 1, ax = x - 52;
-  bladderFilm.arrow.setAttribute('d', long < 1.5 ? '' : `M${ax} ${y} v${(dir * long).toFixed(1)} m-3.5 ${-dir * 4.5} l3.5 ${dir * 4.5} l3.5 ${-dir * 4.5}`);
+  const long = Math.abs(push) < BLADDER.still ? 0 : 7 + 12 * clamp(Math.abs(push), 0, 1.5), dir = push > 0 ? -1 : 1, ax = x - 52;
+  bladderFilm.arrow.setAttribute('d', !long ? '' : `M${ax} ${y} v${(dir * long).toFixed(1)} m-3.5 ${-dir * 4.5} l3.5 ${dir * 4.5} l3.5 ${-dir * 4.5}`);
 }
 
 // ===== The clock =====

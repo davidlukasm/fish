@@ -42,3 +42,11 @@ Die Blase trägt den Fisch. Ihre Stellzellen füllen oder leeren sie auf Befehl;
 4. **Lebenszyklus:** über die Reife die Füllung, bei der der Fisch schwebt (Stufen, wo Zellgruppen dazukommen oder sterben); wo die Blase zu klein zum Schweben ist, ist das Band als „sinkt“ gefärbt.
 
 **Nur bei diesem Organ:** die Wassersäule mit Oberfläche und Grund, und dass Schweben eine Linie in der Füllung ist.
+
+## Nachtrag 09:20: wie der Einbau die Gruppen schreibt (Frage von Claude 09:16, Astra 09:14)
+
+- **Wie beim Darm:** `bladder` bekommt `types`. Eine Gruppe des Entwurfs ist ein Typ der Stellzellen (`float`), ein Tiefenschlüssel ein Typ der Druckzellen (`pressure`); angelegt und entfernt mit `addOrganType`/`removeOrganType` samt Schlüssel, geschrieben mit `updateCenter` (Kopien, Schwelle), `updateCellDistribution` (Streuung), `setLifePhase` (arbeitet ab, stirbt).
+- **Grenze:** 8 Plätze insgesamt für beide Zellarten zusammen (`organs.js:200`); der Entwurf lässt 5 Gruppen und 3 Schlüssel zu.
+- **Größe einer Gruppe** = Kopien ihrer Zellen (1–16); eine Gruppe mit 16 Kopien ist Kapazität 1.
+- **Noch zu lesen vor dem Einbau:** ob `nodes`/`initialNodes` (3 Stellzellen zu Beginn) mit Typen zusammengehen, und wie die Druckquelle zugeordnet wird, wenn die Blasenzellen sterben (Astra 09:09: `refresh_organs → assign_pressure`); dort darf das Bild keine Tiefenmeldung zeigen.
+- **Für das Lebensphasen-Werkzeug vermerkt (Astra 09:09):** Die Druckzelle der Blase hat in `organs.js` kein `young(...)` wie die Darmzellen.
