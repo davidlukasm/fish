@@ -77,3 +77,17 @@ Pflichtlektüre wie oben, 18:18–18:21 neu geöffnet.
 - **Gleichgewicht:** nur noch der Ring mit Fisch und „unten“. Keine Meldung, kein Nutzen, keine Kosten, keine Verbindung zu den Muskeln, die aufrichten (AUFTRAG-1311 §2). Das größte Loch.
 - **Blutsinn:** Rad mit Stoffen und Körperwerten, Meldung „nichts–voll“; „Liest Reserve“ als Satz (A2).
 - **Abwehr:** Fisch mit Stacheln; Maul-Probe im Inspektor? (B, prüfen am neuen Bild: die roten Linien am Maul).
+
+## F. Stand 19:25 (was seit 18:13 geändert und von Astra und Claude im laufenden Atelier geprüft ist)
+| Änderung | Commit | Geprüft | Bleibt offen |
+|---|---|---|---|
+| Auge zurück, Klick auf Szene wieder wirksam | `8f75ec11`, `2865f76a`, `54c5e903` | ja, Maus | „Beispielzellen“, „Bauplan“, Textzeile (alt) |
+| Gemeinsames Lebensband aus 11 Organen | `f02e4cba` | ja | diese 11 haben kein eigenes Lebensbild (A1/A5) |
+| Sätze über den Bildern weg | `918fd2a8` | ja | – |
+| Nase/Barteln Lebensbild nicht mehr abgeschnitten | `55e58062` | ja | – |
+| Gleichgewicht: beide Seiten, Lage als Eingabe, Blitz = Reiz, Weg zur Motorik | `fd452699`, `33df00f4` | ja, Maus | Zustand „Motorik verbunden“ im Startfisch nicht prüfbar |
+| Tastsinn: Hautschnitt mit Drucktiefe, ohne gemeinsamen Block | `6aa7eabb`, `818bd26e`, `2a490d12` | ja, Maus (letzter Commit nur am Prüfstandbild) | – |
+| Schmerz: Wunde nur aus dem Fischpanel, Zeitknopf weg | `4356965b` | geöffnet, ohne Fehler | ob der Verlauf der gezogenen Probe folgt (Astra) |
+| Seitenlinie mit Wasserbahnen | – | – | nicht begonnen |
+
+Weiter offen für alle: A3 Kosten in der Kopfzeile (Bericht liefert seit `e6ce7dc4` den Ruheunterhalt je Gruppe), A4 „Beispielwerte“/„Streuung beim Zellbau“/„Kontakte im Bauplan“, A6 Verbindungen (nur Kiemen „Darm ›“, Gleichgewicht „Motorik“), B je Organ (Kiefer/Seitenflosse alter Muskelblock, Drüse feste 144 Schritte, Pigment Grundfarbe, Darm-Lebensbild mit Ei), Hormon-, Lern-, Lebensphasen-Werkzeug ruhen.
