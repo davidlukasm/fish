@@ -655,19 +655,25 @@ std::vector<int> anatomy_report(const field::Substrate &t,
                yolk =
                    std::min(evolution.egg_capacity, evolution.egg_organ_capacity *
                                                         a.motor_counts[fishsim::organ_port::eggs]);
-  double tail_maintenance = 0;
-  for (const auto &effector : a.effectors)
+  double tail_maintenance = 0, bladder_maintenance = 0;
+  for (const auto &effector : a.effectors) {
     if (effector.port == fishsim::organ_port::forward)
       tail_maintenance += fishsim::effector_upkeep(effector);
-  const double tail_upkeep = fishsim::muscle_upkeep(tail_maintenance, adult.tissue, physiology);
+    if (effector.port == fishsim::organ_port::bladder)
+      bladder_maintenance += fishsim::effector_upkeep(effector);
+  }
+  const double rest = basal + gut_upkeep + muscle_upkeep + cell_upkeep,
+               tail_upkeep = fishsim::muscle_upkeep(tail_maintenance, adult.tissue, physiology),
+               bladder_upkeep =
+                   fishsim::muscle_upkeep(bladder_maintenance, adult.tissue, physiology);
   std::cout << "],\"budget\":{\"rest\":{\"basal\":" << basal << ",\"gut\":" << gut_upkeep
             << ",\"muscles\":" << muscle_upkeep << ",\"cells\":" << cell_upkeep
             << "},\"mass\":{\"tissue\":" << adult.tissue / fishsim::BODY_TISSUE
             << ",\"gut\":" << fishsim::digestion::wall_mass * gut_size
             << ",\"organs\":" << a.organ_mass << "},\"yolk\":{\"organ\":" << yolk
             << ",\"store\":" << fishsim::belly_room(adult) * yolk << "}}"
-            << ",\"tail\":{\"restShare\":"
-            << tail_upkeep / (basal + gut_upkeep + muscle_upkeep + cell_upkeep) << '}';
+            << ",\"tail\":{\"restShare\":" << tail_upkeep / rest << '}'
+            << ",\"bladder\":{\"restShare\":" << bladder_upkeep / rest << '}';
   const auto &growth = t.growth_receptor;
   std::cout << ",\"gutSpeed\":" << fishsim::gut_speed(adult, physiology)
             << ",\"growth\":{\"sensitivity\":" << growth.sensitivity << ",\"half\":" << growth.half

@@ -686,6 +686,9 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
     if (!result)
       return null;
   }
+  if (type === 'bladder')
+    for (const center of kindNodes(findOrgan(result, organ.id)).slice(1))
+      center.profile = identifier('profile');
   // What comes with this organ is set with it, where there is room for it.
   for (const part of ORGANS.filter(o => o.with === type))
     if (!result.organs.some(o => o.type === part.key))
@@ -972,10 +975,11 @@ function pressureGuard(doc, organ, sites) {
       const at = findSite(sites, sensor.site);
       // A gonad's releasing cells on the skin press on nothing (body_plan.cc assign_pressure).
       const gonad = other.type === 'eggs' || other.type === 'sperm';
-      const own = other.centers.filter(c => c !== sensor)
-                      .map(c => findSite(sites, c.site))
-                      .filter(s => s && !(gonad && s.outer))
-                      .map(s => siteSeparation(s, at));
+      const own =
+          other.centers.filter(c => other.type === 'bladder' ? c.role === 'motor' : c !== sensor)
+              .map(c => findSite(sites, c.site))
+              .filter(s => s && !(gonad && s.outer))
+              .map(s => siteSeparation(s, at));
       if (!at || !own.length)
         continue;
       const reach = Math.min(...own);
@@ -1326,7 +1330,8 @@ export function removeOrgan(doc, id) {
                          .filter(a => a.organIds.length);
   // What came with this organ goes with it.
   const parts = ORGANS.filter(o => o.with === organ.type).map(o => o.key);
-  return draft.organs.filter(o => parts.includes(o.type)).reduce((left, part) => removeOrgan(left, part.id) ?? left, draft);
+  return draft.organs.filter(o => parts.includes(o.type))
+      .reduce((left, part) => removeOrgan(left, part.id) ?? left, draft);
 }
 export function removeCenter(doc, id) {
   const found = findCenter(doc, id);
@@ -1411,24 +1416,31 @@ export function nextTypeTuning(organ, wheel) {
       (_, k) => Math.max(...firsts.map(c => scentAffinities(c.q1, c.q2, c.qwidth)[k])));
   return {...scentTuning(smelled.indexOf(Math.min(...smelled))), qwidth : firsts[0].qwidth};
 }
-export function addOrganType(doc, organId, sites, tuning = {}, key) {
-  const original = findOrgan(doc, organId), most = ORGAN_BY_KEY[original?.type]?.types;
+export function addOrganType(doc, organId, sites, tuning = {}, key, layout = null) {
+  const original = findOrgan(doc, organId), limits = ORGAN_BY_KEY[original?.type]?.types;
   key ??= original?.centers[0]?.key;
-  const types = organTypes(original, key);
+  const most = typeof limits === 'number' ? limits : limits?.[key],
+        types = organTypes(original, key);
   if (!most || !types.length || types.length >= most)
     return null;
   const draft = copy(doc), main = findOrgan(draft, organId), id = identifier('profile');
   const twin = main.linked ? findOrgan(draft, main.pair) : null;
   for (const organ of [main, twin].filter(Boolean)) {
     const first = organ.centers.find(c => c.key === key), home = findSite(sites, first?.site);
-    if (!home)
+    if (!home || organ.centers.length >= (ORGAN_BY_KEY[organ.type].nodes ?? Infinity))
       return null;
-    const used = usedSites(draft);
+    const used = new Set([
+      ...usedSites(draft),
+      ...(organ.type === 'bladder' && first.role === 'motor' ? pressureGuard(draft, organ, sites)
+                                                             : [])
+    ]);
     const partner = organ === twin ? main.centers.at(-1) : null;
     const mirror = partner ? mirroredSite(findSite(sites, partner.site), sites) : null;
     const site =
         mirror && !used.has(mirror.id) ? mirror
-        : organ.type === 'gut'
+        : organ.type === 'bladder' && key === PRESSURE_OF.bladder.key && knowsLayout(layout)
+            ? pressureSites(draft, first.id, sites, layout)[0]
+        : organ.type === 'gut' || organ.type === 'bladder'
             ? closestNativeSite(first, sites, used, home, home.side, organ.type)
             : closestSiteDoing(first, functionFor(first, home), sites, used,
                                sitePoint(home, siteRole(organ.type)), home.side, organ.type);

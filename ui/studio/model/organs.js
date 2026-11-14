@@ -198,6 +198,7 @@ export const ORGANS = Object.freeze([
     category : 'internal',
     scope : 'single',
     nodes : 8,
+    types : {float : 5, pressure : 3},
     initialNodes : 3,
     centers : [
       motor('float', MOTOR_KIND.bladder, 16, 'inner'),
