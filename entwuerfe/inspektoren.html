@@ -191,6 +191,13 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Lebenszyklus</h4>
     <svg id="finlife"></svg>
   </section>
+  <section class="panel" aria-label="Maul">
+    <h2>Organ</h2><h3>Maul</h3>
+    <h4 class="first">Saugt Futter ein und beißt zu</h4>
+    <svg id="mouth"></svg>
+    <h4>Lebenszyklus</h4>
+    <svg id="mouthlife"></svg>
+  </section>
 </main>
 <script>
 'use strict';
@@ -283,6 +290,8 @@ const S = {
   touch : {keys : [{gate : .2, spread : .1}], chosen : 0, input : {rise : 60, height : .7, stop : 520}, field : .1, probe : 0, off : false},
   // The sense of balance: hair: where the cells' hair points, in degrees from the snout over the flank (90) to the tail (180); tilt: where the snout points, the posture tried (0 = to the right, 90 = down).
   balance : {keys : [{gate : .06}], hair : 90, tilt : 25},
+  // The mouth, two organs as one: the jaw muscle (bite: its cells; long: the jaw's length; blunt: the teeth's form, 0 sharp - 1 blunt) and the mouth opener (suck: its cells).
+  mouth : {keys : [{}], bite : 8, suck : 5, long : .5, blunt : .15},
   // The side fin: angle: where it beats, in degrees (0 straight back, 90 outward, -90 inward); speed: how fast the fish tried swims, over its cruising speed; bury: how deep it lies in the ground (0-1).
   fin : {keys : [{}], angle : 0, speed : .3, bury : 0},
   // Pigment. Each type of cells swallows the light round a hue (0-360) with a width, and has cells (how much it swallows) and its span of life; time: how many steps recolouring takes; command: how far the brain has the pigment spread (0-1); ground: what lies behind the fish (0 deep water - 1 sand).
@@ -2978,6 +2987,86 @@ function drawFinLife() {
   skinLife('fin', svg, under, live, FIN_PARTS);
 }
 
+// ----- The mouth: jaw and opener -----
+// Read in the engine (src/physiology.hh:269-305; Claude's reading page entwuerfe/ORGAN-muskel.md
+// for the rest):
+//   the mouth opens to the share short + span x the jaw's length of the body; a longer jaw opens
+//   wider and has the shorter lever: lever = the middle jaw's opening / this jaw's opening;
+//   bite force = the jaw cells' capacity x the brain's command x the body's size x lever x the
+//   teeth's grip: sharp teeth cut flesh, (1 - bluntness)^2; blunt ones grind plants and crack
+//   shells, bluntness^2; a loose piece gives way to either;
+//   the opener sucks with its cells' capacity x the body's size; scraping algae takes the
+//   sucking force x the opening x lever^2.
+// The head from the side. The grip at the jaw's tip sets its length, the grip at a tooth the
+// teeth's form; the grips at the two muscles their cells. Before the mouth the four kinds of
+// food, each with the bite it gets: as deep as the force on it. The clock opens the mouth, sucks
+// and bites.
+// The opening's two numbers are the engine's (ui/schema.js, mouth_share_short and _span).
+// ASSUMED for the picture: how the forces compare with each other: a bite is as deep as its
+// force over what the most cells give a jaw of middle length with teeth of one form.
+const MOUTH = {height : 226, hinge : [196, 78], jaw : [46, 92], share : [.28, .44], gape : 58, cells : [1, 12], teeth : 6, foods : [{name : 'Fleisch', colour : '#ee9f9a'}, {name : 'Pflanze, Schale', colour : '#8fd18a'}, {name : 'Brocken', colour : '#e6b47c'}, {name : 'Algen schaben', colour : '#77d2bd'}]};
+const MOUTH_PARTS = ['mouth', 'mouthlife'];
+const mouthShare = long => MOUTH.share[0] + MOUTH.share[1] * long, jawLever = long => mouthShare(.5) / mouthShare(long);
+// The force on each kind of food: cutting, grinding, a loose piece, scraping.
+function mouthForces(m = S.mouth) {
+  const lever = jawLever(m.long), bite = m.bite * lever, suck = m.suck;
+  return [bite * (1 - m.blunt) ** 2, bite * m.blunt ** 2, bite, suck * mouthShare(m.long) * lever * lever * 2];
+}
+function drawMouth() {
+  const cell = S.mouth, {svg, live} = picture('mouth', MOUTH.height), [hx, hy] = MOUTH.hinge, long = MOUTH.jaw[0] + (MOUTH.jaw[1] - MOUTH.jaw[0]) * cell.long, open = MOUTH.gape * mouthShare(cell.long);
+  // The head behind the jaws, with the two muscles: the jaw's closer above, the opener below.
+  el('path', {d : `M${hx - 8} ${hy - 30} Q${hx + 40} ${hy - 52} 300 ${hy - 46} V${hy + 50} Q${hx + 40} ${hy + 50} ${hx - 8} ${hy + 30} Z`, fill : HEAD, stroke : COLOUR.axis, 'stroke-width' : 1.3}, live);
+  el('circle', {cx : hx + 34, cy : hy - 22, r : 5, fill : COLOUR.icon}, live);
+  const muscle = (x, y, cells, colour) => el('ellipse', {cx : x, cy : y, rx : 9 + 1.4 * cells, ry : 5 + .7 * cells, fill : colour, opacity : .85, transform : `rotate(-18 ${x} ${y})`}, live);
+  muscle(hx + 26, hy + 4, cell.bite, keyColour(0)); muscle(hx + 30, hy + 32, cell.suck, keyColour(1));
+  // The jaws: two bars from the hinge; the clock opens and shuts them.
+  const jaws = [-1, 1].map(side => {
+    const g = el('g', {}, live);
+    el('path', {d : `M0 0 L${-long} 0`, stroke : COLOUR.line, 'stroke-width' : 6, 'stroke-linecap' : 'round'}, g);
+    // The teeth: sharp points or blunt blocks.
+    for (let n = 0; n < MOUTH.teeth; n++) { const x = -long * (.35 + .6 * n / (MOUTH.teeth - 1)), flat = 3.2 * cell.blunt, high = 7 - 3 * cell.blunt; el('path', {d : `M${x - 3.4} 0 L${x - flat} ${-side * high} L${x + flat} ${-side * high} L${x + 3.4} 0 Z`, fill : COLOUR.line}, g); }
+    return {g, side};
+  });
+  // Before the mouth the four kinds of food, each bitten as deep as the force on it.
+  const forces = mouthForces(), most = MOUTH.cells[1];
+  MOUTH.foods.forEach((food, j) => {
+    const x = 40 + 73 * j, y = 176, deep = clamp(forces[j] / most, 0, 1);
+    el('rect', {x : x - 15, y : y - 15, width : 30, height : 30, rx : 7, fill : food.colour}, live);
+    if (deep > .01) el('path', {d : `M${x - 15 * deep - 2} ${y - 16} Q${x} ${y - 16 + 34 * deep} ${x + 15 * deep + 2} ${y - 16} Z`, fill : COLOUR.body}, live);
+    txt(live, x, y + 29, food.name, {'text-anchor' : 'middle', style : 'font-size:9.5px', fill : food.colour});
+  });
+  // The settings: the jaw's length at its tip, the teeth's form at a tooth, the cells at each muscle.
+  const tipGrip = el('rect', {width : 9, height : 9, rx : 2.5}, live);
+  drag(svg, tipGrip, p => { cell.long = clamp((hx - p.x - MOUTH.jaw[0]) / (MOUTH.jaw[1] - MOUTH.jaw[0]), 0, 1); draw(MOUTH_PARTS); }, 'mouthlong');
+  const toothGrip = el('circle', {r : 4.5}, live);
+  drag(svg, toothGrip, p => { cell.blunt = clamp((p.x - (hx - long * .9)) / (long * .5), 0, 1); draw(MOUTH_PARTS); }, 'mouthblunt');
+  for (const [key, x, y, i] of [['bite', hx + 26, hy + 4, 0], ['suck', hx + 30, hy + 32, 1]]) {
+    const out = 9 + 1.4 * cell[key];
+    drag(svg, el('rect', {x : x + out - 4, y : y - 5 - out * .3, width : 8, height : 10, rx : 2, style : `fill:${keyColour(i)}`}, live), p => { cell[key] = Math.round(clamp((p.x - x - 9) / 1.4, MOUTH.cells[0], MOUTH.cells[1])); draw(MOUTH_PARTS); }, 'mouth' + key);
+  }
+  // The water the opener draws in: threads before the mouth, the more the stronger it sucks.
+  const threads = Array.from({length : 5}, (_, n) => el('path', {stroke : '#9cc8f0', 'stroke-width' : 1.4, 'stroke-linecap' : 'round', fill : 'none'}, live));
+  // The clock: the mouth opens and sucks, then bites.
+  play.levels = play.levels.filter(l => l.owner !== 'mouth');
+  play.levels.push({owner : 'mouth', sense : 'full', show : () => {
+    const phase = (play.step / STEPS * 4) % 1, wide = phase < .55 ? Math.sin(Math.PI * phase / .55) : 0, angle = deg(Math.atan2(open * wide / 2, long));
+    for (const {g, side} of jaws) g.setAttribute('transform', `translate(${hx} ${hy + side * 4}) rotate(${-side * angle})`);
+    const ty = hy - 4 - open * wide / 2 * .98, tx = hx - long;
+    tipGrip.setAttribute('x', (tx - 4.5).toFixed(1)); tipGrip.setAttribute('y', (ty - 12).toFixed(1));
+    toothGrip.setAttribute('cx', (hx - long * (.9 - .5 * cell.blunt)).toFixed(1)); toothGrip.setAttribute('cy', (hy + 4 + open * wide / 2 * (.9 - .5 * cell.blunt) + 10).toFixed(1));
+    threads.forEach((e, n) => { const far = (20 + 30 * cell.suck / MOUTH.cells[1]) * wide, y = hy + (n - 2) * open * wide / 5; e.setAttribute('d', `M${tx - 6 - far} ${y + (n - 2) * 5 * wide} L${tx - 6} ${y}`); e.setAttribute('opacity', (wide * .9).toFixed(2)); });
+  }});
+}
+// Its life: the same mouth in a small body takes small food, in a big one big food.
+function drawMouthLife() {
+  const {L, R, band, hatch} = SKIN.life, {svg, under, live} = picture('mouthlife', SKIN.life.height, fixed => {
+    const hx = L + (R - L) * hatch, y = band - 26;
+    eggShape(fixed, (L + hx) / 2, y, 17, false);
+    for (const [x, s] of [[hx + 20, .4], [R - 46, .78]]) { fishSide(fixed, x, y, s); el('rect', {x : x + 34 * s, y : y - 5 * s, width : 10 * s, height : 10 * s, rx : 2.5 * s, fill : MOUTH.foods[2].colour}, fixed); }
+  });
+  skinLife('mouth', svg, under, live, MOUTH_PARTS);
+}
+
 // ===== The clock =====
 // Shows the present moment: the lines, what the holders hold, the keys the input has passed, what
 // irritants at the nerve cells.
@@ -3096,9 +3185,10 @@ const PAINT = {fish : drawFish, yield : drawYield, bars : drawBars, life : drawL
                blood : drawBlood, bloodrows : drawBloodRows, bloodlife : drawBloodLife,
                spines : drawSpines, spinelife : drawSpineLife,
                skincolour : drawSkinColour, pigments : drawPigments, pigmentlife : drawPigmentLife,
-               fin : drawFin, finlife : drawFinLife};
+               fin : drawFin, finlife : drawFinLife,
+               mouth : drawMouth, mouthlife : drawMouthLife};
 // The senses first: the fish's stomach follows the fullness input.
-for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife', 'flow', 'flowrose', 'flowlife', 'touch', 'touchskin', 'touchlife', 'tilt', 'tiltlife', 'pain', 'wound', 'painlife', 'blood', 'bloodrows', 'bloodlife', 'spines', 'spinelife', 'skincolour', 'pigments', 'pigmentlife', 'fin', 'finlife']) dirty.add(part);
+for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife', 'flow', 'flowrose', 'flowlife', 'touch', 'touchskin', 'touchlife', 'tilt', 'tiltlife', 'pain', 'wound', 'painlife', 'blood', 'bloodrows', 'bloodlife', 'spines', 'spinelife', 'skincolour', 'pigments', 'pigmentlife', 'fin', 'finlife', 'mouth', 'mouthlife']) dirty.add(part);
 repaint();
 showGut(0);
 // Nothing moves while the panel is off the screen, or for someone who has asked for less motion:
