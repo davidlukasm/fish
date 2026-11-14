@@ -669,7 +669,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
             << ",\"tail\":{\"restShare\":"
             << tail_upkeep / (basal + gut_upkeep + muscle_upkeep + cell_upkeep) << '}';
   const auto &growth = t.growth_receptor;
-  std::cout << ",\"gutSpeed\":" << fishsim::gut_speed(adult)
+  std::cout << ",\"gutSpeed\":" << fishsim::gut_speed(adult, physiology)
             << ",\"growth\":{\"sensitivity\":" << growth.sensitivity << ",\"half\":" << growth.half
             << ",\"steepness\":" << growth.steepness << ",\"affinity\":[";
   for (int k = 0; k < field::HORMONES; ++k)
@@ -1015,14 +1015,11 @@ std::string diet_report() {
   row("size", [](double l) { return gut_size(l); });
   Body reference;
   reference.tissue = BODY_TISSUE;
-  reference.gut_force_scale = physiology.gut_force;
-  // suction_share is already one at this force; stronger muscles cannot quicken passage further.
-  const double speed_max_strength = reference.gut_force_scale / (MOUTH_FORCE_GAIN - 1);
   row("speed", [&](double share) {
-    reference.gut_strength = share * speed_max_strength;
-    return gut_speed(reference);
+    reference.gut_strength = share * physiology.gut_force;
+    return gut_speed(reference, physiology);
   });
-  out << ",\"speedMaxStrength\":" << speed_max_strength
+  out << ",\"speedMaxStrength\":" << physiology.gut_force
       << ",\"muscleCellForce\":" << MUSCLE_CELL_FORCE;
   out << "},\"foods\":{";
   // What each food is made of: its shares of the six stuffs, the rest being ballast.

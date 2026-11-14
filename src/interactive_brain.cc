@@ -173,7 +173,7 @@ void InteractiveSession::write_brain_summary(std::ostream &out, const Individual
       << ",\"digested\":" << b.digested
       << ",\"digestion_net\":" << (1 - PhysiologyParameters::digestion_cost) * b.digestion
       << ",\"gut_transit\":" << gut_transit(b, world.physiology())
-      << ",\"gut_speed\":" << gut_speed(b);
+      << ",\"gut_speed\":" << gut_speed(b, world.physiology());
   out << ",\"model\":" << json_quoted("cppn") << ",\"hatched\":" << (b.hatched ? "true" : "false")
       << ",\"fertilised\":" << (chosen->fertilised ? "true" : "false")
       << ",\"clonal\":" << (chosen->clonal ? "true" : "false")

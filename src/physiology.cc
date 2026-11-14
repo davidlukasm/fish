@@ -441,7 +441,6 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
               muscle_upkeep(active_muscle_maintenance, tissue, physiology) +
               (development_ ? neural_upkeep() * physiology.neural_cost : 0);
   force_scale = physiology.max_bite_force;
-  gut_force_scale = physiology.gut_force;
   resting_defense =
       g.interface ? resting_spine_height(active_interface(g).capacities[organ_port::defense],
                                          physiology.resting_spines, physiology.resting_spines_half)

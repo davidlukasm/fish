@@ -371,16 +371,15 @@ inline double gill_area(const Body &b) {
 }
 // How fast the gut muscle can move the content, as a multiple of the resting gut: a larger
 // muscle is more than proportionally faster.
-inline double gut_speed(const Body &b) {
-  // The gut muscle is measured by its own force, not by the mouth's: the share of its fastest
-  // pace is full once its strength reaches gut_force.
-  const double strength = suction_share(b.gut_strength * body_scale(b), b.gut_force_scale);
+inline double gut_speed(const Body &b, const PhysiologyParameters &p) {
+  const double strength =
+      std::min(1., 2 * effective_force(b.gut_strength * body_scale(b), p.gut_force));
   return 1 + (digestion::fastest - 1) * strength * strength;
 }
 // Share of its content the gut moves on per step. The wall moves food on with twice its pose,
 // which averages its drive.
 inline double gut_pace(const Body &b, const PhysiologyParameters &p) {
-  return (1 + (gut_speed(b) - 1) * 2 * std::clamp(b.gut_motility, 0., 1.)) / gut_transit(b, p);
+  return (1 + (gut_speed(b, p) - 1) * 2 * std::clamp(b.gut_motility, 0., 1.)) / gut_transit(b, p);
 }
 // How much a full gut hurts that holds a meal of these shares of flesh and of fibre for `stay`
 // steps: nothing within the meal's own span of time, all it can beyond it.

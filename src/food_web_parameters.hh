@@ -127,7 +127,4 @@ FISH_FOOD_WEB_PARAMETERS(FISH_FOOD_PARAMETER_RANGE)
 #undef FISH_FOOD_PARAMETER_RANGE
 }
 inline constexpr double default_max_bite_force = 110;
-// A gut muscle of enduring fibres, as a fish of middling size carries one, reaches the gut's
-// fastest pace with this force.
-inline constexpr double default_gut_force = 12.8;
 }
