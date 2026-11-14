@@ -1625,9 +1625,7 @@ function drawGillLife() {
 // command of the filling cells is taken as the share e / (1 + e) they reach; what a young needs
 // (EGG.need) is a number set here, the engine works it out for each plan (egg_energy_needed);
 // a full population, eggs lying too close and no free place behind the fish are left out.
-// mass: yolk that weighs as much as the reference body (RESERVE_ENERGY_PER_MASS, body_mass,
-// physiology.cc:130-137).
-const EGG = {perCell : 10, most : 160, rate : 2, full : .95, need : 60, cells : 16, hatch : .5, belly : .25, mass : 300,
+const EGG = {perCell : 10, most : 160, rate : 2, full : .95, need : 60, cells : 16, hatch : .5, belly : .25,
              F : {height : 132, fishX : 118, fishY : 62, ground : 120},
              C : {L : 64, R : 290, c0 : 16, c1 : 46, top : 78, base : 148, height : 172},
              LIFE : {L : 44, R : 264, top : 18, base : 88, icons : 106, height : 120, beside : 16, whole : .015, least : .08}};
@@ -1665,7 +1663,7 @@ function drawEggs() {
   const {svg, live} = picture('eggs', EGG.F.height, buildEggs), {fishX, fishY} = EGG.F, m = EM(), share = lengthShare();
   const kind = !m.laid.length ? (m.room > 0 ? 'Legt nicht' : 'Kein Platz für Eier') : m.laid.every(e => !e.young) ? 'Legt Nähreier' : m.every ? `Ein Ei alle ${m.every} Schritte` : 'Ein Ei';
   document.getElementById('egg-kind').textContent = kind;
-  if (m.laid.length) txt(live, 4, 10, `${Math.round(m.laid[0].yolk)} Dotter je Ei · bis +${Math.round(100 * m.room / EGG.mass / Math.max(.5, EG.input.maturity))} % Gewicht`, {style : 'font-size:10px'});
+  if (m.laid.length) txt(live, 4, 10, `${Math.round(m.laid[0].yolk)} Dotter je Ei`, {style : 'font-size:10px'});
   // The gut: a tube through the belly, the longer the more of it.
   const coils = 2 + Math.round(4 * share), gx0 = fishX - 38, gx1 = fishX + 52, gy = fishY - 8 - 6 * share, amp = 3 + 7 * share;
   el('path', {d : path(Array.from({length : 61}, (_, k) => [gx0 + (gx1 - gx0) * k / 60, gy + amp * Math.sin(2 * Math.PI * coils * k / 60)])), stroke : COLOUR.tube, 'stroke-width' : 5, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'}, live);
@@ -1687,8 +1685,11 @@ function drawEggs() {
   for (let i = 1; i < all; i++) el('path', {d : `M${x0 + long * i / all} ${cy - high} v${2 * high}`, stroke : COLOUR.track, 'stroke-width' : 1}, cells);
   // The filling cells: the grip where they end. The laying cells: the buttons behind the organ.
   drag(svg, el('rect', {x : x0 + long * EG.cells / all - 4, y : cy - 5.5, width : 8, height : 11, rx : 2, style : `fill:${YOLK}`}, live), p => {
-    const each = bellyRoom() * EG.input.maturity * EGG.perCell, wanted = clamp((p.x - x0 - 14) / 62, 0, 1) ** 2 * most;
-    EG.cells = clamp(Math.round(each > 0 ? wanted / each * EG.cells / all : EG.cells), 1, EGG.cells - EG.laying); draw(EGG_PARTS); }, 'eggsize');
+    // The number of filling cells whose border lies nearest the pointer: the same measure as the grip's place.
+    const border = c => x0 + sizeOf(eggRoom(EG.input.maturity, c + EG.laying))[0] * c / (c + EG.laying);
+    let best = EG.cells;
+    for (let c = 1; c <= EGG.cells - EG.laying; c++) if (Math.abs(border(c) - p.x) < Math.abs(border(best) - p.x)) best = c;
+    EG.cells = best; draw(EGG_PARTS); }, 'eggsize');
   chip(live, x0 + widest + 10, cy + highest + 2, '−', () => { EG.laying--; }, EGG_PARTS, EG.laying > 1, 6);
   chip(live, x0 + widest + 26, cy + highest + 2, '+', () => { EG.laying++; }, EGG_PARTS, all < EGG.cells, 6);
 }
@@ -1711,7 +1712,7 @@ function drawEggFill() {
   }
   // A number set here, not the engine's: pale.
   el('path', {d : `M${L} ${Y(EGG.need)} H${R}`, stroke : COLOUR.sore, 'stroke-dasharray' : '2 3', 'stroke-width' : 1.2, opacity : .6}, live);
-  txt(live, R - 3, Y(EGG.need) - 4, 'reicht für ein Junges', {'text-anchor' : 'end', style : `font-size:10px;paint-order:stroke;stroke:${COLOUR.track};stroke-width:3px`, fill : COLOUR.sore});
+  txt(live, R - 3, Y(EGG.need) - 4, 'Mindestdotter laut Bauplan', {'text-anchor' : 'end', style : `font-size:10px;paint-order:stroke;stroke:${COLOUR.track};stroke-width:3px`, fill : COLOUR.sore});
   for (const e of m.laid) eggMark(live, X(e.step), top - 8, 4.5, e.young);
   el('path', {d : `M${L} ${top - 2} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
   txt(live, 4, base, 'leer');
@@ -1722,10 +1723,10 @@ function drawEggFill() {
   drag(svg, el('circle', {cx : (L + X(Math.max(60, inp.lay))) / 2, cy : mid - (mid - c0) * inp.fill, r : 5.5, fill : COLOUR.line}, live), p => { inp.fill = clamp((mid - p.y) / (mid - c0), 0, 1); draw(EGG_PARTS); }, 'eggcmd', 'knob');
   drag(svg, el('circle', {cx : X(inp.lay), cy : c1, r : 5.5, fill : COLOUR.line}, live), p => { inp.lay = clamp(Math.round((p.x - L) / (R - L) * STEPS), 0, STEPS); draw(EGG_PARTS); }, 'egglay', 'knob');
 }
-// An egg: with a young in it (an eye), or a nutrient egg (yolk only, paler).
-function eggMark(parent, x, y, r, young) {
-  el('circle', {cx : x, cy : y, r, fill : YOLK, opacity : young ? 1 : .45, stroke : COLOUR.track, 'stroke-width' : 1}, parent);
-  if (young) el('circle', {cx : x - r * .25, cy : y - r * .1, r : r * .32, fill : COLOUR.track}, parent);
+// An egg: with yolk enough by the plan, or a nutrient egg (paler); `eye`: fertilised.
+function eggMark(parent, x, y, r, enough, eye = false) {
+  el('circle', {cx : x, cy : y, r, fill : YOLK, opacity : enough ? 1 : .45, stroke : COLOUR.track, 'stroke-width' : 1}, parent);
+  if (eye) el('circle', {cx : x - r * .25, cy : y - r * .1, r : r * .32, fill : COLOUR.track}, parent);
 }
 // The pressure sense: the nerve cells, and under them over the steps how full the organ is in
 // the trial (the fine line) and, for each key, what its cells report to the brain. The
@@ -1780,7 +1781,7 @@ function drawEggLife() {
     el('path', {d : path(pts), stroke : YOLK, 'stroke-width' : 2, fill : 'none'}, live);
   }
   el('path', {d : `M${L} ${Y(EGG.need)} H${R}`, stroke : COLOUR.sore, 'stroke-dasharray' : '2 3', 'stroke-width' : 1.2, opacity : .6}, live);
-  txt(live, L + 4, Y(EGG.need) - 4, 'reicht für ein Junges', {style : 'font-size:10px', fill : COLOUR.sore});
+  txt(live, L + 4, Y(EGG.need) - 4, 'Mindestdotter laut Bauplan', {style : 'font-size:10px', fill : COLOUR.sore});
   el('path', {d : `M${X(EGG.hatch)} ${top} V${base + 5}`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3'}, live);
   el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
   const grip = (r, inside, name, move) => {
@@ -1968,7 +1969,7 @@ function showSperm() {
   if (m.inEgg) return;
   spermFilm.plant.setAttribute('opacity', (1 - .8 * dim).toFixed(2));
   const was = spermFilm.egg.dataset.done === '1';
-  if (spermFilm.egg.childElementCount === 0 || was !== done) { spermFilm.egg.replaceChildren(); spermFilm.egg.dataset.done = done ? '1' : '0'; eggMark(spermFilm.egg, m.eggX, ground - 6, 5.5, done); }
+  if (spermFilm.egg.childElementCount === 0 || was !== done) { spermFilm.egg.replaceChildren(); spermFilm.egg.dataset.done = done ? '1' : '0'; eggMark(spermFilm.egg, m.eggX, ground - 6, 5.5, true, done); }
 }
 
 // ===== The clock =====
