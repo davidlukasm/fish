@@ -81,6 +81,8 @@ const leftAfter = (fast, drive) => {
   const reserve = fibreCourse(fast, GILL.long, drive).reserve.at(-1);
   return 1 - fast + fast * reserve;
 };
+// What fibres from enduring to strong have left after beating long at a full command.
+const FULL_COMMAND = Array.from({length : 21}, (_, k) => leftAfter(k / 20, 1));
 
 liveKind('gills', (studio, organId) => {
   const root = document.createElement('div');
@@ -137,9 +139,15 @@ liveKind('gills', (studio, organId) => {
         scale > 0 ? whole * Math.min(1, 2 * strength / (strength + scale)) : 0;
     const exact = studio.shownDesign === state.document && Number.isFinite(report?.pumpArea);
     // What the fibres have left after beating long, each cell's by its strength.
-    const left = drive =>
-        u > 0 ? cells.reduce((sum, c) => sum + unit(c) * leftAfter(fastShare(c.tau), drive), 0) / u
-              : 0;
+    const left =
+        u > 0
+            ? cells.reduce((sum, c) => sum + unit(c) * leftAfter(fastShare(c.tau), input.pump), 0) /
+                  u
+            : 0;
+    // The most water any pump and any swim offered here gives: the scale of the water's picture.
+    const most = nodeLimit(gills, state.sites),
+          strongest = Math.max(...FULL_COMMAND.map(
+              (after, k) => areaOf(most * fibreForce(k / (FULL_COMMAND.length - 1))) * after));
     return {
       cells,
       pairs : cells.length / 2,
@@ -158,7 +166,8 @@ liveKind('gills', (studio, organId) => {
       areaNow : exact ? report.pumpArea : areaOf(u),
       left,
       rest : report?.restShare,
-      most : nodeLimit(gills, state.sites),
+      most,
+      mostWater : Math.max(1e-9, strongest + 2 * mouth * GILL.fastest),
       canGrow : roomFor(gills)
     };
   }
@@ -167,7 +176,10 @@ liveKind('gills', (studio, organId) => {
   function roomFor(gills) {
     if (asked !== state.document) {
       asked = state.document;
-      room = !!setOrganNodes(state.document, organId, gills.centers.length + 2, state.sites);
+      // setOrganNodes caps the wish at the organ's limit, so a full organ is asked nothing.
+      const count = gills.centers.length + 2;
+      room = count <= nodeLimit(gills, state.sites) &&
+             !!setOrganNodes(state.document, organId, count, state.sites);
     }
     return room;
   }
@@ -175,18 +187,10 @@ liveKind('gills', (studio, organId) => {
   // What the covers pump, held long: of the plan as it is (its exact area), or of a muscle of
   // another strength on the curve.
   const pumped = (strength = null, r = input.maturity, open = input.open) =>
-      works(r) ? (strength === null ? m.areaNow : m.areaOf(strength)) * input.pump *
-                     m.left(input.pump) * open
+      works(r) ? (strength === null ? m.areaNow : m.areaOf(strength)) * input.pump * m.left * open
                : 0;
   const met = (open = input.open) =>
       2 * m.mouth * input.speed * Math.max(0, open - MOUTH_CYCLE.rest) / (1 - MOUTH_CYCLE.rest);
-  // The most water any pump and any swim offered here gives: the scale of the water's picture.
-  const mostWater = () => {
-    let most = 0;
-    for (let k = 0; k <= 20; k++)
-      most = Math.max(most, m.areaOf(m.most * fibreForce(k / 20)) * leftAfter(k / 20, 1));
-    return Math.max(1e-9, most + 2 * m.mouth * GILL.fastest);
-  };
   // What a mouthful brings at this moment, of each kind: how much comes, what share of it stays.
   function stream() {
     const out = input.maturity >= GILL.hatch, fed = out && input.gut < 1,
@@ -313,7 +317,7 @@ liveKind('gills', (studio, organId) => {
     now.kinds.slice(0, 2).forEach((kindOf, i) => {
       const arrives = clamp(
           kindOf.rate * kindOf.keeps /
-          (i ? SPECKS.flock : SPECKS.plankton * mostWater() * rakerPassage(1) * rakerRetention(1)));
+          (i ? SPECKS.flock : SPECKS.plankton * m.mostWater * rakerPassage(1) * rakerRetention(1)));
       el('rect', {
         x : g0 + 26 + 9 * i,
         y : top + 3,
@@ -505,7 +509,7 @@ liveKind('gills', (studio, organId) => {
   function drawWater() {
     const {svg, under, live} = picture(water, WATER.height, buildWater),
                        {L, R, top, base, FY, speedX} = WATER, pass = rakerPassage(m.density),
-                       swum = met() * pass, scale = mostWater(), least = 2 / FULL, most = m.most,
+                       swum = met() * pass, scale = m.mostWater, least = 2 / FULL, most = m.most,
                        cells = m.fullness;
     // Along the bottom: the muscle's cells as full cells, from one pair of the thinnest to all
     // places full.
