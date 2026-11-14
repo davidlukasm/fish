@@ -566,7 +566,6 @@ async function checkLightDisplay(capabilities) {
 
 async function checkEyeControls(model, capabilities, root) {
   const {OrganStudio} = await import('../ui/studio/controller.js');
-  const {FISH_CLICKS} = await import('../ui/studio/events.js');
   const {GRIPS} = await import('../ui/studio/handles.js');
   const {visionInspector} = await import('../ui/studio/view/vision.js');
   const {CONTRAST_POLARITY} = await import('../ui/schema.js');
@@ -575,6 +574,7 @@ async function checkEyeControls(model, capabilities, root) {
   assert.ok(eye);
   const studio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
   Object.assign(studio.state, {
+    station : 'studio',
     document : eye.document,
     selected : {kind : 'organ', id : eye.organId},
     capabilities,
@@ -599,11 +599,18 @@ async function checkEyeControls(model, capabilities, root) {
     studio.state.document = model.updateField(studio.state.document, id, patch, sites);
   };
   const option = pattern => picture().match(pattern)?.[1];
-  const cycle = FISH_CLICKS.find(([ key ]) => key === '[data-vision-polarity]')[1];
   for (const polarity
            of [CONTRAST_POLARITY.dark, CONTRAST_POLARITY.both, CONTRAST_POLARITY.bright]) {
     const next = option(/data-vision-polarity="([^"]+)"/);
-    cycle(studio, {dataset : {visionPolarity : next}});
+    const scene = {dataset : {spectrum : 'scene'}}, choice = {dataset : {visionPolarity : next}};
+    studio.click({
+      detail : 1,
+      target : {
+        closest : selector => selector.includes('[data-vision-polarity]') ? choice
+                              : selector.includes('[data-spectrum]')      ? scene
+                                                                          : null
+      }
+    });
     assert.equal(organ().field.profiles[0].polarity, polarity);
   }
   studio.draftDesign = (doc, batch, draw) => {
