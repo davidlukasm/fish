@@ -10,7 +10,7 @@ import {ATELIER_LIMITS, BODY_UNIT, DIGESTION} from '../../../schema.js';
 import {gutAche, gutUse} from '../../../fish_organs.js';
 import {fastShare, fibreForce} from '../../../fibre.js';
 import {percent, t} from '../../../strings.js';
-import {activationLevel, activationQuality, adaptationOf, adaptationSteps, LONGEST_ADAPTATION, planOfUnit, unitOfPlan} from '../../../tuning.js';
+import {activationLevel, activationQuality, adaptationOf, adaptationSteps, planOfUnit, unitOfPlan} from '../../../tuning.js';
 import {
   addOrganType,
   gutLength,
@@ -27,6 +27,7 @@ import {
 import {kindLimit} from '../../model/organs.js';
 import {label} from '../kit.js';
 import {chip, clamp, drag, el, fishIcon, liveKind, path, picture, txt} from './kit.js';
+import {answer, between, cellGates, CELLS, cubic, IRRITANT, LEVEL_SPAN, LEVELS, NERVE, runOf, SENSE_BOX, silentStep, stimulusOf, USED, usedFor} from './sense.js';
 
 const word = (key, values) => t('studio.live.gut.' + key, values);
 // The foods, in the pictures' order, by their names in the engine's report.
@@ -166,8 +167,6 @@ function rangeIn(curve, reach) {
 // get used to the input from the first step on: what they are used to moves towards it by its
 // share 1 / steps each step, and they answer what the input exceeds it by (cppn_brain.cc,
 // adapted_response); the cells of fullness do not tire (brain_interface.hh, adapting_sense).
-const CELLS = 7, LEVELS = [ activationLevel(0), activationLevel(1) ], LEVEL_SPAN = LEVELS[1] - LEVELS[0];
-const USED = [ adaptationSteps(0), LONGEST_ADAPTATION ];
 const SENSES = Object.freeze({
   full : {cells : 'fullness', tires : false, after : 260, row : false},
   ache : {cells : 'ache', tires : true, after : 120, row : true},
@@ -184,85 +183,7 @@ const REWARD = Object.freeze({L : 62, R : 246, top : 34, row : 19, star : 274, h
 const STAR = 'M0 -7 L1.7 -1.7 L7 0 L1.7 1.7 L0 7 L-1.7 1.7 L-7 0 L-1.7 -1.7 Z';
 // The life picture: across, the fish's maturity; up, how fast the muscle makes the gut.
 const LIFE = Object.freeze({L : 44, R : 226, top : 20, base : 92, icons : 110, height : 124, zones : 72, beside : 16, whole : .015, least : .08, hatch : .5});
-const SENSE_BOX = Object.freeze({L : 92, R : 292, LX : 44, I0 : 150, I1 : 254, row : 34, rowL : 6, rowR : 294, rowGap : 10});
 const KEY_X = 9;
-const cellGates = k => Array.from({length : CELLS}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5), LEVELS[0], LEVELS[1]));
-// A cell's answer to a stimulus past its threshold and what it is used to (body_plan.cc, the
-// bounded answer of a sense cell).
-const answer = (x, gate, used) => {
-  const over = (clamp(x) - used - gate) / (1 - gate);
-  return over > 0 ? over / (over + gate * (1 - over)) : 0;
-};
-// The input tried on a sense: it rises to a height, holds and stops, then fades.
-const stimulusOf = (input, after) => {
-  const top = input.height * clamp(input.stop / Math.max(1, input.rise));
-  return Array.from({length : STEPS + 1}, (_, st) => st <= input.stop ? input.height * clamp(st / Math.max(1, input.rise)) : top * Math.exp(-(st - input.stop) / after));
-};
-// What a key's cells send under an input, step by step, and what they have got used to by then.
-function runOf(k, stim, tires) {
-  const gates = cellGates(k), pace = tires ? 1 / k.used : 0, sent = [], used = [];
-  let u = 0;
-  for (const s of stim) {
-    sent.push(gates.reduce((sum, g) => sum + answer(s, g, u), 0) / CELLS);
-    used.push(u);
-    u += (s - u) * pace;
-  }
-  return {sent, used};
-}
-// The step at which a key's last cell falls silent under this input; past the picture's steps
-// if it never does, 0 if the cell never sends at all.
-function silentStep(k, stim) {
-  const last = Math.min(...cellGates(k));
-  let used = 0, heard = false;
-  for (let st = 0; st < stim.length; st++) {
-    const hears = stim[st] - used > last;
-    if (heard && !hears)
-      return st;
-    heard ||= hears;
-    used += (stim[st] - used) / k.used;
-  }
-  return heard ? stim.length : 0;
-}
-// The pace of tiring that puts that step where it is wanted (the slower, the later).
-function usedFor(k, stim, step) {
-  if (!silentStep({...k, used : USED[1]}, stim))
-    return k.used;
-  let [lo, hi] = USED;
-  for (let n = 0; n < 24; n++) {
-    const mid = (lo + hi) / 2;
-    if (silentStep({...k, used : mid}, stim) < step)
-      lo = mid;
-    else
-      hi = mid;
-  }
-  return hi;
-}
-const between = (values, at) => {
-  const a = Math.floor(at), f = at - a;
-  return values ? (values[a] ?? 0) * (1 - f) + (values[a + 1] ?? values[a] ?? 0) * f : 0;
-};
-// The nerve cells above a sense's diagram: one for each key, the fibres running into one bundle.
-const IRRITANT = 'M2 -8 L-4 1 H1 L-2 8 L5 -2 H0 Z';
-const NERVE = Object.freeze({
-  somas : [ [ 150, 72 ], [ 124, 64 ], [ 176, 82 ] ],
-  join : [ 170, 38 ],
-  bundle : [ [ 170, 38 ], [ 186, 22 ], [ 166, 18 ], [ 178, 8 ] ],
-  tilt : 14,
-  about : [ 150, 62 ],
-  flash : 104,
-  tips : [ [ -13, 5 ], [ -7, 14 ], [ 4, 13 ] ],
-  speed : .0026,
-  rate : .006,
-  merge : .15,
-  pulses : 4,
-  dots : 7,
-  dotSpeed : .004
-});
-const cubic = (a, b, c, d, s) => {
-  const u = 1 - s;
-  return [ 0, 1 ].map(n => u * u * u * a[n] + 3 * u * u * s * b[n] + 3 * u * s * s * c[n] + s * s * s * d[n]);
-};
-
 liveKind('gut', (studio) => {
   const root = document.createElement('div');
   root.className = 'aid-live-gut';

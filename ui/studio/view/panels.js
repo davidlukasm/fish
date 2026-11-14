@@ -9,11 +9,9 @@ import {effectorGraphic, spineField} from './effectors.js';
 import {lateralField} from './lateral.js';
 import {hairField} from './balance.js';
 import {pigmentInspector} from './pigments.js';
-import {scentMap} from './scents.js';
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {
-  BARBEL_FEEL,
   functionFor,
   isPelvicMuscle,
   isRegion,
@@ -63,6 +61,8 @@ import './live/bladder.js';
 import './live/gills.js';
 import './live/eggs.js';
 import './live/sperm.js';
+import './live/nose.js';
+import './live/barbels.js';
 
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
@@ -100,8 +100,8 @@ const muscleKind = (state, center) => '<div class="aid-muscle-kind" title="' +
 export const biasScale = state => state.capabilities?.biasScale ?? 0;
 const skinPanel = (state, organ, center) => skinField(state, organ, center);
 const ORGAN_PANELS = Object.freeze({
-  nose : (state, organ, center) => scentMap(organ, center, state),
-  barbels : (state, organ, center) => barbelFeel(center) + scentMap(organ, center, state),
+  nose : (state, organ) => livePlace('nose', organ),
+  barbels : (state, organ) => livePlace('barbels', organ),
   pigment : (state, organ, center) => pigmentInspector(state, organ, center),
   gut : (state, organ) => livePlace('gut', {id : 'gut'}) + gutProbeControls(state, organ),
   bladder : (state, organ) => livePlace('bladder', organ),
@@ -144,23 +144,6 @@ function organSettings(state, organ, center) {
 export function organSettingsBlock(state, organ) {
   return '<div class="aid-organ-settings" data-organ-settings="' + escapeText(organ.id) + '">' +
          organSettings(state, organ, selectedCenter(state, organ)) + '</div>';
-}
-// Taste, touch or both, each as its sense's own mark with its word.
-const BARBEL_ICON =
-    Object.freeze({taste : [ 'nose' ], both : [ 'nose', 'touch' ], touch : [ 'touch' ]});
-function barbelFeel(center) {
-  return '<div class="aid-button-group aid-barbel-feel" role="group" aria-label="' +
-         label('inspector.barbelFeel.label') + '" title="' + label('inspector.barbelsTaste') +
-         '">' +
-         Object.entries(BARBEL_FEEL)
-             .map(([ key, value ]) =>
-                      '<button class="' + (center.field === value ? 'active' : '') +
-                      '" data-set-field="field" data-value="' + value + '" data-center-id="' +
-                      escapeText(center.id) + '" title="' + label('inspector.barbelFeel.' + key) +
-                      '">' + BARBEL_ICON[key].map(kind => icon(kind, ICON.part)).join('') +
-                      '<span>' + label('inspector.barbelFeel.' + key) + '</span></button>')
-             .join('') +
-         '</div>';
 }
 function centerSide(state, center) {
   const found = findCenter(state.document, center.id);

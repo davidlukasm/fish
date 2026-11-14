@@ -1897,6 +1897,31 @@
       "thinner": "Schale dünner",
       "sense": "Füllgefühl",
       "signal": "Füllung und Meldung ans Gehirn"
+    },
+    "nose": {
+      "smells": "Riecht {list}",
+      "cells": "Duftzellen",
+      "life": "Lebenszyklus",
+      "course": "Signalverlauf bei der Duftprobe",
+      "used": "an Duft gewöhnt",
+      "steps": "Schritte",
+      "sample": "Duftprobe",
+      "egg": "riecht ohne Richtung",
+      "grown": "links und rechts verschieden"
+    },
+    "barbels": {
+      "tasting": "Schmeckt {list}",
+      "taste": "Geschmack",
+      "report": "Meldung",
+      "life": "Lebenszyklus",
+      "sample": "was die Spitze berührt",
+      "stone": "Stein",
+      "nothing": "nichts",
+      "whole": "voll",
+      "tastes": "schmeckt",
+      "feels": "tastet",
+      "egg": "meldet nichts",
+      "grown": "schmeckt und tastet"
     }
   }
 }
