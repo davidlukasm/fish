@@ -543,6 +543,24 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
       std::cout << (z ? "," : "") << '[' << spans[z].front << ',' << spans[z].extent << ']';
   }
   std::cout << ']';
+  std::cout << ",\"finArms\":[";
+  for (std::size_t i = 0; i < groups.size(); ++i) {
+    double force = 0, lever = 0, arm = 0;
+    for (const auto &e : a.effectors) {
+      if ((e.port != fishsim::organ_port::turn && e.port != fishsim::organ_port::pelvic) ||
+          !groups[i].contains(t.neurons[e.neuron].location))
+        continue;
+      force += e.strength;
+      lever += e.strength * std::abs(e.lever);
+      arm += e.strength * e.arm;
+    }
+    std::cout << (i ? "," : "");
+    if (force > 0)
+      std::cout << '[' << force << ',' << lever / force << ',' << arm / force << ']';
+    else
+      std::cout << "null";
+  }
+  std::cout << ']';
   // Where a cell of every development site would lie in this body, and the gut, as pressure
   // cells measure them.
   std::cout << ",\"gutPath\":[";

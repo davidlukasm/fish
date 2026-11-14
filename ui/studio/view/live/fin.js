@@ -10,12 +10,11 @@
 //   is missing: fully when the fish is half dug in.
 // The fish looks to the left, as in the fish panel. The fin's side of the fish is its lower edge
 // here, across is up. The antagonist beats forward: everything its beat does is turned round.
-// ASSUMED for the picture: the lever and the arm of the fin's place (set on the fish).
 // Not in the picture: that the ground's resistance across adds to a fin's grip there.
 // Speed and depth are the picture's own knobs; the fish panel has no probe for them.
-import {FIN_STROKE, SIDE_FIN} from '../../../schema.js';
+import {FIN_STROKE, SIDE_FIN, STROKE_GRIP} from '../../../schema.js';
 import {t} from '../../../strings.js';
-import {findOrgan, finAngle, finStroke, setFinAngle} from '../../model/document.js';
+import {findOrgan, finAngle, finStroke, groupReport, setFinAngle} from '../../model/document.js';
 import {clamp, drag, el, liveKind, picture} from './kit.js';
 import {eggShape, fishLeft, LIFE, lifeBand, lifePlaces} from './skin.js';
 
@@ -28,8 +27,6 @@ const FIN = Object.freeze({
   hinge : [ 8, 30 ],
   blade : 38,
   arrow : 50,
-  lever : .5,
-  arm : .25,
   swing : 24,
   round : 2400,
   fast : 3,
@@ -80,10 +77,26 @@ liveKind('fin', (studio, organId) => {
                 angle = SIDE_FIN.angle * (2 * finAngle(muscle) - 1), a = radians(angle),
                 sense = finStroke(muscle) === FIN_STROKE.front ? -1 : 1;
     // How well the fin grips: the water by the fish's speed, the ground by how deep it lies in it.
-    const water = 1 - .5 * own.speed / (1 + own.speed), ground = 4 * own.bury * (1 - own.bury),
-          grip = (water + (1 - water) * ground) * sense;
-    const push = Math.cos(a) * grip, across = Math.sin(a) * grip,
-          turn = (Math.cos(a) * FIN.lever + Math.sin(a) * FIN.arm) * grip;
+    const water = 1 - (1 - STROKE_GRIP.fin_at_speed) * own.speed / (1 + own.speed),
+          ground = 4 * own.bury * (1 - own.bury), grip = water + (1 - water) * ground,
+          {document, anatomy} = studio.state;
+    let weight = 0, push = 0, across = 0, turn = 0;
+    for (const cell of muscle.centers) {
+      const arms = groupReport(document, anatomy, 'finArms', cell.id);
+      if (!arms)
+        continue;
+      const [force, lever, arm] = arms, bearing = radians(SIDE_FIN.angle * cell.q1),
+                           along = Math.cos(bearing), sideways = Math.sin(bearing);
+      weight += force;
+      push += force * along;
+      across += force * sideways;
+      turn += force * (along * lever + sideways * arm);
+    }
+    if (weight > 0) {
+      push *= sense * grip / weight;
+      across *= sense * grip / weight;
+      turn *= sense / weight;
+    }
     // What the beat does to the fish: it pushes it along, across, and turns it.
     const effects = el('g', {class : 'aid-live-fin-effect'}, live);
     const arrow = (x0, y0, x1, y1) => {
