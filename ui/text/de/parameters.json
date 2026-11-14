@@ -2,6 +2,7 @@
  "about": "Weltparameter: Die Engine sendet Name, Bereich und Gruppe; hier stehen Bezeichnung, Erklärung und Einheit. Ohne eigene Erklärung gilt die Bezeichnung.",
  "labels": {
   "max_bite_force": "Kraftmaßstab",
+  "gut_force": "Kraftmaßstab des Darmmuskels",
   "gut_time": "Darmdurchgang",
   "fill_plant": "Pflanzenballast",
   "fill_sediment": "Sandballast",
@@ -249,6 +250,7 @@
  },
  "help": {
   "max_bite_force": "Rohkraft für halbe wirksame Kraft von Maul und Biss",
+  "gut_force": "Kraft des Darmmuskels, mit der der Darm sein schnellstes Tempo erreicht",
   "gut_time": "Schritte je Körperlänge Darm",
   "fill_plant": "Füllung je Energie Pflanzennahrung",
   "fill_sediment": "Füllung je Energie Bodennahrung",

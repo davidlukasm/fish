@@ -1015,9 +1015,9 @@ std::string diet_report() {
   row("size", [](double l) { return gut_size(l); });
   Body reference;
   reference.tissue = BODY_TISSUE;
-  reference.force_scale = physiology.max_bite_force;
+  reference.gut_force_scale = physiology.gut_force;
   // suction_share is already one at this force; stronger muscles cannot quicken passage further.
-  const double speed_max_strength = reference.force_scale / (MOUTH_FORCE_GAIN - 1);
+  const double speed_max_strength = reference.gut_force_scale / (MOUTH_FORCE_GAIN - 1);
   row("speed", [&](double share) {
     reference.gut_strength = share * speed_max_strength;
     return gut_speed(reference);

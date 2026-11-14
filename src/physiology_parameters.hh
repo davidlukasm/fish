@@ -21,6 +21,8 @@ struct PhysiologyParameters {
   double hatch_mass_floor = 0.2;
   double embryo_nutrient_gain = 0.2;
   double max_bite_force = default_max_bite_force;
+  // The gut muscle's own measure: the force with which it moves the gut at its fastest.
+  double gut_force = default_gut_force;
   double gut_time = 200, fill_plant = 2, fill_sediment = 1.5;
   static constexpr double digestion_cost = .12;
   static constexpr double growth_cost = .3;

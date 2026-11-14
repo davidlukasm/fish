@@ -44,6 +44,7 @@ public:
 #undef FISH_REGISTER_FOOD_PARAMETER
           {"max_bite_force", &world.physiology_.max_bite_force, .001, 10000, false, "body", 1,
            false},
+      {"gut_force", &world.physiology_.gut_force, .001, 10000, false, "body", .1, false},
       {"gut_time", &world.physiology_.gut_time, 1, 100000, false, "body", .01, false},
       {"fill_plant", &world.physiology_.fill_plant, 1, 10, false, "body", .01, false},
       {"fill_sediment", &world.physiology_.fill_sediment, 1, 20, false, "body", .01, false},

@@ -372,7 +372,9 @@ inline double gill_area(const Body &b) {
 // How fast the gut muscle can move the content, as a multiple of the resting gut: a larger
 // muscle is more than proportionally faster.
 inline double gut_speed(const Body &b) {
-  const double strength = suction_share(b.gut_strength * body_scale(b), b.force_scale);
+  // The gut muscle is measured by its own force, not by the mouth's: the share of its fastest
+  // pace is full once its strength reaches gut_force.
+  const double strength = suction_share(b.gut_strength * body_scale(b), b.gut_force_scale);
   return 1 + (digestion::fastest - 1) * strength * strength;
 }
 // Share of its content the gut moves on per step. The wall moves food on with twice its pose,

@@ -53,6 +53,7 @@ struct BodyState {
   double energy = ENERGY_START;
   double organ_mass = 0, suction_strength = 10, bite_strength = 0;
   double force_scale = default_max_bite_force, resting_defense = 0, sediment_coverage = 0;
+  double gut_force_scale = default_gut_force;
   double bite_signal = 0, egg_shell_radius = 0;
   double tissue = 0;
   double peak_tissue = 0;
