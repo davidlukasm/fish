@@ -57,3 +57,19 @@
 - **Astra:**
   - Bleibt A ohne Gen wirklich ohne Wirkung?
   - Was liest die Gewöhnung, was der Bau? Gibt es Stellen, an denen ein Rezeptor auf Reife heute etwas anderes als die Körperreife erwartet?
+
+## Nachtrag 06:05 nach Astra 06:0x: Weg für A ohne neues Zellgen
+
+- **Zellalter gibt es schon:** `age_` je Zelle, im Spielstand (Astra, `substrate.cc:385-387, 775-781`).
+- **Kein eigenes Gen „Reifezeit“ nötig:**
+  - Eigene Reife = min(1, Zellalter ÷ feste Spanne), z. B. 4096 Schritte.
+  - Wann eine Antwort umschlägt, legt dann der vorhandene, erbliche **Halbwert** des Rezeptors fest. Halbwert 0,1 heißt etwa 410 Schritte nach der Bildung.
+  - Die Spanne ist eine Einheit wie `TIME_CONSTANT_MIN/SPAN`, kein Verhalten.
+- **Nötig ist nur der Schalter je Rezeptor: „eigene Reife statt Körperreife“.**
+  - Er muss ins Genom. Heute kodiert ein Rezeptor sieben Ausgänge der CPPN (`cppn.hh:17-19`, `distribution.hh:36-47`). Der Schalter bräuchte einen weiteren Ausgang in `receptor_means`, den der Compiler setzt (`atelier_compiler.hh` `receptor(...)`).
+  - Dazu das Feld im Atelier-Modell (`document.js`, Rezeptor) und die Anzeige im Lebenszyklus.
+  - Ohne gesetzten Schalter rechnet alles exakt mit der Körperreife (Astra).
+  - Gilt nur für gebildete Zellen. Bildung und der Vorab-Tod bleiben bei den Blutgrößen (Astra).
+  - Gehirnansicht und Diagnosekopien rechnen mit derselben Zellreife (Astra, `interactive_brain.cc:96-100`, `substrate.cc:1010-1019`).
+- **Schlupftakt getrennt** (Astra): Eine feste Lebenszeit speichert keinen Schlupf. Dafür bleibt ein echter Auslöser offen.
+- **Fable, nach dem Darm:** Ist ein weiterer Rezeptor-Ausgang der richtige Weg? Welcher Ausgang ist frei? Was kostet das an Genomgröße (`MAX_GENOME_NODES`)?
