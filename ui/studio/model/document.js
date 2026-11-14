@@ -261,6 +261,14 @@ export function wheelAffinity(wheel, x, y, width, index) {
   const [px, py] = wheelPlace(wheel, index), sigma = wheelSigma(wheel, width);
   return Math.exp(-((x - px) ** 2 + (y - py) ** 2) / (2 * sigma * sigma));
 }
+// Gland cells split their output among secreted hormones; receptor affinities stay independent.
+export function glandShares(wheel, center) {
+  const weights =
+      Array.from({length : wheel.hormones},
+                 (_, k) => wheelAffinity(wheel, center.q1, center.q2, center.qwidth, k));
+  const sum = weights.reduce((total, weight) => total + weight, 0);
+  return weights.map(weight => sum > 0 ? weight / sum : 0);
+}
 export function receptorAffinity(wheel, receptor, index) {
   // A receptor that reads the maturity of its own cell binds nothing in the blood, and nothing
   // else reads that maturity: it has no place on the wheel.
@@ -307,7 +315,7 @@ export const NOTICEABLE_AFFINITY = .1;
 export const producers = (doc, index, wheel) =>
     doc.organs.filter(o => o.type === 'gland')
         .flatMap(o => o.centers)
-        .filter(c => wheelAffinity(wheel, c.q1, c.q2, c.qwidth, index) >= NOTICEABLE_AFFINITY);
+        .filter(c => glandShares(wheel, c)[index] >= NOTICEABLE_AFFINITY);
 export const effectsFor =
     (center, wheel) => [...(center.key === 'retina' ? wheel?.lightEffects ?? [] : []),
                         ...(wheel?.roleEffects?.[ROLE[center.role]] ?? [])];

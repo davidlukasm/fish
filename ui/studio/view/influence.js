@@ -14,6 +14,7 @@ import {
   effectDirection,
   endpointCenters,
   findCenter,
+  glandShares,
   growsWith,
   isLearner,
   lifePhase,
@@ -23,7 +24,6 @@ import {
   receivers,
   receptorAffinity,
   teachersOf,
-  wheelAffinity,
   shownSubstance
 } from '../model/document.js';
 import {pathTo} from './wires.js';
@@ -59,7 +59,7 @@ const symbolsAbove = (symbols, r) => {
       })
       .join('');
 };
-const HORMONE_WAY = Object.freeze({curve : 17, faintest : .1, span : .33});
+const HORMONE_WAY = Object.freeze({curve : 17, faintest : .1});
 function hormoneGlyph(item, kind, color, zoom) {
   const G = HORMONE_GLYPH, r = kind === 'producer' ? G.producer : G.receiver;
   const cloud = kind === 'producer' && !item.quiet
@@ -188,8 +188,7 @@ export function hormoneOverlay(state) {
     for (const center of organ.centers) {
       const pos = nodeLocation(doc, sites, center, organ.type);
       if (organ.type === 'gland') {
-        const affinity =
-            wheelAffinity(capabilities, center.q1, center.q2, center.qwidth, substance.index);
+        const affinity = glandShares(capabilities, center)[substance.index];
         if (affinity >= NOTICEABLE_AFFINITY)
           sources.push({pos, affinity});
       }
@@ -223,19 +222,7 @@ export function hormoneOverlay(state) {
                      ? '<path class="aid-hormone-body" d="' + fishOutline(state) +
                            '" style="--hormone:' + color + '"/>'
                      : '';
-  const paths = targets
-                    .map(target => {
-                      const source = nearest(sources, target.pos);
-                      if (!source)
-                        return '';
-                      return '<path class="aid-hormone-influence" d="' +
-                             pathTo(source.pos, target.pos, HORMONE_WAY.curve) + '" stroke="' +
-                             color + '" opacity="' +
-                             fixed(HORMONE_WAY.faintest + HORMONE_WAY.span * target.affinity) +
-                             '"/>';
-                    })
-                    .join('');
-  return '<g class="aid-hormone-overlay" pointer-events="none">' + growth + paths +
+  return '<g class="aid-hormone-overlay" pointer-events="none">' + growth +
          worded(sources, zoom)
              .map(source => hormoneGlyph(source, 'producer', color, zoom))
              .join('') +

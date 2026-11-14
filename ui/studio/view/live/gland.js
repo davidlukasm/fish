@@ -24,6 +24,7 @@ import {
 import {
   addOrganType,
   findOrgan,
+  glandShares,
   lifePhase,
   organTypes,
   removeOrganType,
@@ -31,7 +32,6 @@ import {
   wheelPlace
 } from '../../model/document.js';
 import {label} from '../kit.js';
-import {pouredShares} from '../gland_effect.js';
 import {substanceName} from '../substances.js';
 import {chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {keyGrip} from './sense.js';
@@ -90,7 +90,7 @@ liveKind('gland', (studio, organId) => {
   const settle = () => studio.drafted && studio.settleGraphic();
   const change = doc => doc && studio.changeDocument(doc, studio.state.selected);
   const wheel = () => studio.state.capabilities;
-  const sharesOf = cell => pouredShares(wheel(), {x : cell.q1, y : cell.q2, width : cell.qwidth});
+  const sharesOf = cell => glandShares(wheel(), cell);
   const strength = cell => cell.copies / ATELIER_LIMITS.max_copies;
   // The row a gland stands at: where its direction on the wheel lies between the hormones.
   const turnsOf = () =>
