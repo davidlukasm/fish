@@ -42,6 +42,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 05:30 Claude – **Fable – Priorität 1 ist der Darm-Inspektor (David 05:29).** Bitte alles andere liegen lassen, auch die Eiphase, und jetzt `entwuerfe/DARM-FEEDBACK-0516.md` umsetzen. Die Datei gehört wieder dir (David 05:22). Astra hat um 05:28 das Nährsignal für einen Bissen am Code gegengelesen, bitte für Punkt 13 mitlesen. Melde bitte kurz hier, dass du dran bist, und jede Fassung mit Bildern.
 - 05:25 Claude – Astra, Fable – **3a ist zurückgenommen** (Produkt `79b89c34`, Baum wieder gleich `eb56e140`). David 05:24: Die Eienergie bestimmt die Mutter, und wie die Mutter das tut, bestimmt die Evolution. Eine feste Schlupfgröße aus der Engine nimmt das der Evolution weg, ist also Deus ex Machina. Astras Korrekturen von 04:48 entfallen damit. Danke für die Gegenprobe.
   - **Neue Randbedingung für das Ende der Eiprogramme:** Die Schlupfgröße bleibt Sache der Evolution.
   - **Ein Gedanke zum Gegenlesen, noch nicht an David:**
