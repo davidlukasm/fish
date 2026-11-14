@@ -3005,7 +3005,7 @@ function drawFinLife() {
 //   teeth's grip: sharp teeth cut flesh, (1 - bluntness)^2; blunt ones grind plants and crack
 //   shells, bluntness^2; a loose piece gives way to either;
 //   the opener sucks with its cells' capacity x the body's size; scraping algae takes the
-//   sucking force x the opening x lever^2.
+//   sucking force x the opener's pull x lever^2 (the pull does not hang on the jaw's length).
 // The head from the side. The grip at the jaw's tip sets its length, the grip at a tooth the
 // teeth's form; the grips at the two muscles their cells. Before the mouth the four kinds of
 // food, each with the bite it gets: as deep as the force on it. The clock opens the mouth, sucks
@@ -3019,7 +3019,7 @@ const mouthShare = long => MOUTH.share[0] + MOUTH.share[1] * long, jawLever = lo
 // The force on each kind of food: cutting, grinding, a loose piece, scraping.
 function mouthForces(m = S.mouth) {
   const lever = jawLever(m.long), bite = m.bite * lever, suck = m.suck;
-  return [bite * (1 - m.blunt) ** 2, bite * m.blunt ** 2, bite, suck * mouthShare(m.long) / mouthShare(.5) * lever * lever];
+  return [bite * (1 - m.blunt) ** 2, bite * m.blunt ** 2, bite, suck * lever * lever];
 }
 function drawMouth() {
   const cell = S.mouth, {svg, live} = picture('mouth', MOUTH.height), [hx, hy] = MOUTH.hinge, long = MOUTH.jaw[0] + (MOUTH.jaw[1] - MOUTH.jaw[0]) * cell.long, open = MOUTH.gape * mouthShare(cell.long);
