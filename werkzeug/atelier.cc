@@ -318,10 +318,9 @@ void light_spread_report(const field::Substrate &t, const fishsim::BrainInterfac
   }
   std::cout << "]}";
 }
-std::vector<int> anatomy_report(const field::Substrate &t,
-                                const std::shared_ptr<const fishsim::BrainInterface> &interface,
-                                const std::vector<Group> &groups, bool developed) {
-  const auto &a = *interface;
+std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &groups, bool developed) {
+  const auto &t = *g.blueprint;
+  const auto &a = *g.interface;
   std::cout << ",\"hormoneTimes\":[";
   for (int k = 0; k < field::HORMONES; ++k)
     std::cout << (k ? "," : "") << a.hormone_timing[k].steps;
@@ -676,7 +675,14 @@ std::vector<int> anatomy_report(const field::Substrate &t,
             << "},\"mass\":{\"tissue\":" << adult.tissue / fishsim::BODY_TISSUE
             << ",\"gut\":" << fishsim::digestion::wall_mass * gut_size
             << ",\"organs\":" << a.organ_mass << "},\"yolk\":{\"organ\":" << yolk
-            << ",\"store\":" << fishsim::belly_room(adult) * yolk << "}}"
+            << ",\"store\":" << fishsim::belly_room(adult) * yolk << ",\"minimum\":";
+  // On a plan this includes its laid-out cells; contacts, CPPN work and the mother's incubation
+  // are only known from a developed fish.
+  if (g.viable())
+    std::cout << fishsim::minimum_egg_energy(g, physiology, 0);
+  else
+    std::cout << "null";
+  std::cout << "}}"
             << ",\"tail\":{\"restShare\":" << tail_upkeep / rest << '}'
             << ",\"bladder\":{\"restShare\":" << bladder_upkeep / rest << '}'
             << ",\"gills\":{\"restShare\":" << gill_upkeep / rest
@@ -815,12 +821,14 @@ std::vector<int> anatomy_report(const field::Substrate &t,
 void design_report(const Plan &plan, const std::optional<SightScene> &sight,
                    const std::optional<SenseScene> &sense, bool light_spread) {
   const auto &groups = plan.groups;
-  const auto t = planned_substrate(groups);
-  const auto interface = fishsim::body_interface(t);
+  Genome g;
+  g.blueprint = std::make_shared<const field::Substrate>(planned_substrate(groups));
+  const auto &t = *g.blueprint;
+  g.interface = fishsim::body_interface(t);
   std::cout << std::setprecision(REPORT_DIGITS) << '{';
   std::cout << "\"neurons\":" << t.neurons.size()
             << ",\"limited\":" << (t.resource_limited ? "true" : "false");
-  anatomy_report(t, interface, groups, false);
+  anatomy_report(g, groups, false);
   if (light_spread) {
     const auto sample = light_example(plan);
     light_spread_report(sample, *fishsim::body_interface(sample), groups, true);
@@ -829,9 +837,9 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
   if (sight || (sense && sense->kind != sense_scene::gut && sense->kind != sense_scene::flow))
     probe_tank.emplace(SIGHT_TANK_SEED);
   if (sight)
-    sight_report(t, interface, groups, *sight, *probe_tank);
+    sight_report(t, g.interface, groups, *sight, *probe_tank);
   if (sense)
-    sense_report(t, interface, groups, *sense, probe_tank ? &probe_tank->field : nullptr);
+    sense_report(t, g.interface, groups, *sense, probe_tank ? &probe_tank->field : nullptr);
   std::cout << '}';
 }
 void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan = nullptr,
@@ -882,7 +890,7 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
   adult.organ_mass = a.organ_mass;
   adult.tissue = fishsim::tissue_capacity(adult);
   std::cout << ",\"adultScale\":" << fishsim::growth_fraction(adult);
-  auto group = anatomy_report(t, g.interface, groups, true);
+  auto group = anatomy_report(g, groups, true);
   light_spread_report(t, *g.interface, groups, false);
   std::map<std::uint32_t, int> extra;
   std::map<std::uint32_t, int> members;
