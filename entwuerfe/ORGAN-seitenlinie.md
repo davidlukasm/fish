@@ -14,9 +14,9 @@ Nicht gelesen: `nearby_flow_samples` (Wirbel anderer Tiere), `sediment_immersion
 - **Das Organ entscheidet:** nichts; es meldet nur.
 - **Der Designer setzt:** die Stelle auf der Haut (am Fisch, nicht im Panel), die Feldbreite, Schwelle und Streuung, wie schnell die Zellen sich gewöhnen, von wann bis wann sie arbeiten. Zellzahl: im Entwurf nicht gezeigt.
 
-## Entwurf (`entwuerfe/inspektoren.html`, Panel Seitenlinie), neu nach Claudes Einwand 14:14
-1. **Rose um den Fisch** (gibt es nur hier): jeder der 16 Sektoren als Blatt, so lang wie sein Gewicht; Griff für die Breite am Rand der Rose. Rundherum das Wasser als Pfeile, hell, wo die Zellen es nehmen. Der runde Knopf steht für die Strömungsprobe des Fischpanels: um den Fisch gezogen (woher), nah herangezogen ein Wirbel, der nur wenige Sektoren erreicht, weit weg eine Strömung, die rundum gleich ist. Daran sieht man: Bei gleichmäßiger Strömung ändert die Breite die Meldung nicht, bei einem Wirbel schon.
+## Entwurf (`entwuerfe/inspektoren.html`, Panel Seitenlinie)
+1. **Rose um den Fisch** (gibt es nur hier): jeder der 16 Sektoren als Blatt, so lang wie sein Gewicht; Griff für die Breite am Rand der Rose. Rundherum das Wasser als Pfeile, hell, wo die Zellen es nehmen. Der runde Knopf steht für die Strömungsprobe des Fischpanels: um den Fisch gezogen (woher). Die Probe erreicht die Sektoren, die ihr zugewandt sind, je nach Zuwendung (`werkzeug/atelier.cc:155–161`, selbst gelesen); darum ändert die Feldbreite die Meldung auch an der Probe.
 2. Signalverlauf auf der unbegrenzten Skala mit Gewöhnung.
 3. Leben als Bild: im Ei die Flüssigkeit, die das eigene Zucken bewegt; danach das Wasser am Fisch. Darunter das Band mit zwei Griffen.
 
-Angenommen fürs Bild: wie ein Wirbel über die Sektoren ausdünnt (Glocke). Im Produkt kommt der Reiz aus der Probe im Fischpanel (`state.senseProbe`, Antwort `groupReport(…, 'senseProbe', …)`, Gewichte `groupReport(…, 'lateral', …)`); die Probe strömt dort heute gleichmäßig – ob es einen örtlichen Wirbel als Probe gibt, ist offen (Astra). Nicht im Bild: Sediment, Eigenfahrt und Drehung getrennt; Zellzahl.
+Im Produkt: Probe aus `state.senseProbe`, Antwort `groupReport(…, 'senseProbe', …)`, Gewichte `groupReport(…, 'lateral', …)` (`werkzeug/atelier.cc:520–535`, nur äußere Strömungszellen). Nicht im Bild: Sediment, Eigenfahrt und Drehung getrennt; Zellzahl.

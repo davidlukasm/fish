@@ -246,8 +246,8 @@ const S = {
   // probe: what the thing at the tip tastes of, or a stone.
   taste : {keys : [{gate : .2, lat : 35, lon : 155, width : .25, feel : .3}], chosen : 0, probe : {lat : 35, lon : 155}},
   // The lateral line and the sense of touch: one type of cells each. field: the width of their field on the skin (0-1); probe: where the water or the thing meets the body, as an angle from the snout.
-  // probe: the current (where it comes from; near: 0 a broad current, 1 an eddy close by) and the thing (where on the skin, as an angle from the cells' place; off: lifted off).
-  flow : {keys : [{gate : .3, spread : .1, used : 200}], chosen : 0, input : {rise : 80, height : .8, stop : 560}, field : .3, probe : {bearing : 60, near : .8}},
+  // probe: the current (where it comes from) and the thing (where on the skin, as an angle from the cells' place; off: lifted off).
+  flow : {keys : [{gate : .3, spread : .1, used : 200}], chosen : 0, input : {rise : 80, height : .8, stop : 560}, field : .3, probe : {bearing : 60}},
   touch : {keys : [{gate : .2, spread : .1}], chosen : 0, input : {rise : 60, height : .7, stop : 520}, field : .1, probe : 0, off : false},
   // The sense of balance: hair: where the cells' hair points, in degrees from the snout over the flank (90) to the tail (180); tilt: where the snout points, the posture tried (0 = to the right, 90 = down).
   balance : {keys : [{gate : .06}], hair : 90, tilt : 25},
@@ -2380,12 +2380,12 @@ function fishAbove(parent, x, y, s) {
 // Each of the 16 sectors of the rim as a petal, as long as the cells weigh it; the grip at the
 // rose's edge sets the field's width. Round it the water: an arrow at every sector the current
 // reaches, bright where the cells take it. The knob is the current: dragged round the fish for
-// where it comes from, pulled close for an eddy that reaches only a few sectors, far for a
-// current that is the same all round.
-// ASSUMED for the picture: how an eddy thins out over the sectors (a bell, SPREAD degrees wide).
-const ROSE = {height : 180, cx : 150, cy : 90, body : 30, petal : 22, water : 64, knob : [74, 84], spread : [24, 500]};
+// where it comes from.
+const ROSE = {height : 180, cx : 150, cy : 90, body : 30, petal : 22, water : 64, knob : 82};
 const FLOW_PARTS = ['flowrose', 'flow', 'flowlife'];
-const flowReach = (probe, k) => { const wide = ROSE.spread[0] * Math.pow(ROSE.spread[1] / ROSE.spread[0], 1 - probe.near); return Math.exp(-((turnTo(sectorAngle(k) - probe.bearing) / wide) ** 2) / 2); };
+// The current tried reaches the sectors that face it, each as far as it faces it (the fish
+// panel's flow probe, werkzeug/atelier.cc:155-161).
+const flowReach = (probe, k) => Math.max(0, Math.cos(rad(sectorAngle(k) - probe.bearing)));
 // What the cells get of the current: the sectors' weights x how much of it reaches each, x how
 // far it comes against the cells' own place.
 function flowShare() {
@@ -2411,9 +2411,9 @@ function drawRose() {
   const [px, py] = roseAt(SKIN.place, ROSE.body), [gx, gy] = roseAt(SKIN.place + Math.min(skinWidth(cell.field), 179), ROSE.body + 7), angleOf = p => deg(Math.atan2(ROSE.cy - p.y, ROSE.cx - p.x));
   el('rect', {x : px - 3.5, y : py - 3.5, width : 7, height : 7, rx : 2, fill : keyColour(0), stroke : COLOUR.chosen, 'stroke-width' : 1.5, 'pointer-events' : 'none'}, live);
   drag(svg, el('circle', {cx : gx, cy : gy, r : 4.5}, live), p => { cell.field = clamp((Math.abs(turnTo(angleOf(p) - SKIN.place)) - SKIN.width[0]) / SKIN.width[1], 0, 1); draw(FLOW_PARTS); }, 'flowfield');
-  const [kx, ky] = roseAt(cell.probe.bearing, ROSE.knob[1] - (ROSE.knob[1] - ROSE.knob[0]) * cell.probe.near);
+  const [kx, ky] = roseAt(cell.probe.bearing, ROSE.knob);
   drag(svg, el('circle', {cx : kx, cy : ky, r : 5.5, fill : colour}, live), p => {
-    cell.probe = {bearing : angleOf(p), near : clamp((ROSE.knob[1] - Math.hypot(p.x - ROSE.cx, p.y - ROSE.cy)) / (ROSE.knob[1] - ROSE.knob[0]), 0, 1)}; draw(FLOW_PARTS); }, 'flowprobe', 'knob');
+    cell.probe = {bearing : angleOf(p)}; draw(FLOW_PARTS); }, 'flowprobe', 'knob');
 }
 // Its life: in the egg the fluid its own twitches move, after hatching the water.
 function drawFlowLife() {
