@@ -918,12 +918,6 @@
       "antagonist": "Gegenspieler",
       "antagonistTitle": "Legt je Seite einen zweiten Flossenmuskel an, der in die Gegenrichtung schlägt"
     },
-    "undulation": {
-      "handle": "Ziehen: wie weit der Körper mitschwingt",
-      "beat": "Schwanzschlag",
-      "wave": "Schlängeln",
-      "mixed": "halb und halb"
-    },
     "jaw": {
       "handle": "Ziehen: Länge des Kiefers",
       "word": "Kieferlänge"

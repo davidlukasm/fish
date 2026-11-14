@@ -8,20 +8,17 @@ import {
   ANATOMY,
   ATELIER_LIMITS,
   BODY_UNIT,
-  FIN,
   FIN_STROKE,
   MOTOR_KIND,
   SIDE_FIN
 } from '../../schema.js';
 import {
-  finVolumeOf,
   gutTurns,
   jawReach,
   lipWidth,
   rakerPassage,
   rakerRetention,
   rakerSifting,
-  tailFinSize,
   toothForm,
 } from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
@@ -124,71 +121,10 @@ export function effectorPatch(code, name, fx, fy, most, organ, marks = {}) {
                : null;
 }
 
-const TAIL = Object.freeze({
-  root : 150,
-  body : [ 60, 24 ],
-  unit : 230,
-  most : [ 145, 80 ],
-  fork : .55,
-  lobe : {root : .6, along : .4, out : .55},
-  wave : {amplitude : 22, at : 22, stiff : 3, base : .35, steps : 48, length : 105}
-});
 const TRAIT_THIRD = 1 / 3;
 const traitStyle = (value, [ low, middle, high ]) => value < TRAIT_THIRD       ? low
                                                      : value > 1 - TRAIT_THIRD ? high
                                                                                : middle;
-const tailTip = volume => {
-  const size = tailFinSize(volume);
-  return [
-    Math.min(TAIL.most[0], TAIL.unit * size.length), Math.min(TAIL.most[1], TAIL.unit * size.width)
-  ];
-};
-const swing = (undulation, along) =>
-    TAIL.wave.amplitude * ((1 - undulation) * along ** TAIL.wave.stiff +
-                           undulation * (TAIL.wave.base + (1 - TAIL.wave.base) * along));
-function tailGraphic(state, organ, centers, twin) {
-  const fin = state.anatomy?.fins?.[FIN.tail];
-  const volume = fin ? finVolumeOf(fin.cells, fin.strength) : 1;
-  const [length, width] = tailTip(volume), M = FRAME.middle, R = TAIL.root, side = organ.side;
-  const end = R + length;
-  const undulation = muscleTrait(state.document, MOTOR_KIND.forward, 'undulation', state.sites) ??
-                     BODY_UNIT.trait_middle;
-  const body = 'M0 ' + fixed(M - TAIL.body[0]) + ' L' + R + ' ' + fixed(M - TAIL.body[1]) + ' L' +
-               R + ' ' + fixed(M + TAIL.body[1]) + ' L0 ' + fixed(M + TAIL.body[0]) + 'Z';
-  const L = TAIL.lobe;
-  const lobe = sign => 'M' + R + ' ' + fixed(M + sign * TAIL.body[1] * L.root) + ' Q' +
-                       fixed(R + length * L.along) + ' ' + fixed(M + sign * width * L.out) + ' ' +
-                       fixed(end) + ' ' + fixed(M + sign * width) + ' L' +
-                       fixed(R + length * TAIL.fork) + ' ' + M + ' L' + R + ' ' + M + 'Z';
-  const rays = (sign, nodes, own) =>
-      nodes
-          .map((center, k) => {
-            const share = (k + 1) / (nodes.length + 1);
-            return '<line class="aid-muscle-ray' + (own ? ' own' : '') + '" x1="' + R + '" y1="' +
-                   M + '" x2="' + fixed(R + length * (TAIL.fork + (1 - TAIL.fork) * share)) +
-                   '" y2="' + fixed(M + sign * width * share) + '" stroke-width="' +
-                   fixed(rayWidth(center.copies)) + '"/>';
-          })
-          .join('');
-  const W = TAIL.wave, points = Array.from({length : W.steps + 1}, (_, k) => {
-    const x = end * k / W.steps;
-    return fixed(x) + ' ' +
-           fixed(M - swing(undulation, x / end) * Math.sin(2 * Math.PI * x / W.length));
-  });
-  const at = W.at, handleY = M - swing(undulation, at / end);
-  const style = traitStyle(undulation, [ 'beat', 'mixed', 'wave' ]);
-  return '<path class="aid-muscle-body" d="' + body + '"/>' +
-         '<path class="aid-muscle-fin" d="' + lobe(-1) + lobe(1) + '"/>' +
-         rays(side, centers, true) + rays(-side, twin, false) +
-         '<path class="aid-muscle-wave" d="M' + points.join(' L') + '"/>' +
-         handle('trait:q1', at, handleY,
-                label('undulation.' + style) + ' · ' + label('undulation.handle'),
-                label('undulation.' + style));
-}
-const undulationAt = (x, y) => {
-  const along = TAIL.wave.at / TAIL.root, low = swing(0, along), high = swing(1, along);
-  return (FRAME.middle - y - low) / (high - low);
-};
 
 const SIDE = Object.freeze({
   skin : 74,
@@ -358,7 +294,6 @@ function jawGraphic(state, organ, centers) {
 }
 const chartShare = x => (x - USE_CHART.left) / (USE_CHART.right - USE_CHART.left);
 const TRAIT_HANDLES = Object.freeze({
-  [MOTOR_KIND.forward] : {'trait:q1' : {key : 'undulation', at : undulationAt}},
   [MOTOR_KIND.turn] : Object.fromEntries(
       Object.values(FIN_STROKE)
           .map(stroke => ['trait:q1:' + stroke, {key : FIN_ANGLE_TRAIT, at : angleAt(stroke)}])),
@@ -789,7 +724,6 @@ export function effectorGraphic(state, organ) {
   const twinOrgan = findOrgan(state.document, organ.pair);
   const twin = twinOrgan?.type === 'muscle' ? twinOrgan.centers : [];
   const draw = {
-    [MOTOR_KIND.forward] : tailGraphic,
     [MOTOR_KIND.turn] : sideGraphic,
     [MOTOR_KIND.suction] : suctionGraphic,
     [MOTOR_KIND.aggression] : jawGraphic,
