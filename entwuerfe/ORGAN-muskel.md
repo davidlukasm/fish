@@ -37,3 +37,11 @@ Stand: Produktzweig `e205068d`. Fable prüft gegen den Code und zeichnet daraus;
 ## Offene Fragen für Fable
 - Gehören Kiefer und Maulöffner in **ein** Bild „Maul“ (zusammen öffnen und schließen, `mouth.opening`, `bite_pose`)? Dafür: Sie arbeiten als Paar. Dagegen: Es sind zwei Organe im Atelier.
 - Reihenfolge, wenn die Zeit knapp wird: Seitenflosse zuerst (offener Fehler), dann Maul.
+
+## Entwurf Seitenflosse (Fable, Panel Seitenflosse in `entwuerfe/inspektoren.html`)
+Gegen den Code geprüft (selbst gelesen): `body_plan.cc:86–128`, `protocol_schema.hh:2073–2076`, `movement.cc:76–97`. Stimmt mit der Seite überein. Nicht gelesen: `swimming_grip`, `ground_grip` (nur die Deklaration), `protraction`, Bauchflosse.
+1. **Die Flosse als Ruder** (gibt es nur hier): der Fisch von oben, die Flosse als Blatt an ihrem Ansatz, sie zeigt dorthin, wohin sie schlägt; Griff an der Blattspitze: Schlagwinkel (gerade nach hinten bis ganz nach außen oder innen). Drei Pfeile zeigen, was ein Schlag tut: Schub nach vorn, Schub quer von der Flosse weg, Drehung vor der Schnauze. Die Uhr lässt die Flosse schlagen; die Pfeile leuchten beim Schlag.
+2. Eingabe (rund): der kleine Fisch am Rand wird zum Grund gezogen; am Grund greift die Flosse voll, im freien Wasser schlechter.
+3. Leben: im Ei zuckt die Flosse, draußen rudert sie; darunter das Band.
+
+Angenommen fürs Bild: Hebel und Arm der Flossenstelle (wird am Fisch gesetzt); dass die Flosse im freien Wasser halb so gut greift wie am Grund. Nicht im Bild: Vorschlag (`protraction`), Fasertyp, Schwelle, Zellzahl; Bauchflosse.

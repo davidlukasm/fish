@@ -184,6 +184,13 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Lebenszyklus</h4>
     <svg id="pigmentlife"></svg>
   </section>
+  <section class="panel" aria-label="Seitenflosse">
+    <h2>Organ</h2><h3>Seitenflosse</h3>
+    <h4 class="first">Schiebt und dreht den Fisch wie ein Ruder</h4>
+    <svg id="fin"></svg>
+    <h4>Lebenszyklus</h4>
+    <svg id="finlife"></svg>
+  </section>
 </main>
 <script>
 'use strict';
@@ -276,6 +283,8 @@ const S = {
   touch : {keys : [{gate : .2, spread : .1}], chosen : 0, input : {rise : 60, height : .7, stop : 520}, field : .1, probe : 0, off : false},
   // The sense of balance: hair: where the cells' hair points, in degrees from the snout over the flank (90) to the tail (180); tilt: where the snout points, the posture tried (0 = to the right, 90 = down).
   balance : {keys : [{gate : .06}], hair : 90, tilt : 25},
+  // The side fin: angle: where it beats, in degrees (0 straight back, 90 outward, -90 inward); ground: where the fish is tried (0 in open water - 1 on the ground).
+  fin : {keys : [{}], angle : 30, ground : 0},
   // Pigment. Each type of cells swallows the light round a hue (0-360) with a width, and has cells (how much it swallows) and its span of life; time: how many steps recolouring takes; command: how far the brain has the pigment spread (0-1); ground: what lies behind the fish (0 deep water - 1 sand).
   pigment : {keys : [{hue : 240, width : .3, cells : 5}, {hue : 20, width : .2, cells : 3, from : .6}], chosen : 0, time : 60, command : 1, stop : 450, ground : .35},
   // The defence: cells (their capacity: the resting height), field (the width of what they guard), up (how far the brain has them raised, 0-1 of the most); mouth: the predator tried (bearing: where it bites from, gape: how wide its mouth opens, in body radii).
@@ -2898,6 +2907,65 @@ function drawPigmentLife() {
   grip(until, until < 1, 'piguntil', to => { k.until = to > 1 - whole ? 1 : Math.max(to, from + least); });
 }
 
+// ----- The side fin: an oar -----
+// Read in the engine (src/body_plan.cc:89-128, fin_mechanics; src/protocol_schema.hh:2073-2076;
+// src/movement.cc:78-97; Claude's reading page entwuerfe/ORGAN-muskel.md for the rest):
+//   a side fin cell beats at its angle: straight back at 0, outward up to 90 degrees, inward
+//   down to -90; along the body its force pushes the fish and turns it with the cell's lever, as
+//   an oar does; across the body it pushes the fish away from the fin's side and turns it with
+//   the cell's arm ahead of or behind the body's middle;
+//   a fin's push grips worse in open water than the tail's, and fully on the ground.
+// ASSUMED for the picture: the lever and the arm of the fin's place (set on the fish, not here),
+// and that a fin grips half as well in open water as on the ground (swimming_grip not read).
+const FIN = {height : 206, cx : 138, cy : 98, s : 2.4, hinge : [-8, 27], blade : 38, arrow : 50, lever : .5, arm : .25, open : .5, swing : 24, beats : 5, inset : {x : 268, top : 44, sand : 160}};
+const FIN_PARTS = ['fin', 'finlife'];
+function drawFin() {
+  const cell = S.fin, {svg, live} = picture('fin', FIN.height, fixed => {
+    fishAbove(fixed, FIN.cx, FIN.cy, FIN.s);
+    // Where the fish is tried: beside the picture, seen from the side, the water and the ground.
+    el('path', {d : `M${FIN.inset.x - 22} ${FIN.inset.sand} h44`, stroke : '#b9a678', 'stroke-width' : 5, 'stroke-linecap' : 'round'}, fixed);
+  }), {cx, cy} = FIN, hx = cx + FIN.hinge[0], hy = cy + FIN.hinge[1], a = rad(cell.angle);
+  const grip = FIN.open + (1 - FIN.open) * cell.ground, push = Math.cos(a) * grip, across = Math.sin(a) * grip, turn = (Math.cos(a) * FIN.lever + Math.sin(a) * FIN.arm) * grip;
+  // What the beat does to the fish: it pushes it along, across, and turns it.
+  const effects = el('g', {stroke : COLOUR.line, 'stroke-width' : 2.6, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'}, live);
+  const arrow = (x0, y0, x1, y1) => { const long = Math.hypot(x1 - x0, y1 - y0); if (long < 4) return; const ux = (x1 - x0) / long, uy = (y1 - y0) / long; el('path', {d : `M${x0} ${y0} L${x1} ${y1} m${-7 * ux + 4.5 * uy} ${-7 * uy - 4.5 * ux} L${x1} ${y1} l${-7 * ux - 4.5 * uy} ${-7 * uy + 4.5 * ux}`}, effects); };
+  arrow(cx - 74, cy, cx - 74 - FIN.arrow * push, cy);
+  arrow(cx, cy - 30, cx, cy - 30 - FIN.arrow * across);
+  if (Math.abs(turn) > .03) {
+    // The turn: an arc before the snout, as long as the turn, away from the fin's side.
+    const r = 92, sweep = 70 * turn, from = 180, to = 180 + sweep, at = d => [cx + r * Math.cos(rad(d)), cy + r * Math.sin(rad(d))], [x0, y0] = at(from), [x1, y1] = at(to), way = sweep > 0 ? 1 : -1;
+    el('path', {d : `M${x0} ${y0} A${r} ${r} 0 0 ${sweep > 0 ? 1 : 0} ${x1} ${y1}`}, effects);
+    const tx = -Math.sin(rad(to)) * way, ty = Math.cos(rad(to)) * way;
+    el('path', {d : `M${x1 - 7 * tx + 4.5 * ty} ${y1 - 7 * ty - 4.5 * tx} L${x1} ${y1} L${x1 - 7 * tx - 4.5 * ty} ${y1 - 7 * ty + 4.5 * tx}`}, effects);
+  }
+  // The fin: a blade at its hinge, pointing where it beats.
+  const blade = el('path', {d : `M0 -4 Q${FIN.blade * .6} -9 ${FIN.blade} 0 Q${FIN.blade * .6} 9 0 4 Z`, fill : keyColour(0), stroke : COLOUR.axis, 'stroke-width' : 1.2}, live);
+  const tip = [hx + FIN.blade * Math.cos(a), hy + FIN.blade * Math.sin(a)];
+  drag(svg, el('rect', {x : tip[0] - 4.5, y : tip[1] - 4.5, width : 9, height : 9, rx : 2.5}, live), p => { cell.angle = clamp(deg(Math.atan2(p.y - hy, Math.max(0, p.x - hx))), -90, 90); draw(FIN_PARTS); }, 'finangle');
+  // The fish in the water or on the ground: the little fish beside is dragged down to the sand.
+  const iy = FIN.inset.top + (FIN.inset.sand - 12 - FIN.inset.top) * cell.ground, small = el('g', {}, live);
+  fishSide(small, FIN.inset.x - 4, iy, .5);
+  drag(svg, el('circle', {cx : FIN.inset.x + 16, cy : iy, r : 5, fill : COLOUR.icon}, live), p => { cell.ground = clamp((p.y - FIN.inset.top) / (FIN.inset.sand - 12 - FIN.inset.top), 0, 1); draw(FIN_PARTS); }, 'finground', 'knob');
+  // The clock: the fin beats; what it does shows while it beats.
+  play.levels = play.levels.filter(l => l.owner !== 'fin');
+  play.levels.push({owner : 'fin', sense : 'full', show : () => {
+    const phase = (play.step / STEPS * FIN.beats) % 1, beat = phase < .35 ? Math.sin(Math.PI * phase / .35) : 0;
+    blade.setAttribute('transform', `translate(${hx} ${hy}) rotate(${cell.angle - FIN.swing * (1 - beat)})`);
+    effects.setAttribute('opacity', (.3 + .7 * beat).toFixed(2));
+  }});
+}
+// Its life: in the egg the fin twitches like every muscle; after hatching it rows.
+function drawFinLife() {
+  const {L, R, band, hatch} = SKIN.life, {svg, under, live} = picture('finlife', SKIN.life.height, fixed => {
+    const ex = (L + L + (R - L) * hatch) / 2, fx = (L + (R - L) * hatch + R) / 2, y = band - 26;
+    eggShape(fixed, ex, y, 19, false);
+    el('path', {d : `M${ex + 4} ${y + 3} q7 2 9 8 M${ex + 15} ${y + 2} l3 -3 M${ex + 17} ${y + 7} l4 0`, stroke : keyColour(0), 'stroke-width' : 1.8, fill : 'none', 'stroke-linecap' : 'round'}, fixed);
+    fishAbove(fixed, fx, y, .62);
+    el('path', {d : `M${fx - 2} ${y + 7} q9 3 14 9 q-9 0 -14 -5 Z`, fill : keyColour(0)}, fixed);
+  });
+  skinLife('fin', svg, under, live, FIN_PARTS);
+}
+
 // ===== The clock =====
 // Shows the present moment: the lines, what the holders hold, the keys the input has passed, what
 // irritants at the nerve cells.
@@ -3015,9 +3083,10 @@ const PAINT = {fish : drawFish, yield : drawYield, bars : drawBars, life : drawL
                wound : drawWound, pain : () => drawSense('pain'), painlife : drawPainLife,
                blood : drawBlood, bloodrows : drawBloodRows, bloodlife : drawBloodLife,
                spines : drawSpines, spinelife : drawSpineLife,
-               skincolour : drawSkinColour, pigments : drawPigments, pigmentlife : drawPigmentLife};
+               skincolour : drawSkinColour, pigments : drawPigments, pigmentlife : drawPigmentLife,
+               fin : drawFin, finlife : drawFinLife};
 // The senses first: the fish's stomach follows the fullness input.
-for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife', 'flow', 'flowrose', 'flowlife', 'touch', 'touchskin', 'touchlife', 'tilt', 'tiltlife', 'pain', 'wound', 'painlife', 'blood', 'bloodrows', 'bloodlife', 'spines', 'spinelife', 'skincolour', 'pigments', 'pigmentlife']) dirty.add(part);
+for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife', 'flow', 'flowrose', 'flowlife', 'touch', 'touchskin', 'touchlife', 'tilt', 'tiltlife', 'pain', 'wound', 'painlife', 'blood', 'bloodrows', 'bloodlife', 'spines', 'spinelife', 'skincolour', 'pigments', 'pigmentlife', 'fin', 'finlife']) dirty.add(part);
 repaint();
 showGut(0);
 // Nothing moves while the panel is off the screen, or for someone who has asked for less motion:
