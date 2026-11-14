@@ -1779,7 +1779,6 @@ function drawEggLife() {
   const r = EG.input.maturity;
   el('path', {d : `M${X(r)} ${top} V${base}`, stroke : COLOUR.line, 'stroke-dasharray' : '2 4', 'stroke-width' : 1.2}, live);
   drag(svg, el('circle', {cx : X(r), cy : Y(egg(r)), r : 5.5, fill : COLOUR.line}, live), p => { EG.input.maturity = rOf(p.x); draw(EGG_PARTS); }, 'eggmaturity', 'knob');
-  eggMark(live, X(r) + 12, Math.min(base - 8, Y(egg(r)) - 8), 4.5, egg(r) >= EGG.need);
 }
 // The organ at this moment: its yolk, and the eggs laid so far on the ground behind the fish.
 function showEggs() {
