@@ -22,7 +22,8 @@ export const lifePlaces = () => {
   return {egg : (L + at) / 2, grown : (at + R) / 2, y : band - 26};
 };
 // The band: from where the cells work to where they die, a grip at each end.
-export function lifeBand(svg, under, live, {studio, center, name, draft, settle}) {
+// `centers`: the ids of all cells that share the band, where an organ has more than one.
+export function lifeBand(svg, under, live, {studio, center, centers, name, draft, settle}) {
   const {L, R, band, high, beside, whole, least, hatch} = LIFE, phase = lifePhase(center),
                                                  caps = studio.state.capabilities,
                                                  from = phase.start ?? 0,
@@ -50,8 +51,14 @@ export function lifeBand(svg, under, live, {studio, center, name, draft, settle}
              class : keyGrip(0, true)
            },
               live),
-           p => draft(setLifePhase(studio.state.document, center.id, move(rOf(p.x)),
-                                   caps.sensitivitySpan, caps.steepnessSpan)),
+           p => {
+             const phase = move(rOf(p.x));
+             draft((centers ?? [ center.id ])
+                       .reduce((doc, id) => setLifePhase(doc, id, phase, caps.sensitivitySpan,
+                                                         caps.steepnessSpan) ??
+                                            doc,
+                               studio.state.document));
+           },
            name + part, 'grip', settle);
   grip(from > 0 ? X(from) : L - beside, 'from',
        to => ({start : to < whole ? null : Math.min(to, until - least)}));
@@ -113,6 +120,10 @@ export function wedge(place, half, count = SECTORS) {
   return raw.map(v => sum > 0 ? v / sum : 0);
 }
 // A fish seen from the side, snout to the right.
+// The same fish looking to the left, as the fish panel shows it.
+export function fishLeft(parent, x, y, s) {
+  fishSide(el('g', {transform : `translate(${2 * x} 0) scale(-1 1)`}, parent), x, y, s);
+}
 export function fishSide(parent, x, y, s) {
   el('path', {
     d : `M${x + 30 * s} ${y} Q${x + 12 * s} ${y - 15 * s} ${x - 22 * s} ${y - 2 * s} l${- 11 * s} ${

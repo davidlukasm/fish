@@ -534,6 +534,12 @@ const effectorBlock = (organ, code, side, title, graphic, below, attributes = ''
     '" data-effector-side="' + side + '"' + attributes + ' role="img" aria-label="' +
     escapeText(title) + '">' + graphic + '</svg>' + below + '</div>';
 
+// What a side fin muscle sets besides its angle, below its live inspector: which way it beats,
+// its antagonist, its cells' strength and fibres.
+export const finSettings = (state, organ) =>
+    '<div class="aid-effector-block" data-effector-block="' + escapeText(organ.id) + '">' +
+    strokeChooser(state, organ) + musclePicture(state, organ, MOTOR_KIND.turn, sideOf(organ)) +
+    '</div>';
 export function effectorGraphic(state, organ) {
   const code = organFunction(organ, state.sites);
   const twinOrgan = findOrgan(state.document, organ.pair);

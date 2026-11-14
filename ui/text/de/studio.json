@@ -1952,6 +1952,10 @@
       "steps": "Schritte",
       "bite": "ein voller Biss"
     },
+    "fin": {
+      "does": "Rudert",
+      "life": "Lebenszyklus"
+    },
     "balance": {
       "feels": "Spürt, wo unten ist",
       "life": "Lebenszyklus",

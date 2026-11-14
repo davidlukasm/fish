@@ -66,6 +66,7 @@ import './live/balance.js';
 import './live/blood.js';
 import './live/defense.js';
 import './live/pigment.js';
+import './live/fin.js';
 
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
@@ -107,10 +108,14 @@ const ORGAN_PANELS = Object.freeze({
   pigment : (state, organ) => livePlace('pigment', organ),
   gut : (state, organ) => livePlace('gut', {id : 'gut'}) + gutProbeControls(state, organ),
   bladder : (state, organ) => livePlace('bladder', organ),
-  // The tail muscle has a live inspector; the other muscles keep their pictures until their turn.
-  muscle : (state, organ) => organFunction(organ, state.sites) === MOTOR_KIND.forward
-                                 ? livePlace('tail', organ)
-                                 : effectorGraphic(state, organ),
+  // Tail and side fin muscles have live inspectors; the mouth's muscles keep their pictures until
+  // their turn.
+  muscle : (state, organ) => {
+    const code = organFunction(organ, state.sites);
+    return code === MOTOR_KIND.forward ? livePlace('tail', organ)
+           : code === MOTOR_KIND.turn  ? livePlace('fin', organ) + finSettings(state, organ)
+                                       : effectorGraphic(state, organ);
+  },
   gills : (state, organ) => livePlace('gills', organ),
   // Gut and gut muscle are one organ to the eye: one live inspector for both.
   gutmuscle : () => livePlace('gut', {id : 'gut'}),

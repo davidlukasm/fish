@@ -11,7 +11,7 @@ import {t} from '../../../strings.js';
 import {findOrgan, updateCenter} from '../../model/document.js';
 import {clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {answer, BOUNDED, IRRITANT} from './sense.js';
-import {eggShape, fishSide, lifeBand, lifePlaces, LIFE} from './skin.js';
+import {eggShape, fishLeft, lifeBand, lifePlaces, LIFE} from './skin.js';
 
 const word = (key, values) => t('studio.live.balance.' + key, values);
 const TILT = Object.freeze({
@@ -48,7 +48,8 @@ liveKind('balance', (studio, organId) => {
   const tilt = svgOf();
   heading(word('life'));
   const life = svgOf();
-  // The posture tried: where the snout points (0 to the right, 90 down). Not part of the fish.
+  // The posture tried: where the snout points (0 to the left, as in the fish panel; 90 down). Not
+  // part of the fish.
   const own = {tilt : 25};
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
@@ -69,7 +70,7 @@ liveKind('balance', (studio, organId) => {
         }),
                 {cx, cy, ring, petal} = TILT, hair = hairOf(cell.q1), gate = BOUNDED.gate(cell),
                 at = (angle,
-                      r) => [cx + r * Math.cos(radians(angle)), cy + r * Math.sin(radians(angle))],
+                      r) => [cx - r * Math.cos(radians(angle)), cy + r * Math.sin(radians(angle))],
                 down = (snout, side) => Math.max(0, Math.sin(radians(snout + side * hair)));
     el('circle', {cx, cy, r : ring, class : 'aid-live-rim'}, live);
     for (const side of [1, -1]) {
@@ -89,8 +90,8 @@ liveKind('balance', (studio, organId) => {
     }
     // The ring between the two sides' roses, so that they stay apart where both report.
     el('circle', {cx, cy, r : ring, class : 'aid-live-ringline'}, live);
-    const body = el('g', {transform : `rotate(${own.tilt} ${cx} ${cy})`}, live);
-    fishSide(body, cx, cy, TILT.fish);
+    const body = el('g', {transform : `rotate(${- own.tilt} ${cx} ${cy})`}, live);
+    fishLeft(body, cx, cy, TILT.fish);
     for (const side of [-1, 1]) {
       const [x, y] = at(own.tilt + side * hair, TILT.hair),
                 report = answer(down(own.tilt, side), gate, 0), k = side > 0 ? 0 : 1;
@@ -99,13 +100,13 @@ liveKind('balance', (studio, organId) => {
         el('path', {
           d : IRRITANT,
           class : side > 0 ? 'aid-live-pulse' : 'aid-live-petal k1',
-          transform : `translate(${cx - side * 16} ${cy - side * 12}) scale(${
+          transform : `translate(${cx + side * 16} ${cy - side * 12}) scale(${
               (.45 + .9 * report).toFixed(2)})`
         },
            live);
     }
     el('circle', {cx, cy, r : 5.5, class : 'aid-live-soma k0 on'}, live);
-    const angleOf = p => degrees(Math.atan2(p.y - cy, p.x - cx)),
+    const angleOf = p => degrees(Math.atan2(p.y - cy, cx - p.x)),
           [ hx, hy ] = at(own.tilt + hair, TILT.hair);
     drag(svg,
          el('rect', {
@@ -138,7 +139,7 @@ liveKind('balance', (studio, organId) => {
     const {svg, under, live} = picture(life, LIFE.height, fixed => {
       const {egg, grown, y} = lifePlaces();
       eggShape(fixed, egg, y, 19, false);
-      fishSide(fixed, grown, y, .62);
+      fishLeft(fixed, grown, y, .62);
       for (const x of [egg, grown])
         el('path', {d : `M${x + 30} ${y - 9} v18 m-4 -6 l4 6 l4 -6`, class : 'aid-live-hair k0'},
            fixed);
