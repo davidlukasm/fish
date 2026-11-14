@@ -1318,3 +1318,17 @@
 .aid-bladder-group-mark{fill:#9cc8f0;opacity:.7;cursor:pointer}
 .aid-bladder-group-selected{stroke:#9cc8f0}
 .aid-live-muscleway{fill:none;stroke:#c98f55;stroke-width:3;stroke-linecap:round;opacity:.6}
+.aid-live-room{fill:var(--aid-chip)}
+.aid-live-gills .aid-live-body{fill:#1f4852}
+.aid-live-gilleye{fill:var(--aid-chip);stroke:var(--aid-limit);stroke-width:1.2}
+.aid-live-lid{fill:none;stroke:#e9e2c6;stroke-width:3;stroke-linecap:round}
+.aid-live-arch{fill:none;stroke:#ef8f8f;stroke-width:2.6;stroke-linecap:round}
+.aid-live-raker{fill:none;stroke:#f4efd8;stroke-width:1.3;stroke-linecap:round}
+.aid-live-rakergrip{fill:#ef8f8f}
+.aid-live-grain{fill:#c9b27c}
+.aid-live-gillsand{fill:#c9b27c;opacity:.3}
+.aid-live-knob.aid-live-sandknob{fill:#c9b27c}
+.aid-live-knob.aid-live-gutknob{fill:#e6b47c}
+.aid-live-met{fill:#f4efd8;opacity:.12}
+.aid-live-picture rect.aid-live-met{opacity:.3}
+.aid-live-wide{fill:none;stroke:#f4efd8;stroke-width:1;stroke-dasharray:1 3;opacity:.8}

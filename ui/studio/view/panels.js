@@ -5,7 +5,7 @@ import {driveContext} from './preview.js';
 export {driveContext} from './preview.js';
 import {cellDevelopment, previewControls} from './development.js';
 import {visionInspector} from './vision.js';
-import {effectorGraphic, gillGraphic, spineField} from './effectors.js';
+import {effectorGraphic, spineField} from './effectors.js';
 import {lateralField} from './lateral.js';
 import {hairField} from './balance.js';
 import {pigmentInspector} from './pigments.js';
@@ -61,6 +61,7 @@ import {livePlace} from './live/kit.js';
 import './live/tail.js';
 import './live/gut.js';
 import './live/bladder.js';
+import './live/gills.js';
 
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
@@ -107,7 +108,7 @@ const ORGAN_PANELS = Object.freeze({
   muscle : (state, organ) => organFunction(organ, state.sites) === MOTOR_KIND.forward
                                  ? livePlace('tail', organ)
                                  : effectorGraphic(state, organ),
-  gills : (state, organ) => gillGraphic(state, organ),
+  gills : (state, organ) => livePlace('gills', organ),
   // Gut and gut muscle are one organ to the eye: one live inspector for both.
   gutmuscle : () => livePlace('gut', {id : 'gut'}),
   defense : (state, organ) => spineField(state, organ),

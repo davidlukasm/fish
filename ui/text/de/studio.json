@@ -1823,6 +1823,35 @@
         "meat": "Räuber",
         "all": "Allesfresser"
       }
+    },
+    "gills": {
+      "rakers": "Reusen",
+      "water": "Wasser durch die Kiemen",
+      "life": "Lebenszyklus",
+      "rest": "{p} des Ruhebedarfs",
+      "gut": "Darm ›",
+      "open": "Maulöffnung",
+      "command": "Pumpbefehl",
+      "suck": "Saugen im Sand",
+      "open0": "offen",
+      "dense": "dicht",
+      "stays": "bleibt",
+      "plankton": "Plankton vor dem Maul",
+      "flock": "Flocken im Sand",
+      "enduring": "ausdauernd",
+      "strong": "kräftig",
+      "amount": "Wasser",
+      "weak": "schwacher",
+      "muscle": "Pumpmuskel",
+      "stronger": "starker",
+      "wide": "Maul ganz offen",
+      "pumped": "gepumpt",
+      "met": "beim Schwimmen",
+      "speed": "Tempo",
+      "ready": "Pumpe bereit",
+      "kindOpen": "Offene Kiemen",
+      "kindSift": "Siebt den Grund",
+      "kindFilter": "Planktonfilter"
     }
   }
 }
