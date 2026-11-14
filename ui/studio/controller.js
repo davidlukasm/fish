@@ -39,6 +39,7 @@ const DOUBLE_CLICK = 450;
 import {BODY_MAP, fishScene} from './view/scene.js';
 import {nodeLocation} from './view/places.js';
 import {inspector, organSettingsBlock} from './view/panels.js';
+import {mountLive} from './view/live/kit.js';
 import {cppnGraph, cppnInspector} from './view/graph.js';
 import {settleRegions} from './model/regions.js';
 import {
@@ -393,6 +394,8 @@ export class OrganStudio {
     this.refreshScene();
     this.refreshInspector();
   }
+  // The live inspectors follow a dragged grip of their own without the inspector being set anew.
+  refreshLive() { mountLive(this.root, this); }
   refreshInspector(reset = false) {
     const element = this.root.querySelector('.aid-inspector-scroll');
     if (!element)
@@ -407,6 +410,7 @@ export class OrganStudio {
       if (opened.has(summary.textContent))
         summary.parentElement.open = true;
     element.scrollTop = scroll;
+    mountLive(this.root, this);
     this.drawSight();
   }
   // During a drag the surrounding inspector waits for the drop. Rebuilding just the containing

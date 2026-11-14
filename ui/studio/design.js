@@ -52,6 +52,7 @@ import {
 import {sideOf} from './model/layout.js';
 import {dataAttribute} from './view/markup.js';
 import {organSettingsBlock, selectedCenter} from './view/panels.js';
+import {mountLive} from './view/live/kit.js';
 import {label} from './view/kit.js';
 import {glandProfile, hormonePad, hormoneTime} from './view/substances.js';
 import {requestBody} from './requests.js';
@@ -355,5 +356,7 @@ export const designMethods = {
       if (found)
         block.outerHTML = render(found);
     }
+    // A redrawn block has new places for the live inspectors.
+    mountLive(this.root, this);
   }
 };

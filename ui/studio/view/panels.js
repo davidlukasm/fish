@@ -24,7 +24,8 @@ import {
   isPelvicMuscle,
   isRegion,
   MUSCLE_LABEL_INDEX,
-  ORGAN_BY_KEY
+  ORGAN_BY_KEY,
+  organFunction
 } from '../model/organs.js';
 import {
   chosenCenter,
@@ -62,6 +63,8 @@ import {organTitle} from './names.js';
 import {bladderGraphic, gonadGraphic} from './sacs.js';
 import {skinField} from './skin.js';
 import {gutProbeControls} from './probes.js';
+import {livePlace} from './live/kit.js';
+import './live/tail.js';
 
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
@@ -104,7 +107,10 @@ const ORGAN_PANELS = Object.freeze({
   pigment : (state, organ, center) => pigmentInspector(state, organ, center),
   gut : (state, organ, center) => gutGraphic(state, organ, center) + gutProbeControls(state, organ),
   bladder : (state, organ, center) => bladderGraphic(state, organ, center),
-  muscle : (state, organ) => effectorGraphic(state, organ),
+  // The tail muscle has a live inspector; the other muscles keep their pictures until their turn.
+  muscle : (state, organ) => organFunction(organ, state.sites) === MOTOR_KIND.forward
+                                 ? livePlace('tail', organ)
+                                 : effectorGraphic(state, organ),
   gills : (state, organ) => gillGraphic(state, organ),
   gutmuscle : (state, organ) => gutMuscleGraphic(state, organ),
   defense : (state, organ) => spineField(state, organ),

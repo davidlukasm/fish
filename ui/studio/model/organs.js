@@ -201,7 +201,14 @@ export const ORGANS = Object.freeze([
       sensor('pressure', SENSE_KIND.inner_pressure, 3, 'inner')
     ]
   },
-  {key : 'muscle', category : 'motor', nodes : Infinity, centers : [ motor('muscle', 'site', 16) ]},
+  // A muscle's bundles are its types: each has its own strength, fibres and threshold.
+  {
+    key : 'muscle',
+    category : 'motor',
+    nodes : Infinity,
+    types : 5,
+    centers : [ motor('muscle', 'site', 16) ]
+  },
   // Gill covers on the flanks of the head pump water through the open mouth; q1 is how densely
   // their rakers stand. They pump all day, so they start with enduring fibres.
   {

@@ -1778,5 +1778,16 @@
     "steered2": "Botenstoffe gesteuert",
     "auto1": "Die Zelle lebt mit dem Fisch:",
     "auto2": "von Anfang an, immer aktiv"
+  },
+  "live": {
+    "tail": {
+      "force": "Kraft",
+      "enduring": "ausdauernd",
+      "strong": "kräftig",
+      "command": "Befehl",
+      "off": "Befehl aus",
+      "steps": "Schritte",
+      "tired": "Erschöpfung"
+    }
   }
 }
