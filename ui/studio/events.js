@@ -466,7 +466,8 @@ export const FISH_CLICKS = Object.freeze([
   ],
   [
     '[data-source-gland]',
-    (studio, e) => {
+    (studio, e, event) => {
+      event.preventDefault();
       studio.setTool('select');
       studio.select('organ', e.dataset.sourceGland, null, false);
     }

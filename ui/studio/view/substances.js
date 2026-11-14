@@ -1,12 +1,6 @@
 import {variationGraphic} from './cell_tissue.js';
 import {receptorVariationExamples} from '../model/variation.js';
-import {
-  BLOOD_LEVEL,
-  previewControls,
-  previewContextOf,
-  cellDevelopment,
-  substanceLevel
-} from './development.js';
+import {previewControls, previewContextOf, cellDevelopment} from './development.js';
 import {BLOOD_SUBSTANCE, HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {clamp} from '../../units.js';
@@ -482,9 +476,23 @@ export function hormoneTime(state, index) {
                           : formatNumber(NaN)) +
          '</span></span>';
 }
-const BLOOD_CURVE = Object.freeze({height : 58, top : 5, bottom : 42, samples : 36});
+const BLOOD_CURVE = Object.freeze(
+    {width : 280, height : 45, left : 10, right : 270, top : 4, bottom : 41, samples : 36});
+const BLOOD_AXIS = Object.freeze({height : 31, y : 16, knob : 7});
+function bloodAxis(index, now) {
+  const C = BLOOD_CURVE, A = BLOOD_AXIS;
+  const title = escapeText(label('hormoneCard.previewBlood'));
+  return '<svg class="aid-hormone-axis" viewBox="0 0 ' + C.width + ' ' + A.height +
+         '" data-preview-bars aria-label="' + title + '"><path class="aid-chart-axis" d="M' +
+         C.left + ' ' + A.y + 'H' + C.right + '"/><path class="aid-hormone-level-mark" d="M' +
+         fixed(now) + ' ' + A.y + 'V' + A.height + '"/><circle class="aid-graphic-handle" ' +
+         'data-preview-handle="' + index + '" data-level-left="' + C.left + '" data-level-right="' +
+         C.right + '" cx="' + fixed(now) + '" cy="' + A.y + '" r="' + A.knob + '"><title>' + title +
+         '</title></circle><text x="' + C.left + '" y="' + (A.height - 1) + '">0</text><text x="' +
+         C.right + '" y="' + (A.height - 1) + '" text-anchor="end">1</text></svg>';
+}
 function bloodCurves(state, index, context) {
-  const {document : doc, capabilities : wheel} = state, C = {...BLOOD_LEVEL, ...BLOOD_CURVE};
+  const {document : doc, capabilities : wheel} = state, C = BLOOD_CURVE;
   const x = level => C.left + (C.right - C.left) * level;
   const controls = receivers(doc, index, wheel).flatMap(cell => {
     const organ = findOrgan(doc, cell.organId);
@@ -507,9 +515,11 @@ function bloodCurves(state, index, context) {
       });
     return effects;
   });
-  if (!controls.length)
-    return '';
   const present = bloodLevel(context, index), now = x(present);
+  if (!controls.length)
+    return growsWith(doc, index, wheel)
+               ? '<section class="aid-hormone-receivers">' + bloodAxis(index, now) + '</section>'
+               : '';
   const contexts = Array.from({length : C.samples + 1}, (_, k) => {
     const level = k / C.samples;
     const hormones = [...context.hormones ];
@@ -517,7 +527,7 @@ function bloodCurves(state, index, context) {
     return {level, context : {...context, hormones}};
   });
   return '<section class="aid-hormone-receivers" style="--substance:' + substanceColor(index) +
-         '"><h4>' + label('hormoneCard.acts') + '</h4>' +
+         '"><h4>' + label('hormoneCard.acts') + '</h4>' + bloodAxis(index, now) +
          controls
              .map(entry => {
                const {effect, receptor, id, title, word} = entry;
@@ -546,8 +556,7 @@ function bloodCurves(state, index, context) {
                    '"/>' +
                    '<path class="aid-hormone-level-mark" d="M' + fixed(now) + ' ' + C.top + ' V' +
                    C.bottom + '"/><circle class="aid-hormone-point" cx="' + fixed(now) + '" cy="' +
-                   fixed(y(value)) + '" r="3"/><text x="' + C.left + '" y="55">0</text><text x="' +
-                   C.right + '" y="55" text-anchor="end">1</text></svg>';
+                   fixed(y(value)) + '" r="3"/></svg>';
                return '<button data-select-center="' + escapeText(id) + '" data-select-effect="' +
                       effect + '"><span class="aid-hormone-receiver-heading">' + name + '<output>' +
                       escapeText(formatNumber(value, 2)) + '</output></span>' + values +
@@ -556,6 +565,16 @@ function bloodCurves(state, index, context) {
              .join('') +
          '</section>';
 }
+const GLAND_FLOW = Object.freeze({
+  width : 280,
+  height : 84,
+  left : 10,
+  right : 245,
+  top : 8,
+  bottom : 68,
+  labelWidth : 15,
+  labelHeight : 16
+});
 function substanceSources(state, index) {
   const {document : doc} = state, cells = allCenters(doc), byOrgan = new Map();
   for (const row of state.anatomy?.hormoneSources ?? []) {
@@ -566,22 +585,38 @@ function substanceSources(state, index) {
   const total = [...byOrgan.values() ].reduce((sum, n) => sum + n, 0);
   if (!(total > 0))
     return '';
+  const G = GLAND_FLOW, scale = Math.max(1, Math.ceil(total));
+  const height = (G.bottom - G.top) * total / scale, top = G.bottom - height;
+  const junction = (G.left + G.right) / 2;
+  let left = G.left, ordinal = 0;
   return '<section class="aid-hormone-sources" style="--substance:' + substanceColor(index) +
-         '"><h4>' + label('hormoneCard.sources') + '</h4>' +
+         '"><h4>' + label('hormoneCard.sources') + '</h4><svg viewBox="0 0 ' + G.width + ' ' +
+         G.height + '" aria-label="' + label('hormoneCard.sources') + '"><title>' +
+         escapeText(t('studio.hormoneCard.totalDrive', {n : formatNumber(total, 2)})) + '</title>' +
+         '<path class="aid-chart-axis" d="M' + G.right + ' ' + G.top + 'V' + G.bottom +
+         '"/><text x="' + (G.right + 5) + '" y="' + (G.top + 3) + '">' + formatNumber(scale) +
+         '</text><text x="' + (G.right + 5) + '" y="' + G.bottom + '">0</text>' +
          [...byOrgan ]
              .map(([ id, amount ]) => {
-               const organ = findOrgan(doc, id);
-               const share = amount / total;
-               return '<button data-source-gland="' + escapeText(id) + '"><span>' +
-                      escapeText(organTitle(organ, state.sites)) + '</span><span>' +
-                      percent(share) +
-                      '</span><svg viewBox="0 0 280 8" aria-hidden="true"><rect width="280" height="8"/>' +
-                      '<rect class="aid-gland-share" width="' + fixed(280 * share) +
-                      '" height="8"/></svg></button>';
+               const name = organTitle(findOrgan(doc, id), state.sites);
+               const start = left, width = (G.right - G.left) * amount / total;
+               const middle = start + width / 2;
+               left += width;
+               ++ordinal;
+               const title = escapeText(name + ' ' + ordinal + ' · ' + formatNumber(amount, 2));
+               return '<a href="#aid-body-map" data-source-gland="' + escapeText(id) +
+                      '" aria-label="' + title + '"><title>' + title + '</title>' +
+                      '<path class="aid-gland-flow" d="M' + fixed(start) + ' ' + fixed(top) + ' H' +
+                      fixed(left) + ' V' + G.bottom + ' L' + junction + ' ' + (G.height - 2) +
+                      ' L' + fixed(start) + ' ' + G.bottom + 'Z"/>' +
+                      (width >= G.labelWidth && height >= G.labelHeight
+                           ? '<text class="aid-gland-number" x="' + fixed(middle) + '" y="' +
+                                 fixed(top + height / 2) + '">' + ordinal + '</text>'
+                           : '') +
+                      '</a>';
              })
              .join('') +
-         '<small>' + escapeText(t('studio.hormoneCard.totalDrive', {n : formatNumber(total, 2)})) +
-         '</small></section>';
+         '</svg></section>';
 }
 function substanceInspector(state, currentAnatomy) {
   const {document : doc, capabilities : wheel} = state;
@@ -603,11 +638,8 @@ function substanceInspector(state, currentAnatomy) {
          (grows ? 'data-growth-off' : 'data-growth-substance="' + index + '"') + ' aria-pressed="' +
          grows + '" title="' + label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') +
          '">' + glyph(GROWTH_ICON, ICON.mark, {line : true}) + '</button>' +
-         (currentAnatomy ? hormoneTime(state, index) : '') + '</div>' +
-         '<div class="aid-hormone-preview">' + label('hormoneCard.previewBlood') +
-         substanceLevel(state, index, context, true) + '</div>' +
-         (currentAnatomy ? substanceSources(state, index) : '') +
-         (grows ? growthEditor(state) : '') + bloodCurves(state, index, context) +
+         '</div>' + (currentAnatomy ? substanceSources(state, index) : '') +
+         bloodCurves(state, index, context) + (grows ? growthEditor(state) : '') +
          (substance.id ? '<button class="aid-danger" data-remove-substance="' + index + '">' +
                              label('inspector.removeSubstance') + '</button>'
                        : '');
