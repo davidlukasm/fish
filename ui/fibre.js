@@ -30,15 +30,21 @@ export function fibreBundle(rings, fast) {
         ]);
   return cells.map(([ x, y ], k) => ({x, y, fast : (k * GOLDEN) % 1 < fast}));
 }
-// Average force under a held full command; the engine's twitch shape averages one.
-export function enduranceCurve(f, steps) {
-  const curve = [];
+// A muscle cell's force and its fast fibres' reserve step by step, pulling with `drive` of its
+// force until `stop` and resting after. The engine drains the reserve by the work done per unit
+// of strength and refills it by the fibre mix (muscle_fibre.hh, drained and refilled; body_plan.cc,
+// where the work is the drive times the force left); its twitch shape averages one.
+export function fibreCourse(f, steps, drive = 1, stop = steps) {
+  const force = [], reserves = [];
   let reserve = 1;
   for (let k = 0; k < steps; ++k) {
-    const available = 1 - f + f * reserve;
-    curve.push(fibreForce(f) * available);
+    const pull = k < stop ? drive : 0, available = 1 - f + f * reserve;
+    force.push(fibreForce(f) * pull * available);
+    reserves.push(reserve);
     reserve = clamp(reserve + (1 - reserve) / between(F.recovery_slow, F.recovery_fast, f) -
-                    F.drain * f * f * available);
+                    F.drain * f * f * available * pull);
   }
-  return curve;
+  return {force, reserve : reserves};
 }
+// Average force under a held full command.
+export const enduranceCurve = (f, steps) => fibreCourse(f, steps).force;

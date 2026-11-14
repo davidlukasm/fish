@@ -23,28 +23,6 @@ export const txt = (parent, x, y, words, attrs = {}) => {
   return e;
 };
 export const path = pts => 'M' + pts.map(([ x, y ]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(' L');
-// The colours the live pictures share.
-export const COLOUR = Object.freeze({
-  axis : '#3b6a6c',
-  track : '#0f2c34',
-  trackEdge : '#2d5059',
-  line : '#f4efd8',
-  handle : '#f1dda6',
-  chosen : '#f1dda6',
-  unchosen : '#0d262c',
-  body : '#16363e',
-  icon : '#e9e2c6',
-  muscle : '#9a6a48',
-  edge : '#e6b47c',
-  chipEdge : '#5d8384',
-  chipSign : '#d7e6e3',
-  remove : '#e8a2b5',
-  tired : '#eaa886',
-  water : '#9cc8f0',
-  sand : '#c9b48c',
-  ending : '#7f9a99'
-});
-
 // The place a live inspector takes in the inspector's text.
 export const livePlace = (kind, organ) => '<div class="aid-live" data-live="' + kind +
                                           '" data-live-organ="' + escapeText(organ.id) + '"></div>';
@@ -104,6 +82,7 @@ export function picture(svg, height, build) {
   return {svg, under, live};
 }
 
+// Their colours are in studio.css (.aid-live-*); only a muscle's fibre colour is set in the code.
 // Two kinds of things are dragged, and they look different: a grip sets the organ, a knob shapes
 // an input tried on it. `move` gets the pointer in the picture's own units; `done` runs when it is
 // let go. The pointer is followed on the window, so a redraw of the inspector cannot lose it.
@@ -139,21 +118,12 @@ export function drag(svg, thing, move, name, kind = 'grip', done = null) {
 }
 // A round button.
 export function chip(parent, x, y, sign, act, enabled = true, r = 7) {
-  const g = el('g', {class : 'aid-live-chip', opacity : enabled ? 1 : .3}, parent), d = r * .45,
-        red = sign === '×';
-  el('circle', {
-    cx : x,
-    cy : y,
-    r,
-    style : `fill:${COLOUR.track};stroke:${red ? COLOUR.remove : COLOUR.chipEdge};stroke-width:1.4`
-  },
-     g);
+  const red = sign === '×', d = r * .45,
+        g = el('g', {class : red ? 'aid-live-chip remove' : 'aid-live-chip', opacity : enabled ? 1 : .3}, parent);
+  el('circle', {cx : x, cy : y, r}, g);
   el('path', {
     d : red ? `M${x - d * .8} ${y - d * .8} l${1.6 * d} ${1.6 * d} m0 ${- 1.6 * d} l${- 1.6 * d} ${1.6 * d}`
             : `M${x - d} ${y} h${2 * d}` + (sign === '+' ? ` M${x} ${y - d} v${2 * d}` : ''),
-    stroke : red ? COLOUR.remove : COLOUR.chipSign,
-    'stroke-width' : 1.5,
-    fill : 'none'
   },
      g);
   if (enabled)
@@ -163,13 +133,12 @@ export function chip(parent, x, y, sign, act, enabled = true, r = 7) {
     });
 }
 // A fish seen from the side, for the ages: small for the hatchling, large for the grown fish.
-export function fishIcon(parent, x, cy, s, colour) {
+export function fishIcon(parent, x, cy, s) {
   const w = 12 * s, t = 5.5 * s;
   el('path', {
     d : `M${x - w} ${cy} Q${x - w / 3} ${cy - t * 1.7} ${x + w} ${cy} Q${x - w / 3} ${cy + t * 1.7} ${x - w} ${cy} Z M${x + w - s} ${cy} l${8 * s} ${- 6 * s} l${- 2.5 * s} ${6 * s} l${2.5 * s} ${6 * s} Z`,
-    fill : colour
+    class : 'aid-live-eye'
   },
      parent);
-  el('circle', {cx : x - w * .55, cy : cy - t * .25, r : Math.max(.7, 1.1 * s), fill : COLOUR.track},
-     parent);
+  el('circle', {cx : x - w * .55, cy : cy - t * .25, r : Math.max(.7, 1.1 * s), class : 'aid-live-pupil'}, parent);
 }

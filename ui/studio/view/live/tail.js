@@ -4,24 +4,28 @@
 // fibres (time constant) and threshold. A muscle whose cells have no type is one bundle.
 // Force: each bundle pulls with tanh(command - threshold) (the effector output, substrate.cc; the
 // threshold is the cell's own times the bias scale, command_line.js) times its cells' strength and
-// their fibres' force, as far as its fast fibres are rested (muscle_fibre.hh, ui/fibre.js).
-import {MOTOR_KIND, MUSCLE_FIBRE as F, ATELIER_LIMITS} from '../../../schema.js';
-import {fastShare, fibreForce, fibreHex, fibreTau} from '../../../fibre.js';
+// their fibres' force, as far as its fast fibres are rested (ui/fibre.js, fibreCourse).
+// A muscle saved with a sprint share shows its sprint nodes as bundles of their own, as they pull
+// in the fish; the first edit makes them so in the document (splitSprint), node by node.
+import {ATELIER_LIMITS, MOTOR_KIND} from '../../../schema.js';
+import {fastShare, fibreCourse, fibreForce, fibreHex, fibreTau} from '../../../fibre.js';
 import {t} from '../../../strings.js';
 import {
   addOrganType,
+  findCenter,
   findOrgan,
   isSprintNode,
   muscleTrait,
   organTypes,
   removeOrganType,
-  setMuscleSprint,
   setMuscleTrait,
+  splitSprint,
   SPRINT_THRESHOLD,
   updateCenter
 } from '../../model/document.js';
+import {label} from '../kit.js';
 import {COMMAND_SPAN} from '../command_line.js';
-import {chip, clamp, COLOUR, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 
 const word = key => t('studio.live.tail.' + key);
 const TAIL = Object.freeze({
@@ -54,49 +58,33 @@ const swingAt = (along, wriggle) => Math.pow(along, 2 - 1.4 * wriggle);
 const wriggleFrom = wriggle => TAIL.nose + TAIL.body * Math.pow(TAIL.swing, 1 / (2 - 1.4 * wriggle));
 const wriggleAt = x =>
     clamp((2 - Math.log(TAIL.swing) / Math.log(clamp((x - TAIL.nose) / TAIL.body, .05, .5))) / 1.4);
-const between = (slow, fast, share) => slow * (fast / slow) ** clamp(share);
 
 // The muscle's bundles as the document has them.
 function bundlesOf(state, organ) {
   const scale = state.capabilities?.biasScale ?? 0, kind = organ.centers[0]?.key;
-  return organTypes(organ).filter(type => type.centers[0].key === kind).map(type => {
-    const cell = type.centers[0];
-    // A sprint node's threshold is replaced when the plan is compiled (document.js, compile).
-    const sprint = isSprintNode(organ, organ.centers.indexOf(cell));
-    return {
-      type : type.id,
-      id : cell.id,
-      strength : type.centers.reduce((sum, c) => sum + c.copies, 0),
-      copies : cell.copies,
-      nodes : type.centers.length,
-      fast : fastShare(cell.tau),
-      gate : Math.max(0, sprint ? SPRINT_THRESHOLD : cell.threshold) * scale
-    };
+  // A sprint node's threshold is replaced when the plan is compiled (document.js, compile), so a
+  // type's sprint nodes are a bundle apart from its other nodes.
+  const sprints = c => isSprintNode(organ, organ.centers.indexOf(c));
+  const bundle = (cells, sprint) => ({
+    id : cells[0].id,
+    strength : cells.reduce((sum, c) => sum + c.copies, 0),
+    copies : cells[0].copies,
+    fast : fastShare(cells[0].tau),
+    gate : Math.max(0, sprint ? SPRINT_THRESHOLD : cells[0].threshold) * scale
   });
+  return organTypes(organ).filter(type => type.centers[0].key === kind).flatMap(type => [
+    [ type.centers.filter(c => !sprints(c)), false ], [ type.centers.filter(sprints), true ]
+  ].filter(([ cells ]) => cells.length).map(([ cells, sprint ]) => bundle(cells, sprint)));
 }
 const driveOf = (bundle, command) => Math.tanh(Math.max(0, command - bundle.gate));
-// A bundle's force and its fast fibres' reserve, step by step: pulling until the command stops,
-// then resting (the engine's drain and refill, muscle_fibre.hh).
-function bundleSwim(bundle, drive, stop) {
-  const force = [], reserve = [];
-  let r = 1;
-  for (let st = 0; st <= TAIL.steps; st++) {
-    const d = st < stop ? drive : 0, left = 1 - bundle.fast + bundle.fast * r;
-    force.push(bundle.strength * fibreForce(bundle.fast) * d * left);
-    reserve.push(r);
-    r = clamp(r + (1 - r) / between(F.recovery_slow, F.recovery_fast, bundle.fast) -
-              F.drain * bundle.fast * bundle.fast * left * d);
-  }
-  return {force, reserve};
-}
 function derive(bundles, input) {
   const blank = () => Array(TAIL.steps + 1).fill(0), spent = blank(), bands = [];
   let under = blank(), fastAll = 0;
   // The bundles in the order they join: the lowest threshold first, at the bottom.
   for (const i of bundles.map((b, i) => i).sort((p, q) => bundles[p].gate - bundles[q].gate)) {
     const b = bundles[i], drive = driveOf(b, input.height),
-          {force, reserve} = bundleSwim(b, drive, input.stop),
-          over = under.map((u, st) => u + force[st]);
+          {force, reserve} = fibreCourse(b.fast, TAIL.steps + 1, drive, input.stop),
+          over = under.map((u, st) => u + b.strength * force[st]);
     const weight = b.strength * fibreForce(b.fast) * b.fast * drive;
     fastAll += weight;
     reserve.forEach((r, st) => { spent[st] += weight * (1 - r); });
@@ -140,15 +128,17 @@ liveKind('tail', (studio, organId) => {
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
   const change = doc => doc && studio.changeDocument(doc, studio.state.selected);
-  const edit = (bundle, patch) => updateCenter(studio.state.document, bundle.id, patch);
+  // Every edit starts from the document in which the sprint nodes are bundles of their own.
+  const base = () => splitSprint(studio.state.document, organId) ?? studio.state.document;
+  const edit = (bundle, patch) => updateCenter(base(), bundle.id, patch);
 
   function buildFish(fixed) {
     const {M0, M1, FY} = TAIL, x1 = M1 + 26,
           grad = el('linearGradient', {id : 'aid-live-fibres'}, el('defs', {}, fixed));
-    film.body = el('path', {fill : COLOUR.body, stroke : COLOUR.axis, 'stroke-width' : 1.4}, fixed);
-    film.eye = el('circle', {cx : 36, r : 3, fill : COLOUR.icon}, fixed);
-    film.spine = el('path', {stroke : COLOUR.handle, 'stroke-width' : 1.6, fill : 'none', 'stroke-linecap' : 'round'}, fixed);
-    film.marks = el('g', {fill : 'none', 'stroke-linecap' : 'round', 'stroke-width' : 5}, fixed);
+    film.body = el('path', {class : 'aid-live-body'}, fixed);
+    film.eye = el('circle', {cx : 36, r : 3, class : 'aid-live-eye'}, fixed);
+    film.spine = el('path', {class : 'aid-live-spine'}, fixed);
+    film.marks = el('g', {class : 'aid-live-bundles'}, fixed);
     el('stop', {offset : 0, 'stop-color' : fibreHex(0)}, grad);
     el('stop', {offset : 1, 'stop-color' : fibreHex(1)}, grad);
     el('rect', {x : M0 + 4, y : FY - 4, width : x1 - M0 - 4, height : 8, rx : 4, fill : 'url(#aid-live-fibres)', opacity : .85}, fixed);
@@ -189,20 +179,20 @@ liveKind('tail', (studio, organId) => {
                                     chosen = i;
                                     show(studio.state);
                                   }));
-    el('rect', {x : x0 - 1, y : MB - h - 2, width : width + 2, height : h + 4, rx : 4, fill : 'none', stroke : COLOUR.chosen, 'stroke-width' : 2, 'pointer-events' : 'none'}, live);
+    el('rect', {x : x0 - 1, y : MB - h - 2, width : width + 2, height : h + 4, rx : 4, class : 'aid-live-chosen'}, live);
     drag(svg, el('rect', {x : x0 + width / 2 - 6, y : MB - h - 8, width : 12, height : 12, rx : 2}, live),
          p => draft(edit(cb, {copies : clamp(Math.round((MB - p.y - 4) / cell), 1, most)})), 'bundle', 'grip', settle);
     chip(live, x0 + width - 4, MB - h - 3, '×', () => {
-      const doc = removeOrganType(studio.state.document, organId, cb.type);
+      const from = base(), doc = removeOrganType(from, organId, findCenter(from, cb.id).center.profile ?? '');
       chosen = Math.min(chosen, bundles.length - 2);
       change(doc);
     }, bundles.length > 1, 6.5);
     chip(live, M1 + 22, MB - 10, '+', () => {
-      const added = addOrganType(studio.state.document, organId, studio.state.sites);
-      if (added) {
-        chosen = bundles.length;
-        change(added.document);
-      }
+      const added = addOrganType(base(), organId, studio.state.sites);
+      if (!added)
+        return studio.notice(label('status.noRoom'));
+      chosen = bundles.length;
+      change(added.document);
     }, bundles.length < TAIL.bundles, 8);
     // The chosen bundle's fibres.
     drag(svg, el('circle', {cx : fx0 + (fx1 - fx0) * cb.fast, cy : FY, r : 7}, live),
@@ -215,8 +205,8 @@ liveKind('tail', (studio, organId) => {
           CY = v => base - (base - top) * clamp(v / COMMAND_SPAN), vOf = y => COMMAND_SPAN * clamp((base - y) / (base - top));
     // The holder of the command, filling with it while it lasts.
     txt(live, holder, top - 10, word('command'), {'text-anchor' : 'middle'});
-    el('rect', {x : holder - 5, y : top, width : 10, height : base - top, rx : 5, fill : COLOUR.track, stroke : COLOUR.trackEdge}, live);
-    film.level = el('rect', {x : holder - 4, width : 8, rx : 4, fill : COLOUR.line, opacity : .55}, live);
+    el('rect', {x : holder - 5, y : top, width : 10, height : base - top, rx : 5, class : 'aid-live-track'}, live);
+    film.level = el('rect', {x : holder - 4, width : 8, rx : 4, class : 'aid-live-level'}, live);
     let chosenBand = null;
     for (const b of m.bands) {
       const shape = last => path(b.over.slice(0, last + 1).map((v, st) => [ X(st), Y(v) ])) + ' L' +
@@ -230,8 +220,8 @@ liveKind('tail', (studio, organId) => {
         chosenBand = {b, d : shape(Math.max(1, input.stop - 1))};
     }
     if (chosenBand)
-      el('path', {d : chosenBand.d, fill : 'none', stroke : '#ffffff', 'stroke-width' : 1.3, 'pointer-events' : 'none'}, live);
-    el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+      el('path', {d : chosenBand.d, class : 'aid-live-chosen'}, live);
+    el('path', {d : `M${L} ${top} V${base} H${R}`, class : 'aid-live-axis'}, live);
     txt(live, L, base + 15, word('steps'));
     for (const st of [ 100, 200, 300 ])
       txt(live, X(st), base + 15, st, {'text-anchor' : st === steps ? 'end' : 'middle'});
@@ -239,13 +229,13 @@ liveKind('tail', (studio, organId) => {
       const peak = m.tired.indexOf(Math.max(...m.tired)), at = Math.max(40, Math.min(peak, input.stop - 70));
       const TY = v => base - (base - top) * clamp(v);
       if (m.tired[peak] > .02)
-        el('path', {d : path(m.tired.map((v, st) => [ X(st), TY(v) ])), fill : 'none', stroke : COLOUR.tired, 'stroke-width' : 2}, live);
+        el('path', {d : path(m.tired.map((v, st) => [ X(st), TY(v) ])), class : 'aid-live-tired'}, live);
       if (m.tired[peak] > .2)
-        txt(live, X(at), Math.max(top + 8, TY(m.tired[at]) - 7), word('tired'), {'text-anchor' : 'middle', style : 'fill:' + COLOUR.tired});
+        txt(live, X(at), Math.max(top + 8, TY(m.tired[at]) - 7), word('tired'), {'text-anchor' : 'middle', class : 'aid-live-tired-word'});
     }
     // The command: its end, its strength, its knob.
-    el('path', {d : `M${X(input.stop)} ${top - 6} V${base}`, stroke : COLOUR.ending, 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, live);
-    el('path', {d : `M${holder + 12} ${CY(input.height)} H${X(input.stop)}`, stroke : COLOUR.line, 'stroke-dasharray' : '2 4', 'stroke-width' : 1.2}, live);
+    el('path', {d : `M${X(input.stop)} ${top - 6} V${base}`, class : 'aid-live-ending'}, live);
+    el('path', {d : `M${holder + 12} ${CY(input.height)} H${X(input.stop)}`, class : 'aid-live-input'}, live);
     txt(live, X(input.stop) + (input.stop > 215 ? -9 : 9), top - 8, word('off'), {'text-anchor' : input.stop > 215 ? 'end' : 'start'});
     // The grips: each bundle's threshold on the holder, the chosen bundle's strength on its band.
     if (scale > 0)
@@ -257,21 +247,14 @@ liveKind('tail', (studio, organId) => {
                width : 18,
                height : 8,
                rx : 2,
-               style : `fill:${fibreHex(b.fast)};stroke:${on ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${on ? 2.5 : 1}`
+               // The grip's class would paint over an attribute.
+               style : 'fill:' + fibreHex(b.fast),
+               class : on ? 'aid-live-key on' : 'aid-live-key'
              },
                       live),
              p => {
                chosen = i;
-               // One threshold for each bundle: what the sprint nodes had becomes their own.
-               const doc = studio.state.document, muscle = findOrgan(doc, organId);
-               let next = doc;
-               if (muscle.sprint > 0) {
-                 for (const c of muscle.centers)
-                   if (isSprintNode(muscle, muscle.centers.indexOf(c)))
-                     next = updateCenter(next, c.id, {threshold : SPRINT_THRESHOLD}) ?? next;
-                 next = setMuscleSprint(next, organId, 0) ?? next;
-               }
-               draft(updateCenter(next, b.id, {threshold : clamp(vOf(p.y) / scale)}));
+               draft(edit(b, {threshold : clamp(vOf(p.y) / scale)}));
              },
              'gate' + i, 'grip', settle);
       });
@@ -286,7 +269,7 @@ liveKind('tail', (studio, organId) => {
         settle();
       });
     }
-    drag(svg, el('circle', {cx : X(input.stop), cy : CY(input.height), r : 5.5, fill : COLOUR.line}, live), p => {
+    drag(svg, el('circle', {cx : X(input.stop), cy : CY(input.height), r : 5.5}, live), p => {
       input.stop = clamp(Math.round((p.x - L) / (R - L) * steps), 20, steps - 20);
       input.height = vOf(p.y);
       show(studio.state);

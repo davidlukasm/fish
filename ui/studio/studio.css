@@ -1221,3 +1221,22 @@
 .aid-live-knob{stroke:var(--aid-ink);stroke-width:1.5;cursor:grab}
 .aid-live-knob:hover,.aid-live-knob.dragging{stroke:#fff;stroke-width:2.5}
 .aid-live-chip{cursor:pointer}
+.aid-live-chip circle{fill:var(--aid-chip);stroke:#5d8384;stroke-width:1.4}
+.aid-live-chip path{fill:none;stroke:#d7e6e3;stroke-width:1.5}
+.aid-live-chip.remove circle,.aid-live-chip.remove path{stroke:var(--aid-inhibit)}
+.aid-live-knob{fill:#f4efd8}
+.aid-live-axis{fill:none;stroke:var(--aid-limit)}
+.aid-live-track{fill:var(--aid-chip);stroke:var(--aid-panel-edge)}
+.aid-live-level{fill:#f4efd8;opacity:.55}
+.aid-live-body{fill:#16363e;stroke:var(--aid-limit);stroke-width:1.4}
+.aid-live-eye{fill:#e9e2c6}
+.aid-live-pupil{fill:var(--aid-chip)}
+.aid-live-spine{fill:none;stroke:var(--aid-handle);stroke-width:1.6;stroke-linecap:round}
+.aid-live-bundles{fill:none;stroke-linecap:round;stroke-width:5}
+.aid-live-chosen{fill:none;stroke:var(--aid-handle);stroke-width:2;pointer-events:none}
+.aid-live-tired{fill:none;stroke:var(--aid-motor);stroke-width:2}
+.aid-live-picture text.aid-live-tired-word{fill:var(--aid-motor)}
+.aid-live-ending{fill:none;stroke:#7f9a99;stroke-dasharray:6 4;stroke-width:2}
+.aid-live-input{fill:none;stroke:#f4efd8;stroke-dasharray:2 4;stroke-width:1.2}
+.aid-live-key{stroke:var(--aid-ink);stroke-width:1}
+.aid-live-key.on{stroke:var(--aid-handle);stroke-width:2.5}

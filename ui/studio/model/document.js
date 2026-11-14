@@ -1114,6 +1114,28 @@ export function setMuscleSprint(doc, organId, share) {
     organs : doc.organs.map(o => targets.has(o) ? {...o, sprint : clamp(share, 0, 1)} : o)
   };
 }
+// A muscle whose bundles each have their own threshold needs no sprint share: its sprint nodes
+// become bundles of their own (their own type) with the threshold they were compiled with, in
+// this muscle and its linked twin, so the fish pulls exactly as before. Null where no node sprints.
+export function splitSprint(doc, organId) {
+  const original = findOrgan(doc, organId);
+  if (original?.type !== 'muscle' || !linkedOrgans(doc, original).some(sprintNodes))
+    return null;
+  const draft = copy(doc), fresh = new Map();
+  for (const organ of linkedOrgans(draft, findOrgan(draft, organId))) {
+    organ.centers.forEach((center, index) => {
+      if (!isSprintNode(organ, index))
+        return;
+      const was = typeOf(center);
+      if (!fresh.has(was))
+        fresh.set(was, identifier('profile'));
+      center.profile = fresh.get(was);
+      center.threshold = SPRINT_THRESHOLD;
+    });
+    organ.sprint = 0;
+  }
+  return draft;
+}
 // A muscle's fibres, carried by its cells' time constant: 1 all fast, 0 all slow. Spine erectors
 // are muscles too.
 const FIBROUS = Object.freeze([ 'muscle', 'defense', 'gills', 'gutmuscle' ]);
