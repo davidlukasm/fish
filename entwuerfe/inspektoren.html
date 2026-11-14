@@ -992,7 +992,7 @@ function drawTailSpeed() {
 // small body harder than a large one, so every layer thins as the fish grows. The round knob on
 // the curve chooses the maturity at which the pictures above show the fish. Left of the dashed line
 // the fish is still in the egg (dimmed): what works there twitches against the shell.
-const TLIFE = {L : 30, R : 282, top : 14, base : 86, icons : 104, height : 118, samples : 126, edge : .004};
+const TLIFE = {L : 44, R : 264, top : 14, base : 86, icons : 104, height : 118, samples : 126, edge : .004, beside : 16, apart : 13, whole : .015};
 function buildTailLife(fixed) {
   const {L, R, top, base, icons} = TLIFE;
   txt(fixed, L + 4, top + 2, 'Schub');
@@ -1025,17 +1025,17 @@ function drawTailLife() {
   // The fish shown above.
   const r = T.input.maturity;
   el('path', {d : `M${X(r)} ${Y(pushAt(r))} V${base}`, stroke : COLOUR.line, 'stroke-dasharray' : '2 4', 'stroke-width' : 1.2}, live);
-  // The grips on each layer's two edges.
-  for (const i of order) {
-    const n = nodes[i], chosen = i === T.chosen, until = Math.min(1, n.until);
-    const grip = (r, inside, name, move) => {
-      const [under, over] = layer(i, inside);
-      drag(svg, el('rect', {x : X(r) - 4, y : Y((under + over) / 2) - 5.5, width : 8, height : 11, rx : 2, style : `fill:${fibreColour(n.fast)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2.5 : 1}`}, live),
-        p => { move(rOf(p.x)); T.chosen = i; draw(TAIL_PARTS); }, name + i);
-    };
-    grip(n.from, n.from + edge, 'from', to => { n.from = Math.min(to, until - .08); });
-    grip(until, until - 2 * edge, 'until', to => { n.until = Math.max(to, n.from + .08); });
-  }
+  // The grips on each layer's two edges. An edge in the midst of life carries its grip in the
+  // layer; a bundle that works from the start or never dies has that grip beside the picture, one
+  // above the other in the bundles' order, so that none lies on another or under the knob.
+  order.forEach((i, place) => {
+    const n = nodes[i], chosen = i === T.chosen, until = Math.min(1, n.until), beside = base - 7 - TLIFE.apart * place;
+    const grip = (x, y, name, move) => drag(svg, el('rect', {x : x - 4, y : y - 5.5, width : 8, height : 11, rx : 2, style : `fill:${fibreColour(n.fast)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2.5 : 1}`}, live),
+      p => { move(rOf(p.x)); T.chosen = i; draw(TAIL_PARTS); }, name + i);
+    const middle = at => { const [under, over] = layer(i, at); return Y((under + over) / 2); };
+    grip(n.from > 0 ? X(n.from) : L - TLIFE.beside, n.from > 0 ? middle(n.from + edge) : beside, 'from', to => { n.from = to < TLIFE.whole ? 0 : Math.min(to, until - .08); });
+    grip(until < 1 ? X(until) : R + TLIFE.beside, until < 1 ? middle(until - 2 * edge) : beside, 'until', to => { n.until = to > 1 - TLIFE.whole ? 1 : Math.max(to, n.from + .08); });
+  });
   drag(svg, el('circle', {cx : X(r), cy : Y(pushAt(r)), r : 5.5, fill : COLOUR.line}, live), p => { T.input.maturity = rOf(p.x); draw(TAIL_PARTS); }, 'maturity', 'knob');
 }
 // The fish swims while the command lasts: it beats as hard as its force and as quick as the fibres
