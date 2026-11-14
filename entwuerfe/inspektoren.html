@@ -1183,8 +1183,11 @@ function drawBladder() {
   // which stands still while a grip of this picture is held.
   const reach = sacLength(m.capacity);
   drag(svg, bladderFilm.grip = el('rect', {x : fishX + reach - 4, width : 8, height : 12, rx : 2}, live), p => {
-    const wanted = clamp((p.x - fishX - 5) / 13, .02, 1) * BLADDER.groups, had = BL.groups.reduce((sum, g) => sum + g.cells, 0) / BLADDER.full;
-    // All groups grow or shrink alike.
+    // The grip stands at the capacity of the groups that work now, so it sets that; all groups
+    // grow or shrink alike, as far as the working ones can go.
+    const had = BM().capacity, most = BL.groups.filter(g => groupWorks(g, BL.input.maturity)).length;
+    if (!(had > 0)) return;
+    const wanted = clamp((p.x - fishX - 5) / 13 * BLADDER.groups, 1 / BLADDER.full, most);
     for (const g of BL.groups) g.cells = clamp(Math.round(g.cells * wanted / had), 1, BLADDER.full);
     draw(BLADDER_PARTS); }, 'sacsize');
 }
@@ -1203,7 +1206,8 @@ function drawBladderFill() {
   if (m.hover <= 1) {
     el('rect', {x : L, y : top, width : R - L, height : Y(m.hover) - top, fill : WATER, opacity : .14}, live);
     el('path', {d : `M${L} ${Y(m.hover)} H${R}`, stroke : COLOUR.line, 'stroke-dasharray' : '5 4', 'stroke-width' : 1.4}, live);
-    txt(live, R - 3, Y(m.hover) - 4, 'steigt', {'text-anchor' : 'end'}); txt(live, R - 3, Y(m.hover) + 12, 'sinkt', {'text-anchor' : 'end'});
+    if (Y(m.hover) - top > 15) txt(live, R - 3, Y(m.hover) - 4, 'steigt', {'text-anchor' : 'end'});
+    txt(live, R - 3, Y(m.hover) + 12, 'sinkt', {'text-anchor' : 'end'});
   } else txt(live, R - 3, top + 12, 'sinkt', {'text-anchor' : 'end'});
   el('path', {d : path(m.filling.map((v, st) => [X(st), Y(v)])) + ` L${R} ${base} L${L} ${base} Z`, fill : WATER, opacity : .45, stroke : WATER, 'stroke-width' : 1.8}, live);
   el('path', {d : `M${L} ${top - 2} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
@@ -1216,7 +1220,7 @@ function drawBladderFill() {
     el('circle', {cx : X(st), cy : Y(m.hover), r : 2.6, fill : COLOUR.line}, live);
     txt(live, X(st) + (sign === '↑' ? -5 : 5), Y(m.hover) - 6, `${sign} ${st}`, {'text-anchor' : sign === '↑' ? 'end' : 'start', class : 'value', style : `paint-order:stroke;stroke:${COLOUR.track};stroke-width:3px`});
   }
-  play.lines.bladderfill = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : c0, base};
+  play.lines.bladderfill = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : c0, base, steps : STEPS};
   const stOf = x => clamp(Math.round((x - L) / (R - L) * STEPS), 0, STEPS), vOf = y => clamp((mid - y) / half, -1, 1);
   drag(svg, el('circle', {cx : X(inp.stop), cy : CY(inp.fill), r : 5.5, fill : COLOUR.line}, live), p => { inp.stop = clamp(stOf(p.x), 20, STEPS - 60); inp.fill = clamp(vOf(p.y), 0, 1); draw(BLADDER_PARTS); }, 'blfill', 'knob');
   drag(svg, el('circle', {cx : (X(inp.stop) + R) / 2, cy : CY(-inp.empty), r : 5.5, fill : COLOUR.line}, live), p => { inp.empty = clamp(-vOf(p.y), 0, 1); draw(BLADDER_PARTS); }, 'blempty', 'knob');
@@ -1224,8 +1228,8 @@ function drawBladderFill() {
   drag(svg, el('circle', {cx : L, cy : Y(inp.start), r : 5.5, fill : WATER}, live), p => { inp.start = clamp((base - p.y) / (base - top), 0, 1); draw(BLADDER_PARTS); }, 'blstart', 'knob');
 }
 // The depth sense: the nerve cells, and under them over the steps the depth the fish has in the
-// trial (the line) and, for each key, what its cells report to the brain (a see-through area in
-// the key's colour, across the whole picture). The thresholds are the dashed lines; they are set
+// trial (the fine line) and, for each key, what its cells report to the brain (a curve in the
+// key's colour across the whole picture, the chosen key's filled lightly). The thresholds are the dashed lines; they are set
 // in the water column, where one sees the depth.
 const DEPTH = {L : 44, R : 292};
 function drawDepth() {
@@ -1241,16 +1245,16 @@ function drawDepth() {
   el('rect', {x : L, y : I0, width : R - L, height : I1 - I0, fill : COLOUR.track}, live);
   keys.forEach((k, i) => {
     const chosen = i === cell.chosen;
-    el('path', {d : path(runs[i].sent.map((v, st) => [X(st), IY(v)])) + ` L${R} ${I1} L${L} ${I1} Z`, fill : keyColour(i), opacity : chosen ? .45 : .22, stroke : keyColour(i), 'stroke-width' : chosen ? 1.6 : 1, class : 'chip'}, live).addEventListener('pointerdown', choose(i));
+    el('path', {d : path(runs[i].sent.map((v, st) => [X(st), IY(v)])) + ` L${R} ${I1} L${L} ${I1} Z`, fill : COLOUR.line, 'fill-opacity' : chosen ? .22 : 0, stroke : keyColour(i), 'stroke-width' : chosen ? 1.8 : 1, class : 'chip'}, live).addEventListener('pointerdown', choose(i));
     el('path', {d : `M${L} ${IY(k.gate)} H${R}`, stroke : keyColour(i), 'stroke-dasharray' : '4 3', 'stroke-width' : chosen ? 1.8 : 1.1}, live);
   });
-  el('path', {d : path(stim.map((v, st) => [X(st), IY(v)])), fill : 'none', stroke : WATER, 'stroke-width' : 2}, live);
+  el('path', {d : path(stim.map((v, st) => [X(st), IY(v)])), fill : 'none', stroke : WATER, 'stroke-width' : 1.3}, live);
   el('path', {d : `M${L} ${I0 - 2} V${I1} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
   txt(live, L - 4, I0 + 9, 'tief', {'text-anchor' : 'end'}); txt(live, L - 4, I1, 'flach', {'text-anchor' : 'end'});
   txt(live, L, I1 + 16, 'Schritte');
   for (const st of [STEPS / 3, 2 * STEPS / 3]) txt(live, X(st), I1 + 16, st, {'text-anchor' : 'middle'});
   txt(live, R, I1 + 16, STEPS, {'text-anchor' : 'end'});
-  play.lines[id] = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : I0, base : I1};
+  play.lines[id] = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : I0, base : I1, steps : STEPS};
 }
 // Life cycle: across, the fish's maturity; up, the filling. The line is the filling at which the
 // fish hovers with the groups of cells that work then: above it the fish rises, below it sinks;
@@ -1278,6 +1282,8 @@ function drawBladderLife() {
     el('path', {d : `M${x0} ${Y(hover)} H${x1}`, stroke : COLOUR.line, 'stroke-width' : 2}, live);
   }
   txt(live, R - 3, top + 11, 'steigt', {'text-anchor' : 'end'}); txt(live, R - 3, base - 4, 'sinkt', {'text-anchor' : 'end'});
+  // In the egg the bladder can fill, but nothing swims: that part stands dimmed.
+  el('rect', {x : L, y : top, width : X(BLADDER.hatch) - L, height : base - top, fill : COLOUR.track, opacity : .6, 'pointer-events' : 'none'}, live);
   el('path', {d : `M${X(BLADDER.hatch)} ${top} V${base + 5}`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3'}, live);
   el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
   // The groups' grips: in the picture where a group begins or ends in the midst of life (on the
@@ -1286,7 +1292,13 @@ function drawBladderLife() {
     const chosen = i === BL.chosen, until = Math.min(1, g.until), row = base - 7 - apart * i;
     const grip = (r, inside, name, move) => {
       const stepY = inside ? Math.min(base - 6, Math.max(top + 6, Y(Math.min(1, hoverAt(capacityAt(r + (name === 'blfrom' ? .001 : -.001))))))) : row;
-      drag(svg, el('rect', {x : (inside ? X(r) : name === 'blfrom' ? L - beside : R + beside) - 4, y : stepY - 5.5, width : 8, height : 11, rx : 2, style : `fill:${WATER};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2.5 : 1}`}, live),
+      const x = inside ? X(r) : name === 'blfrom' ? L - beside : R + beside;
+      // Beside the picture only the chosen group has its grip; the others a mark to choose them by.
+      if (!inside && !chosen) {
+        el('rect', {x : x - 3, y : stepY - 3, width : 6, height : 6, rx : 1.5, fill : WATER, opacity : .7, class : 'chip'}, live).addEventListener('pointerdown', () => { BL.chosen = i; draw(BLADDER_PARTS); });
+        return;
+      }
+      drag(svg, el('rect', {x : x - 4, y : stepY - 5.5, width : 8, height : 11, rx : 2, style : `fill:${WATER};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2.5 : 1}`}, live),
         p => { move(rOf(p.x)); BL.chosen = i; draw(BLADDER_PARTS); }, name + i);
     };
     grip(g.from, g.from > 0, 'blfrom', to => { g.from = to < whole ? 0 : Math.min(to, until - least); });
@@ -1317,7 +1329,8 @@ function showBladder() {
 // irritants at the nerve cells.
 function showMoment() {
   const now = id => inputAt(id, stepAt(id));
-  for (const [id, {line, x, top, base}] of Object.entries(play.lines)) line.setAttribute('d', `M${x(stepAt(id)).toFixed(1)} ${top} V${base}`);
+  // A picture that counts the clock's own steps says so; the others have their sense's or the tail's.
+  for (const [id, {line, x, top, base, steps}] of Object.entries(play.lines)) line.setAttribute('d', `M${x(steps ? play.step / STEPS * steps : stepAt(id)).toFixed(1)} ${top} V${base}`);
   // The bite swallowed now: its dot swells and settles; its star is what the cells send for what
   // is left of its flow.
   const turn = play.step / STEPS * play.reward.length, since = turn % 1;
