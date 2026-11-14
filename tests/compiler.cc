@@ -134,8 +134,10 @@ void shared_addresses_preserve_each_wire() {
   genome.development_seed = 1;
   genome.variation_seed = 2;
   genome.compile(false);
-  const auto checked = assess(plan, genome);
+  const auto checked = assess_circuit(plan, genome);
   assert(checked.ok() && checked.missing == 0 && checked.additional == 0);
+  const auto whole_fish = assess(plan, genome);
+  assert(whole_fish.issues.size() == 1 && whole_fish.issues.front().code == "size");
 }
 void assessment_checks_learning_and_every_cell() {
   auto plan = cells(1);
@@ -143,25 +145,25 @@ void assessment_checks_learning_and_every_cell() {
   fishsim::Genome genome;
   genome.cppn = Builder().build(plan);
   genome.compile(false);
-  assert(assess(plan, genome).ok() && genome.blueprint->neurons.size() == 4);
+  assert(assess_circuit(plan, genome).ok() && genome.blueprint->neurons.size() == 4);
   for (float Group::*property :
        {&Group::learning_tau, &Group::electrical_limit, &Group::teaching_limit}) {
     auto changed = plan;
     changed.groups[0].*property = .9f;
-    assert(!assess(changed, genome).ok());
+    assert(!assess_circuit(changed, genome).ok());
     changed.options.traitTolerance = .4f;
-    assert(assess(changed, genome).ok());
+    assert(assess_circuit(changed, genome).ok());
   }
   auto later = plan;
   later.groups[0].growth = {true, 0, 0};
-  assert(!assess(later, genome).ok());
+  assert(!assess_circuit(later, genome).ok());
   const auto rejects_last_cell = [&](auto change) {
     auto broken = genome;
     auto tissue = std::make_shared<field::Substrate>(*genome.blueprint);
     assert(tissue->neurons.front().group == tissue->neurons.back().group);
     change(tissue->neurons.back());
     broken.blueprint = tissue;
-    assert(!assess(plan, broken).ok());
+    assert(!assess_circuit(plan, broken).ok());
   };
   rejects_last_cell([](auto &cell) { cell.parameters.threshold = .9f; });
   rejects_last_cell([](auto &cell) { cell.parameters.learning_time = .9f; });
@@ -177,7 +179,7 @@ void inactive_growth_ignores_saved_settings() {
   fishsim::Genome genome;
   genome.cppn = Builder().build(plan);
   genome.compile(false);
-  assert(assess(plan, genome).ok());
+  assert(assess_circuit(plan, genome).ok());
   field::Hormones hormones;
   hormones.fill(1);
   assert(genome.blueprint->growth_receptor.occupancy(hormones) == 0);
@@ -195,7 +197,7 @@ void body_receptors_survive_compilation() {
     fishsim::Genome genome;
     genome.cppn = Builder().build(plan);
     genome.compile(false);
-    assert(assess(plan, genome).ok());
+    assert(assess_circuit(plan, genome).ok());
     const auto &cell = genome.blueprint->neurons.at(0);
     const double reserve = substance == field::RESERVE_SUBSTANCE ? .25 : 0;
     const double fatigue = substance == field::FATIGUE_SUBSTANCE ? .25 : 0;
@@ -212,7 +214,7 @@ void receptor_spread_checks_sensitive_cells() {
   fishsim::Genome genome;
   genome.cppn = Builder().build(plan);
   genome.compile(false);
-  assert(assess(plan, genome).ok());
+  assert(assess_circuit(plan, genome).ok());
   const auto &actual = genome.blueprint->neurons.back().hormone_receptors[field::Learning];
   assert(std::abs(actual.sensitivity) > .01f);
   const auto altered = [&](auto change, bool accepted) {
@@ -221,7 +223,7 @@ void receptor_spread_checks_sensitive_cells() {
     auto &receptor = tissue->neurons.back().hormone_receptors[field::Learning];
     change(receptor);
     changed.blueprint = tissue;
-    assert(assess(plan, changed).ok() == accepted);
+    assert(assess_circuit(plan, changed).ok() == accepted);
   };
   altered([](auto &r) { r.half = field::HORMONE_HALF_MAX; }, false);
   altered([](auto &r) { r.affinity.fill(1); }, false);
@@ -264,7 +266,7 @@ void property_overrides_reach_outputs() {
       fishsim::Genome genome;
       genome.cppn = Builder().build(plan);
       genome.compile(false);
-      assert(assess(plan, genome).ok());
+      assert(assess_circuit(plan, genome).ok());
       std::map<int, std::vector<int>> parents;
       for (const auto &edge : genome.cppn->get_connection_genes())
         if (edge.get_enabled())
@@ -524,7 +526,7 @@ int region_trace(const std::string &mode, std::uint64_t seed = 27139,
   fishsim::Genome genome;
   genome.cppn = Builder().build(plan);
   genome.compile(false);
-  assert(assess(plan, genome).ok());
+  assert(assess_circuit(plan, genome).ok());
   if (mode == "learn")
     return learning_trace(plan, genome, seed, sequence);
   if (mode == "value")
@@ -726,7 +728,7 @@ int main(int argc, char **argv) {
     first.development_seed = 17;
     first.variation_seed = 31;
     first.compile(false);
-    assert(assess(plan, first).ok());
+    assert(assess_circuit(plan, first).ok());
     auto same = first;
     same.compile(false);
     auto other = first;
@@ -794,7 +796,7 @@ int main(int argc, char **argv) {
     fishsim::Genome g;
     g.cppn = Builder().build(plan);
     g.compile(false);
-    assert(assess(plan, g).ok());
+    assert(assess_circuit(plan, g).ok());
   }
   {
     const auto original = fishsim::Genome::load(fishsim::EXAMPLE_GENOME);
@@ -973,7 +975,7 @@ int main(int argc, char **argv) {
   g.development_seed = 1;
   g.variation_seed = 2;
   g.compile(false);
-  const auto checked = assess(p, g);
+  const auto checked = assess_circuit(p, g);
   assert(checked.ok() && checked.additional == 0 && fit.evaluations > 0);
   // Budget boundaries cross preparation, query batches, copy draws, SCC traversal and SIMD
   // layout. Every split must keep both the immutable brain and mutation observations identical.
@@ -1035,25 +1037,25 @@ int main(int argc, char **argv) {
   fishsim::Genome leaky;
   leaky.cppn = Builder().build(broad);
   leaky.compile(false);
-  assert(!assess(broad, leaky).ok());
+  assert(!assess_circuit(broad, leaky).ok());
   auto tolerant = p;
   tolerant.groups[0].copies = 5;
-  assert(!assess(tolerant, g).ok());
+  assert(!assess_circuit(tolerant, g).ok());
   tolerant.options.capacityTolerance = .25f;
-  assert(assess(tolerant, g).ok());
+  assert(assess_circuit(tolerant, g).ok());
   auto traits = p;
   traits.groups[0].threshold = .1f;
-  assert(!assess(traits, g).ok());
+  assert(!assess_circuit(traits, g).ok());
   traits.options.traitTolerance = .05f;
-  assert(assess(traits, g).ok());
+  assert(assess_circuit(traits, g).ok());
   auto hormones = p;
   hormones.groups[0].receptors[field::Output].active = true;
   hormones.groups[0].receptors[field::Output].baseline = .5f;
-  assert(!assess(hormones, g).ok());
+  assert(!assess_circuit(hormones, g).ok());
   hormones.options.traitTolerance = .25f;
-  assert(assess(hormones, g).ok());
+  assert(assess_circuit(hormones, g).ok());
   p.connections.push_back({2, 3, 2, 0});
-  assert(!assess(p, g).ok());
+  assert(!assess_circuit(p, g).ok());
   std::cout << "Compiler: local traits, stable sites, weight bounds, planned contacts and their "
                "places passed\n";
 }

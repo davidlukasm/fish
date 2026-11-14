@@ -483,7 +483,7 @@ inline float trait_deviation(const Group &wanted, const field::Neuron &cell,
                                                          effect == field::Output ? 1.f : 0.f));
   return deviation;
 }
-inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
+inline Assessment assess_circuit(const Plan &p, const fishsim::Genome &g) {
   Assessment result;
   const auto &t = *g.blueprint;
   const int n = int(p.groups.size());
@@ -602,6 +602,13 @@ inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
     result.issues.push_back({"leakage", worstFrom, worstTo, result.leakage});
   if (t.resource_limited)
     result.issues.push_back({"resources"});
+  if (g.cppn->nodes() + p.options.reserve > fishsim::MAX_GROWING_NODES)
+    result.issues.push_back(
+        {"reserve", -1, -1, double(fishsim::MAX_GROWING_NODES - g.cppn->nodes())});
+  return result;
+}
+inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
+  auto result = assess_circuit(p, g);
   // A body that could never grow to the size it hatches at is mature before it forms its cells:
   // every answer to maturity is spent in the egg.
   if (g.interface) {
@@ -610,9 +617,6 @@ inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
     if (fishsim::tissue_capacity(grown) < fishsim::HATCH_TISSUE)
       result.issues.push_back({"size", -1, -1, fishsim::tissue_capacity(grown)});
   }
-  if (g.cppn->nodes() + p.options.reserve > fishsim::MAX_GROWING_NODES)
-    result.issues.push_back(
-        {"reserve", -1, -1, double(fishsim::MAX_GROWING_NODES - g.cppn->nodes())});
   return result;
 }
 }
