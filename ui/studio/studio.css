@@ -1373,3 +1373,4 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-tasterow{fill:var(--aid-chip);stroke:var(--aid-panel-edge);cursor:pointer}
 .aid-live-tasterow.on{stroke:var(--key);stroke-width:1.8}
 .aid-live-touched{fill:#f4efd8;opacity:.55}
+.aid-live-sense-offered{fill:none;stroke:currentColor;stroke-width:1.1;stroke-dasharray:2 3;opacity:.7}
