@@ -8,6 +8,7 @@ Davids aktuelle Rückmeldung zu allen Panels steht erklärt und mit Bildern in `
 
 **Die Engine zwingt nie allen Zellen ein Verhalten auf.** Spontane Aktivität, Härtung (Festigung), Hirnwachstum, Lernen, Bildung und Tod von Zellen laufen nur über Mechanismen, die erblich und dynamisch steuerbar sind: Zellantworten, Hormone, Modulatoren, Lebenszyklus der Zelle. Ein Organ setzt diese Mechanismen für seine eigenen Zellen ein, zum richtigen Zeitpunkt und mit dem richtigen Ablauf. Vorbild ist die Netzhaut: Ihre Wellen sind ein Mechanismus der Zelle, und ihre Reifeantwort beendet sie.
 
+- **Die Organe sind verantwortlich, dass vor dem Schlupf richtig verdrahtet wird (David 14.11. 01:57).** Lernen ist Hirnentwicklung, und alle Verbindungen beginnen bei 0. Jedes Organ sorgt selbst dafür, dass seine Zellen im Ei aktiv sind, damit ihre Bahnen wachsen. Es härtet diese Bahnen zum richtigen Zeitpunkt. Dafür nimmt es die vorhandenen Mittel: die Rhythmusantwort der Sinneszellen (Engine `8579edf5`), den Rhythmus der Nervenzellen, die Wellen der Netzhaut, Helferzellen mit Tod nach dem Schlupf, eigene Empfängerzellen mit Festigungsantwort. Ein Organentwurf ohne Antwort darauf, wie seine Zellen vor dem Schlupf lernen, ist unvollständig.
 - **Verboten:**
   - automatische Aktivität für alle Zellen einer Art, zum Beispiel Wellen für alle Sinneszellen,
   - automatische Festigung aller lernenden Zellen,
