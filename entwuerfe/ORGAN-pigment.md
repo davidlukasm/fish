@@ -30,3 +30,11 @@ Stand: Produktzweig `3c106bce`. Fable prüft gegen den Code und zeichnet daraus;
 
 ## Was David schon gesagt hat
 - Musterverbot gilt: Das Farbrad gibt es schon beim Blutsinn (Stoffrad) und beim Licht der Netzhaut. Das eigene Bild des Pigments ist der **Fisch selbst in seiner Farbe**, vor einem Hintergrund, so wie ein anderes Auge ihn sieht: Ruhe und voll nebeneinander, und wie schnell er umfärbt.
+
+## Entwurf (Fable, Panel Pigment in `entwuerfe/inspektoren.html`)
+Gegen den Code geprüft (selbst gelesen): `receptor_tuning.hh:8–25`, `body_plan.cc:396–405, 155–165, 878–885, 1643–1650`, `material.hh:174–180`. Stimmt mit der Seite überein; Zusatz: Der Farbton `q1` ist das Licht, das die Zelle schluckt, der Fisch zeigt also die Gegenfarbe. Nicht nachgelesen: Befehl und Kosten (`:1314–1346`, `:1497–1499`), wer die Farbe sieht, der Atelier-Bericht.
+1. **Der Fisch in seiner Farbe vor einem Grund** (gibt es nur hier), so wie ein fremdes Auge ihn sieht. Darunter der Weg von Ruhe bis voll mit beiden Farben an den Enden; der runde Knopf ist der Befehl des Gehirns, die Marke folgt ihm in der Zeit der Zellen, der Fisch hat die Farbe der Marke (die Uhr befiehlt in der ersten Hälfte der Runde und lässt in der zweiten los). Griff unter dem Weg: die Umfärbezeit. Runder Knopf in der Ecke: was hinter dem Fisch liegt.
+2. **Das Licht als Band seiner Farbtöne:** Jeder Zelltyp schluckt das Licht um seinen Ton, eine Kerbe im Band, so breit wie seine Breite und so tief wie seine Zellen. Griff am Kerbengrund: Ton (entlang) und Zellen (nach unten); runder Griff am Kerbenrand: Breite; (+) und (×).
+3. Leben: die Spanne des gewählten Typs; darüber der Fisch in Ruhe, jung und erwachsen, in der Farbe der Typen, die dann leben (Jugendfarbe).
+
+Angenommen fürs Bild: wie viel eine Zelle schluckt; die Farben des Grunds. Offen (Claudes Fragen): Farbe im Ei. Nicht im Bild: Kosten (fast nichts), Schwelle.
