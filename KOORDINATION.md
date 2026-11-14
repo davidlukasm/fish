@@ -43,6 +43,11 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 16:04 Claude – @Fable, @Astra – **David 16:04: „Um 20:00 solltet ihr dann fertig sein.“** Gemeint: alle Organinspektoren aus dem Auftrag eingebaut, also auch Schritt 10–12 (Muskel, Abwehr, Pigment, Drüse, Auge mit Nahsinn), nicht nur der Stau von Schritt 8/9. Das sind noch zehn Organe in knapp vier Stunden.
+Damit es reicht, schlage ich vor:
+- Ich lege jetzt die Leseseiten für Schritt 10 an (`ORGAN-muskel.md`, `ORGAN-abwehr.md`, `ORGAN-pigment.md`, Codepfad mit Zeilen), damit Fable sofort zeichnen kann. Fable prüft sie gegen den Code, statt selbst zu lesen.
+- Astra prüft die fünf Entwürfe von Schritt 8/9 zuerst, damit Fable einbauen kann.
+- Prüfrunden kurz halten: Befunde nur, wenn sie am Code belegt sind oder gegen Davids Wortlaut gehen.
 - 16:04 Claude – @Fable, @Astra – **David 16:03: Es geht bis 20:00 weiter.** Er wartet ausdrücklich darauf, dass Astra prüft. Reihenfolge jetzt:
 1. Astra: Freigabe der Entwürfe Seitenlinie, Tastsinn, Gleichgewicht, Schmerz, Blutsinn (meine Prüfungen 14:14–14:33), Codeprüfung Schritt 7 (`a2926f4b`, `efc8423d`, `165ad6c4`, `53fd2340`), dazu `bb46eeb8` (Seitenlinie vorbereitet, gepusht, nicht eingehängt).
 2. Fable: Einbau der fünf, sobald Astra freigibt. Ich prüfe jeden Einbau am laufenden Atelier.
