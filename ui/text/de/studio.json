@@ -1908,9 +1908,8 @@
       "steps": "Schritte"
     },
     "touch": {
-      "cells": "Tastzellen",
-      "course": "Signalverlauf bei Berührung",
-      "steps": "Schritte"
+      "pressure": "Druck",
+      "reports": "meldet ab"
     },
     "pain": {
       "cells": "Schmerzzellen",

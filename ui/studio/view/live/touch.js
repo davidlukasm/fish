@@ -14,7 +14,7 @@ import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
-import {clamp, drag, el, liveKind, path, picture} from './kit.js';
+import {clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {BOUNDED} from './sense.js';
 import {placeOf, sectorOf, wedge} from './skin.js';
 
@@ -22,15 +22,15 @@ const word = (key, values) => t('studio.live.touch.' + key, values);
 const pressureOf = impact => SKIN_RESPONSE.touch_rest + (1 - SKIN_RESPONSE.touch_rest) * impact /
                                                             (impact + SKIN_RESPONSE.touch_impact);
 const CUT = Object.freeze({
-  height : 150,
+  height : 236,
   L : 14,
   R : 286,
-  skin : 58,
-  deep : 30,
-  cells : 104,
-  thing : 10,
+  skin : 52,
+  deep : 110,
+  cells : 196,
+  thing : 11,
   dent : 20,
-  least : .08
+  least : .06
 });
 const turnTo = a => ((a + 540) % 360) - 180;
 
@@ -89,7 +89,7 @@ liveKind('touch', (studio, organId) => {
            live);
     });
     weights.forEach((v, k) => {
-      const x = X(turnTo(-180 + (k + .5) * 360 / count - place)), y = cells + .35 * dip(x);
+      const x = X(turnTo(-180 + (k + .5) * 360 / count - place)), y = cells;
       if (v <= 0) {
         el('circle', {cx : x, cy : y, r : 1.2, class : 'aid-live-rimdot'}, live);
         return;
@@ -98,7 +98,7 @@ liveKind('touch', (studio, organId) => {
       el('circle', {
         cx : x,
         cy : y,
-        r : 2 + 5 * v / most,
+        r : 3 + 6 * v / most,
         class : 'aid-live-petal k0',
         opacity : .45 + .55 * v / most
       },
@@ -107,7 +107,7 @@ liveKind('touch', (studio, organId) => {
         el('circle', {
           cx : x,
           cy : y,
-          r : 7 + 7 * clamp(heard),
+          r : 11 + 7 * clamp(heard),
           class : 'aid-live-glow k0',
           opacity : .25 + .5 * clamp(heard)
         },
@@ -115,20 +115,27 @@ liveKind('touch', (studio, organId) => {
     });
     drag(svg,
          el('circle',
-            {cx : X(Math.min(contactHalfAngle(cell.field ?? 0), 179)), cy : cells, r : 4.5}, live),
+            {cx : X(Math.min(contactHalfAngle(cell.field ?? 0), 179)), cy : cells, r : 5.5}, live),
          p => draft(updateCenter(studio.state.document, cell.id,
                                  {field : contactFieldOf(Math.abs(aOf(p.x)))})),
          'touchfield', 'grip', settle);
-    if (probe)
-      el('circle',
-         {cx : tx, cy : skin + pressure * deep - thing + 1, r : thing, class : 'aid-live-thing'},
-         live);
+    if (probe) {
+      const top = skin + pressure * deep - thing + 1;
+      el('circle', {cx : tx, cy : top, r : thing, class : 'aid-live-thing'}, live);
+      txt(live, tx, skin - 8, word('pressure'),
+          {'text-anchor' : 'middle', class : 'aid-live-small'});
+    }
+    // The threshold's grip at an end of the middle step, on the side away from the thing.
+    const away = probe && tx < X(0) ? 1 : -1, gx = X(0) + away * (2 * half + 6),
+          gy = skin + clamp(gate / most, CUT.least, 1) * deep;
+    txt(live, gx + away * 10, gy - 7, word('reports'),
+        {'text-anchor' : away > 0 ? 'start' : 'end', class : 'aid-live-small'});
     drag(svg,
          el('rect', {
-           x : X(0) - 4.5,
-           y : skin + clamp(gate / most, CUT.least, 1) * deep - 4.5,
-           width : 9,
-           height : 9,
+           x : gx - 5,
+           y : gy - 5,
+           width : 10,
+           height : 10,
            rx : 2.5,
            class : 'aid-live-keygrip k0 on'
          },
