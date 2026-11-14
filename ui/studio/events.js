@@ -366,6 +366,16 @@ export const FISH_CLICKS = Object.freeze([
     }
   ],
   [
+    '[data-vision-polarity]',
+    (studio, e) => {
+      const chosen = chosenField(studio);
+      if (!chosen)
+        return PASS;
+      const polarity = Number(e.dataset.visionPolarity);
+      studio.editField(chosen.organ.id, {profile : {id : chosen.profile.id, polarity}});
+    }
+  ],
+  [
     '[data-vision-remove]',
     studio => {
       const chosen = chosenField(studio);

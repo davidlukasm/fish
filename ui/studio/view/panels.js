@@ -69,7 +69,6 @@ import './live/pigment.js';
 import './live/fin.js';
 import './live/mouth.js';
 import './live/gland.js';
-import './live/eye.js';
 import './live/near.js';
 import {glandCommand} from './gland_effect.js';
 
@@ -136,7 +135,7 @@ const ORGAN_PANELS = Object.freeze({
   blood : (state, organ) => livePlace('blood', organ),
 });
 // The organs whose live inspector draws the cells' life itself.
-const LIVE_LIFE = new Set([...Object.keys(ORGAN_PANELS), 'eye', 'proximity' ]);
+const LIVE_LIFE = new Set([...Object.keys(ORGAN_PANELS), 'proximity' ]);
 const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
                                       icon(organ.type, ICON.metric) + '<span>' +
                                       escapeText(organTitle(organ)) + '</span></div>';

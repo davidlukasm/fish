@@ -1408,15 +1408,6 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-gland-mark.on{opacity:1;stroke:#f1dda6;stroke-width:1.2;cursor:default}
 .aid-live-grip.aid-live-gland-time{stroke:var(--aid-ink);stroke-width:1.5}
 .aid-live-drop{stroke:var(--aid-ground);stroke-width:.6}
-.aid-live-eye-field{fill:none;stroke:#f4efd8;stroke-width:1.6}
-.aid-live-eye-worth{fill:none;stroke:var(--key,#c2f5e9);stroke-width:1.4;opacity:.8}
-.aid-live-eye-level{fill:none;stroke:#f4efd8;stroke-width:3;stroke-linecap:round}
-.aid-live-eye-level.around{stroke:#e9e2c6;stroke-width:2;stroke-dasharray:5 3;stroke-linecap:butt}
-.aid-live-eye-gap{fill:none;stroke:#f4efd8;stroke-width:5}
-.aid-live-eye-gap.darker{stroke:#9cc8f0}
-.aid-live-eye-half{fill:none;stroke:#f1dda6;stroke-width:1.4}
 .aid-live-near-ring{fill:none;stroke:var(--key)}
 .aid-live-near-half{fill:none;stroke:#f1dda6;stroke-dasharray:3 3}
 .aid-live-near-thing{fill:#f08a4b}
-.aid-live-eye-column{fill:var(--channel);stroke:var(--channel);stroke-width:1.2}
-.aid-live-eye-column.darker{fill:none}
