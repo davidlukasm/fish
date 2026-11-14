@@ -72,6 +72,17 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Lebenszyklus</h4>
     <svg id="bladderlife"></svg>
   </section>
+  <section class="panel" aria-label="Kiemen">
+    <h2>Organ</h2><h3>Kiemen</h3>
+    <h4 id="gill-kind" class="first">Kiemen</h4>
+    <svg id="gills"></svg>
+    <h4>Reusen</h4>
+    <svg id="rakers"></svg>
+    <h4>Wasser durch die Kiemen</h4>
+    <svg id="gillwater"></svg>
+    <h4>Lebenszyklus</h4>
+    <svg id="gilllife"></svg>
+  </section>
 </main>
 <script>
 'use strict';
@@ -339,7 +350,7 @@ function repaint() {
   document.getElementById('tail-kind').textContent = T.wriggle > .5 ? 'Schlängler' : 'Schwanzschläger';
   for (const part of dirty) PAINT[part]();
   dirty.clear();
-  showMoment(); showNerves(0); showTail(0); showBladder();
+  showMoment(); showNerves(0); showTail(0); showBladder(); showGills(0);
 }
 
 // ===== What moves: one clock =====
@@ -1335,6 +1346,202 @@ function showBladder() {
   bladderFilm.arrow.setAttribute('d', !long ? '' : `M${ax} ${y} v${(dir * long).toFixed(1)} m-3.5 ${-dir * 4.5} l3.5 ${dir * 4.5} l3.5 ${-dir * 4.5}`);
 }
 
+// ===== The gills: what stays in the fish =====
+// Read in the engine (physiology.hh:345-370, 410-416; feeding.cc:535-601; protocol_schema.hh:
+// 2057-2063), for a body of the reference size with a jaw of middle length (mouth 2 wide):
+//   pump share   s = min(1, 2 F / (F + 110)), F the pump muscle's strength (0.1 a copy of a slow cell)
+//   pumped water   = 32 s x command x mouth opening
+//   met swimming   = 4 x speed x (opening - 0.35) / 0.65, nothing with the mouth at rest
+//   through the rakers goes the share 1 - 0.6 d of it (d the rakers' density)
+//   of its plankton stays 0.02 + 0.98 d^3; of the flocks in a mouthful of ground stays
+//   (1 - 0.85 (1 - d)^4) (1 - d^4); sand never stays; nothing stays while the gut is full.
+// A schema: the head is cut level and seen from above, the specks stand for food, not for water.
+const GILL = {force : 110, copy : .1, least : 16, most : 128, mouth : 32, ram : 4, rest : .35, cruise : .75, fastest : 1.5, hatch : .5, bare : .02, power : 3, drag : .6, slip : .85, sift : 4,
+              H : {height : 164, mid : 80, tip : 40, gape : 17, cheek : 116, half : 40, lid : 74, arch : [[182, 8], [124, 33]], throat : 182, gut : 254, sand : 36},
+              R : {L : 44, R : 264, top : 16, base : 86, height : 104},
+              W : {L : 44, R : 264, top : 16, base : 86, height : 106, most : 9},
+              LIFE : {L : 44, R : 264, top : 18, base : 88, icons : 106, height : 120, beside : 16, whole : .015, least : .08}};
+const GILL_PARTS = ['gills', 'rakers', 'gillwater', 'gilllife'];
+const GI = {rakers : .5, cells : 16, from : 0, until : 1, input : {open : .8, pump : 1, speed : .75, sand : 0, gut : .3, maturity : .8}};
+const SAND = '#c9b27c';
+const rakerKeeps = d => GILL.bare + (1 - GILL.bare) * d ** GILL.power, rakerPassage = d => 1 - GILL.drag * d,
+      rakerSifts = d => (1 - GILL.slip * (1 - d) ** GILL.sift) * (1 - d ** GILL.sift);
+const pumpShare = cells => { const f = cells * GILL.copy; return Math.min(1, 2 * f / (f + GILL.force)); };
+const pumpWorks = r => r >= GI.from && (GI.until >= 1 || r < GI.until);
+// The water through the gills, pumped and met while swimming, before the rakers brake it.
+const gillPumped = (cells = GI.cells, r = GI.input.maturity) => pumpWorks(r) ? GILL.mouth * pumpShare(cells) * GI.input.pump * GI.input.open : 0;
+const gillMet = () => GILL.ram * GI.input.speed * Math.max(0, GI.input.open - GILL.rest) / (1 - GILL.rest);
+const gillFilm = {lids : [], jaws : [], eyes : [], skin : null, specks : null, list : [], beat : 0};
+// The head's outline for one side (-1 above, 1 below): jaw, cheek; the gill cover is its own part.
+function buildGills(fixed) {
+  const {mid, tip, cheek, half, lid, throat, gut} = GILL.H;
+  gillFilm.skin = el('path', {fill : COLOUR.body}, fixed);
+  for (const side of [-1, 1]) {
+    // The body behind the gill slit, and the throat that leads on to the gut.
+    el('path', {d : `M${cheek + lid + 8} ${mid + side * (half - 6)} Q${256} ${mid + side * (half + 1)} 300 ${mid + side * (half - 5)}`, stroke : COLOUR.icon, 'stroke-width' : 1.6, fill : 'none'}, fixed);
+    el('path', {d : `M${throat} ${mid + side * 9} H${gut}`, stroke : COLOUR.tube, 'stroke-width' : 2.2}, fixed);
+    gillFilm.eyes[(side + 1) / 2] = el('circle', {r : 4.5, fill : COLOUR.icon, stroke : COLOUR.track, 'stroke-width' : 1.5}, fixed);
+    gillFilm.jaws[(side + 1) / 2] = el('path', {stroke : COLOUR.icon, 'stroke-width' : 1.6, fill : 'none', 'stroke-linecap' : 'round'}, fixed);
+    gillFilm.lids[(side + 1) / 2] = el('path', {stroke : COLOUR.icon, 'stroke-width' : 1.6, fill : 'none', 'stroke-linecap' : 'round'}, fixed);
+  }
+  gillFilm.specks = el('g', {}, fixed);
+}
+// Where the raker `k` of `n` stands on its side's arch.
+const rakerAt = (k, n, side) => { const [[x0, y0], [x1, y1]] = GILL.H.arch, t = (k + .5) / n; return [x0 + (x1 - x0) * t, GILL.H.mid + side * (y0 + (y1 - y0) * t)]; };
+const rakerCount = d => 3 + Math.round(11 * d);
+function drawGills() {
+  const {svg, under, live} = picture('gills', GILL.H.height, buildGills), {mid, tip, gape, cheek, half, lid, arch, throat, gut} = GILL.H, d = GI.rakers, inp = GI.input, n = rakerCount(d);
+  document.getElementById('gill-kind').textContent = d < .25 ? 'Offene Kiemen' : d < .72 ? 'Siebt den Grund' : 'Planktonfilter';
+  // Sand before the mouth: the fish noses into the ground.
+  if (inp.sand > 0) {
+    const edge = (GILL.H.tip + 4) * inp.sand, hash = i => { const v = Math.sin(i * 127.1) * 43758.5453; return v - Math.floor(v); };
+    el('path', {d : `M0 0 H${edge} Q${edge + 5} ${GILL.H.height / 4} ${edge} ${GILL.H.height / 2} T${edge} ${GILL.H.height} H0 Z`, fill : SAND, opacity : .3}, under);
+    for (let i = 0; i < 70; i++) el('circle', {cx : hash(i) * edge, cy : hash(i + 500) * GILL.H.height, r : .9 + hash(i + 900), fill : SAND, opacity : .75}, under);
+  }
+  for (const side of [-1, 1]) {
+    // The arch and its rakers: teeth into the mouth's room, the denser the more of them.
+    el('path', {d : `M${arch[0][0]} ${mid + side * arch[0][1]} L${arch[1][0]} ${mid + side * arch[1][1]}`, stroke : COLOUR.sore, 'stroke-width' : 2.4, 'stroke-linecap' : 'round'}, live);
+    for (let k = 0; k < n; k++) { const [x, y] = rakerAt(k, n, side); el('path', {d : `M${x} ${y} l-9 ${-side * 6}`, stroke : COLOUR.line, 'stroke-width' : 1.3, 'stroke-linecap' : 'round'}, live); }
+    // The pump muscle on the cover: the stronger, the thicker.
+    el('path', {d : `M${cheek + 8} ${mid + side * (half + 7)} H${cheek + lid - 22}`, stroke : COLOUR.muscle, 'stroke-width' : 2 + 7 * Math.sqrt((GI.cells - GILL.least) / (GILL.most - GILL.least)), 'stroke-linecap' : 'round', opacity : pumpWorks(inp.maturity) ? 1 : .3}, under);
+  }
+  // The gut behind the throat, as full as it is; nothing more goes in when it is full.
+  const g0 = gut, g1 = 292, top = mid - 16, base = mid + 16, level = base - (base - top) * inp.gut;
+  el('rect', {x : g0, y : top, width : g1 - g0, height : base - top, rx : 7, fill : COLOUR.stomachBack, stroke : COLOUR.stomachEdge, 'stroke-width' : 1.4}, live);
+  el('rect', {x : g0 + 1.5, y : level, width : g1 - g0 - 3, height : base - level, rx : 4, fill : COLOUR.stomach}, live);
+  drag(svg, el('circle', {cx : (g0 + g1) / 2, cy : level, r : 5.5, fill : COLOUR.stomachEdge}, live), p => { inp.gut = clamp((base - p.y) / (base - top), 0, 1); draw(GILL_PARTS); }, 'gillgut', 'knob');
+  // What the organ is: the rakers' density on the arch, the pump muscle's size on the cover.
+  const [gx, gy] = [arch[0][0] + (arch[1][0] - arch[0][0]) * (.15 + .7 * d), mid - (arch[0][1] + (arch[1][1] - arch[0][1]) * (.15 + .7 * d))];
+  drag(svg, el('rect', {x : gx - 4, y : gy - 5.5, width : 8, height : 11, rx : 2, style : `fill:${COLOUR.sore}`}, live), p => { GI.rakers = clamp(((arch[0][0] - p.x) / (arch[0][0] - arch[1][0]) - .15) / .7, 0, 1); draw(GILL_PARTS); }, 'rakers');
+  const my = mid - half - 9 - 14 * (GI.cells - GILL.least) / (GILL.most - GILL.least);
+  drag(svg, el('rect', {x : cheek + 22, y : my - 4, width : 11, height : 8, rx : 2, style : `fill:${COLOUR.muscle}`}, live), p => { GI.cells = Math.round(clamp(GILL.least + (mid - half - 9 - p.y) / 14 * (GILL.most - GILL.least), GILL.least, GILL.most)); draw(GILL_PARTS); }, 'pumpsize');
+  // What the organ is given: how wide the mouth stands open (the jaw's muscle), how hard the
+  // pump is told to beat, whether the mouth is in the ground.
+  drag(svg, el('circle', {cx : tip, cy : mid + 3 + gape * inp.open, r : 5.5, fill : COLOUR.line}, live), p => { inp.open = clamp((p.y - mid - 3) / gape, 0, 1); draw(GILL_PARTS); }, 'gillopen', 'knob');
+  drag(svg, el('circle', {cx : cheek + lid - 4, cy : mid + half + 6 + 12 * inp.pump, r : 5.5, fill : COLOUR.line}, live), p => { inp.pump = clamp((p.y - mid - half - 6) / 12, 0, 1); draw(GILL_PARTS); }, 'gillpump', 'knob');
+  const sx = Math.max(8, (tip + 4) * inp.sand);
+  drag(svg, el('circle', {cx : sx, cy : GILL.H.height - 12, r : 5.5, fill : SAND}, live), p => { inp.sand = clamp(p.x / (tip + 4), 0, 1); draw(GILL_PARTS); }, 'gillsand', 'knob');
+  txt(live, sx + 9, GILL.H.height - 8, 'Sand', {style : 'font-size:10px'});
+  txt(live, (g0 + g1) / 2, base + 13, 'Darm', {'text-anchor' : 'middle', style : 'font-size:10px'});
+}
+// What a mouthful brings at this moment: specks a second, and what share of each kind stays.
+function gillStream() {
+  const inp = GI.input, d = GI.rakers, water = (gillPumped() + gillMet()) * rakerPassage(d), fed = inp.maturity >= GILL.hatch && inp.gut < 1, ground = inp.sand >= 1 && inp.open > GILL.rest;
+  return {water, ground, kinds : [{colour : FOOD[3][2], rate : water, keeps : fed ? rakerKeeps(d) : 0},
+                                  {colour : FOOD[2][2], rate : ground ? 1.2 : 0, keeps : fed ? rakerSifts(d) : 0}, {colour : SAND, rate : ground ? 1.6 : 0, keeps : 0}]};
+}
+// The head at this moment: the mouth as wide as it is held, the covers at their stroke, and the
+// specks on their way: those the rakers keep stay on a tooth and go down the throat, the others
+// leave under the cover.
+function showGills(dt) {
+  if (!gillFilm.specks) return;
+  const {mid, tip, gape, cheek, half, lid, arch, throat, gut, height} = GILL.H, inp = GI.input, s = pumpWorks(inp.maturity) ? pumpShare(GI.cells) : 0, n = rakerCount(GI.rakers);
+  gillFilm.beat = (gillFilm.beat + dt / 900) % 1;
+  const lift = inp.pump * (3 + 16 * Math.sqrt(s)) * (s > 0 ? Math.max(0, Math.sin(2 * Math.PI * gillFilm.beat)) : 0), open = 3 + gape * inp.open;
+  const jaw = side => `${tip} ${mid + side * open} Q${tip + 40} ${mid + side * (half - 4)} ${cheek} ${mid + side * half}`,
+        cover = side => `Q${cheek + lid / 2} ${mid + side * (half + 5 + lift / 2)} ${cheek + lid} ${mid + side * (half - 2 + lift)}`;
+  for (const side of [-1, 1]) {
+    gillFilm.jaws[(side + 1) / 2].setAttribute('d', 'M' + jaw(side));
+    gillFilm.lids[(side + 1) / 2].setAttribute('d', `M${cheek} ${mid + side * half} ` + cover(side));
+    gillFilm.eyes[(side + 1) / 2].setAttribute('cx', .25 * tip + .5 * (tip + 40) + .25 * cheek); gillFilm.eyes[(side + 1) / 2].setAttribute('cy', mid + side * (.25 * open + .5 * (half - 4) + .25 * half));
+  }
+  // The skin: the head with its mouth's room, closed behind by the body.
+  gillFilm.skin.setAttribute('d', `M${jaw(-1)} ${cover(-1)} L${cheek + lid + 8} ${mid - half + 6} Q256 ${mid - half - 1} 300 ${mid - half + 5} V${mid + half - 5} Q256 ${mid + half + 1} ${cheek + lid + 8} ${mid + half - 6} L${cheek + lid} ${mid + half - 2 + lift} Q${cheek + lid / 2} ${mid + half + 5 + lift / 2} ${cheek} ${mid + half} Q${tip + 40} ${mid + half - 4} ${tip} ${mid + open} Z`);
+  const stream = gillStream();
+  gillFilm.due += dt / 1000;
+  for (const kind of stream.kinds) {
+    if (Math.random() < kind.rate * 1.1 * dt / 1000) {
+      const side = Math.random() < .5 ? -1 : 1, kept = Math.random() < kind.keeps, k = Math.floor(Math.random() * n), [rx, ry] = rakerAt(k, n, side);
+      const start = [tip - 26, mid + side * Math.random() * open * .8], inside = [tip + 44, mid + side * (4 + Math.random() * 14)];
+      // Kept: onto a tooth, a rest there, along the arch into the throat. Not kept: between the teeth and out under the cover.
+      const way = kept ? [start, inside, [rx - 8, ry - side * 5], [rx - 8, ry - side * 5], [throat, mid + side * 4], [gut + 6, mid]]
+                       : [start, inside, [rx - 4, ry - side * 3], [rx + 14, ry + side * 10], [cheek + lid + 6, mid + side * (half + 4)], [304, mid + side * (half + 14)]];
+      gillFilm.list.push({way, at : 0, colour : kind.colour, dot : el('circle', {r : kind.colour === SAND ? 1.6 : 2.4, fill : kind.colour}, gillFilm.specks)});
+    }
+  }
+  const pace = (.35 + .1 * Math.sqrt(stream.water)) * dt / 1000;
+  gillFilm.list = gillFilm.list.filter(p => {
+    p.at += pace * (p.way[2][0] === p.way[3][0] && p.at >= 2 && p.at < 3 ? .6 : 1) * 5 / 2;
+    if (p.at >= 5) { p.dot.remove(); return false; }
+    const i = Math.floor(p.at), f = p.at - i, a = p.way[i], b = p.way[i + 1];
+    p.dot.setAttribute('cx', (a[0] + (b[0] - a[0]) * f).toFixed(1)); p.dot.setAttribute('cy', (a[1] + (b[1] - a[1]) * f).toFixed(1));
+    return true;
+  });
+}
+// What stays in the fish over the rakers' density: of the plankton in the water at the mouth
+// (less water passes dense rakers, more of its plankton stays), and of the flocks in the ground.
+function drawRakers() {
+  const {svg, live} = picture('rakers', GILL.R.height), {L, R, top, base} = GILL.R, d = GI.rakers;
+  const X = v => L + (R - L) * v, Y = v => base - (base - top) * v, kinds = [[FOOD[3][2], 'Plankton', v => rakerPassage(v) * rakerKeeps(v)], [FOOD[2][2], 'Flocken im Sand', rakerSifts]];
+  el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+  txt(live, L, base + 13, 'offen'); txt(live, R, base + 13, 'dicht', {'text-anchor' : 'end'}); txt(live, L - 4, top + 8, 'bleibt', {'text-anchor' : 'end'});
+  el('path', {d : `M${X(d)} ${top} V${base}`, stroke : COLOUR.line, 'stroke-dasharray' : '3 3', 'stroke-width' : 1.2}, live);
+  kinds.forEach(([colour, word, of], i) => {
+    el('path', {d : path(Array.from({length : 61}, (_, k) => [X(k / 60), Y(of(k / 60))])), stroke : colour, 'stroke-width' : 2, fill : 'none'}, live);
+    el('circle', {cx : X(d), cy : Y(of(d)), r : 3, fill : colour}, live);
+    // The higher value's number stands above its dot, the lower one's below.
+    const upper = of(d) >= kinds[1 - i][2](d) && (i || of(d) > kinds[1][2](d));
+    txt(live, X(d) + (d > .7 ? -7 : 7), Y(of(d)) + (upper || Y(of(d)) > base - 14 ? -5 : 13), `${Math.round(100 * of(d))} %`, {'text-anchor' : d > .7 ? 'end' : 'start', fill : colour});
+    el('circle', {cx : L + 42 + 58 * i, cy : base + 9.5, r : 3, fill : colour}, live); txt(live, L + 48 + 58 * i, base + 13, word, {style : 'font-size:10px'});
+  });
+  drag(svg, el('rect', {x : X(d) - 4, y : top - 5.5, width : 8, height : 11, rx : 2, style : `fill:${COLOUR.sore}`}, live), p => { GI.rakers = clamp((p.x - L) / (R - L), 0, 1); draw(GILL_PARTS); }, 'rakerline');
+}
+// The water through the gills: below what the fish meets while it swims with its mouth open,
+// on it what the covers pump, over the pump muscle's size. The rakers brake both.
+function drawGillWater() {
+  const {svg, under, live} = picture('gillwater', GILL.W.height), {L, R, top, base, most} = GILL.W, pass = rakerPassage(GI.rakers), met = gillMet() * pass;
+  const X = c => L + (R - L) * (c - GILL.least) / (GILL.most - GILL.least), Y = v => base - (base - top) * clamp(v / most, 0, 1), sum = c => met + gillPumped(c) * pass;
+  const line = Array.from({length : 57}, (_, k) => { const c = GILL.least + 2 * k; return [X(c), Y(sum(c))]; });
+  el('path', {d : `M${L} ${Y(met)} H${R} V${base} H${L} Z`, fill : COLOUR.line, opacity : .1}, under);
+  el('path', {d : path(line) + ` L${R} ${Y(met)} L${L} ${Y(met)} Z`, fill : COLOUR.muscle, opacity : .55}, under);
+  el('path', {d : path(line), stroke : COLOUR.line, 'stroke-width' : 1.6, fill : 'none'}, live);
+  el('path', {d : `M${L} ${Y(met)} H${R}`, stroke : COLOUR.line, 'stroke-dasharray' : '3 3', 'stroke-width' : 1}, live);
+  el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+  txt(live, L - 4, top + 8, 'Wasser', {'text-anchor' : 'end'});
+  txt(live, L, base + 13, 'schwacher'); txt(live, (L + R) / 2, base + 13, 'Pumpmuskel', {'text-anchor' : 'middle'}); txt(live, R, base + 13, 'starker', {'text-anchor' : 'end'});
+  // The word stands over the curve, on the side away from the grip.
+  const far = GI.cells > (GILL.least + GILL.most) / 2 ? GILL.least + (GILL.most - GILL.least) / 4 : GILL.least + 3 * (GILL.most - GILL.least) / 4;
+  txt(live, X(far), Y(sum(far)) - 6, 'gepumpt', {'text-anchor' : 'middle', style : 'font-size:10px'});
+  if (Y(met) < base - 12) txt(live, L + 5, Y(met) + 11, 'beim Schwimmen', {style : 'font-size:10px'});
+  drag(svg, el('rect', {x : X(GI.cells) - 4, y : Y(sum(GI.cells)) - 5.5, width : 8, height : 11, rx : 2, style : `fill:${COLOUR.muscle}`}, live), p => { GI.cells = Math.round(clamp(GILL.least + (p.x - L) / (R - L) * (GILL.most - GILL.least), GILL.least, GILL.most)); draw(GILL_PARTS); }, 'pumpcurve');
+  // How fast the fish swims: the knob on the line of the water it meets.
+  const yOfSpeed = v => Y(GILL.ram * v * Math.max(0, GI.input.open - GILL.rest) / (1 - GILL.rest) * pass);
+  drag(svg, el('circle', {cx : R, cy : Y(met), r : 5.5, fill : COLOUR.line}, live), p => { const full = base - yOfSpeed(GILL.fastest); GI.input.speed = full > 0 ? clamp((base - p.y) / full, 0, 1) * GILL.fastest : GI.input.speed; draw(GILL_PARTS); }, 'gillspeed', 'knob');
+}
+// The pump over the fish's life: from what maturity its cells work and at what they die. The
+// rakers stay as they are. In the egg the covers can beat, but the fish eats nothing.
+function buildGillLife(fixed) {
+  const {L, R, top, icons} = GILL.LIFE, hatch = L + (R - L) * GILL.hatch, arrow = {stroke : COLOUR.icon, 'stroke-width' : 1.3, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'};
+  txt(fixed, L, top - 4, 'Wasser');
+  el('ellipse', {cx : L + 8, cy : icons, rx : 6, ry : 5, fill : 'none', stroke : COLOUR.icon, 'stroke-width' : 1.4}, fixed);
+  el('circle', {cx : L + 8, cy : icons, r : 1.8, fill : COLOUR.icon}, fixed);
+  fishIcon(fixed, hatch, icons, AGE_SIZE.young, COLOUR.icon); fishIcon(fixed, R - 36, icons, AGE_SIZE.grown, COLOUR.icon);
+  el('path', {d : `M${L + 22} ${icons} H${hatch - 16} m-6 -3.5 l6 3.5 l-6 3.5 M${hatch + 18} ${icons} H${R - 60} m-6 -3.5 l6 3.5 l-6 3.5`, ...arrow}, fixed);
+}
+function drawGillLife() {
+  const {svg, under, live} = picture('gilllife', GILL.LIFE.height, buildGillLife), {L, R, top, base, beside, whole, least} = GILL.LIFE, pass = rakerPassage(GI.rakers), until = Math.min(1, GI.until);
+  const X = r => L + (R - L) * clamp(r, 0, 1), rOf = x => clamp((x - L) / (R - L), 0, 1), Y = v => base - (base - top) * clamp(v / GILL.W.most, 0, 1);
+  // In the egg nothing is met swimming; the covers' own water stands there dimmed.
+  const level = r => ((r >= GILL.hatch ? gillMet() : 0) + gillPumped(GI.cells, r)) * pass;
+  el('rect', {x : L, y : top, width : R - L, height : base - top, fill : COLOUR.track}, under);
+  const cuts = [...new Set([0, GILL.hatch, GI.from, until, 1])].sort((a, b) => a - b), line = [];
+  for (let i = 0; i + 1 < cuts.length; i++) { const v = level((cuts[i] + cuts[i + 1]) / 2); line.push([X(cuts[i]), Y(v)], [X(cuts[i + 1]), Y(v)]); }
+  el('path', {d : path(line) + ` L${R} ${base} L${L} ${base} Z`, fill : COLOUR.muscle, opacity : .4}, under);
+  el('path', {d : path(line), stroke : COLOUR.line, 'stroke-width' : 2, fill : 'none', 'stroke-linejoin' : 'round'}, live);
+  el('rect', {x : L, y : top, width : X(GILL.hatch) - L, height : base - top, fill : COLOUR.track, opacity : .6, 'pointer-events' : 'none'}, live);
+  el('path', {d : `M${X(GILL.hatch)} ${top} V${base + 5}`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3'}, live);
+  el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+  const grip = (r, inside, name, move) => {
+    const x = inside ? X(r) : name === 'gillfrom' ? L - beside : R + beside, y = inside ? clamp(Y(level(r + (name === 'gillfrom' ? .001 : -.001))), top + 6, base - 6) : base - 7;
+    drag(svg, el('rect', {x : x - 4, y : y - 5.5, width : 8, height : 11, rx : 2, style : `fill:${COLOUR.muscle}`}, live), p => { move(rOf(p.x)); draw(GILL_PARTS); }, name);
+  };
+  grip(GI.from, GI.from > 0, 'gillfrom', to => { GI.from = to < whole ? 0 : Math.min(to, until - least); });
+  grip(until, until < 1, 'gilluntil', to => { GI.until = to > 1 - whole ? 1 : Math.max(to, GI.from + least); });
+  const r = GI.input.maturity;
+  el('path', {d : `M${X(r)} ${top} V${base}`, stroke : COLOUR.line, 'stroke-dasharray' : '2 4', 'stroke-width' : 1.2}, live);
+  drag(svg, el('circle', {cx : X(r), cy : Y(level(r)), r : 5.5, fill : COLOUR.line}, live), p => { GI.input.maturity = rOf(p.x); draw(GILL_PARTS); }, 'gillmaturity', 'knob');
+}
+
 // ===== The clock =====
 // Shows the present moment: the lines, what the holders hold, the keys the input has passed, what
 // irritants at the nerve cells.
@@ -1432,7 +1639,7 @@ function tick(now) {
   const dt = play.last ? Math.min(50, now - play.last) : 16; play.last = now;
   // The clock stands while the grip that rides on the bladder's fish is held.
   if (held?.name !== 'sacsize') play.step = (play.step + dt * STEPS / ROUND_MS) % STEPS;
-  showMoment(); showGut(dt); showNerves(dt); showTail(dt); showBladder();
+  showMoment(); showGut(dt); showNerves(dt); showTail(dt); showBladder(); showGills(dt);
 }
 
 // ===== Everything from the model =====
@@ -1440,9 +1647,10 @@ function tick(now) {
 const PRESETS = [['Räuber', .6, 0, 0], ['Planktonfresser', .8, 0, 0], ['Allesfresser', 1.6, 0, 0], ['Algenfresser', 3.4, 0, 0], ['Pflanzenfresser', 4, 0, 0], ['Jung Plankton, dann Blatt', 3, 1, 0]];
 choiceList(document.getElementById('presets'), 'Vorlage', PRESETS.map(p => p[0]), i => { const [, length, young, grown] = PRESETS[i]; Object.assign(S, {length, young, grown}); draw(); });
 const PAINT = {fish : drawFish, yield : drawYield, bars : drawBars, life : drawLife, full : () => drawSense('full'), ache : () => drawSense('ache'), feed : drawReward, tail : drawTail, tailforce : drawTailForce, tailspeed : drawTailSpeed, taillife : drawTailLife,
-               bladder : drawBladder, bladderfill : drawBladderFill, depth : drawDepth, bladderlife : drawBladderLife};
+               bladder : drawBladder, bladderfill : drawBladderFill, depth : drawDepth, bladderlife : drawBladderLife,
+               gills : drawGills, rakers : drawRakers, gillwater : drawGillWater, gilllife : drawGillLife};
 // The senses first: the fish's stomach follows the fullness input.
-for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife']) dirty.add(part);
+for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS]) dirty.add(part);
 repaint();
 showGut(0);
 // Nothing moves while the panel is off the screen, or for someone who has asked for less motion:
