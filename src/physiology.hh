@@ -49,7 +49,7 @@ inline double muscle_upkeep(double maintenance, double tissue, const PhysiologyP
          std::clamp(tissue / BODY_TISSUE, 0., MAX_TISSUE / BODY_TISSUE);
 }
 double maternal_reserve(const Body &, double adult_reserve);
-double development_energy(const Genome &, const PhysiologyParameters &, double yolk);
+double development_energy(const Genome &, double neural_cost, double hatch_tissue);
 inline double bounded_filling(double content, double capacity) {
   return capacity > 0 ? std::clamp(content / capacity, 0., 1.) : content > 0 ? 1. : 0.;
 }
@@ -428,16 +428,10 @@ void advance_mouth(Body &, bool pump_started, bool bite_started, double pump_ste
                    double bite_steps);
 double stored_energy(const Body &);
 void empty_stores(Body &);
-// Every body hatches at the same share of its grown size, HATCH_TISSUE of the reference body's
-// tissue capacity, so that its maturity at hatching is the same whatever the egg held. A body
-// below the reference organ mass hatches at HATCH_TISSUE and so more mature.
-inline double hatch_tissue(double organ_mass, double organ_mass_ref) {
-  return std::min(MAX_TISSUE,
-                  HATCH_TISSUE *
-                      std::max(1., organ_mass / std::max(tolerance::negligible, organ_mass_ref)));
-}
-inline double hatch_tissue(const Genome &g, const PhysiologyParameters &p) {
-  return hatch_tissue(g.interface ? g.interface->organ_mass : 0, p.organ_mass_ref);
+// Excess hatch funding becomes tissue instead of overflowing a tiny reserve.
+inline double hatch_tissue(double energy) {
+  return std::clamp(std::min(energy - HATCH_RESERVE, energy / (1 + ADULT_RESERVE / BODY_TISSUE)),
+                    HATCH_TISSUE, MAX_TISSUE);
 }
 inline double birth_exposure(const Body &b, double tau) {
   if (!b.hatched)
@@ -447,9 +441,8 @@ inline double birth_exposure(const Body &b, double tau) {
 double hatch_search_reserve(const Body &);
 void advance_embryo(Body &, const Genome &, const PhysiologyParameters &, bool = false);
 void mature_body(Body &);
-void draw_yolk_sac(Body &);
 std::optional<double> predicted_hatch_reserve(const Body &, const Genome &, double neural_cost = 1);
-double predicted_hatch_radius(const Body &, const Genome &);
+double predicted_hatch_radius(const Body &, const Genome &, double neural_cost = 1);
 void maintain_body(Body &, bool protected_life = false);
 double take_nutrition(Body &, double amount, const Fodder &, const PhysiologyParameters &);
 inline double take_nutrition(Body &b, double amount, int source = 0,

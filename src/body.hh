@@ -37,9 +37,7 @@ struct MouthState {
 };
 struct EmbryoState {
   // spent: energy used up before hatching (upkeep, brain, construction, motor work), not tissue.
-  // yolk_sac: what the egg held beyond the hatchling's full reserve.
-  double target_tissue = 0, shell = 1, secretion = 0, pending = 0, pressure = 0, spent = 0,
-         yolk_sac = 0;
+  double target_tissue = 0, shell = 1, secretion = 0, pending = 0, pressure = 0, spent = 0;
   std::array<double, BODY_SECTORS> touch{}, flow{};
 };
 struct BodyState {

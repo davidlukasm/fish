@@ -155,7 +155,7 @@ int Ecosystem::insert_group(SupportGroup &job, Point anchor) {
     return 0;
   members.resize(count);
   for (auto &member : members) {
-    auto energy = funded_egg_energy(member.candidate, physiology_, evo.yolk);
+    auto energy = funded_egg_energy(member.candidate, physiology_.neural_cost, evo.yolk);
     if (!energy)
       return -1;
     member.energy = *energy;
@@ -202,7 +202,8 @@ int Ecosystem::insert_group(SupportGroup &job, Point anchor) {
     if (p.body.alive && !p.nutrient_egg)
       occupied.push_back(
           {{p.body.x, p.body.y},
-           std::max(collision_radius(p.body), predicted_hatch_radius(p.body, p.genome))});
+           std::max(collision_radius(p.body),
+                    predicted_hatch_radius(p.body, p.genome, physiology_.neural_cost))});
   std::vector<double> radii;
   double spread = GROUP_SPREAD;
   for (const auto &member : members) {
@@ -210,7 +211,8 @@ int Ecosystem::insert_group(SupportGroup &job, Point anchor) {
     embryo.energy = member.energy;
     embryo.prepare(member.candidate);
     const double radius =
-        std::max(collision_radius(embryo), predicted_hatch_radius(embryo, member.candidate));
+        std::max(collision_radius(embryo),
+                 predicted_hatch_radius(embryo, member.candidate, physiology_.neural_cost));
     radii.push_back(radius);
     spread = std::max(spread, GROUP_SPREAD_RADII * radius * std::sqrt(double(count)));
   }
@@ -394,7 +396,7 @@ void Ecosystem::restore_population() {
       job.source = support_.reserve[rng.index(int(support_.reserve.size()))];
     else
       job.source = support_.founder;
-    if (!job.source.blueprint || !funded_egg_energy(job.source, physiology_, evo.yolk))
+    if (!job.source.blueprint || !funded_egg_energy(job.source, physiology_.neural_cost, evo.yolk))
       continue;
     const int spot = (first + batch) % spots;
     Point site = spot < int(feeders.size()) ? Point{feeders[spot].x, feeders[spot].y}

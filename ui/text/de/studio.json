@@ -1276,7 +1276,6 @@
       "missing": "Geplanter Eingang fehlt",
       "leakage": "Empfangsbereiche überlappen unerlaubte Sender",
       "resources": "Entwicklung durch Ressourcenlimit begrenzt",
-      "size": "Ausgewachsen kleiner als beim Schlupf",
       "reserve": "Zu wenig Genomreserve"
     },
     "cancel": "Abbrechen",

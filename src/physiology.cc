@@ -79,11 +79,11 @@ double minimum_egg_energy(const Genome &g, const PhysiologyParameters &p, int in
   auto stage = embryo_construction_template(g);
   if (!stage.viable())
     return ENERGY_MAX;
-  const double hatch = hatch_tissue(g, p);
-  double energy = hatch + HATCH_RESERVE_FRACTION * reserve_capacity_for_tissue(hatch) +
+  double energy = HATCH_TISSUE +
+                  HATCH_RESERVE_FRACTION * reserve_capacity_for_tissue(HATCH_TISSUE) +
                   g.blueprint->queries / QUERY_ENERGY_DIVISOR;
   for (int step = 0, steps = std::max(stage.work_ticks(), incubation_steps); step < steps; ++step) {
-    const double tissue = hatch * stage.work_fraction();
+    const double tissue = HATCH_TISSUE * stage.work_fraction();
     energy += basal_cost(tissue, p) + muscle_upkeep(g.interface->muscle_maintenance, tissue, p);
     stage.advance();
     energy += stage.running_cost() * p.neural_cost;
@@ -93,12 +93,10 @@ double minimum_egg_energy(const Genome &g, const PhysiologyParameters &p, int in
 double egg_energy_needed(const Body &parent, const Genome &g, const PhysiologyParameters &p) {
   // Embryos also move and learn before they hatch; the parent's own incubation shows that cost.
   const double observed =
-      parent.hatch_age > 0
-          ? parent.birth_tissue + hatch_search_reserve(parent) + parent.embryo.spent
-          : 0;
+      parent.hatch_age > 0 ? HATCH_TISSUE + hatch_search_reserve(parent) + parent.embryo.spent : 0;
   return std::max(minimum_egg_energy(g, p, parent.hatch_age), observed);
 }
-double development_energy(const Genome &g, const PhysiologyParameters &p, double yolk) {
+double development_energy(const Genome &g, double scale, double yolk) {
   const double upkeep = g.interface ? g.interface->muscle_maintenance : 0;
   const auto estimate = [&] {
     if (g.blueprint)
@@ -108,10 +106,10 @@ double development_energy(const Genome &g, const PhysiologyParameters &p, double
     return field::EmbryoConstruction(n, std::min(o.max_edges, n * n));
   }();
   const double steps = estimate.work_ticks();
-  const double hatch = hatch_tissue(g, p);
-  yolk = std::max(yolk, hatch + HATCH_RESERVE_FRACTION * reserve_capacity_for_tissue(hatch) +
+  yolk = std::max(yolk, HATCH_TISSUE +
+                            HATCH_RESERVE_FRACTION * reserve_capacity_for_tissue(HATCH_TISSUE) +
                             steps * (FOUNDER_UPKEEP_ALLOWANCE + upkeep));
-  return std::max(yolk, estimate.birth_cost() * p.neural_cost + yolk +
+  return std::max(yolk, estimate.birth_cost() * scale + yolk +
                             (g.blueprint ? g.blueprint->queries : BRAIN_QUERY_LIMIT) /
                                 QUERY_ENERGY_DIVISOR);
 }
@@ -134,20 +132,19 @@ double body_mass(const Body &b) {
                   (1 + digestion::wall_mass * gut_size_factor(b)) * b.tissue / BODY_TISSUE +
                       (std::max(0., b.energy) + b.reproduction().egg_yolk +
                        b.reproduction().sperm_store + b.gut_fill + b.embryo.secretion +
-                       b.embryo.pending + b.embryo.yolk_sac) /
+                       b.embryo.pending) /
                           RESERVE_ENERGY_PER_MASS) +
          b.organ_mass;
 }
 double stored_energy(const Body &b) {
   return std::max(0., b.energy) + std::max(0., b.tissue) + b.reproduction().egg_yolk +
          b.reproduction().sperm_store + b.gut_energy + b.feces_pending + b.embryo.secretion +
-         b.embryo.pending + b.embryo.yolk_sac;
+         b.embryo.pending;
 }
 void empty_stores(Body &b) {
   b.energy = b.tissue = b.reproduction_.egg_yolk = b.reproduction_.sperm_store = b.gut_energy =
       b.gut_spent = b.gut_meal_flesh = b.gut_meal_fibre = b.gut_plant = b.gut_fill =
-          b.feces_pending = b.feces_plant = b.embryo.secretion = b.embryo.pending =
-              b.embryo.yolk_sac = 0;
+          b.feces_pending = b.feces_plant = b.embryo.secretion = b.embryo.pending = 0;
   b.gut_closed.fill(0);
   b.gut_open.fill(0);
 }
@@ -168,8 +165,7 @@ double hatch_search_reserve(const Body &b) {
 }
 void mature_body(Body &b) {
   if (!b.alive || b.hatched || !b.development_ || !b.development_->complete() ||
-      b.tissue < std::max(HATCH_TISSUE, b.embryo.target_tissue) - tolerance::negligible ||
-      b.energy < hatch_search_reserve(b))
+      b.tissue < HATCH_TISSUE || b.energy < hatch_search_reserve(b))
     return;
   b.birth_tissue = b.tissue;
   b.peak_tissue = std::max(b.peak_tissue, b.tissue);
@@ -177,16 +173,6 @@ void mature_body(Body &b) {
   b.hatch_age = b.age;
   b.embryo.pending += b.embryo.secretion;
   b.embryo.secretion = 0;
-  // What the egg held beyond a full reserve stays as the yolk sac, drawn on as the reserve empties.
-  const double sac = std::max(0., b.energy - reserve_capacity(b));
-  b.embryo.yolk_sac += sac;
-  b.energy -= sac;
-}
-void draw_yolk_sac(Body &b) {
-  const double drawn =
-      std::min(b.embryo.yolk_sac, std::max(0., reserve_capacity(b) - std::max(0., b.energy)));
-  b.embryo.yolk_sac -= drawn;
-  b.energy += drawn;
 }
 std::optional<double> predicted_hatch_reserve(const Body &b, const Genome &g, double neural_cost) {
   if (b.hatched || !g.blueprint || !g.interface || !g.viable())
@@ -199,18 +185,22 @@ std::optional<double> predicted_hatch_reserve(const Body &b, const Genome &g, do
       double(std::max(g.blueprint->queries, b.ledger().queries_paid) - b.ledger().queries_paid) /
       QUERY_ENERGY_DIVISOR;
   const double remaining = b.energy - stage.remaining_cost() * neural_cost - queries,
-               tissue = b.embryo.target_tissue > 0
-                            ? std::max(0., b.embryo.target_tissue - b.tissue)
-                            : hatch_tissue(g.interface->organ_mass, b.organ_mass_ref);
+               tissue = b.embryo.target_tissue > 0 ? std::max(0., b.embryo.target_tissue - b.tissue)
+                                                   : hatch_tissue(remaining);
   return remaining - tissue;
 }
-double predicted_hatch_radius(const Body &b, const Genome &g) {
+double predicted_hatch_radius(const Body &b, const Genome &g, double neural_cost) {
   if (b.hatched)
     return structural_radius(b.birth_tissue > 0 ? b.birth_tissue : b.tissue, b.organ_mass);
-  const double organ_mass = g.interface ? g.interface->organ_mass : b.organ_mass;
-  return structural_radius(b.embryo.target_tissue > 0 ? b.embryo.target_tissue
-                                                      : hatch_tissue(organ_mass, b.organ_mass_ref),
-                           organ_mass);
+  const double queries = g.blueprint
+                             ? double(std::max(g.blueprint->queries, b.ledger().queries_paid) -
+                                      b.ledger().queries_paid) /
+                                   QUERY_ENERGY_DIVISOR
+                             : 0;
+  const double remaining =
+      b.energy - (b.development() ? b.development()->remaining_cost() * neural_cost : 0) - queries;
+  return structural_radius(
+      b.embryo.target_tissue > 0 ? b.embryo.target_tissue : hatch_tissue(remaining), b.organ_mass);
 }
 double take_nutrition(Body &b, double amount, const Fodder &f, const PhysiologyParameters &p) {
   const double accepted = std::clamp(amount, 0., gut_room(b, f)),
@@ -400,7 +390,7 @@ void Body::grow_brain(const Genome &g, const PhysiologyParameters &p, bool prote
   if (!brain_)
     return;
   if (!hatched && embryo.target_tissue == 0)
-    embryo.target_tissue = hatch_tissue(organ_mass, organ_mass_ref);
+    embryo.target_tissue = hatch_tissue(energy - development_->remaining_cost() * p.neural_cost);
   const double missing = hatched ? 0 : std::max(0., embryo.target_tissue - tissue);
   const double reserve = hatched ? PhysiologyParameters::growth_reserve * reserve_capacity(*this)
                                  : hatch_search_reserve(*this);
@@ -423,8 +413,6 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
                         bool protected_life) {
   grow_brain(g, physiology, protected_life);
   growth_prepared_ = false;
-  if (hatched)
-    draw_yolk_sac(*this);
   nutrient_flow *= PhysiologyParameters::nutrient_keep;
   organ_mass_ref = physiology.organ_mass_ref;
   feces_pending += digest_nutrition(*this, physiology);
@@ -481,7 +469,8 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
   }
   if (g.cppn && !hatched) {
     if (embryo.target_tissue == 0) {
-      embryo.target_tissue = hatch_tissue(organ_mass, organ_mass_ref);
+      embryo.target_tissue =
+          hatch_tissue(energy - development_->remaining_cost() * physiology.neural_cost);
     }
     development_->advance();
     const double tissue_work =

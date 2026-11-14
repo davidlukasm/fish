@@ -59,8 +59,7 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
         << "\nMOUTH " << b.bite_signal << ' ' << b.egg_shell_radius << ' ' << b.force_scale << ' '
         << b.resting_defense << ' ' << b.sediment_coverage << '\n';
     out << "EMBRYO " << b.embryo.target_tissue << ' ' << b.embryo.shell << ' ' << b.embryo.secretion
-        << ' ' << b.embryo.pending << ' ' << b.embryo.pressure << ' ' << b.embryo.spent << ' '
-        << b.embryo.yolk_sac;
+        << ' ' << b.embryo.pending << ' ' << b.embryo.pressure << ' ' << b.embryo.spent;
     for (double v : b.embryo.touch)
       out << ' ' << v;
     for (double v : b.embryo.flow)

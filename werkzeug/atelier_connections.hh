@@ -1,6 +1,5 @@
 #pragma once
 #include "atelier_compiler.hh"
-#include "physiology.hh"
 #include "field/mix.hh"
 #include <numeric>
 #include <functional>
@@ -596,12 +595,6 @@ inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
     result.issues.push_back({"leakage", worstFrom, worstTo, result.leakage});
   if (t.resource_limited)
     result.issues.push_back({"resources"});
-  if (g.interface) {
-    fishsim::Body grown;
-    grown.organ_mass = g.interface->organ_mass;
-    if (fishsim::tissue_capacity(grown) < fishsim::HATCH_TISSUE)
-      result.issues.push_back({"size", -1, -1, fishsim::tissue_capacity(grown)});
-  }
   if (g.cppn->nodes() + p.options.reserve > fishsim::MAX_GROWING_NODES)
     result.issues.push_back(
         {"reserve", -1, -1, double(fishsim::MAX_GROWING_NODES - g.cppn->nodes())});

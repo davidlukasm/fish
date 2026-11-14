@@ -245,7 +245,8 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
           F::satiety, gut_filling(b))(F::damage, 1 - b.health)
       .with(F::hatch_shape,
             [&](std::ostream &o) {
-              o << '[' << predicted_hatch_radius(b, p.genome) << ',' << b.birth_tissue << ']';
+              o << '[' << predicted_hatch_radius(b, p.genome, physiology.neural_cost) << ','
+                << b.birth_tissue << ']';
             })(F::body_geometry, anatomy(shape.body))(F::morphology_asset, morphology)(
           F::gut_fill, b.gut_fill)(F::gut_energy, b.gut_energy)(F::gut_use, gut_use(b, physiology))(
           F::digestion, b.digestion)(F::digested, b.digested)(F::feeding_action, b.feeding_action)(
