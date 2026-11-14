@@ -9,10 +9,7 @@
 //   gives way to either;
 //   the opener sucks with its cells' capacity x the body's size; scraping algae takes the sucking
 //   force x the opener's pull x lever^2.
-// Lever, opening, cutting and grinding are the engine's own curves (capabilities.diet).
-// ASSUMED for the picture: how the forces compare with each other: a bite is as deep as its
-// force over what the most cells of one node give a jaw of middle length; the cells count alike,
-// whatever their fibres.
+// The food tiles use the plan's fully driven bite and scrape forces.
 import {ATELIER_LIMITS, BODY_UNIT, MOTOR_KIND} from '../../../schema.js';
 import {mouthShare} from '../../../fish_forms.js';
 import {t, tList} from '../../../strings.js';
@@ -36,11 +33,6 @@ const MOUTH = Object.freeze({
   colours : [ '#ee9f9a', '#8fd18a', '#e6b47c', '#77d2bd' ]
 });
 const degrees = r => r * 180 / Math.PI;
-// A curve of the engine at a trait's value.
-const valueAt = (values, at) => {
-  const pos = clamp(at) * (values.length - 1), k = Math.floor(pos);
-  return values[k] + (values[Math.min(values.length - 1, k + 1)] - values[k]) * (pos - k);
-};
 
 liveKind('mouth', (studio, organId) => {
   const root = document.createElement('div');
@@ -71,21 +63,16 @@ liveKind('mouth', (studio, organId) => {
     const state = studio.state, middle = BODY_UNIT.trait_middle,
           trait = key => muscleTrait(state.document, MOTOR_KIND.aggression, key, state.sites),
           long = trait('jaw_length') ?? middle, blunt = trait('blunt_teeth') ?? middle,
-          diet = state.capabilities?.diet, jaws = musclesOf(MOTOR_KIND.aggression),
-          openers = musclesOf(MOTOR_KIND.suction);
-    const lever = diet ? valueAt(diet.jaw.lever, long) : mouthShare(middle) / mouthShare(long),
-          cut = diet ? valueAt(diet.teeth.cut, blunt) : (1 - blunt) ** 2,
-          grind = diet ? valueAt(diet.teeth.grind, blunt) : blunt ** 2,
-          bite = cellsOf(jaws) * lever, suck = cellsOf(openers);
+          jaws = musclesOf(MOTOR_KIND.aggression), openers = musclesOf(MOTOR_KIND.suction);
     return {
       long,
       blunt,
       jaws,
       openers,
       bite : cellsOf(jaws),
-      suck,
+      suck : cellsOf(openers),
       // The force on each kind of food: cutting, grinding, a loose piece, scraping.
-      forces : [ bite * cut, bite * grind, bite, suck * lever * lever ]
+      forces : state.anatomy?.mouthForces ?? []
     };
   }
   function drawHead(m) {
@@ -154,8 +141,8 @@ liveKind('mouth', (studio, organId) => {
     });
     // Before the mouth the four kinds of food, each bitten as deep as the force on it.
     const names = tList('studio.live.mouth.foods');
-    m.forces.forEach((force, j) => {
-      const x = 40 + 73 * j, y = 176, deep = clamp(force / most);
+    names.forEach((name, j) => {
+      const x = 40 + 73 * j, y = 176, deep = clamp(m.forces[j] ?? 0);
       el('rect', {x : x - 15, y : y - 15, width : 30, height : 30, rx : 7, fill : MOUTH.colours[j]},
          live);
       // The bite: as wide and as deep as the force; the whole of a piece at the most force.
@@ -166,7 +153,7 @@ liveKind('mouth', (studio, organId) => {
           class : 'aid-live-mouth-bite'
         },
            live);
-      txt(live, x, y + 29, names[j] ?? '',
+      txt(live, x, y + 29, name,
           {'text-anchor' : 'middle', class : 'aid-live-small', style : `fill:${MOUTH.colours[j]}`});
     });
     // The jaw's settings, where there is a jaw muscle to carry them: its length at its tip, the

@@ -673,6 +673,16 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
   fishsim::Body preview;
   preview.organ_mass = a.organ_mass;
   preview.tissue = fishsim::BODY_TISSUE;
+  preview.suction_strength = a.suction_strength;
+  preview.bite_strength = a.bite_strength;
+  preview.jaw_length = a.jaw_length;
+  preview.blunt_teeth = a.blunt_teeth;
+  // Compare the reference food at a full opening stroke or bite and a fully paid command.
+  preview.bite_signal = preview.mouth.flow = 1;
+  std::cout << ",\"mouthForces\":[" << fishsim::bite_force(preview, fishsim::BiteKind::cutting)
+            << ',' << fishsim::bite_force(preview, fishsim::BiteKind::grinding) << ','
+            << fishsim::bite_force(preview, fishsim::BiteKind::loose) << ','
+            << fishsim::scrape_force(preview) << ']';
   std::cout << ",\"barbelPlaces\":[";
   for (int side = 0; side < 2; ++side) {
     std::cout << (side ? "," : "");
