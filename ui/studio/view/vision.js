@@ -10,6 +10,7 @@ import {
   spectrumValues
 } from './spectrum.js';
 import {stimulusOfShare, stimulusShare} from './sensitivity.js';
+import {livePlace} from './live/kit.js';
 import {escapeText, fixed, idSafe, pointText} from './markup.js';
 import {allCenters, findOrgan, isChosen, organOf} from '../model/document.js';
 import {fedBy, regionPlan} from '../model/regions.js';
@@ -383,7 +384,6 @@ export function spectrumEditor(state, organ, profile, shift = 1, start = null) {
            axis : {excite : label('excites'), inhibit : label('inhibits')},
            others : otherTypes(organ, profile, definition)
          }) +
-         contrastScene(profile, faint, target, spread) +
          `<p class="aid-picture-caption">${escapeText(values)}</p></div>`;
 }
 const NEAR_BARS =
@@ -527,8 +527,9 @@ function contrastScene(profile, faint, target, spread) {
 export function visionInspector(state, organ) {
   const profiles = organ.field.profiles;
   const p = profiles.find(p => p.id === state.visionProfile) ?? profiles[0];
+  // Below its answers by direction the near sense's live inspector: the report over the distance.
   if (organ.type !== 'eye')
-    return section(nearAnswers(state, organ));
+    return section(nearAnswers(state, organ)) + livePlace('near', organ);
   return section(`<div class="aid-vision-profiles"><button class="aid-add" data-vision-add="${
              idSafe(
                  organ.id)}">${escapeText(t('studio.marks.add', {name : label('add')}))}</button>${
@@ -537,7 +538,8 @@ export function visionInspector(state, organ) {
                        label('remove')}">${
                        escapeText(t('studio.marks.less', {name : label('add')}))}</button>`
                  : ''}</div>`) +
-         section(spectrumEditor(state, organ, p)) + section(sightEyes());
+         section(spectrumEditor(state, organ, p)) + livePlace('eye', organ) + section(sightEyes()) +
+         livePlace('eyelife', organ);
 }
 const CLEAR = Object.freeze({step : .25});
 export function clearOfFish(state, organ, probe) {

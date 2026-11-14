@@ -1952,6 +1952,14 @@
       "steps": "Schritte",
       "bite": "ein voller Biss"
     },
+    "eye": {
+      "sees": "Meldet Unterschiede",
+      "life": "Lebenszyklus"
+    },
+    "near": {
+      "far": "Spürt, wie nah etwas ist",
+      "life": "Lebenszyklus"
+    },
     "gland": {
       "pours": "Schüttet {list}",
       "binds": "Bindet {list}",

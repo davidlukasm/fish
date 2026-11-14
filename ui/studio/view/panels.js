@@ -69,6 +69,8 @@ import './live/pigment.js';
 import './live/fin.js';
 import './live/mouth.js';
 import './live/gland.js';
+import './live/eye.js';
+import './live/near.js';
 import {glandCommand} from './gland_effect.js';
 
 const MUSCLE_ICON = Object.freeze({
