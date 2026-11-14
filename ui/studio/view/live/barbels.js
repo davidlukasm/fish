@@ -23,7 +23,7 @@ import {
   updateCenter
 } from '../../model/document.js';
 import {label} from '../kit.js';
-import {clamp, drag, el, liveKind, picture, txt} from './kit.js';
+import {clamp, drag, el, hatchOf, liveKind, picture, txt} from './kit.js';
 import {sideIndex} from '../../model/layout.js';
 import {STONE} from '../../model/probe.js';
 import {bestScents, sampleColour, scentMap} from './scentmap.js';
@@ -280,6 +280,7 @@ liveKind('barbels', (studio, organId) => {
     });
     drawRows(cells, contacts[sideIndex(barbels.side)], anatomy);
     typeLife(life, {
+      hatch : hatchOf(studio),
       name : 'barbels',
       own,
       phases : cells.map(lifePhase),

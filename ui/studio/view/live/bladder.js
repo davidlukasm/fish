@@ -15,13 +15,28 @@ import {
 import {nodeLimit, ORGAN_BY_KEY} from '../../model/organs.js';
 import {label} from '../kit.js';
 import {boundedAnswer} from '../sense_curves.js';
-import {chip, clamp, drag, el, fishIcon, heldGrip, liveKind, path, picture, txt} from './kit.js';
+import {
+  chip,
+  clamp,
+  drag,
+  el,
+  fishIcon,
+  hatchOf,
+  heldGrip,
+  liveKind,
+  path,
+  picture,
+  txt
+} from './kit.js';
 
 const word = (key, values) => t('studio.live.bladder.' + key, values);
 const MAX_COPIES = ATELIER_LIMITS.max_copies, STEPS = 900, ROUND_MS = 12000, PLOT_STRIDE = 5;
 // The hatch marker and transit through the drawn water column are schematic. Lift, filling and
 // the depth response use the same relationships as the aquarium.
-const HATCH = .5, FALL_STEPS = 150, STILL = .08;
+const FALL_STEPS = 150, STILL = .08;
+// Where this plan's fish hatches at the earliest: read from the plan report at every repaint
+// (kit.js, hatchOf).
+let HATCH = .5;
 const WATER = {
   left : 46,
   right : 290,
@@ -502,6 +517,7 @@ liveKind('bladder', (studio, organId) => {
   }
 
   function show(next) {
+    HATCH = hatchOf(studio);
     state = next;
     organ = findOrgan(state.document, organId);
     const physics = state.capabilities?.buoyancy;

@@ -203,7 +203,7 @@ liveKind('eyelife', (studio, organId) => {
     const eye = findOrgan(studio.state.document, organId), cell = eye?.centers[0];
     if (!cell)
       return;
-    const {L, R, hatch} = LIFE, at = L + (R - L) * hatch, {egg, y} = lifePlaces();
+    const {L, R, between} = LIFE, at = L + (R - L) * between, {egg, y} = lifePlaces();
     const {svg, under, live} = picture(life, LIFE.height, fixed => {
       eggShape(fixed, egg, y, 19, false);
       fishLeft(fixed, R - 34, y, .7);

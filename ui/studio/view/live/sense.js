@@ -551,11 +551,12 @@ const LIFE = Object.freeze({
   height : 96,
   beside : 16,
   whole : .015,
-  least : .08,
-  hatch : .5
+  least : .08
 });
-export function typeLife(svg, {name, own, phases, egg, words, set, draft, settle, redraw}) {
-  const {L, R, top, base, icons, beside, whole, least} = LIFE, hatchX = L + (R - L) * LIFE.hatch;
+// `hatch`: the maturity at which the plan's fish hatches (kit.js, hatchOf).
+export function typeLife(
+    svg, {name, own, phases, egg, words, hatch : hatches, set, draft, settle, redraw}) {
+  const {L, R, top, base, icons, beside, whole, least} = LIFE, hatchX = L + (R - L) * hatches;
   const {under, live} = picture(svg, LIFE.height, fixed => {
     txt(fixed, L + 4, top + 11, words.egg, {class : 'aid-live-small'});
     txt(fixed, hatchX + 5, top + 11, words.grown, {class : 'aid-live-small'});
@@ -569,14 +570,14 @@ export function typeLife(svg, {name, own, phases, egg, words, set, draft, settle
       class : 'aid-live-arrow'
     },
        fixed);
-  });
+  }, hatches);
   const X = r => L + (R - L) * clamp(r), rOf = x => clamp((x - L) / (R - L)),
         high = (base - top - 20) / Math.max(1, phases.length);
   el('rect', {x : L, y : top, width : R - L, height : base - top, class : 'aid-live-ground'},
      under);
   phases.forEach((phase, i) => {
     const on = i === own.chosen, from = phase.start ?? 0, until = Math.min(1, phase.end ?? 1),
-          y = top + 18 + high * i, hatch = clamp(LIFE.hatch, from, until);
+          y = top + 18 + high * i, hatch = clamp(hatches, from, until);
     const band = (x, by, width, height, empty = false) => {
       const e = el('rect', {
         x,

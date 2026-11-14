@@ -69,8 +69,12 @@ export function mountLive(root, studio) {
 
 // A picture: what never changes (built once) between a layer under it and one over it; only those
 // two are repainted. Its height is fixed, so nothing under it moves.
-export function picture(svg, height, build) {
+// `stamp`: what the fixed part hangs on; when it changes, the picture is built anew.
+export function picture(svg, height, build, stamp = '') {
+  if (svg.firstChild && svg.dataset.stamp !== String(stamp))
+    svg.replaceChildren();
   if (!svg.firstChild) {
+    svg.dataset.stamp = String(stamp);
     svg.setAttribute('viewBox', `0 0 300 ${height}`);
     const under = el('g', {}, svg), fixed = el('g', {}, svg);
     el('g', {}, svg);
@@ -142,3 +146,7 @@ export function fishIcon(parent, x, cy, s) {
      parent);
   el('circle', {cx : x - w * .55, cy : cy - t * .25, r : Math.max(.7, 1.1 * s), class : 'aid-live-pupil'}, parent);
 }
+// The maturity at which this plan's fish hatches at the earliest (the plan report's
+// hatchMaturity: more energy in the egg makes it later, and the mother is not in the Atelier).
+// Until the report is in, the middle.
+export const hatchOf = studio => clamp(studio.state.anatomy?.hatchMaturity ?? .5);

@@ -28,11 +28,14 @@ import {
 } from '../../model/document.js';
 import {nodeLimit} from '../../model/organs.js';
 import {label} from '../kit.js';
-import {chip, clamp, drag, el, fishIcon, liveKind, path, picture, txt} from './kit.js';
+import {chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
 import {pressurePicture} from './pressure.js';
 
 const word = (key, values) => t('studio.live.eggs.' + key, values);
-const FULL = ATELIER_LIMITS.max_copies, STEPS = 900, ROUND_MS = 12000, HATCH = .5;
+const FULL = ATELIER_LIMITS.max_copies, STEPS = 900, ROUND_MS = 12000;
+// Where this plan's fish hatches at the earliest: read from the plan report at every repaint
+// (kit.js, hatchOf).
+let HATCH = .5;
 // zoom: the fish against its drawing, so that it fills the panel's width; travel: how far the
 // cells' grip moves from the thinnest to the fullest cells.
 const BELLY = Object.freeze(
@@ -383,7 +386,7 @@ liveKind('eggs', (studio, organId) => {
        fixed);
   }
   function drawLife() {
-    const {svg, under, live} = picture(life, LIFE.height, buildLife),
+    const {svg, under, live} = picture(life, LIFE.height, buildLife, HATCH),
                        {L, R, top, base, beside, whole, least} = LIFE, caps = state.capabilities,
                        until = Math.min(1, m.until), from = Math.max(m.from, HATCH);
     const X = r => L + (R - L) * clamp(r), rOf = x => clamp((x - L) / (R - L)),
@@ -475,6 +478,7 @@ liveKind('eggs', (studio, organId) => {
                         : null;
   }
   function show(next) {
+    HATCH = hatchOf(studio);
     state = next;
     const eggs = organ();
     if (!eggs)

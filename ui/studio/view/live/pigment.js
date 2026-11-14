@@ -32,7 +32,7 @@ import {
 import {label} from '../kit.js';
 import {chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {keyGrip, STEPS} from './sense.js';
-import {eggShape, fishSide, lifeBand, lifePlaces, LIFE} from './skin.js';
+import {eggShape, fishSide, hatchOf, LIFE, lifeBand, lifePlaces} from './skin.js';
 
 const word = (key, values) => t('studio.live.pigment.' + key, values);
 const ROUND_MS = 12000, MOST = 4, TURN = 2 * TUNING.hue_half_circle;
@@ -275,9 +275,10 @@ liveKind('pigment', (studio, organId) => {
                         hueAffinities(tuningHue(c.q1), c.qwidth).map((a, k) => left[k] * (1 - a)),
                     skin));
     const {svg, under, live} = picture(life, LIFE.height), {egg, grown, y} = lifePlaces(),
-                       hatch = LIFE.L + (LIFE.R - LIFE.L) * LIFE.hatch;
+                       hatch = LIFE.L + (LIFE.R - LIFE.L) * LIFE.between;
     eggShape(live, egg, y, 17, false);
-    for (const [x, maturity, s] of [[ hatch + 22, LIFE.hatch + .05, .42 ],
+    // The young fish has the colour of the fish just hatched.
+    for (const [x, maturity, s] of [[ hatch + 22, hatchOf(studio), .42 ],
                                     [ LIFE.R - 30, 1, .75 ]]) {
       const g = el('g', {}, live);
       fishSide(g, x, y, s);

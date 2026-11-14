@@ -26,7 +26,7 @@ import {
 } from '../../model/document.js';
 import {kindLimit} from '../../model/organs.js';
 import {label} from '../kit.js';
-import {chip, clamp, drag, el, fishIcon, liveKind, path, picture, txt} from './kit.js';
+import {chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
 import {answer, between, cellGates, CELLS, cubic, IRRITANT, LEVEL_SPAN, LEVELS, NERVE, runOf, SENSE_BOX, silentStep, stimulusOf, USED, usedFor} from './sense.js';
 
 const word = (key, values) => t('studio.live.gut.' + key, values);
@@ -182,7 +182,10 @@ const BITE = 16.5, BITE_STEPS = 10;
 const REWARD = Object.freeze({L : 62, R : 246, top : 34, row : 19, star : 274, height : 168});
 const STAR = 'M0 -7 L1.7 -1.7 L7 0 L1.7 1.7 L0 7 L-1.7 1.7 L-7 0 L-1.7 -1.7 Z';
 // The life picture: across, the fish's maturity; up, how fast the muscle makes the gut.
-const LIFE = Object.freeze({L : 44, R : 226, top : 20, base : 92, icons : 110, height : 124, zones : 72, beside : 16, whole : .015, least : .08, hatch : .5});
+const LIFE = Object.freeze({L : 44, R : 226, top : 20, base : 92, icons : 110, height : 124, zones : 72, beside : 16, whole : .015, least : .08});
+// Where this plan's fish hatches at the earliest: read from the plan report at every repaint
+// (kit.js, hatchOf).
+let HATCH = .5;
 const KEY_X = 9;
 liveKind('gut', (studio) => {
   const root = document.createElement('div');
@@ -781,7 +784,7 @@ liveKind('gut', (studio) => {
   // muscle does not work, at the muscle's pace where it does, from the maturity at which its
   // cells begin to work to the one at which they die; a grip at each of the two.
   function buildLife(fixed) {
-    const {L, R, top, base, icons, hatch} = LIFE, at = L + (R - L) * hatch;
+    const {L, R, top, base, icons} = LIFE, at = L + (R - L) * HATCH;
     el('path', {d : `M${L - 14} ${base} L${L - 19.5} ${top} h11 Z`, class : 'aid-live-muscle'}, fixed);
     txt(fixed, 4, top - 8, word('muscle'));
     el('ellipse', {cx : L + 8, cy : icons, rx : 6, ry : 5, class : 'aid-live-egg'}, fixed);
@@ -791,7 +794,7 @@ liveKind('gut', (studio) => {
     el('path', {d : `M${L + 22} ${icons} H${at - 16} m-6 -3.5 l6 3.5 l-6 3.5 M${at + 18} ${icons} H${R - 40} m-6 -3.5 l6 3.5 l-6 3.5`, class : 'aid-live-arrow'}, fixed);
   }
   function drawLife() {
-    const {svg, under, live} = picture(life, LIFE.height, buildLife), {L, R, top, base, zones} = LIFE, m = model, caps = state.capabilities;
+    const {svg, under, live} = picture(life, LIFE.height, buildLife, HATCH), {L, R, top, base, zones} = LIFE, m = model, caps = state.capabilities;
     const span = DIGESTION.fastest - 1, yOf = pace => base - (base - top) * clamp((pace - 1) / span), X = r => L + (R - L) * clamp(r), rOf = x => clamp((x - L) / (R - L));
     // The bands: runs of the same food, from rest up to the fastest pace.
     const runs = [];
@@ -811,7 +814,7 @@ liveKind('gut', (studio) => {
       free = y + 12;
       txt(under, R + 6, y + 5, word(food === 'all' ? 'everything' : 'food.' + food), {class : 'aid-live-food-word', 'data-food' : food});
     }
-    el('path', {d : `M${X(LIFE.hatch)} ${top} V${base + 5}`, class : 'aid-live-hatch'}, live);
+    el('path', {d : `M${X(HATCH)} ${top} V${base + 5}`, class : 'aid-live-hatch'}, live);
     el('path', {d : `M${L} ${top} V${base} H${R}`, class : 'aid-live-axis'}, live);
     if (!m.muscle)
       return;
@@ -825,6 +828,7 @@ liveKind('gut', (studio) => {
     grip(until < 1 ? X(until) : R + LIFE.beside + 44, 'gutuntil', to => set({end : to > 1 - LIFE.whole ? null : Math.max(to, from + LIFE.least)}));
   }
   function show(next) {
+    HATCH = hatchOf(studio);
     state = next;
     model = derive();
     if (!model)

@@ -29,14 +29,16 @@ import {
 } from '../../model/document.js';
 import {nodeLimit} from '../../model/organs.js';
 import {label} from '../kit.js';
-import {chip, clamp, drag, el, fishIcon, liveKind, path, picture, txt} from './kit.js';
+import {chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
 
 const word = (key, values) => t('studio.live.gills.' + key, values);
 const FULL = ATELIER_LIMITS.max_copies;
 // long: steps the pump has beaten before its stroke is shown; fastest: the swim offered, twice
-// the cruising speed; hatch: where the life picture marks hatching, a schematic place.
-const GILL = Object.freeze(
-    {long : 400, fastest : 2 * BEHAVIOR_SCALE.cruising_speed, hatch : .5, beat : 900});
+// the cruising speed.
+const GILL = Object.freeze({long : 400, fastest : 2 * BEHAVIOR_SCALE.cruising_speed, beat : 900});
+// Where this plan's fish hatches at the earliest: read from the plan report at every repaint
+// (kit.js, hatchOf).
+let HATCH = .5;
 // Specks a second: of plankton for each unit of water, of flocks and of sand at the hardest suck.
 const SPECKS = Object.freeze({plankton : 1.1, flock : 2.2, sand : 3});
 const HEAD = Object.freeze({
@@ -193,7 +195,7 @@ liveKind('gills', (studio, organId) => {
       2 * m.mouth * input.speed * Math.max(0, open - MOUTH_CYCLE.rest) / (1 - MOUTH_CYCLE.rest);
   // What a mouthful brings at this moment, of each kind: how much comes, what share of it stays.
   function stream() {
-    const out = input.maturity >= GILL.hatch, fed = out && input.gut < 1,
+    const out = input.maturity >= HATCH, fed = out && input.gut < 1,
           through = (pumped() + met()) * rakerPassage(m.density),
           ground = out && input.open > 0 ? input.suck : 0;
     return {
@@ -592,7 +594,7 @@ liveKind('gills', (studio, organId) => {
   // The rakers stay as they are. In the egg the covers can beat already; the fish eats from
   // hatching on.
   function buildLife(fixed) {
-    const {L, R, top, icons} = LIFE, hatch = L + (R - L) * GILL.hatch;
+    const {L, R, top, icons} = LIFE, hatch = L + (R - L) * HATCH;
     txt(fixed, L, top - 4, word('ready'));
     el('ellipse', {cx : L + 8, cy : icons, rx : 6, ry : 5, class : 'aid-live-egg'}, fixed);
     el('circle', {cx : L + 8, cy : icons, r : 1.8, class : 'aid-live-eye'}, fixed);
@@ -606,7 +608,7 @@ liveKind('gills', (studio, organId) => {
        fixed);
   }
   function drawLife() {
-    const {svg, under, live} = picture(life, LIFE.height, buildLife),
+    const {svg, under, live} = picture(life, LIFE.height, buildLife, HATCH),
                        {L, R, top, base, beside, whole, least, on} = LIFE,
                        caps = state.capabilities, until = Math.min(1, m.until), first = m.cells[0];
     const X = r => L + (R - L) * clamp(r), rOf = x => clamp((x - L) / (R - L)),
@@ -623,11 +625,11 @@ liveKind('gills', (studio, organId) => {
        under);
     el('path', {d : path(line), class : 'aid-live-now', 'stroke-width' : 2}, live);
     // The food's way opens with hatching: a row of specks from there on.
-    for (let x = X(GILL.hatch) + 8; x < R - 2; x += 11)
+    for (let x = X(HATCH) + 8; x < R - 2; x += 11)
       el('circle',
          {cx : x, cy : top + 5, r : 2, class : 'aid-live-food-fill', 'data-food' : 'plankton'},
          live);
-    el('path', {d : `M${X(GILL.hatch)} ${top} V${base + 5}`, class : 'aid-live-hatch'}, live);
+    el('path', {d : `M${X(HATCH)} ${top} V${base + 5}`, class : 'aid-live-hatch'}, live);
     el('path', {d : `M${L} ${top} V${base} H${R}`, class : 'aid-live-axis'}, live);
     const phase = to =>
         setLifePhase(studio.state.document, first.id, to, caps.sensitivitySpan, caps.steepnessSpan);
@@ -649,10 +651,10 @@ liveKind('gills', (studio, organId) => {
     const r = input.maturity;
     el('path', {d : `M${X(r)} ${top} V${base}`, class : 'aid-live-input'}, live);
     drag(svg, el('circle', {cx : X(r), cy : Y(level(r)), r : 5.5}, live), p => {
-      const before = input.maturity >= GILL.hatch;
+      const before = input.maturity >= HATCH;
       input.maturity = rOf(p.x);
       // Back in the egg nothing of the trial just shown drifts on.
-      if (before && input.maturity < GILL.hatch)
+      if (before && input.maturity < HATCH)
         clearSpecks();
       again();
     }, 'maturity', 'knob');
@@ -663,6 +665,7 @@ liveKind('gills', (studio, organId) => {
     film.list = [];
   }
   function show(next) {
+    HATCH = hatchOf(studio);
     state = next;
     const gills = organ();
     if (!gills?.centers.length)

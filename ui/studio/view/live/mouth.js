@@ -149,7 +149,8 @@ liveKind('mouth', (studio, organId) => {
       // remain visible, while a missing muscle still leaves the food whole.
       if (deep > 0)
         el('path', {
-          d : `M${x - 15 * deep} ${y - 15} Q${x} ${y - 15 + 60 * deep} ${x + 15 * deep} ${y - 15} Z`,
+          d : `M${x - 15 * deep} ${y - 15} Q${x} ${y - 15 + 60 * deep} ${x + 15 * deep} ${
+              y - 15} Z`,
           class : 'aid-live-mouth-bite'
         },
            live);
@@ -212,7 +213,7 @@ liveKind('mouth', (studio, organId) => {
   // Its life: the same mouth in a small body takes small food, in a big one big food.
   function drawLife(muscle) {
     const {svg, under, live} = picture(life, LIFE.height, fixed => {
-      const {L, R, band, hatch} = LIFE, at = L + (R - L) * hatch, {egg, y} = lifePlaces();
+      const {L, R, between} = LIFE, at = L + (R - L) * between, {egg, y} = lifePlaces();
       eggShape(fixed, egg, y, 17, false);
       for (const [x, s] of [[ at + 24, .4 ], [ R - 24, .78 ]]) {
         fishLeft(fixed, x, y, s);

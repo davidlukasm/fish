@@ -20,7 +20,7 @@ import {
   updateCenter
 } from '../../model/document.js';
 import {label} from '../kit.js';
-import {el, liveKind} from './kit.js';
+import {el, hatchOf, liveKind} from './kit.js';
 import {bestScents, sampleColour, scentMap} from './scentmap.js';
 import {INTENSITY, keysOf, senseCourse, STEPS, typeLife} from './sense.js';
 
@@ -121,6 +121,7 @@ liveKind('nose', (studio, organId) => {
     });
     course.draw();
     typeLife(life, {
+      hatch : hatchOf(studio),
       name : 'nose',
       own,
       phases : cells.map(lifePhase),

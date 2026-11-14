@@ -27,7 +27,7 @@ import {
   updateCenter
 } from '../../model/document.js';
 import {label} from '../kit.js';
-import {chip, clamp, drag, el, fishIcon, liveKind, path, picture, txt} from './kit.js';
+import {chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
 
 const word = (key, values) => t('studio.live.tail.' + key, values);
 const TAIL = Object.freeze({
@@ -60,11 +60,11 @@ const TAIL = Object.freeze({
   VB : 118,
   // A schema's fixed assumptions: how many steps the body's speed lags behind the push in open
   // water and deep in sand.
-  lag : {water : 14, sand : 3},
-  // Where the life picture marks hatching: a schematic place, not the plan's own (the egg's
-  // energy, and with it the tissue a fish hatches with, comes from its mother).
-  hatch : .5
+  lag : {water : 14, sand : 3}
 });
+// Where this plan's fish hatches at the earliest: read from the plan report at every repaint
+// (kit.js, hatchOf).
+let HATCH = .5;
 // The life picture.
 const LIFE = Object.freeze({L : 44, R : 264, top : 14, base : 86, icons : 104, height : 118, samples : 126, edge : .004, beside : 16, apart : 13, whole : .015, least : .08});
 // How far the body swings at a place along it (0 nose, 1 the tail's tip), as a share of the tip's
@@ -215,7 +215,7 @@ liveKind('tail', (studio, organId) => {
     if (Number.isFinite(rest))
       txt(live, 4, 10, word('rest', {p : percent(rest, 1)}), {class : 'aid-live-small'});
     // In the egg the fish lies in its shell.
-    if (input.maturity < TAIL.hatch)
+    if (input.maturity < HATCH)
       el('ellipse', {cx : 146, cy : fishY, rx : 142, ry : 46, class : 'aid-live-shell'}, live);
     film.marks.replaceChildren();
     const along = (TAIL.to - TAIL.from) / bundles.length;
@@ -346,7 +346,7 @@ liveKind('tail', (studio, organId) => {
   // Speed: the same swim in open water and deep in sand. The water's curve always fills the
   // height, so only its shape changes; the sand's stands against it. In the egg nothing swims.
   function drawSpeed() {
-    const {live} = picture(speed, 140), {L, R, VT, VB, steps} = TAIL, m = model, egg = input.maturity < TAIL.hatch;
+    const {live} = picture(speed, 140), {L, R, VT, VB, steps} = TAIL, m = model, egg = input.maturity < HATCH;
     const X = st => L + (R - L) * st / steps, Y = v => VB - (VB - VT) * v / m.fastest;
     lines.speed = null;
     if (!m.water)
@@ -377,7 +377,7 @@ liveKind('tail', (studio, organId) => {
   // dies; its two grips sit on those edges, or beside the picture for a whole life. The round
   // knob on the curve chooses the maturity at which the pictures above show the fish.
   function buildLife(fixed) {
-    const {L, R, top, icons} = LIFE, hatch = L + (R - L) * TAIL.hatch;
+    const {L, R, top, icons} = LIFE, hatch = L + (R - L) * HATCH;
     txt(fixed, L + 4, top - 4, word('push'));
     el('ellipse', {cx : L + 8, cy : icons, rx : 6, ry : 5, class : 'aid-live-egg'}, fixed);
     el('circle', {cx : L + 8, cy : icons, r : 1.8, class : 'aid-live-eye'}, fixed);
@@ -392,7 +392,7 @@ liveKind('tail', (studio, organId) => {
       life.replaceChildren();
       return;
     }
-    const {svg, live} = picture(life, LIFE.height, buildLife), {L, R, top, base, samples, edge} = LIFE;
+    const {svg, live} = picture(life, LIFE.height, buildLife, HATCH), {L, R, top, base, samples, edge} = LIFE;
     const X = r => L + (R - L) * clamp(r), rOf = x => clamp((x - L) / (R - L));
     const order = bundles.map((b, i) => i).sort((p, q) => bundles[p].gate - bundles[q].gate);
     const share = (b, r) => works(b, r) ? b.strength * fibreForce(b.fast) * driveOf(b, TAIL.command) / massAt(r, tail) : 0;
@@ -427,8 +427,8 @@ liveKind('tail', (studio, organId) => {
           });
     }
     // In the egg: the layers stand dimmed, up to the schematic mark of hatching.
-    el('rect', {x : L, y : top, width : X(TAIL.hatch) - L, height : base - top, class : 'aid-live-dim'}, live);
-    el('path', {d : `M${X(TAIL.hatch)} ${top} V${base + 5}`, class : 'aid-live-hatch'}, live);
+    el('rect', {x : L, y : top, width : X(HATCH) - L, height : base - top, class : 'aid-live-dim'}, live);
+    el('path', {d : `M${X(HATCH)} ${top} V${base + 5}`, class : 'aid-live-hatch'}, live);
     el('path', {d : `M${L} ${top} V${base} H${R}`, class : 'aid-live-axis'}, live);
     const r = input.maturity;
     el('path', {d : `M${X(r)} ${Y(pushAt(r))} V${base}`, class : 'aid-live-input'}, live);
@@ -454,6 +454,7 @@ liveKind('tail', (studio, organId) => {
     }, 'maturity', 'knob');
   }
   function show(next) {
+    HATCH = hatchOf(studio);
     state = next;
     const muscle = organ();
     if (!muscle)

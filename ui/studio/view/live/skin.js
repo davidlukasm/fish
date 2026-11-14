@@ -2,7 +2,7 @@
 // picture, an egg with its embryo, and a fish seen from above.
 import {lifePhase, setLifePhase} from '../../model/document.js';
 import {skinProbeBearing} from '../../model/probe.js';
-import {clamp, drag, el} from './kit.js';
+import {clamp, drag, el, hatchOf} from './kit.js';
 import {keyGrip} from './sense.js';
 
 export const LIFE = Object.freeze({
@@ -14,17 +14,21 @@ export const LIFE = Object.freeze({
   beside : 16,
   whole : .015,
   least : .08,
-  hatch : .5
+  // Where the picture of the egg ends and the fish's begins: a place in the picture, not a
+  // maturity.
+  between : .5
 });
+export {hatchOf};
 // The places of the two little pictures over the band: before hatching and after it.
 export const lifePlaces = () => {
-  const {L, R, band, hatch} = LIFE, at = L + (R - L) * hatch;
+  const {L, R, band, between} = LIFE, at = L + (R - L) * between;
   return {egg : (L + at) / 2, grown : (at + R) / 2, y : band - 26};
 };
 // The band: from where the cells work to where they die, a grip at each end.
 // `centers`: the ids of all cells that share the band, where an organ has more than one.
 export function lifeBand(svg, under, live, {studio, center, centers, name, draft, settle}) {
-  const {L, R, band, high, beside, whole, least, hatch} = LIFE, phase = lifePhase(center),
+  const {L, R, band, high, beside, whole, least, between} = LIFE, phase = lifePhase(center),
+                                                 hatch = hatchOf(studio),
                                                  caps = studio.state.capabilities,
                                                  from = phase.start ?? 0,
                                                  until = Math.min(1, phase.end ?? 1),
@@ -39,7 +43,12 @@ export function lifeBand(svg, under, live, {studio, center, centers, name, draft
     class : 'aid-live-lifeband k0 on'
   },
      under);
-  el('path', {d : `M${X(hatch)} ${band - 46} V${band + high + 5}`, class : 'aid-live-hatch'}, live);
+  // Hatching: between the two pictures above, and from there to its maturity on the band.
+  el('path', {
+    d : `M${X(between)} ${band - 46} V${band - 14} L${X(hatch)} ${band - 3} V${band + high + 5}`,
+    class : 'aid-live-hatch'
+  },
+     live);
   const grip = (x, part, move) =>
       drag(svg,
            el('rect', {

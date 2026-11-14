@@ -35,7 +35,7 @@ import {label} from '../kit.js';
 import {substanceName} from '../substances.js';
 import {chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {keyGrip} from './sense.js';
-import {eggShape, fishLeft, LIFE, lifeBand, lifePlaces} from './skin.js';
+import {eggShape, fishLeft, hatchOf, LIFE, lifeBand, lifePlaces} from './skin.js';
 
 const word = (key, values) => t('studio.live.gland.' + key, values);
 const GLAND = Object.freeze({
@@ -300,8 +300,11 @@ liveKind('gland', (studio, organId) => {
   // Its life: every age the gland lives in has its hormone; one that forms late brings it late.
   function drawLife(cell) {
     const shares = sharesOf(cell), colour = substanceColor(shares.indexOf(Math.max(...shares))),
-          {L, R, band, hatch} = LIFE, at = L + (R - L) * hatch, {egg, y} = lifePlaces(),
-          places = [ [ egg, 0 ], [ at + 24, .42 ], [ R - 40, .78 ] ];
+          {L, R, between} = LIFE, at = L + (R - L) * between, {egg, y} = lifePlaces(),
+          hatch = hatchOf(studio),
+          // The three ages drawn, each with its maturity: the egg half way to hatching, the
+          // fish just hatched, the grown fish.
+        places = [ [ egg, 0, hatch / 2 ], [ at + 24, .42, hatch ], [ R - 40, .78, 1 ] ];
     const {svg, under, live} = picture(life, LIFE.height, fixed => {
       eggShape(fixed, egg, y, 17, false);
       for (const [x, s] of places.slice(1))
@@ -309,8 +312,7 @@ liveKind('gland', (studio, organId) => {
     });
     const phaseOf = lifePhase(cell), from = phaseOf.start ?? 0,
           until = Math.min(1, phaseOf.end ?? 1);
-    for (const [x] of places) {
-      const r = (x - L) / (R - L);
+    for (const [x, , r] of places) {
       if (r >= from && r <= until)
         el('path', {
           d : x === egg ? `M${x + 2} ${y - 7} q8 9 0 14 q-8 -5 0 -14 Z`

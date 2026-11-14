@@ -29,11 +29,14 @@ import {
 } from '../../model/document.js';
 import {nodeLimit} from '../../model/organs.js';
 import {label} from '../kit.js';
-import {chip, clamp, drag, el, fishIcon, liveKind, path, picture, txt} from './kit.js';
+import {chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
 import {pressurePicture} from './pressure.js';
 
 const word = (key, values) => t('studio.live.sperm.' + key, values);
-const FULL = ATELIER_LIMITS.max_copies, STEPS = 900, ROUND_MS = 12000, HATCH = .5;
+const FULL = ATELIER_LIMITS.max_copies, STEPS = 900, ROUND_MS = 12000;
+// Where this plan's fish hatches at the earliest: read from the plan report at every repaint
+// (kit.js, hatchOf).
+let HATCH = .5;
 // reach: picture units a cloud reaches for the root of one unit of sperm; fade: steps until it
 // is gone; grow: steps until it has spread; plant: how far behind the vent the plant stands.
 // travel: how far the cells' grip moves from the thinnest to the fullest cells.
@@ -428,7 +431,7 @@ liveKind('sperm', (studio, organId) => {
        fixed);
   }
   function drawLife() {
-    const {svg, under, live} = picture(life, LIFE.height, buildLife),
+    const {svg, under, live} = picture(life, LIFE.height, buildLife, HATCH),
                        {L, R, top, base, beside, whole, least} = LIFE, caps = state.capabilities,
                        until = Math.min(1, m.until);
     const X = r => L + (R - L) * clamp(r), rOf = x => clamp((x - L) / (R - L)),
@@ -515,6 +518,7 @@ liveKind('sperm', (studio, organId) => {
                         : null;
   }
   function show(next) {
+    HATCH = hatchOf(studio);
     state = next;
     const sperm = organ();
     if (!sperm)
