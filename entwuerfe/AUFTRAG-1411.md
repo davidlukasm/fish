@@ -92,7 +92,7 @@ Regionen (Tectum, Motorik, Körperzustand usw.) sind keine Organe dieses Auftrag
 - **Kein fertiger Inspektor wird ohne Davids Auftrag verändert** (David 07:24).
 - **Kein Muster:** Wer ein Panel sieht, das aussieht wie das vorige, sagt es.
 - **Keine Frage an David** zu Dingen, die wir selbst nach Pro und Contra entscheiden können (David 04:06).
-- **Zeitrahmen:** Um 10:00 und um 12:00 kurze Standmeldung an David. Um 14:00 ist Schluss.
+- **Zeitrahmen:** Um 10:00 und um 12:00 kurze Standmeldung an David. **David 13:27: Arbeitszeit bis 16:00 verlängert.** Standmeldungen 14:00 und 15:00, Schluss um 16:00.
 
 ## Bekannte Fehler, für die Reihe vorgemerkt
 
