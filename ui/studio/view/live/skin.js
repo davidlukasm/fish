@@ -2,7 +2,7 @@
 // picture, an egg with its embryo, and a fish seen from above.
 import {lifePhase, setLifePhase} from '../../model/document.js';
 import {skinProbeBearing} from '../../model/probe.js';
-import {clamp, drag, el, hatchOf} from './kit.js';
+import {clamp, drag, el, hatchKnown, hatchOf} from './kit.js';
 import {keyGrip} from './sense.js';
 
 export const LIFE = Object.freeze({
@@ -43,9 +43,11 @@ export function lifeBand(svg, under, live, {studio, center, centers, name, draft
     class : 'aid-live-lifeband k0 on'
   },
      under);
-  // Hatching: between the two pictures above, and from there to its maturity on the band.
+  // Hatching: between the two pictures above, and from there to its maturity on the band; no
+  // stroke on the band before the plan report says where.
   el('path', {
-    d : `M${X(between)} ${band - 46} V${band - 14} L${X(hatch)} ${band - 3} V${band + high + 5}`,
+    d : `M${X(between)} ${band - 46} V${band - 14}` +
+            (hatchKnown(studio) ? ` L${X(hatch)} ${band - 3} V${band + high + 5}` : ''),
     class : 'aid-live-hatch'
   },
      live);
