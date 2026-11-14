@@ -891,6 +891,8 @@ function drawTail() {
   const {svg, live} = picture('tail', TAIL.height, buildTail), {M0, M1, MB, FY, cell, most, fishY} = TAIL, nodes = T.nodes, cn = nodes[T.chosen];
   const width = (M1 - M0) / nodes.length, hOf = n => 4 + cell * n.cells, x0 = M0 + T.chosen * width, h = hOf(cn), fx0 = M0 + 4, fx1 = M1 + 26;
   txt(live, 4, 10, `+${comma(TM().cost)} % Ruhebedarf`, {style : 'font-size:10px'});
+  // In the egg the fish lies in its shell.
+  if (T.input.maturity < HATCHES) el('ellipse', {cx : 146, cy : fishY, rx : 142, ry : 46, fill : 'none', stroke : COLOUR.icon, 'stroke-width' : 1.4, 'stroke-dasharray' : '5 4', opacity : .7, 'pointer-events' : 'none'}, live);
   // The bundles on the fish's flanks.
   tailFilm.marks.replaceChildren();
   const along = (TAIL.to - TAIL.from) / nodes.length;
@@ -975,13 +977,19 @@ function drawTailForce() {
 function drawTailSpeed() {
   const {live} = picture('tailspeed', 140), {L, R, VT, VB, steps} = TAIL, m = TM(), inp = T.input, WATER = '#9cc8f0', SAND = '#c9b48c';
   const X = st => L + (R - L) * st / steps, Y = v => VB - (VB - VT) * v / m.fastest;
-  txt(live, 4, VT + 12, 'im Wasser', {style : 'fill:' + WATER}); txt(live, 4, VT + 28, 'im Sand', {style : 'fill:' + SAND});
-  el('path', {d : `M${L} ${VT - 6} V${VB} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
-  if (m.pulls) {
+  // In the egg nothing swims: the twitches work on the egg and its shell (advance_embryo,
+  // src/movement.cc:52-64). The picture stands empty round an egg until the fish has hatched.
+  const egg = inp.maturity < HATCHES;
+  txt(live, 4, VT + 12, 'im Wasser', {style : 'fill:' + WATER, opacity : egg ? .3 : 1}); txt(live, 4, VT + 28, 'im Sand', {style : 'fill:' + SAND, opacity : egg ? .3 : 1});
+  el('path', {d : `M${L} ${VT - 6} V${VB} H${R}`, stroke : COLOUR.axis, fill : 'none', opacity : egg ? .4 : 1}, live);
+  if (egg) {
+    el('ellipse', {cx : (L + R) / 2, cy : (VT + VB) / 2, rx : 26, ry : 21, fill : 'none', stroke : COLOUR.icon, 'stroke-width' : 1.6, opacity : .7}, live);
+    el('circle', {cx : (L + R) / 2, cy : (VT + VB) / 2, r : 6, fill : COLOUR.icon, opacity : .7}, live);
+  } else if (m.pulls) {
     el('path', {d : path(m.water.map((v, st) => [X(st), Y(v)])) + ` L${R} ${VB} L${L} ${VB} Z`, fill : WATER, opacity : .3, stroke : WATER, 'stroke-width' : 2}, live);
     el('path', {d : path(m.sand.map((v, st) => [X(st), Y(v)])), fill : 'none', stroke : SAND, 'stroke-width' : 2}, live);
   }
-  el('path', {d : `M${X(inp.stop)} ${VT - 6} V${VB}`, ...COMMAND_END}, live);
+  if (!egg) el('path', {d : `M${X(inp.stop)} ${VT - 6} V${VB}`, ...COMMAND_END}, live);
   stepAxis(live, L, R, VB, X);
   play.lines.tailspeed = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : VT, base : VB};
 }
