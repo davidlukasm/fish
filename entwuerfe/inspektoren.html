@@ -125,6 +125,24 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Lebenszyklus</h4>
     <svg id="barblife"></svg>
   </section>
+  <section class="panel" aria-label="Seitenlinie">
+    <h2>Organ</h2><h3>Seitenlinie</h3>
+    <h4 class="first">Spürt Wasser, das gegen die Haut strömt</h4>
+    <svg id="flowskin"></svg>
+    <h4>Strömungszellen</h4>
+    <svg id="flow"></svg>
+    <h4>Lebenszyklus</h4>
+    <svg id="flowlife"></svg>
+  </section>
+  <section class="panel" aria-label="Tastsinn">
+    <h2>Organ</h2><h3>Tastsinn</h3>
+    <h4 class="first">Spürt, was die Haut berührt</h4>
+    <svg id="touchskin"></svg>
+    <h4>Tastzellen</h4>
+    <svg id="touch"></svg>
+    <h4>Lebenszyklus</h4>
+    <svg id="touchlife"></svg>
+  </section>
 </main>
 <script>
 'use strict';
@@ -210,7 +228,10 @@ const S = {
   smell : {keys : [{gate : .25, spread : .1, used : 200, lat : 35, lon : 25, width : .25}], chosen : 0, input : {rise : 80, height : .8, stop : 560}, probe : {lat : 35, lon : 25}},
   // The barbels' types: a place and width on the same map, and feel: their share of mere touch;
   // probe: what the thing at the tip tastes of, or a stone.
-  taste : {keys : [{gate : .2, lat : 35, lon : 155, width : .25, feel : .3}], chosen : 0, probe : {lat : 35, lon : 155}}
+  taste : {keys : [{gate : .2, lat : 35, lon : 155, width : .25, feel : .3}], chosen : 0, probe : {lat : 35, lon : 155}},
+  // The lateral line and the sense of touch: one type of cells each. field: the width of their field on the skin (0-1); probe: where the water or the thing meets the body, as an angle from the snout.
+  flow : {keys : [{gate : .3, spread : .1, used : 200}], chosen : 0, input : {rise : 80, height : .8, stop : 560}, field : .3, probe : 70},
+  touch : {keys : [{gate : .2, spread : .1}], chosen : 0, input : {rise : 60, height : .7, stop : 520}, field : .1, probe : 78.75, off : false}
 };
 
 // ===== The model: the one source for every picture and number =====
@@ -329,8 +350,10 @@ const SENSE = {
   eggfull : {title : 'Füllung und Meldung ans Gehirn', colour : '#e8c66a', tires : false, steps : 900},
   spermfull : {title : 'Füllung und Meldung ans Gehirn', colour : '#dfe8f2', tires : false, steps : 900},
   // The nose: each type meets of the sample what it takes of its scents; a new type starts at the sample.
-  smell : {title : 'Signalverlauf bei der Duftprobe', used : 'an Duft gewöhnt', get colour() { return sampleColour(); }, tires : true, steps : 900, after : 120, shows : ['scentmap', 'smell', 'noselife'], row : null,
-           share : k => smellShare(k), fresh : () => ({...S.smell.probe, width : .25}), most : 4}
+  smell : {title : 'Signalverlauf bei der Duftprobe', used : 'an Duft gewöhnt', get colour() { return sampleColour(); }, tires : true, intense : true, steps : 900, after : 120, shows : ['scentmap', 'smell', 'noselife'], row : null,
+           share : k => smellShare(k), fresh : () => ({...S.smell.probe, width : .25}), most : 4},
+  flow : {title : 'Signalverlauf bei Strömung', used : 'an Strömung gewöhnt', colour : '#9cc8f0', tires : true, intense : true, steps : 900, after : 120, shows : ['flowskin', 'flow', 'flowlife'], row : null, share : () => skinShare('flow'), most : 1},
+  touch : {title : 'Signalverlauf bei Berührung', colour : '#d9b98c', tires : false, steps : 900, after : 60, shows : ['touchskin', 'touch', 'touchlife'], row : null, share : () => skinShare('touch'), most : 1}
 };
 // The reward signal (David 14.11.): at each swallow the engine adds what the bite will give this
 // gut at its present pace to a flow that fades within some ten steps (take_nutrition,
@@ -349,16 +372,30 @@ function stimulus(id) {
   return Array.from({length : o.steps + 1}, (_, st) => st <= i.stop ? i.height * clamp(st / Math.max(1, i.rise), 0, 1) : top * Math.exp(-(st - i.stop) / o.after));
 }
 // What a key's cells send under an input, step by step, and what they have got used to by then.
+// The two scales a sense's stimulus has (src/brain_interface.hh:21-24, intensity_sense).
+// bounded: a stimulus between nothing and all (body_plan.cc:988-992, bounded_response).
+// intense: a stimulus without upper bound (scent, flow), drawn on a logarithmic scale from the
+// faintest threshold a cell can have to a stimulus of one; a threshold is 0.0003 x 333 ^ quality
+// (receptor_tuning.hh:49-51), so it lies at REACH x its quality; the cell answers nothing up to
+// its threshold and half at twice the threshold, and what it is used to raises the threshold by
+// as much (body_plan.cc:981-985, excess_response).
+const FAINT = .0003, REACH = Math.log(333.333333) / -Math.log(FAINT);
+const SCALES = {
+  bounded : {top : .97, pos : s => clamp(s, 0, 1), val : v => v, gates : k => cellGates(k), answer},
+  intense : {top : REACH, pos : s => s > FAINT ? clamp(1 - Math.log(s) / Math.log(FAINT), 0, 1) : 0, val : v => v > 0 ? Math.exp(Math.log(FAINT) * (1 - clamp(v, 0, 1))) : 0,
+             gates : k => cellGates(k).map(v => Math.exp(Math.log(FAINT) * (1 - Math.min(v, REACH)))), answer : (s, g, u) => { const e = s - g - u; return e > 0 ? e / (e + g + u) : 0; }}
+};
+const scaleOf = id => SCALES[SENSE[id]?.intense ? 'intense' : 'bounded'];
 function run(id, k, stim) {
-  const gates = cellGates(k), pace = SENSE[id].tires ? 1 / k.used : 0, sent = [], used = []; let u = 0;
-  for (const s of stim) { sent.push(gates.reduce((t, g) => t + answer(s, g, u), 0) / CELLS); used.push(u); u += (s - u) * pace; }
+  const sc = scaleOf(id), gates = sc.gates(k), pace = SENSE[id].tires ? 1 / k.used : 0, sent = [], used = []; let u = 0;
+  for (const s of stim) { sent.push(gates.reduce((t, g) => t + sc.answer(s, g, u), 0) / CELLS); used.push(u); u += (s - u) * pace; }
   return {sent, used};
 }
 // The step at which a key's last cell falls silent under this input: what it is used to has
 // risen to within its threshold of the input. Past the picture's steps if it never does, 0 if
 // the cell never sends at all.
-function silentStep(k, stim) {
-  const last = Math.min(...cellGates(k)); let used = 0, heard = false;
+function silentStep(k, stim, sc = SCALES.bounded) {
+  const last = Math.min(...sc.gates(k)); let used = 0, heard = false;
   for (let st = 0; st < stim.length; st++) {
     const hears = stim[st] - used > last;
     if (heard && !hears) return st;
@@ -367,10 +404,10 @@ function silentStep(k, stim) {
   return heard ? stim.length : 0;
 }
 // The pace of tiring that puts that step where it is wanted (the slower, the later).
-function usedFor(k, stim, step) {
-  if (!silentStep({...k, used : USED[1]}, stim)) return k.used;
+function usedFor(k, stim, step, sc = SCALES.bounded) {
+  if (!silentStep({...k, used : USED[1]}, stim, sc)) return k.used;
   let [lo, hi] = USED;
-  for (let n = 0; n < 24; n++) { const mid = (lo + hi) / 2; if (silentStep({...k, used : mid}, stim) < step) lo = mid; else hi = mid; }
+  for (let n = 0; n < 24; n++) { const mid = (lo + hi) / 2; if (silentStep({...k, used : mid}, stim, sc) < step) lo = mid; else hi = mid; }
   return hi;
 }
 
@@ -730,24 +767,25 @@ function nerves(svg, parent, id, cell, choose, gripX, tire) {
 function drawSense(id) {
   const cell = S[id], o = SENSE[id], keys = cell.keys, inp = cell.input, offered = stimulus(id), steps = o.steps;
   // What each key's cells meet of the input: all of it, or the share their sense gives them (o.share).
-  const met = keys.map(k => o.share ? offered.map(v => v * o.share(k)) : offered), stim = play.stim[id] = met[cell.chosen] ?? offered;
+  const sc = scaleOf(id), met = keys.map(k => offered.map(v => sc.val(v) * (o.share ? o.share(k) : 1))), stim = play.stim[id] = (met[cell.chosen] ?? met[0]).map(sc.pos);
   const {L, R, LX, I0, I1, row} = SENSE_BOX, {svg, live} = picture(id, I1 + 22 + (o.row ? row + 50 : 0));
   const IY = v => I1 - (I1 - I0) * clamp(v, 0, 1), vOf = y => clamp((I1 - y) / (I1 - I0), 0, 1);
   const X = st => L + (R - L) * st / steps, stOf = x => clamp(Math.round((x - L) / (R - L) * steps), 0, steps);
   const choose = i => () => { cell.chosen = i; draw(o.shows); };
   const fewer = () => { keys.splice(cell.chosen, 1); cell.chosen = 0; };
-  const more = () => { keys.push({gate : clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95), spread : .1, ...(o.tires ? {used : 200} : {}), ...(o.fresh?.() ?? {})}); cell.chosen = keys.length - 1; };
+  const more = () => { keys.push({gate : clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, Math.min(.95, sc.top)), spread : .1, ...(o.tires ? {used : 200} : {}), ...(o.fresh?.() ?? {})}); cell.chosen = keys.length - 1; };
   play.glow = play.glow.filter(g => g.owner !== id);
   play.levels = play.levels.filter(l => l.owner !== id);
   const runs = keys.map((k, i) => run(id, k, met[i]));
   play.sentBy[id] = runs.map(r => r.sent);
   // Where a key's cells send nothing more, and the grips' way of moving it.
-  const ends = keys.map((k, i) => silentStep(k, met[i]));
-  const tire = (k, i, p) => { k.used = usedFor(k, met[i], stOf(p.x)); cell.chosen = i; draw([id]); };
+  const ends = keys.map((k, i) => silentStep(k, met[i], sc));
+  const tire = (k, i, p) => { k.used = usedFor(k, met[i], stOf(p.x), sc); cell.chosen = i; draw([id]); };
   nerves(svg, live, id, cell, choose, k => X(clamp(ends[keys.indexOf(k)], 0, steps)), tire);
   // The same pair twice: at the cells (lower right of them) and at the keys (under their holder).
-  chip(live, R - 22, I0 - 54, '−', fewer, o.shows, keys.length > 1, 6);
-  chip(live, R - 6, I0 - 54, '+', more, o.shows, keys.length < (o.most ?? 3), 6);
+  // A sense with one type of cells only has no pair.
+  const several = (o.most ?? 3) > 1;
+  if (several) { chip(live, R - 22, I0 - 54, '−', fewer, o.shows, keys.length > 1, 6); chip(live, R - 6, I0 - 54, '+', more, o.shows, keys.length < (o.most ?? 3), 6); }
   txt(live, L, I0 - 9, o.title);
   // What holds the thresholds, filling with the input.
   // The stomach is smaller than the diagram is high, so that it stands clear of the pair under
@@ -761,9 +799,11 @@ function drawSense(id) {
   // The input; for each key its band and its line, for the chosen one also what its cells still
   // feel and what they send.
   el('rect', {x : L, y : I0, width : R - L, height : I1 - I0, fill : COLOUR.track}, live);
+  // Where the cells get only a share of the input, the whole input stands behind it as an outline: its knobs lie on that.
+  if (o.share) el('path', {d : path(offered.map((v, st) => [X(st), IY(v)])), fill : 'none', stroke : o.colour, 'stroke-width' : 1.1, 'stroke-dasharray' : '2 3', opacity : .7}, live);
   el('path', {d : path(stim.map((v, st) => [X(st), IY(v)])) + ` L${R} ${I1} L${L} ${I1} Z`, fill : o.colour, opacity : .35, stroke : o.colour, 'stroke-width' : 1.6}, live);
   keys.forEach((k, i) => {
-    const chosen = i === cell.chosen, low = Math.min(...cellGates(k)), felt = runs[i].used.map((u, st) => Math.max(0, met[i][st] - u));
+    const chosen = i === cell.chosen, low = Math.min(...cellGates(k)), felt = runs[i].used.map((u, st) => sc.pos(Math.max(0, met[i][st] - u)));
     const shapes = [keyBand(live, k, i, chosen, L, R - L, IY)];
     if (chosen) shapes.push(el('path', {d : `${path(felt.map((f, st) => [X(st), IY(Math.max(f, low))]))} L${R} ${IY(low)} L${L} ${IY(low)} Z`, fill : o.colour, opacity : .95}, live));
     for (const shape of shapes) { shape.setAttribute('class', 'chip'); shape.addEventListener('pointerdown', choose(i)); }
@@ -786,7 +826,7 @@ function drawSense(id) {
     if (i !== cell.chosen) { el('path', {d : `M${x} ${I1 - 9} V${I1}`, stroke : keyColour(i), 'stroke-width' : 2.5}, live); return; }
     el('path', {d : `M${x} ${I0 - 23} V${I0 - 21} M${x} ${I0} V${I1}`, stroke : keyColour(i), 'stroke-dasharray' : '2 3'}, live);
     // The word stands clear of the marks, on a ground of its own so that no line runs through it.
-    if (at <= steps && met[i][at] > Math.min(...cellGates(k))) txt(live, x + (left ? -7 : 7), I1 - 15, o.used, {'text-anchor' : left ? 'end' : 'start', style : `font-size:10px;paint-order:stroke;stroke:${COLOUR.track};stroke-width:4px;stroke-linejoin:round`});
+    if (at <= steps && met[i][at] > Math.min(...sc.gates(k))) txt(live, x + (left ? -7 : 7), I1 - 15, o.used, {'text-anchor' : left ? 'end' : 'start', style : `font-size:10px;paint-order:stroke;stroke:${COLOUR.track};stroke-width:4px;stroke-linejoin:round`});
     drag(svg, el('rect', {x : x - 4, y : I1 - 11, width : 8, height : 10, rx : 2, style : `fill:${keyColour(i)};stroke:${COLOUR.chosen};stroke-width:2`}, live), p => tire(k, i, p), id + 'used');
   });
   // The grips, above everything they could be hidden by: every key and its spread (side by
@@ -794,13 +834,12 @@ function drawSense(id) {
   keys.forEach((k, i) => {
     const chosen = i === cell.chosen, gates = cellGates(k);
     drag(svg, el('rect', {x : LX - 9, y : IY(k.gate) - 4, width : 18, height : 8, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2.5 : 1}`}, live),
-      p => { k.gate = clamp(vOf(p.y), .03, .97); cell.chosen = i; draw(o.shows); }, id + 'key' + i);
+      p => { k.gate = clamp(vOf(p.y), .03, sc.top); cell.chosen = i; draw(o.shows); }, id + 'key' + i);
     spreadGrip(svg, live, R - 8 - 13 * i, IY(Math.max(...gates)), IY(Math.min(...gates)), p => { k.spread = clamp(2 * (vOf(p.y) - k.gate), 0, .8); cell.chosen = i; draw(o.shows); }, id + 'spread' + i);
   });
   drag(svg, el('circle', {cx : X(inp.rise), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.rise = clamp(stOf(p.x), 1, inp.stop - 1); inp.height = vOf(p.y); draw(o.shows); }, id + 'rise', 'knob');
   drag(svg, el('circle', {cx : X(inp.stop), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.stop = clamp(stOf(p.x), inp.rise + 1, steps - 10); inp.height = vOf(p.y); draw(o.shows); }, id + 'stop', 'knob');
-  chip(live, LX - 9, I1 + 10, '−', fewer, o.shows, keys.length > 1, 6);
-  chip(live, LX + 9, I1 + 10, '+', more, o.shows, keys.length < (o.most ?? 3), 6);
+  if (several) { chip(live, LX - 9, I1 + 10, '−', fewer, o.shows, keys.length > 1, 6); chip(live, LX + 9, I1 + 10, '+', more, o.shows, keys.length < (o.most ?? 3), 6); }
   // How strongly each food irritates these cells in this gut: only the foods that can at all.
   if (o.row) {
     const B0 = I1 + 46, B1 = B0 + row, {rowL, rowR, rowGap} = SENSE_BOX, ranges = M().ranges;
@@ -2169,7 +2208,8 @@ const BARB = {least : 1, most : 16, spread : .45, short : .22, long : .35, half 
               B : {L : 84, R : 280, top : 14, row : 26},
               LIFE : {L : 44, R : 264, top : 14, base : 64, icons : 82, height : 96, beside : 16, whole : .015, least : .08}};
 const BARB_PARTS = ['barbels', 'tastemap', 'tastes', 'barblife'];
-const BA = {cells : 3, thing : {x : 44, y : 44}};
+// At first the thing lies at the upper tip.
+const BA = {cells : 3, thing : {x : 91, y : 45}};
 const barbLength = cells => BARB.H.radius * (BARB.short + BARB.long * Math.sqrt(cells) / (Math.sqrt(cells) + BARB.half));
 const barbTip = (side, cells = BA.cells) => { const {mouthX, mouthY} = BARB.H, long = barbLength(cells); return [mouthX - long * Math.cos(BARB.spread), mouthY + side * (10 + long * Math.sin(BARB.spread))]; };
 // The side whose tip touches the thing (-1 above, 1 below), or 0: each side's cells feel their own tip.
@@ -2195,6 +2235,7 @@ function drawBarbels() {
     // A stroke across the barbel for each of its cells.
     for (let c = 1; c <= BA.cells; c++) { const t = c / (BA.cells + 1), mx = (from[0] + x) / 2, my = (from[1] + y) / 2 + side * 6, bx = (1 - t) ** 2 * from[0] + 2 * t * (1 - t) * mx + t * t * x, by = (1 - t) ** 2 * from[1] + 2 * t * (1 - t) * my + t * t * y; el('path', {d : `M${bx - 1.5} ${by - 4} l3 8`, stroke : COLOUR.track, 'stroke-width' : 1.2}, live); }
   }
+  txt(live, 6, BARB.H.height - 6, touching ? 'berührt' : 'berührt nichts', {style : 'font-size:10px'});
   // The cells: the grip at the upper tip, pulled out for more of them.
   const [gx, gy] = barbTip(-1);
   drag(svg, el('rect', {x : gx - 4, y : gy - 5.5, width : 8, height : 11, rx : 2, style : `fill:${COLOUR.icon}`}, live), p => {
@@ -2254,6 +2295,110 @@ function drawBarbLife() {
     grip(until, until < 1, 'barbuntil', to => { k.until = to > 1 - whole ? 1 : Math.max(to, from + least); });
   });
   el('path', {d : `M${X(BARB.hatch)} ${top} V${base + 5}`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3'}, live);
+  el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+}
+
+
+// ===== The skin senses: lateral line and touch =====
+// Read in the engine (src/body_plan.cc:347-360, 1086-1139, 1185-1205; src/receptor_tuning.hh:70-72;
+// src/simulation_types.hh:42-46; src/embryo.cc:1-25; src/physiology_parameters.hh:9-13, 39):
+//   the body's rim has 16 sectors; a group of skin cells weighs them by a wedge round its own
+//   place, 1 - angle / width, width 22.5 to 180 degrees, the weights summing to one: a wide field
+//   feels more of the rim and less of each place;
+//   lateral line: the stimulus is, summed over the sectors by weight, the water's speed against
+//   the fish there, as far as it comes against the cells' own place (the positive projection on
+//   their direction), less what the sediment covers; a stimulus without upper bound, the cells get
+//   used to it;
+//   touch: the stimulus is the weight of the touched sector x the pressure there, 0.1 for a mere
+//   leaning up to 1 for the hardest blow; between nothing and all, the cells do not tire;
+//   in the egg both feel the embryo itself: the lateral line the fluid its own twitches move, touch
+//   the shell's pressure and the twitches; after hatching the outside fades in over the cell's time.
+// ASSUMED for the picture: the water tried comes as a jet three sectors wide; the place of the
+// cells is set on the fish (here: the flank), not in this panel.
+const SKIN = {sectors : 16, width : [22.5, 157.5], jet : 1, place : 78.75, cx : 150, cy : 74, rx : 92, ry : 34, height : 156, reach : 44, snap : 16, thing : 7};
+const SKIN_WORDS = {flow : {parts : ['flowskin', 'flow', 'flowlife'], svg : 'flowskin', life : 'flowlife', egg : 'spürt eigenes Zucken', grown : 'spürt das Wasser'},
+                    touch : {parts : ['touchskin', 'touch', 'touchlife'], svg : 'touchskin', life : 'touchlife', egg : 'spürt die Eischale', grown : 'spürt Berührung'}};
+const turnTo = a => ((a + 540) % 360) - 180;
+const skinWidth = field => SKIN.width[0] + SKIN.width[1] * field;
+const sectorAngle = k => -180 + (k + .5) * 360 / SKIN.sectors;
+// The cells' weights on the 16 sectors.
+function skinWeights(field) {
+  const raw = Array.from({length : SKIN.sectors}, (_, k) => Math.max(0, 1 - Math.abs(turnTo(sectorAngle(k) - SKIN.place)) / skinWidth(field))), sum = raw.reduce((x, y) => x + y, 0);
+  return raw.map(v => v / sum);
+}
+const sectorOf = angle => clamp(Math.floor((turnTo(angle) + 180) * SKIN.sectors / 360), 0, SKIN.sectors - 1);
+// What the cells get of the input: of a jet, the weights of the sectors it meets x how far it
+// comes against the cells' own place; of a thing, the weight of the sector it touches.
+function skinShare(id) {
+  const cell = S[id], w = skinWeights(cell.field), at = sectorOf(cell.probe);
+  if (id === 'touch') return cell.off ? 0 : w[at];
+  let met = 0;
+  for (let d = -SKIN.jet; d <= SKIN.jet; d++) met += w[(at + d + SKIN.sectors) % SKIN.sectors];
+  return met * Math.max(0, Math.cos(rad(cell.probe - SKIN.place)));
+}
+// A point on the body's rim, seen from above with the snout to the left; the angle runs from the
+// snout over the upper flank.
+const rim = (angle, out = 0) => [SKIN.cx - (SKIN.rx + out) * Math.cos(rad(angle)), SKIN.cy - (SKIN.ry + out) * Math.sin(rad(angle))];
+function buildSkin(fixed) {
+  const {cx, cy, rx, ry} = SKIN;
+  el('path', {d : `M${cx + rx - 6} ${cy} l26 -18 q-6 18 0 36 Z`, fill : HEAD, stroke : COLOUR.axis, 'stroke-width' : 1.2}, fixed);
+  el('ellipse', {cx, cy, rx, ry, fill : HEAD, stroke : COLOUR.axis, 'stroke-width' : 1.4}, fixed);
+  for (const side of [-1, 1]) el('circle', {cx : cx - rx + 26, cy : cy + side * 15, r : 3.2, fill : COLOUR.icon}, fixed);
+}
+function drawSkin(id) {
+  const W = SKIN_WORDS[id], cell = S[id], {svg, live} = picture(W.svg, SKIN.height, buildSkin), w = skinWeights(cell.field), most = Math.max(...w), colour = SENSE[id].colour, share = skinShare(id);
+  // The cells' field: each sector of the rim as strong as the cells weigh it.
+  w.forEach((v, k) => {
+    if (v <= 0) return;
+    const a0 = sectorAngle(k) - 180 / SKIN.sectors, pts = Array.from({length : 7}, (_, n) => rim(a0 + n * 360 / SKIN.sectors / 6, 3));
+    el('path', {d : path(pts), stroke : keyColour(0), 'stroke-width' : 2 + 6 * v / most, opacity : .35 + .65 * v / most, fill : 'none', 'stroke-linecap' : 'butt'}, live);
+  });
+  // The cells' place, and the grip for the field's width at its edge.
+  const [px, py] = rim(SKIN.place, 3), half = Math.min(skinWidth(cell.field), 179), [gx, gy] = rim(SKIN.place + half, 12);
+  el('rect', {x : px - 4, y : py - 4, width : 8, height : 8, rx : 2, fill : keyColour(0), stroke : COLOUR.chosen, 'stroke-width' : 1.5, 'pointer-events' : 'none'}, live);
+  drag(svg, el('circle', {cx : gx, cy : gy, r : 4.5}, live), p => {
+    const angle = deg(Math.atan2((SKIN.cy - p.y) / SKIN.ry, (SKIN.cx - p.x) / SKIN.rx));
+    cell.field = clamp((Math.abs(turnTo(angle - SKIN.place)) - SKIN.width[0]) / SKIN.width[1], 0, 1); draw(W.parts); }, id + 'field');
+  const angleOf = p => deg(Math.atan2((SKIN.cy - p.y) / SKIN.ry, (SKIN.cx - p.x) / SKIN.rx));
+  if (id === 'flow') {
+    // The water tried: a jet against the body; its knob is dragged round the fish. It is drawn as
+    // strong as the cells get it.
+    const [hx, hy] = rim(cell.probe, 6), [tx, ty] = rim(cell.probe, SKIN.reach), ux = (hx - tx) / (SKIN.reach - 6), uy = (hy - ty) / (SKIN.reach - 6);
+    for (const d of [-1, 0, 1]) {
+      // Three threads side by side, all running the jet's way.
+      const [sx, sy] = rim(cell.probe + d * 360 / SKIN.sectors, 6), long = SKIN.reach - 16, [fx, fy] = [sx - ux * long, sy - uy * long];
+      el('path', {d : `M${fx} ${fy} L${sx} ${sy} m${-5 * ux + 3.5 * uy} ${-5 * uy - 3.5 * ux} L${sx} ${sy} l${-5 * ux - 3.5 * uy} ${-5 * uy + 3.5 * ux}`, stroke : colour, 'stroke-width' : 1.6, fill : 'none', 'stroke-linecap' : 'round', opacity : .35 + .65 * Math.min(1, 3 * share)}, live);
+    }
+    drag(svg, el('circle', {cx : tx, cy : ty, r : 5.5, fill : colour}, live), p => { cell.probe = angleOf(p); draw(W.parts); }, id + 'probe', 'knob');
+  } else {
+    // The thing tried: at the rim it touches; pulled away it touches nothing.
+    const [tx, ty] = cell.off ? cell.at : rim(cell.probe, SKIN.thing + 1);
+    drag(svg, el('circle', {cx : tx, cy : ty, r : SKIN.thing, fill : colour}, live), p => {
+      const angle = angleOf(p), [ex, ey] = rim(angle, SKIN.thing + 1), away = Math.hypot(p.x - ex, p.y - ey), inside = ((p.x - SKIN.cx) / SKIN.rx) ** 2 + ((p.y - SKIN.cy) / SKIN.ry) ** 2 < 1;
+      cell.off = !inside && away > SKIN.snap; cell.probe = angle; cell.at = [clamp(p.x, 8, 292), clamp(p.y, 10, SKIN.height - 10)]; draw(W.parts); }, id + 'probe', 'knob');
+  }
+}
+// Life cycle of a skin sense: one band from where its cells work to where they die; before
+// hatching they feel the embryo itself, after it the outside.
+function buildSkinLife(id) { return fixed => {
+  const {L, R, top, icons} = SNIFF.LIFE, hatch = L + (R - L) * SNIFF.hatch, arrow = {stroke : COLOUR.icon, 'stroke-width' : 1.3, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'}, W = SKIN_WORDS[id];
+  txt(fixed, L + 4, top + 11, W.egg, {style : 'font-size:10px'}); txt(fixed, hatch + 5, top + 11, W.grown, {style : 'font-size:10px'});
+  el('ellipse', {cx : L + 8, cy : icons, rx : 6, ry : 5, fill : 'none', stroke : COLOUR.icon, 'stroke-width' : 1.4}, fixed);
+  el('circle', {cx : L + 8, cy : icons, r : 1.8, fill : COLOUR.icon}, fixed);
+  fishIcon(fixed, hatch, icons, AGE_SIZE.young, COLOUR.icon); fishIcon(fixed, R - 36, icons, AGE_SIZE.grown, COLOUR.icon);
+  el('path', {d : `M${L + 22} ${icons} H${hatch - 16} m-6 -3.5 l6 3.5 l-6 3.5 M${hatch + 18} ${icons} H${R - 60} m-6 -3.5 l6 3.5 l-6 3.5`, ...arrow}, fixed);
+}; }
+function drawSkinLife(id) {
+  const W = SKIN_WORDS[id], {svg, under, live} = picture(W.life, SNIFF.LIFE.height, buildSkinLife(id)), {L, R, top, base, beside, whole, least} = SNIFF.LIFE, k = S[id].keys[0];
+  const X = r => L + (R - L) * clamp(r, 0, 1), rOf = x => clamp((x - L) / (R - L), 0, 1), from = k.from ?? 0, until = Math.min(1, k.until ?? 1), y = top + 18, high = base - top - 20, hatch = clamp(SNIFF.hatch, from, until);
+  el('rect', {x : L, y : top, width : R - L, height : base - top, fill : COLOUR.track}, under);
+  // Before hatching lighter: there the cells feel the embryo itself.
+  el('rect', {x : X(from), y : y + 1, width : X(hatch) - X(from), height : high - 2, fill : keyColour(0), opacity : .4}, under);
+  el('rect', {x : X(hatch), y : y + 1, width : X(until) - X(hatch), height : high - 2, fill : keyColour(0), opacity : .75}, under);
+  const grip = (r, inside, name, move) => drag(svg, el('rect', {x : (inside ? X(r) : name.endsWith('from') ? L - beside : R + beside) - 4, y : y + high / 2 - 5.5, width : 8, height : 11, rx : 2, style : `fill:${keyColour(0)}`}, live), p => { move(rOf(p.x)); draw(W.parts); }, name);
+  grip(from, from > 0, id + 'from', to => { k.from = to < whole ? 0 : Math.min(to, until - least); });
+  grip(until, until < 1, id + 'until', to => { k.until = to > 1 - whole ? 1 : Math.max(to, from + least); });
+  el('path', {d : `M${X(SNIFF.hatch)} ${top} V${base + 5}`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3'}, live);
   el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
 }
 
@@ -2367,9 +2512,11 @@ const PAINT = {fish : drawFish, yield : drawYield, bars : drawBars, life : drawL
                eggs : drawEggs, eggfill : drawEggFill, eggfull : drawEggFull, egglife : drawEggLife,
                sperm : drawSperm, spermfill : drawSpermFill, spermfull : drawSpermFull, spermlife : drawSpermLife,
                scentmap : () => drawScentMap(), smell : () => drawSense('smell'), noselife : drawNoseLife,
-               barbels : drawBarbels, tastemap : () => drawScentMap('tastemap', S.taste, BARB_PARTS, {kind : 'barb-kind', verb : 'Schmeckt', sample : 'was die Spitze berührt', stone : true, fresh : {feel : .3, gate : .3}}), tastes : drawTastes, barblife : drawBarbLife};
+               barbels : drawBarbels, tastemap : () => drawScentMap('tastemap', S.taste, BARB_PARTS, {kind : 'barb-kind', verb : 'Schmeckt', sample : 'was die Spitze berührt', stone : true, fresh : {feel : .3, gate : .3}}), tastes : drawTastes, barblife : drawBarbLife,
+               flowskin : () => drawSkin('flow'), flow : () => drawSense('flow'), flowlife : () => drawSkinLife('flow'),
+               touchskin : () => drawSkin('touch'), touch : () => drawSense('touch'), touchlife : () => drawSkinLife('touch')};
 // The senses first: the fish's stomach follows the fullness input.
-for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife']) dirty.add(part);
+for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife', 'flow', 'flowskin', 'flowlife', 'touch', 'touchskin', 'touchlife']) dirty.add(part);
 repaint();
 showGut(0);
 // Nothing moves while the panel is off the screen, or for someone who has asked for less motion:
