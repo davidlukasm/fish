@@ -13,16 +13,17 @@ Auftrag (David 07:37, `AUFTRAG-1411.md` Punkt 6): ein Lebensphasen-Werkzeug im A
 - **Lebensband** in jedem neuen Inspektor (`lifeBand`, `ui/studio/view/live/skin.js:26ff`): nur Beginn und Ende auf der Reife, schreibt Ausgabe- und Todesrezeptor (`setLifePhase`, `ui/studio/model/document.js:1597ff`).
 - **Vorschau-Bedingungen** (`previewControls`, `ui/studio/view/development.js:92–133`): Reife und Blutspiegel der Vorschau als Knopf. Das ist schon heute die „Lebensphase“, in der alle Bilder gezeichnet werden.
 
-## Befund am Lebensband (bitte prüfen, Fable)
-- Das Band zeichnet den Schlupf fest bei Reife **0,5** (`LIFE.hatch = .5`, `skin.js:17`, Strich `:42`), und seine Griffe schreiben die Reife direkt (`X(r)`, `:31`).
-- Bei der Referenz-Organmasse ist die Reife beim Schlupf aber mindestens 20 ÷ 90 ≈ 0,22. Ein Griff „knapp nach dem Schlupf“ setzt also Reife 0,5, und die Zelle stirbt viel später als gezeigt. Das ist ungültig, nicht vereinfacht.
-- Vorschlag: Schlupfstrich bei 20 ÷ Kapazität des Plans. Der Planbericht kennt die Kapazität (Organmasse). Ein Wert, keine Spanne, aus der Engine.
+## Grundsatz nach David 18:02 (ersetzt den früheren Befund zum Schlupfstrich)
+- Der Gestalter denkt in **Lebensabschnitten** (Ei, jung, erwachsen), nicht in Reifezahlen. Er wartet auf keinen Engine-Lauf, um zu erfahren, wann sein Fisch schlüpft (David 08:11 und 18:02).
+- **Kein gleiches Lebensband unter allen Organen.** Jedes Organ tut im Leben etwas anderes; die Eiablage braucht man im Ei nicht. Das Lebensbild eines Organs zeigt, was **seine** Zellen in den Abschnitten tun, und bietet nur die Einstellungen an, die für dieses Organ Sinn ergeben.
+- Wie ein Organ seine Abschnitte in Rezeptoren übersetzt (Reife, Zellreife, Stoff), ist Sache des Organs. Der frühere Vorschlag, den Schlupfstrich aus der Engine zu rechnen (Claude 17:20), ist zurückgenommen.
+- Grundlage: Fables Aufstellung je Organ (Ei / jung / erwachsen), aus den ORGAN-Seiten und dem Code.
 
 ## Vorschlag Werkzeug (zur Diskussion, kein Entwurf)
-1. **Eine Lebenslinie für den ganzen Fisch**, oben im Atelier oder als Werkzeug wie „Hormone“/„Lernen“: Ei → Schlupf → jung → erwachsen auf der Körperreife; darauf ein runder Knopf **„jetzt“** = die Reife der Vorschau (heute in `previewControls` versteckt).
+1. **Eine Lebenslinie für den ganzen Fisch**, oben im Atelier oder als Werkzeug wie „Hormone“/„Lernen“: Ei → jung → erwachsen als Abschnitte, schematisch; darauf ein runder Knopf **„jetzt“** = der Abschnitt der Vorschau (heute in `previewControls` versteckt).
 2. Darunter **alle Organe als Bänder**, wann sie leben, mit ihrem Aktivitätsverlauf. Daraus liest man die Lebensphasen des Fischs: was im Ei arbeitet, was erst später kommt, was mit der Reife geht.
 3. Zieht man „jetzt“, zeigen Fischpanel und alle Inspektoren den Fisch in dieser Phase (welche Zellen leben, wie aktiv).
-4. **Je Organ** bleibt das eigene Lebensbild im Inspektor (heute das Band), aber es liest dieselbe Lebenslinie und denselben Schlupfstrich. Das Reife-Diagramm (Davids Beispiel) ist dort das Werkzeug für die Feinheiten (Aktivitätswende).
+4. **Je Organ** ein eigenes Lebensbild im Inspektor (statt des heutigen gleichen Bands), das zeigt, was dieses Organ in jedem Abschnitt tut. Das Reife-Diagramm (Davids Beispiel) ist dort das Werkzeug für die Feinheiten (Aktivitätswende).
 5. **Zellreife** als zweite Uhr nur dort, wo ein Organ sie nutzt (Darm heute), als eigene kurze Achse ab Bildung der Zelle.
 
 ## Offen
