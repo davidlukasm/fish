@@ -431,11 +431,13 @@ export const isChosen = (selected, organ) =>
     !!organ && (selected?.id === organ.id || organ.centers.some(c => c.id === selected?.id));
 
 const NEW_CENTER = Object.freeze({sense_threshold : -.6, tau : .5, field : .3, qwidth : .35});
+// Silent from hatching on (answer 0 at maturity 0.2, the retina's value; a hatchling is at 0.22 or
+// more): a hatched fish must not feel pain, fullness or smell that is not there.
 export const EGG_RHYTHM = Object.freeze({
   active : 1,
   baseline : 1,
   sensitivity : -2,
-  half : .3,
+  half : .2,
   substance : BLOOD_SUBSTANCE.maturity,
   steepness : 3
 });
