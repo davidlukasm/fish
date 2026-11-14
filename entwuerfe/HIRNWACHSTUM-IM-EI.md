@@ -1,57 +1,76 @@
-# Hirnwachstum im Ei: spontane Aktivität und Festigung (Claude, 14.11. 01:10)
+# Hirnwachstum im Ei: spontane Aktivität und Härtung (Claude, neu 14.11. 01:45)
 
-David 00:50–00:59: Lernen ist Hirnwachstum, vor allem im Ei. Alle Verbindungen beginnen bei 0 und müssen gelernt werden. „Wie soll es sein“ müssen wir uns selbst überlegen: wie es echte Fische machen. Härtung und Festigung gehören mit hinein.
+David 00:50–01:32: Lernen ist Hirnwachstum, vor allem im Ei. Alle Verbindungen beginnen bei 0 und müssen gelernt werden. Härtung (Festigung) ist erblich und dynamisch steuerbar, über Modulatoren und Hormone, also auch im Ei möglich. Es ist Aufgabe des Organs, seine eigenen Verbindungen zum richtigen Zeitpunkt mit dem richtigen Ablauf zu härten, wie die Netzhaut es tut. **Kein Deus ex Machina** (LEITLINIE 0). Die erste Fassung dieses Entwurfs verstieß dagegen. Mein Commit `14762028` ist zurückgenommen (`f27e2cc0`).
 
-## Was die Engine heute tut (im Code geprüft, nicht in Kommentaren)
+## 1. Was es schon gibt (im Code geprüft)
 
-| Zellen | spontane Aktivität | Stelle |
-| --- | --- | --- |
-| Netzhaut | synchronisierte Wellen: Nachbarn ziehen sich mit | `substrate.cc:696-722` |
-| Nervenzellen der Hirnregionen | Sinusrhythmus, Phase aus der Lage, je Zelle eigen. Stärke 0,75 im Ei, 0,25 bei Reife 0,8, fast 0 ab etwa 0,95. Schlupf liegt bei etwa 0,22. | `substrate.cc:790-804`, `region_cells.js:7-17`, `regions.js:94,106` |
-| Strömung und Tasten außen | im Ei die eigenen Zuckungen gegen die Schale | `embryo.cc:10-26`, `body_plan.cc:1191-1209` |
-| alle übrigen Sinneszellen | keine. Sie melden nur ihren Reiz, im Ei meist 0 oder konstant. | `substrate.cc:742-745` |
-| Festigung | nur über eine Festigungsantwort der lernenden Zelle. Im Atelier gibt es sie nur mit dem System „Festigung“ (Sattheit, also erst nach dem Schlupf). Im Ei wird nichts gefestigt. | `systems.js:40-50`, `substrate.cc:930-969` |
+| Mechanismus | wer ihn hat | gesteuert durch | Stelle |
+| --- | --- | --- | --- |
+| Wellen: spontanes Feuern, Nachbarn ziehen mit | nur Sinneszellen mit Licht | Schwelle der Zelle (Erregbarkeit 1 − Schwelle) und ihre Erregungsantwort (Hormone, Reife) | `substrate.cc:696-722` |
+| Rhythmus: Sinus, Phase aus der Lage, Periode = Zellzeit | Nervenzellen mit Schrittmacheranteil `pace` | `pace` aus der Zellidentität (nur Nerven, `substrate.hh:105-119`) × Rhythmusantwort | `substrate.cc:790-804` |
+| Bildung der Zelle | jede Zelle | Bildungsantwort (Hormone, Reife, Reserve, Erschöpfung); nur gebildete Zellen zählen | `substrate.cc:599-622` |
+| Tod der Zelle | jede Zelle | Todesantwort über 0,5 | `substrate.cc:510-513, 602-605` |
+| Ausgabe | jede Zelle | Ausgabeantwort skaliert Signal und Wirkung | `substrate.cc:744, 805` |
+| Festigung eines Kontakts | die lernende Zelle: bei Nerv-zu-Nerv und Sinn-zu-Nerv das **Ziel**, bei Kontakten in einen Muskel der **Sender** | Festigungsantwort der lernenden Zelle; gefestigt wird, was der Kontakt selbst gelernt hat | `substrate.cc:888-903, 930-955` |
+| Lernen | lernende Zelle | Lernrate, Lern-, Wettbewerbs- und Berechtigungsantwort | `substrate.cc:338-342, 880-960` |
+| eigene Bewegung im Ei | Strömung und Tasten außen | Zuckungen des Embryos | `embryo.cc:10-26` |
 
-**Folgen:**
-- Ein Kontakt entsteht nur, wenn der Sender vom Gewohnten abweicht, und wächst nur mit dem Signal des Senders (`substrate.cc:681-693, 913-921`). Stumme oder konstante Sinneszellen bekommen im Ei keine Bahn.
-- Ein ungefestigter Kontakt vergisst mit Halbwertszeit 500 Schritte, schneller noch, wenn er nicht genutzt wird: (1 − Nutzung)/(4 τ) je Schritt (`substrate.cc:343-348`).
-- Er wird entfernt, sobald er unter 5 % fällt (`:965-970`).
-- Selten meldende Sinne verlieren ihre Bahn also zwischen zwei Ereignissen immer wieder: Füllung bei Mahlzeiten, Bauchweh.
+**Wie die Organe des Ateliers das heute nutzen:**
+- **Regionen:**
+  - Ihre Relais tragen `DEVELOPING_RELAY`: Rhythmus im Ei, endet über die Reife (Halbwert 0,8).
+  - Hochschwellige Relais tragen `THRESHOLD_RELAY` und behalten den Rhythmus lebenslang, damit Eingänge, die erst nach dem Schlupf kommen, noch lernbar sind (David `09b6b0e7`).
+  - Spätes Fortpflanzen bleibt lernbar (David `70175f3c`).
+- **Netzhaut:** Ihre Wellen endet die Reifeantwort der Zelle (Handfisch `792f1f53`).
+- **Festigung:** nur über das System „Festigung“ (Sattheit → Drüse → Festigungsantwort der Lernzellen, `systems.js:40-50`).
 
-**Mein Commit `14762028` von 00:53** gibt allen Sinnen Netzhautwellen. Das war zu schnell und passt nur für die Netzhaut, siehe unten.
+## 2. Welche Lücke wirklich bleibt
 
-## Wie es echte Fische machen
+1. **Eine Sinneszelle ohne Licht hat keinen erblichen Weg, von selbst zu feuern.**
+   - Sie wird nicht ausgewertet (`substrate.cc:983-984`), ihr Signal ist nur ihr Reiz (`:742-745`).
+   - Ihr `pace` ist immer 0, weil die Klasse nur für Nerven gerechnet wird.
+   - Ein Organ kann ihr also keine Spontanaktivität geben, mit keinem Gen und keinem Hormon.
+   - Ihre Kontakte wachsen aber nur mit ihrem eigenen Signal (`:913-921`).
+2. **Ein Sinnesorgan kann die Härtung seiner eigenen ausgehenden Kontakte nicht selbst steuern.** Bei Sinn-zu-Nerv zählt nur die Festigungsantwort der empfangenden Hirnzelle. Beim Muskel ist es umgekehrt, dort zählt der Sender.
 
-- **Netzhaut:** spontane Wellen in Bipolar- und Ganglienzellen, beim Zebrafisch etwa 66–84 h nach Befruchtung, also um den Schlupf. Sie sind synchronisiert und laufen bis ins Tectum, meist von temporal aus ([Zhang et al. 2016, Nat Commun](https://link.springer.com/10.1038/ncomms12650)).
-- **Rückenmark und Bewegung:** Ab etwa 17,5 h zuckt der Embryo spontan, ohne Sinne. Elektrisch gekoppelte Schrittmacher-Interneurone treiben das, 84 % der Ereignisse sind synchron ([bioRxiv 2023.08.25.554828](https://www.biorxiv.org/content/10.1101/2023.08.25.554828.full.pdf)). Die Engine hat dieses Zucken im Ei.
-- **Riechzellen:** Sie haben Grundaktivität ohne Duft. Diese ist nicht wellenförmig und nicht gleichzeitig. Zellen desselben Rezeptors haben aber ähnliche zeitliche Muster. Für die Glomeruli zählt diese Grundaktivität mehr als echte Düfte ([Frontiers Neural Circuits 2024, Maus](https://frontiersin.org/articles/10.3389/fncir.2024.1409680/full)).
-- **Darm:** Spontane, nervengesteuerte Darmwellen setzen beim Zebrafisch ein, bevor er frisst: vereinzelt ab Tag 3, regelmäßig ab Tag 4. Die erste Nahrung folgt an Tag 5–6, der Schlupf ist an Tag 2–3 ([Holmberg et al. 2004, J Exp Biol](https://cob.silverchair.com/jeb/article/207/23/4085/15022/Ontogeny-of-the-gut-motility-control-system-in)). Dehnungszellen spüren diese eigenen Wellen der Darmwand.
-- **Allgemein:**
-  - Synchronisierte Spontanaktivität macht stumme Synapsen innerhalb von Minuten aktiv und räumt überzählige Axone ab.
-  - Danach folgen kritische Phasen, in denen die Verbindungen sich festigen.
-  - Die Spontanaktivität klingt ab, wenn die Hemmung reift ([Frontiers Neural Circuits 2016](https://frontiersin.org/journals/neural-circuits/articles/10.3389/fncir.2016.00040/full)).
+Alles andere geht schon mit vorhandenen Mitteln: Zeitpunkt über Bildung und Tod, Helferzellen, Ende über Reife, Härtung der Hirnseite über Antworten und Hormone.
 
-## Vorschlag
+## 3. Wie echte Fische es machen (Belege)
 
-1. **Jeder Sinn feuert auf seine eigene Art, wie echte Fische:**
-   - **Netzhaut:** synchronisierte Nachbarwellen, wie bisher.
-   - **Alle anderen Sinneszellen:** Grundaktivität, jede Zelle in Stößen für sich. Zellen derselben Gruppe (gleiche Herkunft im Bauplan, also gleicher „Rezeptor“) haben dasselbe Muster aus Rate und Stoßlänge, aber eigene Zeitpunkte.
-     - Belegt ist das für Riechzellen (Maus).
-     - Für Barteln, Schmerz, Gleichgewicht, Blase und Blut ist es eine Annahme. Ein Behelf, bis wir Belege haben.
-   - **Seitenlinie und Tasten:** dazu weiter die eigenen Zuckungen.
-   - **Füllzellen des Darms:** spüren zusätzlich die Wand des eigenen Darms, wenn der Darmmuskel zuckt. Das entspricht den Dehnungszellen bei den echten spontanen Darmwellen vor dem ersten Fressen.
-2. **Ausblenden:**
-   - Die Grundaktivität läuft im Ei voll.
-   - Nach dem Schlupf blendet sie über die Zellzeit aus, so wie die Welt über `birth_exposure` einblendet. Das ist schon gebaut.
-   - Die Reifeantwort der Zelle (Erregung) kann sie früher beenden, wie heute bei der Netzhaut.
-3. **Härtung (Festigung) des im Ei Gelernten:**
-   - Lernende Zellen bekommen eine Festigungsantwort auf Reife. Sie ist im Ei an und reicht bis kurz nach dem Schlupf, Halbwert etwa bei Schlupfreife.
-   - Was im Ei an der Spontanaktivität gelernt wurde, wird so mindestens halb gefestigt. Es bleibt erhalten, auch wenn der Sinn danach lange schweigt, und lernt weiter.
-   - Ohne das baut sich die Bahn eines selten meldenden Sinns nach dem Schlupf wieder ab.
-   - **Wider:** Gefestigte Kontakte werden schwerer verdrängt, also lernt der junge Fisch Falsches langsamer um. Abhilfe: Die Festigung endet kurz nach dem Schlupf. Spätere Festigung kommt wie bisher über Sattheit.
-4. **Zahlen** (Rate, Stoßlänge, Halbwert der Härtung) **nicht schätzen.** Astra misst, wie viele Kontakte bis zum Schlupf wachsen und wie viele 2000 Schritte danach noch stehen, je Sinn, ohne Entwurfsfische.
+- **Netzhaut:** synchronisierte Wellen um den Schlupf, beim Zebrafisch 66–84 h nach Befruchtung, bis ins Tectum ([Zhang 2016](https://link.springer.com/10.1038/ncomms12650)).
+- **Rückenmark:** Ab 17,5 h zuckt der Embryo von selbst. Gekoppelte Schrittmacher-Interneurone treiben das ([bioRxiv 2023](https://www.biorxiv.org/content/10.1101/2023.08.25.554828.full.pdf)).
+- **Riechzellen:** Sie haben Grundaktivität ohne Duft, nicht gleichzeitig, aber mit ähnlichem Muster je Rezeptor. Für die Glomeruli zählt sie mehr als echte Düfte ([Frontiers 2024, Maus](https://frontiersin.org/articles/10.3389/fncir.2024.1409680/full)).
+- **Darm:** Spontane, nervengesteuerte Wellen beginnen vor dem ersten Fressen ([Holmberg 2004](https://cob.silverchair.com/jeb/article/207/23/4085/15022/Ontogeny-of-the-gut-motility-control-system-in)).
+- **Danach:** kritische Phasen, Festigung, und die Spontanaktivität klingt ab ([Frontiers 2016](https://frontiersin.org/journals/neural-circuits/articles/10.3389/fncir.2016.00040/full)).
 
-## Offen für Fable und Astra
+## 4. Vorschlag (ruhende Mechanismen, die Organe schalten)
 
-- Fable: Bitte lies 1 bis 3 gegen die Engine gegen. Gibt es eine einfachere Stelle für die Härtung als eine Zellantwort, etwa einen festen Entwicklungsanteil in `substrate.cc:944-955`?
-- Astra: Messplan zu Punkt 4.
+**Engine A: Sinneszellen dürfen von selbst feuern.** Dieselbe erbliche Rhythmus-Steuerung wie bei Nerven gilt auch für Sinneszellen. Das Signal bekommt den Anteil `pace · ½(1 + Rhythmusantwort) · Puls`, und `pace` wird auch für Sinneszellen aus ihrer Identität gelesen.
+- **Für:** kein neuer Mechanismus, sondern derselbe wie in den Regionen. Ohne Gen ist er aus (pace 0).
+- **Wider:** `cell_class` liefert dann auch für Sinneszellen Werte. Bestehende Genome mit zufälliger Identität könnten plötzlich Sinneszellen mit Rhythmus haben.
+- **Fable bitte prüfen:**
+  - Ist die Identität der Sinneszellen in Atelier-Genomen und in alten Genomen so gesetzt, dass `pace` 0 bleibt?
+  - Oder braucht es ein eigenes Gen?
+
+**Engine B: Der Sender darf beim Festigen mitreden.** Bei Sinn-zu-Nerv-Kontakten zählt neben der Festigungsantwort des Ziels auch die des Senders, wie heute schon bei Muskeln.
+- **Für:** Das Sinnesorgan kann seine eigenen Bahnen zum richtigen Zeitpunkt härten.
+- **Wider:** Zwei Stellen entscheiden über denselben Kontakt.
+- **Offen:** wie die beiden Antworten zusammenwirken, das Maximum oder die Summe. Fable bitte Für und Wider.
+
+**Organe im Atelier** (je Organ eigene Entscheidung, keine gemeinsame Vorgabe):
+- **Darm:**
+  - Füll-, Schmerz- und Nährzellen bekommen im Ei einen Rhythmus, der über die Reife endet, wie `DEVELOPING_RELAY`.
+  - Ihre Bahn härtet beim Schlupf, über Engine B mit einer Festigungsantwort auf Reife.
+  - Die Nährzellen haben im Ei schon echtes Signal vom Wachstum.
+- **Nase und Barteln:** Grundaktivität je Gruppe im Ei, nach dem Riechzellen-Beleg.
+- **Netzhaut:** bleibt, wie sie ist.
+- **Helferzellen**, die vor der Geburt Muster erzeugen und danach sterben: dort, wo ein Organ Muster braucht, die es aus sich selbst nicht hat.
+
+**Zahlen:** Halbwerte und Stärken nicht schätzen. Astra misst je Organ, wie viele Kontakte bis zum Schlupf wachsen und wie viele 2000 Schritte danach noch stehen.
+
+## 5. Reihenfolge
+
+1. Fable liest 2 und 4 (Engine A und B) gegen die Engine.
+2. David entscheidet über A und B.
+3. Engine.
+4. Organe.
+5. Astra misst.
