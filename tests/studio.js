@@ -1698,8 +1698,11 @@ async function learningDocument(model, capabilities) {
                              {active : 1, baseline : 1, sensitivity : 0});
   const nose = model.addOrgan(doc, 'nose', sites, {x : 245, y : 425});
   doc = nose.document;
-  for (const center of model.allCenters(doc).filter(c => c.organType === 'nose'))
+  for (const center of model.allCenters(doc).filter(c => c.organType === 'nose')) {
     doc = model.updateCenter(doc, center.id, {copies : 1});
+    // The trace supplies the two inputs and uses silent gaps between pulses.
+    doc = model.updateReceptor(doc, center.id, E.rhythm, {active : 0});
+  }
   const wired = model.connectSelections(doc, {kind : 'organ', id : nose.organId},
                                         {kind : 'center', id : learner.centerId}, sites);
   assert.ok(wired);
