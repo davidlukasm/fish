@@ -16,9 +16,9 @@ Nicht gelesen: wie groß ein Biss in Gesundheit ist (`feeding.cc` im Ganzen), Un
 - **Das Organ entscheidet:** nichts.
 - **Der Designer setzt:** Stelle auf der Haut (am Fisch), Feldbreite, Schwelle und Streuung, Gewöhnungszeit, Lebensspanne.
 
-## Entwurf (Panel Schmerz)
-1. **Der Fisch mit der Wunde** (gibt es nur hier): ein Biss aus dem Rand, so groß wie er Gesundheit nimmt; die Schmerzzellen in der Haut, so groß wie ihr Gewicht, Griff für die Breite. Der runde Knopf steht für die Wundprobe des Fischpanels: am Rand entlang (wo der Biss sitzt), in den Körper gezogen: Schaden im ganzen Körper (Hunger, Krankheit, Alter).
-2. Signalverlauf einer Wunde: sie entsteht mit dem Biss und schließt sich im Heiltempo der Engine (gestrichelter Umriss); die Zellen sind lange voll gereizt und gewöhnen sich trotzdem daran. Ein Knopf: wann der Biss kommt und wie tief er ist.
+## Entwurf (Panel Schmerz), nach Claudes Prüfung 14:26
+1. **Der Fisch mit dem Biss, der sich schließt** (gibt es nur hier): Der Biss am Rand ist so groß, wie die Wunde im gezeigten Schritt ist, und wird mit der Uhr kleiner; der Ring um die getroffene Zelle ist so dick wie ihr Reiz und so hell wie ihre Meldung, er verblasst also schon, während der Biss noch offen ist. Schmerzzellen in der Haut so groß wie ihr Gewicht, Griff für die Breite. Der runde Knopf steht für die Wundprobe des Fischpanels: am Rand entlang (wo der Biss sitzt), in den Körper gezogen: Schaden ohne Ort, als Saum rund um den ganzen Rand.
+2. Signalverlauf: die Wunde entsteht mit dem Biss und geht mit 0,001 Gesundheit je Schritt zurück (Fisch mit sonst voller Gesundheit); Marke „ein voller Biss“ bei 0,25 (`bite_wound`, `physiology_parameters.cc:6`; `feeding.cc:38`: für einen Fisch von Referenzgröße). Ein Knopf: wann der Biss kommt und wie viel Gesundheit er nimmt. Schwelle, Streuung und Gewöhnung haben hier ihre Griffe.
 3. Leben: im Ei Schaden rundum durch die enge Schale, danach der Biss.
 
-Nicht im Bild: dass ein hungriger Fisch nicht heilt; Zellzahl.
+Wirkung der Feldbreite (Claude 14:26, Punkt 3): Schmal meldet einen Biss an der Stelle bis 16-fach und daneben nichts; ganz breit meldet Biss und Schaden ohne Ort gleich, nämlich den Gesamtschaden. Nicht im Bild: dass ein hungriger Fisch nicht heilt; dass ein geschwächter langsamer schließt; Zellzahl.
