@@ -1703,8 +1703,37 @@ export function addSubstance(doc, max, wanted = null) {
   draft.substances.push({id : identifier('substance'), index, name : ''});
   return draft;
 }
-export const shownSubstance = (doc, index) =>
-    doc.substances.find(s => s.index === index) ?? doc.substances[0] ?? null;
+export function visibleSubstances(doc, wheel) {
+  if (!wheel)
+    return [];
+  const visible = new Map(doc.substances.map(substance => [substance.index, substance]));
+  const show = index => {
+    if (index < HORMONES.levels && !visible.has(index))
+      visible.set(index, {index, name : ''});
+  };
+  const showReceptor = receptor => {
+    if (receptor?.active && receptor.sensitivity !== 0)
+      show(receptor.substance);
+  };
+  for (const organ of doc.organs)
+    for (const center of organ.centers) {
+      if (organ.type === 'gland') {
+        const shares = glandShares(wheel, center);
+        const highest = Math.max(...shares);
+        if (highest >= NOTICEABLE_AFFINITY)
+          show(shares.indexOf(highest));
+      }
+      showReceptor(center.growth);
+      for (const effect of effectsFor(center, wheel))
+        showReceptor(center.receptors[effect]);
+    }
+  showReceptor(doc.growth);
+  return [...visible.values() ];
+}
+export function shownSubstance(doc, index, wheel) {
+  const visible = visibleSubstances(doc, wheel);
+  return visible.find(s => s.index === index) ?? visible[0] ?? null;
+}
 export const SUBSTANCE_NAME_LENGTH = 32;
 export function setSubstance(doc, index, name) {
   const draft = copy(doc), entry = draft.substances.find(s => s.index === index);

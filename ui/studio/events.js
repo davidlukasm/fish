@@ -40,7 +40,8 @@ import {
   updateCenter,
   updateGrowth,
   updateWire,
-  usedSites
+  usedSites,
+  visibleSubstances
 } from './model/document.js';
 import {
   assembleSelection,
@@ -117,7 +118,17 @@ export const ANYWHERE_CLICKS = Object.freeze([
 
 export const STUDIO_CLICKS = Object.freeze([
   ['[data-trace-source]',(studio,e)=>studio.setTraceSource(e.dataset.traceSource)],
-  [ '[data-tool]', (studio, e) => studio.setTool(e.dataset.tool) ],
+  [
+    '[data-tool]',
+    (studio, e) => {
+      const tool = e.dataset.tool;
+      if (tool === 'hormone' && tool !== studio.state.tool) {
+        studio.state.selected = null;
+        studio.state.multi.clear();
+      }
+      studio.setTool(tool);
+    }
+  ],
   [ '[data-act-kind="wiring"]', (studio, e) => studio.armWiring(e.dataset.actValue) ],
   [ '[data-act-kind="stimulus"]', (studio, e) => studio.placeStimulus(e.dataset.actValue) ],
   [ '[data-drag-kind]', (studio, e) => studio.pickUp(e.dataset.dragKind, e.dataset.dragValue) ],
@@ -558,7 +569,11 @@ export const FISH_CLICKS = Object.freeze([
   [
     '[data-add-substance]',
     studio => {
-      const doc = addSubstance(studio.state.document, HORMONES.levels);
+      const {document, capabilities, tool} = studio.state;
+      const visible = tool === 'hormone' ? visibleSubstances(document, capabilities) : document.substances;
+      const index = Array.from({length : HORMONES.levels}, (_, i) => i)
+                        .find(i => !visible.some(substance => substance.index === i));
+      const doc = index === undefined ? null : addSubstance(document, HORMONES.levels, index);
       if (!doc)
         return;
       // The new substance opens to be named; in the hormone tool its inspector replaces a cell's.
@@ -655,12 +670,16 @@ export const FISH_CLICKS = Object.freeze([
   ],
   [
     '[data-select-substance]',
-    (studio, e) => showChoice(studio, state => {
-      state.focusSubstance = Number(e.dataset.selectSubstance);
-      if (state.tool === 'hormone')
-        state.selected = null;
-    }, true)
+    (studio, e) => {
+      studio.state.focusSubstance = Number(e.dataset.selectSubstance);
+      studio.refreshLibrary();
+      if (studio.state.tool === 'hormone')
+        studio.select(null, null);
+      else
+        studio.refreshViews();
+    }
   ],
+  [ '[data-hormone-overview]', studio => studio.select(null, null) ],
   [
     BODY_MAP,
     studio => {
@@ -682,8 +701,10 @@ export const FISH_CHANGES = Object.freeze([
   } ],
   [
     'substanceName',
-    (studio, e) => keep(studio, setSubstance(studio.state.document, Number(e.dataset.substanceName),
-                                             e.value.trim()))
+    (studio, e) => {
+      const index = Number(e.dataset.substanceName);
+      keep(studio, setSubstance(withSubstance(studio.state.document, index), index, e.value.trim()));
+    }
   ],
   [
     'assemblyName',

@@ -15,8 +15,7 @@ import {
   findAssembly,
   findCenter,
   organOf,
-  wiredCrossing,
-  shownSubstance
+  wiredCrossing
 } from '../model/document.js';
 import {BODY_FRAME, BODY_RADIUS, centroid, findSite, onMidline} from '../model/layout.js';
 import {cameraBox, steadyAt, viewBoxOf, zoomOf} from './frame.js';
@@ -68,8 +67,8 @@ const CENTER_GLYPH = Object.freeze({radius : 8.25, chosen : 11, halo : 5, ring :
 function centersSvg(state) {
   const {document : doc, sites, selected} = state;
   const zoom = zoomOf(state);
-  const roles = hormoneRoles(state);
-  const substance = substanceColor(shownSubstance(doc, state.focusSubstance)?.index);
+  const {roles, index} = hormoneRoles(state);
+  const substance = substanceColor(index);
   const activeAssembly = selected?.kind === 'assembly' ? findAssembly(doc, selected.id) : null;
   const assemblyCenters = new Set(activeAssembly?.centerIds ?? []);
   let result = '';

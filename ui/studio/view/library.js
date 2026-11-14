@@ -5,7 +5,7 @@ import {SYSTEMS, systemMissing} from '../model/systems.js';
 import {centerMarker} from './scene.js';
 import {EFFECT_ORDER} from './effects.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
-import {LEARNING_EFFECTS, shownSubstance} from '../model/document.js';
+import {LEARNING_EFFECTS, visibleSubstances} from '../model/document.js';
 import {
   MODULES,
   NEURON_BY_KEY,
@@ -55,10 +55,7 @@ function tile({
 const section = (title, tiles, extra = '') => '<section class="aid-library-section"><h4>' + title +
                                               '</h4><div class="aid-palette-grid">' + tiles +
                                               '</div>' + extra + '</section>';
-const openSubstance = state =>
-    state.capabilities ? shownSubstance(state.document, state.focusSubstance)?.index : undefined;
-const substanceSection = (state, index, tiles) => {
-  const open = index === openSubstance(state);
+const substanceSection = (state, index, tiles, open) => {
   return '<section class="aid-library-section aid-substance-section' + (open ? ' open' : '') +
          '"><h4><button class="aid-substance-title" data-select-substance="' + index +
          '" aria-expanded="' + open + '" style="--substance:' + substanceColor(index) +
@@ -66,11 +63,12 @@ const substanceSection = (state, index, tiles) => {
          '</button></h4>' + (open ? '<div class="aid-palette-grid">' + tiles + '</div>' : '') +
          '</section>';
 };
-const addSubstanceTile = state => state.document.substances.length < HORMONES.levels
-                                      ? '<button class="aid-palette-tile add" data-add-substance>' +
-                                            '<span class="aid-palette-icon">＋</span><span>' +
-                                            label('sections.newSubstance') + '</span></button>'
-                                      : '';
+const addSubstanceTile = substances =>
+    substances.length < HORMONES.levels
+        ? '<button class="aid-palette-tile add" data-add-substance>' +
+              '<span class="aid-palette-icon">＋</span><span>' + label('sections.newSubstance') +
+              '</span></button>'
+        : '';
 const organTile = (o, name = label('organs.' + o.key), title = name) =>
     tile({kind : 'organ', value : o.key, name, markup : icon(o.key), colour : tone(o.key), title});
 const CELL_MARK = Object.freeze({marker : 7, box : 10});
@@ -187,8 +185,9 @@ function wiringLibrary(state) {
                      '</button>');
 }
 function hormoneLibrary(state) {
-  const doc = state.document, titles = tList('studio.hormoneCard.tileTitles');
-  const substances = state.capabilities ? doc.substances : [];
+  const titles = tList('studio.hormoneCard.tileTitles');
+  const substances = visibleSubstances(state.document, state.capabilities);
+  const active = substances.find(s => s.index === state.focusSubstance) ?? substances[0];
   return substances
              .map(sub => {
                const index = sub.index, colour = substanceColor(index);
@@ -219,7 +218,8 @@ function hormoneLibrary(state) {
                                                       title : titles[effect],
                                                       wide : true
                                                     }))
-                                               .join(''));
+                                               .join(''),
+                                       sub === active);
              })
              .join('') +
          systemsSection(state, SYSTEMS.map(s => s.key)) +
@@ -249,7 +249,7 @@ function hormoneLibrary(state) {
                                               path : STUDIO_ICON.blood,
                                               colour : BODY_SIGNAL
                                             })) +
-         section(label('hormoneCard.more'), addSubstanceTile(state));
+         section(label('hormoneCard.more'), addSubstanceTile(substances));
 }
 const SYSTEM_ICON = Object.freeze({
   reward : EFFECT_ICON[HORMONE_EFFECT.teaching],
@@ -281,6 +281,7 @@ const LEARNING_CELLS = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
 function learningLibrary(state) {
   const titles = tList('studio.hormoneCard.tileTitles');
   const substances = state.capabilities ? state.document.substances : [];
+  const active = substances.find(s => s.index === state.focusSubstance) ?? substances[0];
   return section(label('learnCard.cells'), LEARNING_CELLS.map(cellTile).join('')) +
          systemsSection(state, [ 'reward' ]) +
          substances
@@ -313,10 +314,11 @@ function learningLibrary(state) {
                                                       title : titles[effect],
                                                       wide : true
                                                     }))
-                                               .join(''));
+                                               .join(''),
+                                       sub === active);
              })
              .join('') +
-         section(label('hormoneCard.more'), addSubstanceTile(state));
+         section(label('hormoneCard.more'), addSubstanceTile(substances));
 }
 function stimulusLibrary(state) {
   const has = type => state.document.organs.some(o => o.type === type);

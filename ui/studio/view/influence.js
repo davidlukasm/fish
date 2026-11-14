@@ -173,7 +173,8 @@ function teachingOverlay(state) {
 }
 export function hormoneOverlay(state) {
   const {document : doc, sites, capabilities} = state;
-  const substance = state.tool === 'hormone' ? shownSubstance(doc, state.focusSubstance) : null;
+  const substance =
+      state.tool === 'hormone' ? shownSubstance(doc, state.focusSubstance, capabilities) : null;
   const marks = layerShown(state, 'hormones') ? hormoneMarks(state, substance?.index ?? null) : '';
   const overlay = html =>
       html ? '<g class="aid-hormone-overlay" pointer-events="none">' + html + '</g>' : '';
@@ -271,13 +272,16 @@ function hormoneMarks(state, skip = null) {
       .join('');
 }
 export function hormoneRoles(state) {
-  const roles = new Map(), index = shownSubstance(state.document, state.focusSubstance)?.index;
+  const roles = new Map();
   const wheel = state.capabilities;
-  if (state.tool !== 'hormone' || !wheel || index === undefined)
-    return roles;
+  const index = state.tool === 'hormone'
+                    ? shownSubstance(state.document, state.focusSubstance, wheel)?.index
+                    : undefined;
+  if (index === undefined)
+    return {roles, index};
   for (const c of receivers(state.document, index, wheel))
     roles.set(c.id, 'receives');
   for (const c of producers(state.document, index, wheel))
     roles.set(c.id, 'produces');
-  return roles;
+  return {roles, index};
 }

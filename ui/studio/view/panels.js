@@ -479,14 +479,11 @@ function generatedInspector(state) {
          '" role="img" aria-label="' + escapeText(centerTitle(center)) + '"><title>' +
          escapeText(values) + '</title>' + cells + '</svg>';
 }
-export function inspector(state) {
+export function inspector(state, shownDesign = state.document) {
   if (state.selected?.kind === 'generated')
     return generatedInspector(state);
   if (state.tool === 'hormone')
-    return state.document.substances.length || state.selected
-               ? hormoneInspector(state)
-               : previewControls(state) + '<header class="aid-inspector-head">' +
-                     heading(label('hormoneCard.title')) + '</header>' + workflow();
+    return hormoneInspector(state, shownDesign === state.document);
   if (state.tool === 'learn')
     return learningInspector(state);
   if (state.multi?.size > 1)

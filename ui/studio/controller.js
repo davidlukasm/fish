@@ -404,8 +404,8 @@ export class OrganStudio {
     // A redrawn inspector keeps open what the user opened.
     const opened =
         new Set([...element.querySelectorAll('details[open] > summary') ].map(s => s.textContent));
-    element.innerHTML =
-        this.state.mode === 'fish' ? inspector(this.state) : cppnInspector(this.state);
+    element.innerHTML = this.state.mode === 'fish' ? inspector(this.state, this.shownDesign)
+                                                   : cppnInspector(this.state);
     for (const summary of element.querySelectorAll('details > summary'))
       if (opened.has(summary.textContent))
         summary.parentElement.open = true;
@@ -425,7 +425,7 @@ export class OrganStudio {
                   findOrgan(this.state.document, settings.dataset.organSettings);
     const fresh = document.createElement('div');
     fresh.innerHTML = organ                        ? organSettingsBlock(this.state, organ)
-                      : this.state.mode === 'fish' ? inspector(this.state)
+                      : this.state.mode === 'fish' ? inspector(this.state, this.shownDesign)
                                                    : cppnInspector(this.state);
     const same = sameElement(organ ? settings : element, fresh, graphic);
     if (!same)

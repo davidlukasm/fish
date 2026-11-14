@@ -583,12 +583,13 @@ function substanceSources(state, index) {
          '<small>' + escapeText(t('studio.hormoneCard.totalDrive', {n : formatNumber(total, 2)})) +
          '</small></section>';
 }
-function substanceInspector(state) {
+function substanceInspector(state, currentAnatomy) {
   const {document : doc, capabilities : wheel} = state;
-  const substance = shownSubstance(doc, state.focusSubstance);
-  if (!substance || !wheel)
+  const substance = shownSubstance(doc, state.focusSubstance, wheel);
+  if (!substance)
     return '<header class="aid-inspector-head">' + heading(label('hormoneCard.title')) +
-           '</header>';
+           '</header><button class="aid-secondary" data-add-substance>' +
+           label('sections.newSubstance') + '</button>';
   const index = substance.index, grows = growsWith(doc, index, wheel);
   const fallback = substanceName(state, index);
   const context = previewContextOf(state);
@@ -602,12 +603,14 @@ function substanceInspector(state) {
          (grows ? 'data-growth-off' : 'data-growth-substance="' + index + '"') + ' aria-pressed="' +
          grows + '" title="' + label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') +
          '">' + glyph(GROWTH_ICON, ICON.mark, {line : true}) + '</button>' +
-         hormoneTime(state, index) + '</div>' +
+         (currentAnatomy ? hormoneTime(state, index) : '') + '</div>' +
          '<div class="aid-hormone-preview">' + label('hormoneCard.previewBlood') +
-         substanceLevel(state, index, context, true) + '</div>' + substanceSources(state, index) +
+         substanceLevel(state, index, context, true) + '</div>' +
+         (currentAnatomy ? substanceSources(state, index) : '') +
          (grows ? growthEditor(state) : '') + bloodCurves(state, index, context) +
-         '<button class="aid-danger" data-remove-substance="' + index + '">' +
-         label('inspector.removeSubstance') + '</button>';
+         (substance.id ? '<button class="aid-danger" data-remove-substance="' + index + '">' +
+                             label('inspector.removeSubstance') + '</button>'
+                       : '');
 }
 // What a substance does to a cell, as the receptor turns it (`direction`, 0 for either way).
 const effectWords = (effect, direction) =>
@@ -624,11 +627,8 @@ export function boundEffect(effect, direction) {
               : '') +
          '</span>';
 }
-function hormoneDetails(state) {
-  const {document : doc, selected} = state;
-  const focus = chosenCenter(doc, selected, state.visionProfile);
-  if (!focus)
-    return substanceInspector(state);
+function hormoneDetails(state, focus) {
+  const {document : doc} = state;
   const html = '<header class="aid-inspector-head"><span>' + label('sections.receptors') +
                '</span>' + heading(centerTitle(focus)) + '</header>';
   const own = effectsFor(focus, state.capabilities);
@@ -666,7 +666,10 @@ function hormoneDetails(state) {
          receptorEditor(state, focus, effects, effect) + '</div>';
 }
 
-export function hormoneInspector(state) {
-  return state.selected ? previewControls(state) + hormoneDetails(state)
-                        : substanceInspector(state);
+export function hormoneInspector(state, currentAnatomy) {
+  const focus = chosenCenter(state.document, state.selected, state.visionProfile);
+  const back = '<button class="aid-secondary" data-hormone-overview>' + label('hormoneCard.title') +
+               '</button>';
+  return focus && state.capabilities ? back + previewControls(state) + hormoneDetails(state, focus)
+                                     : substanceInspector(state, currentAnatomy);
 }

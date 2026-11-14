@@ -720,7 +720,7 @@
 .aid-hormone-time{display:inline-flex;align-items:center;gap:4px;padding:5px;border-radius:8px;border:1px solid #3d6a70;color:var(--aid-name-text);font-size:11px}
 .aid-card-name{flex-basis:100%;color:var(--aid-name-text)}
 .aid-hormone-preview,.aid-hormone-sources,.aid-hormone-receivers{margin:12px 0;color:var(--aid-name-text)}
-.aid-hormone-preview>.aid-preview-level-row{display:block;margin-top:4px}
+.aid-hormone-preview>.aid-preview-level-row{display:block;margin:4px 9px 0}
 .aid-hormone-preview .aid-preview-level{width:100%;height:auto;display:block}
 .aid-hormone-sources h4,.aid-hormone-receivers h4{margin:0 0 6px}
 .aid-hormone-sources button,.aid-hormone-receivers button{display:block;width:100%;margin:5px 0;padding:7px 8px;border:1px solid var(--aid-card-edge);border-radius:8px;background:#14333a;color:inherit;text-align:left;cursor:pointer}

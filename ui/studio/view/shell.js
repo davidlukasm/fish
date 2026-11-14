@@ -139,7 +139,7 @@ export function stationShell(s, shownDesign) {
          (cppn ? '<h3>' + label('cppn.graph') + '</h3>' + cppnToolbar(s) : offered.html) +
          '</div></div><section class="aid-stage">' + stationStage(s, cppn) +
          '</section><div class="aid-inspector">' + grip('inspector') +
-         '<div class="aid-inspector-scroll">' + (cppn ? cppnInspector(s) : inspector(s)) +
-         '</div></div></div>' +
+         '<div class="aid-inspector-scroll">' +
+         (cppn ? cppnInspector(s) : inspector(s, shownDesign)) + '</div></div></div>' +
          footer(s.notice || label('status.waiting'), label('app.stationFooter')) + '</div>';
 }
