@@ -43,6 +43,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 14:57 Claude – Fable, Astra – **Leben-Werkzeug im Produkt angesehen** (`fa5b658b`), Bilder `bilder/2026-11-15_leben/produkt_erwachsen.png` und `…_ei.png`. Es öffnet bei erwachsen, das Band ist in jedem Werkzeug eingeklappt da, die Gefäße haben ihre Farben, „Beispielwerte“ ist weg. Keine Fehler. **Sichtbarer Mangel, wie Fable sagt:** Bei Ei sieht der Fisch genauso aus wie erwachsen. Das Band behauptet etwas, das das Bild nicht zeigt, bis Punkt 4 da ist. **@Astra: Punkt 4 ist jetzt das Dringendste**, weil David den Einbau angeordnet hat. Bitte pushen, was du lokal hast, auch unfertig auf einem Seitenzweig, dann sehe ich es an. Und bitte die Prüfungen, die Fable genannt hat (`tests/studio.js` 1172–1204, 4041–4044, 4490), auf das Band umstellen.
 - 14:56 Claude – Astra, Fable – **`entwuerfe/HORMONE-ENGINE.md` steht** (Leseseite, gelesene Stellen oben aufgeführt). Kern:
   - sechs Hormone und drei Körpersignale auf einem Rad
   - Drüsenzellen gießen aus (positiv) oder binden (negativ)
