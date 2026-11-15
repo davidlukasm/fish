@@ -887,7 +887,8 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
   }
   return draft;
 }
-export function positionOrgan(doc, organId, sites, position, layout = null, origin = null) {
+export function positionOrgan(doc, organId, sites, position, layout = null, origin = null,
+                              muscleArea = null) {
   const original = findOrgan(doc, organId);
   if (!original || original.type === 'brain')
     return null;
@@ -908,11 +909,15 @@ export function positionOrgan(doc, organId, sites, position, layout = null, orig
     return updateField(draft, organId,
                        {lo : original.field.lo + delta, hi : original.field.hi + delta}, sites);
   }
-  for (const member of [...members]) {
-    const antagonist = isFinMuscle(member, sites) && antagonistOf(draft, member, sites);
-    if (antagonist && !members.includes(antagonist))
-      members.push(antagonist);
-  }
+  const changesMuscle = muscleArea &&
+                        (organFunction(original, sites) !== muscleArea.code ||
+                         isPelvicMuscle(original) !== muscleArea.pelvic);
+  if (!changesMuscle)
+    for (const member of [...members]) {
+      const antagonist = isFinMuscle(member, sites) && antagonistOf(draft, member, sites);
+      if (antagonist && !members.includes(antagonist))
+        members.push(antagonist);
+    }
   const movedIds = new Set(members.map(o => o.id));
   const used = usedSites(draft, c => !movedIds.has(c.organId));
   for (const member of members) {
@@ -922,17 +927,23 @@ export function positionOrgan(doc, organId, sites, position, layout = null, orig
     const oldHome = findSite(sites, member.region?.site ?? member.centers[0]?.site);
     if (!oldHome)
       continue;
+    if (changesMuscle)
+      for (const center of member.centers) {
+        center.pelvic = muscleArea.pelvic;
+        center.functionCode = muscleArea.pelvic ? MOTOR_KIND.turn : 'site';
+      }
     const first = member.centers[0], side = member.side === 0         ? null
                                             : p.y < BODY_FRAME.middle ? -1
                                                                       : 1;
     const pool = first.role === 'nerve' ? sites.filter(nerveZone) : sites;
+    const wantedFunction = changesMuscle ? muscleArea.code : functionFor(first, oldHome);
     const functionPool =
         first.functionCode === 'site'
-            ? pool.filter(s => functionFor(first, s) === functionFor(first, oldHome))
+            ? pool.filter(s => functionFor(first, s) === wantedFunction)
             : pool;
     const native =
         member.type === 'muscle'
-            ? nativeMusclePosition(sites, p, organFunction(member, sites), isPelvicMuscle(member))
+            ? nativeMusclePosition(sites, p, wantedFunction, isPelvicMuscle(member))
             : p;
     const home = closestSite(first, functionPool, used, native, side, member.type);
     if (!home)
@@ -948,7 +959,7 @@ export function positionOrgan(doc, organId, sites, position, layout = null, orig
         w : home.w + old.w - oldHome.w,
         side : old.side * flip
       };
-      const code = functionFor(center, old);
+      const code = changesMuscle ? wantedFunction : functionFor(center, old);
       const candidates =
           center.role === 'nerve' ? pool : sites.filter(s => functionFor(center, s) === code);
       const at = closestNativeSite(center, candidates, used, wanted, wanted.side, member.type);

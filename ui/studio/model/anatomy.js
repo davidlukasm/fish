@@ -20,13 +20,14 @@ export const muscleAreas = sites =>
           return {...area, from : Math.min(...xs), to : Math.max(...xs)};
         })
         .filter(area => Number.isFinite(area.from));
-export function musclePosition(sites, position, code = null, pelvic = false) {
+export function musclePosition(sites, position, code = null, pelvic = false, allowAny = false) {
+  const own = a => a.code === code && a.pelvic === pelvic;
   const areas =
-      muscleAreas(sites).filter(a => code === null || a.code === code && a.pelvic === pelvic);
+      muscleAreas(sites).filter(a => allowAny || code === null || own(a));
+  const distance = p => Math.hypot(p.x - position.x, p.y - position.y);
   return areas.map(area => ({area, position : areaPosition(area, position)}))
-             .sort((a, b) => Math.hypot(a.position.x - position.x, a.position.y - position.y) -
-                             Math.hypot(b.position.x - position.x, b.position.y - position.y))[0] ??
-         null;
+             .sort((a, b) => distance(a.position) - distance(b.position) ||
+                             Number(own(b.area)) - Number(own(a.area)))[0] ?? null;
 }
 export function nativeMusclePosition(sites, position, code, pelvic) {
   if (code !== MOTOR_KIND.turn)

@@ -73,17 +73,17 @@ export function moveCanvasOrgan(state, id, pointer, origin) {
   const at = organLocation(organ, state.sites, state.document);
   let target =
       origin ? {x : at.x + pointer.x - origin.x, y : at.y + pointer.y - origin.y} : pointer;
-  if (organ.type === 'muscle')
-    target = musclePosition(state.sites, target, organFunction(organ, state.sites),
-                            isPelvicMuscle(organ))
-                 ?.position ??
-             target;
+  const muscle = organ.type === 'muscle'
+                     ? musclePosition(state.sites, target, organFunction(organ, state.sites),
+                                      isPelvicMuscle(organ), true)
+                     : null;
+  target = muscle?.position ?? target;
   target = freeSkinPosition(state, organ.type, anatomicalPosition(organ.type, target),
                             organ.linked && !!organ.pair, [ organ.id, organ.linked && organ.pair ]);
   if (!target)
     return null;
   return positionOrgan(keepPositions(state.document, state.sites), id, state.sites, target,
-                       state.anatomy, at);
+                       state.anatomy, at, muscle?.area);
 }
 export function newFishDocument(name, sites) {
   let document = newDocument(name);
