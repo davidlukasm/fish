@@ -24,7 +24,7 @@ import {
   wheelAffinity
 } from '../model/document.js';
 import {substanceColor} from '../../hormones.js';
-import {wrapAngle} from '../../units.js';
+import {radians, wrapAngle} from '../../units.js';
 import {fishBodyColour} from '../model/pigment.js';
 import {chromatophoresSvg} from './pigments.js';
 import {
@@ -54,7 +54,7 @@ import {skinPatchSvg} from './skin.js';
 import {isPelvicMuscle, isRegion, kindLimit, organFunction} from '../model/organs.js';
 import {muscleShape, workTone, finAttachments} from './muscles.js';
 import {fibreHex} from '../../fibre.js';
-import {preferredScent} from '../../tuning.js';
+import {contactHalfAngle, preferredScent} from '../../tuning.js';
 import {scentColors} from '../../brain_model.js';
 import {
   BRAIN,
@@ -519,24 +519,30 @@ function organNodes(state, organ) {
       })
       .join('');
 }
-const FELT =
-    Object.freeze({step : 6, least : .04, base : .35, arrow : 58, gap : 6, head : 10, point : 2.2});
+const FELT = Object.freeze(
+    {step : 6, least : .04, base : .35, arrow : 58, gap : 6, head : 10, point : 2.2, grip : 22});
+// The plan reports where each cell aims. Its field's width is the group's setting, by the engine's
+// own rule (receptor_tuning.hh, contact_width), so that the felt skin follows a grip while the
+// plan's report is still on its way.
 function feltCells(state, organ) {
   return organ.centers.flatMap(
-      c => (groupReport(state.document, state.anatomy, 'felt', c.id) ?? [])
-               .map(cell =>
-                        ({cell, at : nodeLocation(state.document, state.sites, c, organ.type)})));
+      c => (groupReport(state.document, state.anatomy, 'felt', c.id) ??
+            []).map(([ aim ]) => ({
+                      cell : [ aim, radians(contactHalfAngle(c.field ?? 0)) ],
+                      at : nodeLocation(state.document, state.sites, c, organ.type)
+                    })));
 }
 // Where a skin sense's felt stretch of skin ends towards the tail, on the organ's own side: the
-// place of the grip for its field's width.
+// place of the grip for its field's width, a little off the skin so that it can be caught.
 export function feltEnd(state, organ) {
   const cells = feltCells(state, organ), side = sideOf(organ) || 1, zones = state.anatomy?.zones;
   const felt = point => cells.some(
       ({cell : [ aim, width ]}) =>
           1 - Math.abs(wrapAngle(skinDirection(point, zones) - aim)) / width > FELT.least);
-  return skinPoints(FELT.step)
-      .filter(point => (point.y - BODY_FRAME.middle) * side >= 0 && felt(point))
-      .reduce((far, point) => !far || point.x > far.x ? point : far, null);
+  const end = skinPoints(FELT.step)
+                  .filter(point => (point.y - BODY_FRAME.middle) * side >= 0 && felt(point))
+                  .reduce((far, point) => !far || point.x > far.x ? point : far, null);
+  return end && {x : end.x, y : end.y + side * FELT.grip};
 }
 function feltSkin(state, cells) {
   const points = skinPoints(FELT.step);
@@ -582,7 +588,7 @@ function feltSvg(state, organ) {
   if (!cells.length)
     return '';
   return '<g class="aid-felt ' + organ.type + '">' +
-         (organ.type === 'lateral' ? feltFlow(state, organ, cells) : feltSkin(state, cells)) +
+         (organ.type === 'lateral' ? feltFlow(state, organ, cells) : '') + feltSkin(state, cells) +
          '</g>';
 }
 const headTitle = key => '<title>' + escapeText(t(key)) + '</title>';

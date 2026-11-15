@@ -33,8 +33,9 @@ export function anatomyHandles(state, id = state.selected?.id) {
   if (!organ)
     return [];
   const at = organLocation(organ, state.sites, state.document), specs = [];
-  const add = (key, point, value, axis, span) =>
-      specs.push({id : organ.id, key, point, value, axis, span});
+  // `scene`: the fish itself shows the setting, so it is redrawn while the grip is dragged.
+  const add = (key, point, value, axis, span, scene = false) =>
+      specs.push({id : organ.id, key, point, value, axis, span, scene});
   if (organ.type === 'gut') {
     const length = gutLength(state.document) ?? BODY_UNIT.trait_middle;
     add('gut', gutShape(gutTurns(length), state.document).along(.72), length, 'y', -90);
@@ -46,7 +47,7 @@ export function anatomyHandles(state, id = state.selected?.id) {
   if (SKIN_SENSES.includes(organ.type)) {
     const end = feltEnd(state, organ);
     if (end)
-      add('field', end, organ.centers[0]?.field ?? 0, 'x', FIELD_SPAN);
+      add('field', end, organ.centers[0]?.field ?? 0, 'x', FIELD_SPAN, true);
   }
   if (organ.type !== 'muscle')
     return specs;

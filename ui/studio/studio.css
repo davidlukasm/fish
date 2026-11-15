@@ -548,7 +548,8 @@
 .aid-felt{pointer-events:none;fill:none;stroke-linecap:round}
 .aid-felt.touch>path{stroke:var(--aid-touch-felt);stroke-width:12}
 .aid-felt.pain>path{stroke:var(--aid-pain-felt);stroke-width:12}
-.aid-felt.lateral>path{stroke:var(--aid-flow);stroke-width:3;stroke-linejoin:round}
+.aid-felt.lateral>path{stroke:var(--aid-flow);stroke-width:12}
+.aid-felt.lateral>path.aid-felt-arrow{stroke-width:3;stroke-linejoin:round}
 .aid-stimulus-kind{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:8;padding:6px 14px;border-radius:999px;font-size:12.5px;white-space:nowrap;pointer-events:none;background:#0b2229e6;border:1.5px dashed var(--aid-hint-text);color:var(--aid-control-text)}
 .aid-hint-legend{position:absolute;left:76px;bottom:16px;z-index:8;display:flex;flex-wrap:wrap;gap:6px 14px;max-width:calc(100% - 220px);padding:8px 12px;border-radius:12px;background:#0b2229e6;border:1px solid #2c4c55;font-size:12.5px;pointer-events:none}
 .aid-hint-legend span{display:flex;align-items:center;gap:6px}
