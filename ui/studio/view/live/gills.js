@@ -623,14 +623,21 @@ liveKind('gills', (studio, organId) => {
   // hatching on.
   function buildLife(fixed) {
     const {L, R, top, icons} = LIFE, hatch = L + (R - L) * HATCH;
+    const eggEnd = L + 22, adultStart = R - 40, hatchGap = 18, minArrow = 10;
+    const separateHatch =
+        hatch - hatchGap - eggEnd >= minArrow && adultStart - hatch - hatchGap >= minArrow;
+    const arrow = (from, to) => `M${from} ${icons} H${to} m-6 -3.5 l6 3.5 l-6 3.5`;
     txt(fixed, L, top - 4, word('ready'));
     el('ellipse', {cx : L + 8, cy : icons, rx : 6, ry : 5, class : 'aid-live-egg'}, fixed);
     el('circle', {cx : L + 8, cy : icons, r : 1.8, class : 'aid-live-eye'}, fixed);
-    fishIcon(fixed, hatch, icons, .5);
+    // The dashed line marks hatching even when its fish symbol would collide with another.
+    if (separateHatch)
+      fishIcon(fixed, hatch, icons, .5);
     fishIcon(fixed, R - 16, icons, .8);
     el('path', {
-      d : `M${L + 22} ${icons} H${hatch - 16} m-6 -3.5 l6 3.5 l-6 3.5 M${hatch + 18} ${icons} H${
-          R - 40} m-6 -3.5 l6 3.5 l-6 3.5`,
+      d : separateHatch
+              ? arrow(eggEnd, hatch - hatchGap) + ' ' + arrow(hatch + hatchGap, adultStart)
+              : arrow(eggEnd, adultStart),
       class : 'aid-live-arrow'
     },
        fixed);
