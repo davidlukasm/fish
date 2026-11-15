@@ -74,7 +74,7 @@ liveKind('pain', (studio, organId) => {
     const probe = studio.state.senseProbe;
     return probe?.kind === 'wound' && probe.organ === organId ? probe : null;
   };
-  let step = 0, bubble = null, span = spanOf(SKIN_RESPONSE.bite_wound);
+  let step = 0, bubble = null, span = spanOf(SKIN_RESPONSE.bite_wound), drawn = null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -94,15 +94,15 @@ liveKind('pain', (studio, organId) => {
   // closed below what they feel.
   function courseOf(cell) {
     const probe = wound(), part = share(cell, probe);
-    // The cells' thresholds are those the engine drew, once its run for this fish is in.
-    const key = {
-      ...keysOf([ {id : '', centers : [ cell ]} ], BOUNDED)[0],
-      drawn : drawnThresholds(studio.state, cell.id),
-      cells : cell.copies
-    };
+    // The cells' thresholds are those the engine drew. Its run comes in after a change has
+    // settled; until then the last run's stand, and before the first the plan's one threshold.
+    const plan = keysOf([ {id : '', centers : [ cell ]} ], BOUNDED)[0],
+          fresh = drawnThresholds(studio.state, cell.id);
+    drawn = fresh ?? drawn;
+    const key = {...plan, drawn : drawn ?? [ plan.gate ], stale : !fresh};
     const depth = closingWound(probe?.strength ?? 0, BITE_STEP, SKIN_RESPONSE.heal_rate),
           met = depth.map(v => clamp(v * part)), sent = runOf(key, met, true).sent,
-          silent = silentStep(key, met), last = Math.min(...BOUNDED.gates(key)),
+          silent = silentStep(key, met), last = Math.min(1, ...BOUNDED.gates(key)),
           closed = met.findIndex((v, st) => st > BITE_STEP && v <= last);
     return {
       span : spanOf(probe?.strength ?? SKIN_RESPONSE.bite_wound),
@@ -135,14 +135,31 @@ liveKind('pain', (studio, organId) => {
     el('path', {d : `M${S.L - 6} ${by} h6`, class : 'aid-live-axis'}, live);
     txt(live, S.L - 8, by + 3, word('bite'), {'text-anchor' : 'end', class : 'aid-live-small'});
     // How small a wound the cells still feel here: below this depth they send nothing. Each cell
-    // has its own depth, the cells' thresholds spreading round the plan's; the grip on the plan's
-    // sets the threshold, the grip on the deepest how far the cells spread.
+    // has its own depth, drawn by the engine within the plan's threshold and its spread either
+    // way (distribution.hh, draw_traits): that band is the plan's, the lines in it the engine's,
+    // pale while they are the last run's. The grip on the plan's threshold sets it, the grip on
+    // the band's edge how far the cells may spread.
     const feels = c.part > 0 ? c.key.gate / c.part : S.deepest, gy = D(feels),
-          gates = BOUNDED.gates(c.key), far = Math.max(...gates);
-    if (c.part > 0)
-      for (const gate of gates)
-        el('path', {d : `M${S.L} ${D(gate / c.part)} H${S.R}`, class : 'aid-live-keyline k0 cell'},
+          reach = c.key.spread / 2,
+          edge = c.part > 0 ? D(Math.min(BOUNDED.pos(1), c.key.gate + reach) / c.part) : gy;
+    if (c.part > 0) {
+      const top = D(Math.max(0, c.key.gate - reach) / c.part);
+      if (reach > 0)
+        el('rect', {
+          x : S.L,
+          y : top,
+          width : S.R - S.L,
+          height : Math.max(0, edge - top),
+          class : 'aid-live-keyband k0'
+        },
            live);
+      for (const gate of BOUNDED.gates(c.key))
+        el('path', {
+          d : `M${S.L} ${D(gate / c.part)} H${S.R}`,
+          class : 'aid-live-keyline k0 cell' + (c.key.stale ? ' stale' : '')
+        },
+           live);
+    }
     el('path', {d : `M${S.L} ${gy} H${S.R}`, class : 'aid-live-keyline k0'}, live);
     txt(live, S.R, gy + 11, word('felt'), {'text-anchor' : 'end', class : 'aid-live-small'});
     if (c.part > 0)
@@ -163,7 +180,7 @@ liveKind('pain', (studio, organId) => {
       drag(svg,
            el('rect', {
              x : S.R - 5,
-             y : D(far / c.part) - 4,
+             y : edge - 4,
              width : 10,
              height : 8,
              rx : 2.5,
