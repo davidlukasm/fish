@@ -452,19 +452,19 @@ function groundGrip(config) {
          probeGrip(organ, probe, null, zoom, 0);
 }
 // Food before the mouth, while a muscle of the mouth is chosen: the four bites the engine tells
-// apart (anatomy.mouthForces; feeding.cc: cutting for flesh, grinding for crabs and mussels,
-// loose for feed, scraping for algae), each a piece with the Aquarium's sign for such food on
+// apart (anatomy.mouthForces; feeding.cc and tank_energy.cc: cutting for flesh, grinding for
+// plants, crabs and mussels, loose for feed, scraping for algae), each a piece with the Aquarium's sign for such food on
 // it, bitten as deep as the mouth's force on it, its name below it. Nothing is set at the food; it is not kept in
 // view, so the fish stays large.
 const FOOD = Object.freeze({
   far : 55,
-  spread : 35,
+  spread : 40,
   half : 9,
   round : 4,
   word : 9,
   sign : .7,
   ink : '#0c252b',
-  signs : [ FOOD_SLOT.fish, FOOD_SLOT.mussel, FOOD_SLOT.feed, FOOD_SLOT.algae ],
+  signs : [ FOOD_SLOT.fish, FOOD_SLOT.plant, FOOD_SLOT.feed, FOOD_SLOT.algae ],
   colours : [ '#ee9f9a', '#8fd18a', '#e6b47c', '#77d2bd' ]
 });
 function foodSvg(state) {
@@ -492,8 +492,13 @@ function foodSvg(state) {
   // The names over the pieces, so that no piece hides its neighbour's name.
   const words = F.colours.map(
       (colour, j) => '<text class="aid-handle-word" text-anchor="middle" style="fill:' + colour +
-                     '" transform="' + places[j] + '" y="' + (h + F.word) + '">' +
-                     escapeText(names[j] ?? '') + '</text>');
+                     '" transform="' + places[j] + '">' +
+                     (names[j] ?? '')
+                         .split('\n')
+                         .map((line, n) => '<tspan x="0" y="' + (h + F.word * (n + 1)) + '">' +
+                                           escapeText(line) + '</tspan>')
+                         .join('') +
+                     '</text>');
   return '<g class="aid-sense-probe" pointer-events="none">' + pieces.join('') + words.join('') +
          '</g>';
 }
