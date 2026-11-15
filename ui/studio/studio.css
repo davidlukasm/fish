@@ -1152,6 +1152,7 @@
 .aid-live-keyband.on{opacity:.4}
 .aid-live-keyline{fill:none;stroke:var(--key);stroke-dasharray:4 3;stroke-width:1.1}
 .aid-live-keyline.on{stroke-width:1.8}
+.aid-live-keyline.cell{stroke-width:.7;stroke-opacity:.55;stroke-dasharray:2 3}
 .aid-live-keymark{fill:none;stroke:var(--key);stroke-width:2.5}
 .aid-live-keygrip{fill:var(--key);stroke:var(--aid-ink);stroke-width:1}
 .aid-live-keygrip.on{stroke:var(--aid-handle);stroke-width:2.5}

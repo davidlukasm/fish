@@ -1,7 +1,8 @@
 // A sense's cells in a live inspector: what its keys (types of cells) send over the steps of an
 // input tried on them. A key's threshold is where its cells' activation starts (document.js,
 // threshold; tuning.js, activationLevel); its cells' thresholds spread around it by twice the
-// plan's spread either way (distribution.hh, draw_traits), shown as CELLS cells spread evenly.
+// plan's spread either way (distribution.hh, draw_traits): as the engine drew them where a
+// picture asks for that, else shown as CELLS cells spread evenly.
 // Cells that tire get used to the input from the first step on: what they are used to moves
 // towards it by its share 1 / steps each step, and they answer what the input exceeds it by
 // (cppn_brain.cc, adapted_response).
@@ -23,9 +24,17 @@ export const STEPS = 900, CELLS = 7, LEVELS = [ activationLevel(0), activationLe
 export const USED = [ adaptationSteps(0), LONGEST_ADAPTATION ];
 export const SENSE_BOX = Object.freeze(
     {L : 92, R : 292, LX : 44, I0 : 150, I1 : 254, row : 34, rowL : 6, rowR : 294, rowGap : 10});
-export const cellGates = k =>
-    Array.from({length : CELLS},
-               (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5), LEVELS[0], LEVELS[1]));
+// A key's cells' thresholds: those the engine drew for them in the design run's example, where
+// the picture has them (`drawn`; document.js, drawnThresholds); else, and while a grip is
+// dragged, cells spread evenly over the plan's spread: as many as the picture says the key has
+// (`cells`), or CELLS.
+export function cellGates(k) {
+  if (k.drawn?.length)
+    return k.drawn.map(gate => clamp(gate, LEVELS[0], LEVELS[1]));
+  const count = k.cells ?? CELLS;
+  return Array.from({length : count}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / count - .5),
+                                                      LEVELS[0], LEVELS[1]));
+}
 // A cell's answer to a stimulus past its threshold and what it is used to (body_plan.cc, the
 // bounded answer of a sense cell).
 export const answer = (x, gate, used) => {
@@ -89,7 +98,7 @@ export function runOf(k, stim, tires, scale = BOUNDED) {
         used = [];
   let u = 0;
   for (const s of stim) {
-    sent.push(gates.reduce((sum, g) => sum + reply(s, g, u), 0) / CELLS);
+    sent.push(gates.reduce((sum, g) => sum + reply(s, g, u), 0) / gates.length);
     used.push(u);
     u += (s - u) * pace;
   }
