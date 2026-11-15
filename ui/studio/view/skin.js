@@ -1,12 +1,20 @@
 import {radians, wrapAngle} from '../../units.js';
-import {contactHalfAngle} from '../../tuning.js';
+import {activationLevel, contactHalfAngle, unitOfPlan} from '../../tuning.js';
 import {groupReport} from '../model/document.js';
 import {findSite, sideSign} from '../model/layout.js';
 import {OUTLINE_STEP, skinAt, skinDirection, skinPoints} from './frame.js';
 import {nodeLocation, organLocation} from './places.js';
 import {fixed} from './markup.js';
-import {senseSensitivity} from './sense_marks.js';
+import {stimulusShare} from './sensitivity.js';
 
+// How readily the cells answer, 0 to 1: from the design run's answer, else from the threshold.
+function senseSensitivity(state, center) {
+  const answer = groupReport(state.document, state.anatomy, 'senses', center.id);
+  const dimmest = answer?.intensity ? state.anatomy?.lightDimmest : null;
+  if (answer?.begins > 0 && (!answer.intensity || dimmest > 0))
+    return 1 - stimulusShare(answer.begins, dimmest);
+  return answer?.intensity ? null : 1 - activationLevel(unitOfPlan(center.threshold));
+}
 const CANVAS_SKIN = Object.freeze({length : [ 3, 22 ], hit : 13, step : 6, fork : .3, least : .05});
 function skinAim(state, organ, center) {
   const felt = !state.stale && groupReport(state.document, state.anatomy, 'felt', center.id);
