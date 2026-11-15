@@ -12,6 +12,7 @@
 import {t} from '../../../strings.js';
 import {learningTimeOf, learningTimeSteps} from '../../../tuning.js';
 import {findCenter, updateCenter} from '../../model/document.js';
+import {PORT_LIMIT_DRAG} from '../circuit.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 
 const word = key => t('studio.live.learn.' + key);
@@ -39,11 +40,13 @@ function placeholder(center, probe) {
         teach = list(at => at >= probe.teach && at < probe.teach + 8 ? 1 : 0),
         trace = list(at => at < probe.cue ? 0 : Math.exp(-(at - probe.cue) / lasts)), weight = [],
         quiet = [];
+  const mode = center.mode ?? 0;
   let w = .2, q = .3;
   for (let st = 0; st <= n; st++) {
     const second = st >= S.round;
-    w = clamp(w + center.qwidth * .05 * teach[st] * trace[st] * (second ? 1 - probe.expected : 1));
-    q = Math.max(0, q - .0006 * Math.max(0, center.mode ?? 0));
+    w = clamp(w + center.qwidth * .05 * teach[st] * trace[st] * (second ? 1 - probe.expected : 1) *
+                      (1 + Math.min(0, mode)));
+    q = Math.max(0, q - .0006 * Math.max(0, mode));
     weight.push(w);
     quiet.push(q);
   }
@@ -144,10 +147,28 @@ liveKind('learn', (studio, centerId) => {
            class : 'aid-live-keygrip k0 on'
          },
             live),
-         p => draft(
-             updateCenter(studio.state.document, centerId,
-                          {qwidth : clamp((S.weight - p.y) / S.rise - ex.weight[0], S.least, 1)})),
+         // Up makes the cell learn faster; what the step then is, the redraw shows.
+         (p, from) => draft(updateCenter(
+             studio.state.document, centerId,
+             {qwidth : clamp(cell.qwidth + (from.y - p.y) / PORT_LIMIT_DRAG, S.least, 1)})),
          'learnrate', 'grip', settle);
+    // How the cell treats what does not fire with it: the grip on the still input's line. Down,
+    // the cell pushes it out the harder; up, the cell cancels what fires with it instead.
+    const qx = X(S.round), qy = S.weight - S.rise * ex.quiet[S.round];
+    drag(svg,
+         el('rect', {
+           x : qx - 5,
+           y : qy - 4,
+           width : 10,
+           height : 8,
+           rx : 2.5,
+           class : 'aid-live-keygrip k0 on'
+         },
+            live),
+         (p, from) => draft(updateCenter(
+             studio.state.document, centerId,
+             {mode : clamp((cell.mode ?? 0) + 2 * (p.y - from.y) / PORT_LIMIT_DRAG, -1, 1)})),
+         'learnmode', 'grip', settle);
   }
   function show() {
     const cell = center();

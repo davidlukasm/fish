@@ -1,8 +1,8 @@
 import {regionNodeMap} from './region_graph.js';
 import {HORMONE_EFFECT, TIME_CONSTANT} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
-import {clamp, PERCENT} from '../../units.js';
-import {LONGEST_LEARNING_TIME, learningTimeOf, learningTimeSteps} from '../../tuning.js';
+import {clamp} from '../../units.js';
+import {LONGEST_LEARNING_TIME, learningTimeOf} from '../../tuning.js';
 import {
   allCenters,
   chosenCenter,
@@ -12,29 +12,25 @@ import {
   isLearner,
   LEARNING_EFFECTS,
   pairEndpoint,
-  receptorResponse,
   receptorEnds,
   regulatorySubstances
 } from '../model/document.js';
-import {escapeText, fixed, glyph} from './markup.js';
+import {escapeText, glyph} from './markup.js';
 import {routedLinks} from '../model/regions.js';
-import {formatNumber, formatSigned, joinParts, t} from '../../strings.js';
-import {bandGlyph, heading, icon, ICON, label, VALUE_DIGITS} from './kit.js';
+import {joinParts} from '../../strings.js';
+import {bandGlyph, heading, icon, ICON, label} from './kit.js';
 import {effectCurve, substanceName} from './substances.js';
 import {centerTitle, organTitle, tone} from './names.js';
-import {isTeachingSource, isPacemaker, isRegion, modeLean, nerveClass} from '../model/organs.js';
+import {isTeachingSource, isPacemaker, isRegion, modeLean} from '../model/organs.js';
 import {EFFECT_ICON} from './icons.js';
 import {cellDevelopment, previewContextOf} from './development.js';
 import {effectScene} from './effects.js';
-import {EPISODE_LAYOUT, episodeSvg} from './episode.js';
 import {centerMarker} from './scene.js';
 import {contactPlan} from './contact_plan.js';
 import {learningFactors} from '../model/learning.js';
 import {livePlace} from './live/kit.js';
 import './live/learn.js';
 
-// The learning gain keeps one digit more because it is small.
-const RATE_DIGITS = VALUE_DIGITS + 1;
 function sendersOf(state, center) {
   const doc = state.document, organ = findCenter(doc, center.id)?.organ;
   const hears = new Set([ center.id, organ?.id ]);
@@ -53,104 +49,8 @@ const boundSubstance = (state, center, effect) => {
              : null;
 };
 
-const traceSteps = center => learningTimeSteps(center.learning_tau);
 const MODE_NAME = Object.freeze({[-1] : 'cancelling', 0 : 'neutral', 1 : 'competing'});
 export const modeName = mode => MODE_NAME[modeLean(mode)];
-const RULE = Object.freeze({
-  change : 7,
-  compete : 3,
-  cancel : 2.4,
-  expect : 1.6,
-  glow : .55,
-  unused : .8,
-  apart : 2.6,
-  delay : TIME_CONSTANT.learning_min_steps
-});
-const remnantOf = center => Math.exp(-RULE.delay / traceSteps(center));
-// Two rounds of the cell's learning: what fires with it grows, a still input fades and, when
-// the cell competes, gives way; a teacher's surprise grows what its trace still holds.
-function learningPicture(state, center, teachers, colours, values) {
-  const L = EPISODE_LAYOUT, R = RULE, words = key => label('learnRule.' + key);
-  const factors = learningFactors(state.capabilities, center, previewContextOf(state));
-  const rate = factors.value / factors.max, mode = factors.mode, pacer = teachers.pacers.length > 0;
-  const remnant = remnantOf(center), teaches = colours.length > 0;
-  const inputs = [
-    {y : L.cy - L.r * R.apart, deed : 'own', label : words('activeInput')},
-    ...(pacer ? [ {y : L.cy, deed : 'beat', label : words('rhythmicInput')} ] : []),
-    {y : L.cy + L.r * R.apart, deed : null, label : words('quietInput')}
-  ];
-  const competing = R.compete * rate * Math.max(0, mode) * factors.competition;
-  const cancelling = R.cancel * rate * Math.max(0, -mode);
-  let expect = 0;
-  const rounds = [ 0, 1 ].map(k => {
-    const surprise = teaches ? 1 - expect : 0;
-    const reward = R.change * rate * surprise * remnant;
-    const own = reward * factors.credit, beat = pacer ? reward * factors.credit : 0;
-    const giveWay = modeLean(mode) > 0 ? -(own + beat) : 0;
-    const before = expect;
-    if (teaches)
-      expect = before + (1 - before) * Math.min(1, R.expect * rate);
-    const trace = [ factors.credit * R.glow, ...(pacer ? [ factors.credit * R.glow ] : []), 0 ];
-    return {
-      trace,
-      remnant,
-      teach : teaches ? colours[k % colours.length] : null,
-      grow : [ competing - cancelling, ...(pacer ? [ -competing ] : []), -competing - R.unused ],
-      gain : [ own, ...(pacer ? [ beat ] : []), giveWay ],
-      expect : [ before, expect ]
-    };
-  });
-  const lean = label('inspector.' + modeName(mode));
-  const caption = !(rate > 0)            ? words('off')
-                  : teaches              ? joinParts([
-                      t('studio.learnRule.gain', {n : Math.round(rate * PERCENT)}),
-                      modeLean(mode) !== 0 ? lean : ''
-                    ])
-                  : modeLean(mode) !== 0 ? t('studio.learnRule.untaughtMode', {mode : lean})
-                                         : words('untaught');
-  return episodeSvg({
-    title : label('inspector.learning'),
-    tooltip : joinParts([ caption, values ]),
-    inputs,
-    output : true,
-    labels : {
-      beat : words('rhythm'),
-      teach : words('lesson'),
-      output : words('reaction'),
-      expect : words('prediction')
-    },
-    caption : words('example'),
-    rounds
-  });
-}
-function learningValues(state, center) {
-  if (!state.capabilities)
-    return '';
-  const constants = state.capabilities.neural, context = previewContextOf(state),
-        cl = nerveClass(center);
-  const response = effect =>
-      receptorResponse(state.capabilities, center.receptors[effect], context);
-  const eta = constants.learningFloor + (constants.learningGainMax - constants.learningFloor) *
-                                            center.qwidth *
-                                            (1 + response(HORMONE_EFFECT.learning)) / 2;
-  const decayHalf = use => {
-    const d = Math.log(2) / constants.baselineSteps +
-              (1 - use) / (constants.unusedDecaySpan * learningTimeSteps(center.learning_tau));
-    const retention = 1 - d + d * d * (.5 - d / 6);
-    return Math.ceil(Math.log(.5) / Math.log(retention));
-  };
-  const row = (key, value) => label('learnRule.' + key) + ' ' + value;
-  return [
-    row('effectiveRate', formatNumber(eta, RATE_DIGITS)),
-    row('mode',
-        label('inspector.' + modeName(cl.mode)) + ' ' + formatSigned(cl.mode, VALUE_DIGITS)),
-    row('probation', Math.ceil(constants.contactTrial * learningTimeSteps(center.learning_tau)) +
-                         ' ' + label('learnRule.steps')),
-    row('prune', formatNumber(constants.prune, VALUE_DIGITS)),
-    row('decayUnused', decayHalf(0) + ' ' + label('learnRule.steps')),
-    row('decayUsed', decayHalf(1) + ' ' + label('learnRule.steps'))
-  ].join(' · ');
-}
 const TRACE = Object.freeze(
     {width : 300, height : 138, left : 22, right : 280, top : 20, bottom : 110, samples : 64});
 const traceAxis = LONGEST_LEARNING_TIME;
@@ -171,58 +71,6 @@ export function learnMemoryPatch(state, center, handle, fx, fy) {
     return null;
   const value = clamp((T.bottom - fy * T.height) / (T.bottom - T.top)) * gain.max;
   return {qwidth : clamp((value - gain.floor) / gain.span)};
-}
-function traceGraphic(state, center) {
-  const T = TRACE, lasts = traceSteps(center), gain = learningGain(state, center);
-  const x = steps =>
-      T.left + (T.right - T.left) * Math.log1p(steps / TIME_CONSTANT.learning_min_steps) / traceLog;
-  const y = level => T.bottom - (T.bottom - T.top) * level / gain.max;
-  const points = Array.from({length : T.samples + 1}, (_, k) => {
-    const steps = traceAt(k / T.samples);
-    return fixed(x(steps)) + ' ' + fixed(y(gain.value * Math.exp(-steps / lasts)));
-  });
-  const grip = (key, x, y, title) => '<circle class="aid-graphic-handle" data-learning-handle="' +
-                                     key + '" cx="' + fixed(x) + '" cy="' + fixed(y) +
-                                     '" r="7"><title>' + escapeText(title) + '</title></circle>';
-  return '<svg class="aid-learn-trace" viewBox="0 0 ' + T.width + ' ' + T.height +
-         '" data-learning-memory="' + escapeText(center.id) + '" role="img" aria-label="' +
-         label('cellPicture.learningMemory') + '"><title>' +
-         escapeText(label('cellPicture.learningMemory') + ' · ' +
-                    t('studio.learnRule.lasts', {n : Math.round(lasts)})) +
-         '</title><path class="aid-learn-glow" d="M' + T.left + ' ' + T.bottom + ' L' +
-         points.join(' L') + ' L' + T.right + ' ' + T.bottom + ' Z"/>' +
-         '<path class="aid-learn-fade" d="M' + points.join(' L') + '"/>' +
-         '<path class="aid-chart-axis" d="M' + T.left + ' ' + T.top + 'V' + T.bottom + 'H' +
-         T.right + '"/>' +
-         (gain.span > 0 ? grip('rate', T.left, y(gain.value), label('cellPicture.learningStrength'))
-                        : '') +
-         grip('trace', x(lasts), y(gain.value / Math.E), label('learnRule.traceLength')) +
-         '<text x="' + (T.left + 12) + '" y="14">' + label('learnRule.laterLesson') +
-         '</text><text x="' + T.left + '" y="130">' + label('learnRule.cueNow') +
-         '</text><text x="' + T.right + '" y="130" text-anchor="end">' + label('learnRule.later') +
-         '</text></svg>';
-}
-function modeChoices(center) {
-  return '<div class="aid-learning-modes">' +
-         [ -1, 0, 1 ]
-             .map(mode => {
-               const name = label('cellPicture.mode.' + (mode + 1));
-               return '<button data-response-cell="' + escapeText(center.id) +
-                      '" data-response-property="mode" ' +
-                      'data-response-value="' + mode + '" aria-pressed="' +
-                      (modeLean(center.mode) === mode) + '" title="' + name + '">' +
-                      '<svg viewBox="0 0 88 54" aria-hidden="true"><circle class="aid-tissue-cell" cx="66" cy="26" r="12"/>' +
-                      '<path class="aid-contact-fibre" d="M10 12L55 22" stroke-width="' +
-                      (mode < 0   ? 1
-                       : mode > 0 ? 6
-                                  : 3) +
-                      '"/><path class="aid-contact-fibre" d="M10 40L55 30" stroke-width="' +
-                      (mode > 0 ? 1 : 3) +
-                      '"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>' +
-                      escapeText(label('learnRule.modeShort.' + (mode + 1))) + '</button>';
-             })
-             .join('') +
-         '</div>';
 }
 function substancePart(state, center, effect) {
   const receptor = center.receptors?.[effect];
@@ -346,14 +194,8 @@ export function learningInspector(state) {
            label('inspector.selectLearning') + '</div>';
   html += nodeChoice(state, chosen);
   const teachers = sendersOf(state, chosen);
-  const taught = boundSubstance(state, chosen, HORMONE_EFFECT.teaching);
-  const colours = [
-    ...(teachers.modulators.length ? [ tone('brain') ] : []),
-    ...(taught ? [ substanceColor(taught.index) ] : [])
-  ];
   return html + heading(centerTitle(chosen)) + livePlace('learn', chosen) +
-         teacherList(state, chosen, teachers.modulators) + modeChoices(chosen) +
-         '<div class="aid-learn-effects">' +
+         teacherList(state, chosen, teachers.modulators) + '<div class="aid-learn-effects">' +
          LEARNING_EFFECTS.map(effect => substancePart(state, chosen, effect)).join('') + '</div>' +
          cellDevelopment(state, chosen) + contactPlan(state, [ chosen ]);
 }
