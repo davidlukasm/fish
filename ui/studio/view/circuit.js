@@ -6,7 +6,7 @@ import {chiasmWire, isLearner, regulatorySubstances, substanceBound} from '../mo
 import {substanceName} from './substances.js';
 import {escapeText, glyph} from './markup.js';
 import {organPorts, planned, regionPlan, regionSlots} from '../model/regions.js';
-import {joinParts, t} from '../../strings.js';
+import {joinParts, percent, t} from '../../strings.js';
 import {ICON, icon, iconSwitch, label, slotFill, slotShape} from './kit.js';
 import {organTitle, slotTitle} from './names.js';
 import {regionPicture} from './region_controls.js';
@@ -67,10 +67,17 @@ export function slotsSection(state, organ) {
 // feeds; or the organ that feeds it, a line and this organ's symbol. Joined, a full line; free,
 // a dashed one with the button that joins it; the fish lacking that organ, pale and without a
 // button. The symbol of the other organ leads to its inspector.
-export function portsSection(state, organ) {
+// How strong a contact into this organ's cells may grow is the receiving cells' own (one limit
+// for every contact they take, colony-core substrate.cc): every incoming line is as thick as
+// that limit, and one grip at the receiving end of the first sets it for all of them.
+const PORT_LINE = Object.freeze({least : 1, span : 5});
+export const PORT_LIMIT_DRAG = 60;
+export function portsSection(state, organ, center = null) {
+  const limit = center && center.role !== 'sensor' ? center.electrical_limit : null;
+  let gripped = limit === null;
   const rows =
-      organPorts(state.document, organ)
-          .map(({dir, other, kind, slot, joined}) => {
+      organPorts(state.document, organ, state.sites)
+          .map(({dir, other, kind, slot, slots, joined}) => {
             const fill = joined ? 'filled' : other ? 'free' : 'absent';
             const name = other ? organTitle(other, state.sites) : label('organs.' + kind);
             const own = icon(organ.type, ICON.part);
@@ -79,19 +86,32 @@ export function portsSection(state, organ) {
                                     '</button>'
                               : '<span class="aid-port-absent" title="' + escapeText(name) + '">' +
                                     icon(kind, ICON.part) + '</span>';
+            const thick = dir === 'in' && limit !== null;
+            const grip = thick && !gripped;
+            gripped ||= grip;
             const line =
-                '<span class="aid-port-line">' +
+                '<span class="aid-port-line"' +
+                (thick ? ' style="border-top-width:' +
+                             (PORT_LINE.least + PORT_LINE.span * limit).toFixed(1) + 'px"'
+                       : '') +
+                '>' +
                 (other && !joined
                      ? '<button class="aid-slot-add" data-port-organ="' + escapeText(organ.id) +
                            '" data-port-other="' + escapeText(other.id) + '" data-port-key="' +
                            escapeText(slot.key) + '" data-port-dir="' + dir + '" title="' +
                            label('wiring.connect') + '">+</button>'
                      : '') +
+                (grip ? '<span class="aid-port-grip" data-port-limit="' + escapeText(center.id) +
+                            '" data-port-value="' + limit + '" title="' +
+                            escapeText(
+                                joinParts([ label('contacts.electrical_limit'), percent(limit) ])) +
+                            '"></span>'
+                      : '') +
                 '</span>';
             return '<li class="' + fill + '">' +
                    (dir === 'out' ? own + line + far : far + line + own) + '<small>' +
-                   escapeText(name.replace(/\u00ad/g, '')) + ' · ' + escapeText(slotTitle(slot)) +
-                   '</small></li>';
+                   escapeText(name.replace(/\u00ad/g, '')) + ' · ' +
+                   escapeText((slots ?? [ slot ]).map(slotTitle).join(', ')) + '</small></li>';
           })
           .join('');
   return rows ? '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +

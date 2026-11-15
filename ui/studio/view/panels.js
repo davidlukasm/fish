@@ -208,7 +208,7 @@ function organInspector(state, organ) {
              sideSwitch(organ) + centerTabs(state, organ);
   html +=
       organSettingsBlock(state, organ) +
-      (isRegion(organ) ? '' : slotsSection(state, organ) + portsSection(state, organ)) +
+      (isRegion(organ) ? '' : slotsSection(state, organ) + portsSection(state, organ, center)) +
       chemistry(state, organ, center) +
       (isRegion(organ) && state.selected?.kind !== 'center'
            ? ''

@@ -539,6 +539,9 @@
 .aid-ports li.absent{opacity:.45}
 .aid-port-absent{border-style:dashed;border-color:#6f9aa0;background:transparent}
 .aid-port-line .aid-slot-add{background:var(--aid-panel,#12303a);border-style:solid}
+.aid-port-line{position:relative}
+.aid-port-grip{position:absolute;right:-3px;top:50%;width:10px;height:14px;margin-top:-7px;box-sizing:border-box;border-radius:3px;background:var(--aid-handle-core);border:2.2px solid var(--aid-handle);cursor:ns-resize;touch-action:none}
+.aid-port-grip:hover{border-color:var(--aid-light)}
 .aid-region-slots li.missing .aid-slot-add{border-color:#e9a27f;color:#f0c1a6}
 .aid-reach{pointer-events:none}
 .aid-reach .aid-reach-edge{fill:none;stroke:var(--aid-brain);stroke-width:1;stroke-dasharray:4 4;opacity:.6;vector-effect:non-scaling-stroke}

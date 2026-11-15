@@ -1,4 +1,10 @@
-const port = (key, dir, node, fits = [], required = false) => ({key, dir, node, fits, required});
+import {FIN_STROKE, MOTOR_KIND} from '../../schema.js';
+
+// `works`, where a port is made for one kind of muscle work: the work its muscle does and, for a
+// fin, which way it strokes. The engine wires any muscle to any such port; the work only says which
+// muscle a free port is offered to.
+const port = (key, dir, node, fits = [], required = false, works = null) =>
+    ({key, dir, node, fits, required, works});
 const unit = initial => ({least : 0, most : 1, initial, step : .01});
 const home = Object.freeze({
   key : 'relay',
@@ -20,9 +26,13 @@ export const REGION_TYPES = Object.freeze([
     slots : [
       port('urge', 'in', 'urge', [], true), port('steer', 'in', 'steer'),
       port('escape', 'in', 'escape'),
-      port('stroke', 'out', [ 'oscillator', 'rest' ], [ 'muscle' ], true), port('fin', 'in', 'fin'),
-      port('row', 'out', [ 'row', 'recoverOpponent' ], [ 'muscle' ]),
-      port('recover', 'out', [ 'recover', 'rowOpponent' ], [ 'muscle' ])
+      port('stroke', 'out', [ 'oscillator', 'rest' ], [ 'muscle' ], true,
+           {kind : MOTOR_KIND.forward}),
+      port('fin', 'in', 'fin'),
+      port('row', 'out', [ 'row', 'recoverOpponent' ], [ 'muscle' ], false,
+           {kind : MOTOR_KIND.turn, stroke : FIN_STROKE.back}),
+      port('recover', 'out', [ 'recover', 'rowOpponent' ], [ 'muscle' ], false,
+           {kind : MOTOR_KIND.turn, stroke : FIN_STROKE.front})
     ],
     settings : {cycle : unit(.6), finCycle : unit(.6), alternation : unit(1)}
   },

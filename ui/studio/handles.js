@@ -36,6 +36,7 @@ import {variationPatch} from './view/cell_tissue.js';
 import {contactCapacityPatch} from './view/contact_plan.js';
 import {previewPatch} from './view/development.js';
 import {lifeGripPatch, lifeGripStart} from './view/life_cycle.js';
+import {PORT_LIMIT_DRAG} from './view/circuit.js';
 import {HORMONE_EFFECT} from '../schema.js';
 import {cellPatch, label} from './view/kit.js';
 import {CPPN_GRIPS, CPPN_HANDLES, cppnMethods} from './cppn.js';
@@ -60,6 +61,7 @@ const HANDLES = Object.freeze({
   memory : {follow : 'memoryPointer'},
   drive : {follow : 'drivePointer'},
   life : {follow : 'lifePointer'},
+  portLimit : {follow : 'portLimitPointer'},
   response : {follow : 'responsePointer'},
   nerve : {follow : 'nervePointer'},
   region : {follow : 'regionPointer'},
@@ -180,6 +182,11 @@ export const GRIPS = Object.freeze([
     held : 'life',
     start : (studio, g, h) =>
         ({id : g.dataset.lifeCycle, axis : g.dataset.lifeAxis, handle : h.dataset.lifeGrip})
+  },
+  {
+    graphic : '[data-port-limit]',
+    held : 'portLimit',
+    start : (studio, g) => ({id : g.dataset.portLimit, value : Number(g.dataset.portValue)})
   },
   {
     graphic : '[data-cell-group]',
@@ -468,6 +475,13 @@ export const handleMethods = {
                      : effect === BIRTH ? updateCellGrowth(doc, centerId, patch)
                                         : updateReceptor(doc, centerId, effect, patch),
                      'receptor:' + drag.target);
+  },
+  // Up makes the incoming lines thicker: the cells' contacts may grow stronger.
+  portLimitPointer(event) {
+    const drag = this.handleDrag, {fy} = pointerShare(event, drag.rect);
+    const value = clamp(drag.value - (fy - .5) * drag.rect.height / PORT_LIMIT_DRAG);
+    this.draftDesign(updateCenter(this.state.document, drag.id, {electrical_limit : value}),
+                     'portLimit:' + drag.id);
   },
   // A grip of a cell's life cycle: when it comes into being or dies, how active it starts or ends,
   // where its activity turns and how steeply.
