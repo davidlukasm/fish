@@ -187,8 +187,16 @@ export const gestureMethods = {
     if (this.state.armed && event.button === 0)
       return;
     const item = event.target.closest?.(itemSelector(PRESSED_ITEMS));
-    const kind = markedKind(item, PRESSED_ITEMS);
-    const id = kind ? item.dataset[kind] : null;
+    let kind = markedKind(item, PRESSED_ITEMS);
+    let id = kind ? item.dataset[kind] : null;
+    if (kind === 'center' && this.state.tool === 'select' && event.button === 0) {
+      // The selected muscle's cell marks can cover its shape but move with the whole muscle.
+      const organ = findCenter(this.state.document, id)?.organ;
+      if (organ?.type === 'muscle') {
+        kind = 'organ';
+        id = organ.id;
+      }
+    }
     this.pointer = {
       id,
       kind,
