@@ -49,13 +49,16 @@ export function probeFor(organ, probe, anatomy, document) {
     return null;
   const side = sideOf(organ);
   const prior = probe?.kind === kind ? probe : null;
+  const same = prior?.organ === organ.id, tuning = organ.centers[0];
   const skin = (kind === 'touch' || kind === 'wound') && !prior?.manual;
-  const bearing = skin ? skinProbeBearing(document, anatomy, organ.centers[0]?.id) : null;
-  if (probe?.organ === organ.id)
-    return bearing === null || bearing === probe.bearing ? probe : {...probe, bearing};
+  const aim = kind === 'attack' && !(same && prior.manual);
+  const bearing = skin ? skinProbeBearing(document, anatomy, tuning?.id)
+                       : aim ? spineBearing(document, anatomy, tuning?.id)
+                             : null;
+  if (same)
+    return bearing === null || bearing === prior.bearing ? prior : {...prior, bearing};
   const facing = kind === 'balance' ? 1 : prior ? prior.side === side ? 1 : -1 : side;
-  const scene = prior ?? START[kind], tuning = organ.centers[0];
-  const spines = kind === 'attack' ? spineBearing(document, anatomy, tuning?.id) : null;
+  const scene = prior ?? START[kind];
   const tip = !prior && kind === 'taste' && anatomy?.bodyRadius > 0
                   ? anatomy.barbelPlaces?.[sideIndex(side)]
                   : null;
@@ -67,7 +70,8 @@ export function probeFor(organ, probe, anatomy, document) {
     kind,
     side,
     scent : prior?.scent ?? (kind === 'smell' && tuning ? preferredScent(tuning) : 0),
-    bearing : bearing ?? spines ?? (tip ? degrees(Math.atan2(across, tip[0])) : facing * scene.bearing),
+    ...(aim ? {manual : false} : {}),
+    bearing : bearing ?? (tip ? degrees(Math.atan2(across, tip[0])) : facing * scene.bearing),
     ...(tip ? {distance : Math.hypot(tip[0], across)} : {}),
     ...(scene.flow ? {flow : {...scene.flow, bearing : facing * scene.flow.bearing}} : {})
   };
