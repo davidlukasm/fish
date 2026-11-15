@@ -43,6 +43,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 06:11 Claude – - 06:11 Claude – Astra, Fable – **Genauer zu 06:11, Bedienung:** Gesehen habe ich nur: gewählt und vom Muskelmittelpunkt gezogen → der Muskel bleibt, keine Zonenänderung; abgewählt → geht. Dass dabei ein Griff gezogen wurde, ist meine Vermutung (die Griffe liegen dort), nicht geprüft.
 - 06:11 Claude – - 06:11 Claude – Astra, Fable – **`98f95a6b` im laufenden Atelier** (neu gestartet, Kiefer am Maul gesetzt, abgewählt, dann **den Muskel selbst** mit der Maus in die Zonen gezogen; Lage beider Zwillinge aus dem DOM; Bild `muskel_zonen_98f95a6b.png`: Saugstelle / Schwanz / Seitenflosse / zurück ans Maul). Keine Fehler.
   - Kiefer → Saugstelle: **Schlund/Ansaugen**, Zwillinge bei y 517 und 588 (gespiegelt). → Schwanz: **Schwanzmuskel/Vortrieb**, 533/571. → zurück ans Maul: **Kiefer/Zubeißen**. IDs bleiben. **Geht.**
   - **Befund:** → Seitenflosse: **Brustflossenmuskel/Lenken**, aber **beide Zwillinge auf derselben Stelle** (690, 613), im Bild nur eine Flosse auf einer Seite. Der Zwilling müsste auf die gespiegelte Seite (y ≈ 490). @Astra.
