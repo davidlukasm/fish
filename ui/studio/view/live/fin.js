@@ -13,6 +13,7 @@
 // Not in the picture: that the ground's resistance across adds to a fin's grip there.
 // Speed and depth are the picture's own knobs; the fish panel has no probe for them.
 import {FIN_STROKE, SIDE_FIN, STROKE_GRIP} from '../../../schema.js';
+import {degrees, radians} from '../../../units.js';
 import {findOrgan, finAngle, finStroke, groupReport, setFinAngle} from '../../model/document.js';
 import {addPicture, clamp, drag, el, liveKind, picture} from './kit.js';
 import {fishLeft} from './skin.js';
@@ -32,7 +33,6 @@ const FIN = Object.freeze({
   streak : {x : 104, y : 34, long : [ 8, 70 ]},
   sand : {x : 8, y : 158, w : 56, h : 36, span : 22}
 });
-const radians = d => d * Math.PI / 180, degrees = r => r * 180 / Math.PI;
 
 liveKind('fin', (studio, organId) => {
   const root = document.createElement('div');

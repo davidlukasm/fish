@@ -14,10 +14,11 @@
 // (anatomy.spineHeights and spinesRaised).
 // Not in the pictures: that a hungry fish holds off less; the brake in the water and in the sand.
 import {ATELIER_LIMITS} from '../../../schema.js';
+import {degrees, radians} from '../../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, setNodeCopies, updateCenter} from '../../model/document.js';
 import {addPicture, clamp, drag, el, liveKind, picture} from './kit.js';
-import {fishAbove} from './skin.js';
+import {fishAbove, turnTo} from './skin.js';
 
 const SPINE = Object.freeze({
   height : 204,
@@ -31,8 +32,6 @@ const SPINE = Object.freeze({
   gape : [ .5, 2.1 ],
   step : 2
 });
-const radians = d => d * Math.PI / 180, degrees = r => r * 180 / Math.PI;
-const turnTo = a => ((a + 540) % 360) - 180;
 
 liveKind('defense', (studio, organId) => {
   const root = document.createElement('div');

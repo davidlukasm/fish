@@ -13,6 +13,7 @@
 import {ATELIER_LIMITS, BODY_UNIT, MOTOR_KIND} from '../../../schema.js';
 import {mouthShare} from '../../../fish_forms.js';
 import {tList} from '../../../strings.js';
+import {degrees} from '../../../units.js';
 import {findOrgan, muscleTrait, setMuscleTrait, setNodeCopies} from '../../model/document.js';
 import {organFunction} from '../../model/organs.js';
 import {addPicture, clamp, drag, el, liveKind, picture, txt} from './kit.js';
@@ -30,7 +31,6 @@ const MOUTH = Object.freeze({
   },
   colours : [ '#ee9f9a', '#8fd18a', '#e6b47c', '#77d2bd' ]
 });
-const degrees = r => r * 180 / Math.PI;
 
 liveKind('mouth', (studio, organId) => {
   const root = document.createElement('div');

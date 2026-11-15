@@ -12,6 +12,7 @@
 // the fish. The grip on the dashed ring sets the threshold: there the cell answers half. ASSUMED
 // for the picture: a bright thing straight before the cell.
 import {unitOfPlan} from '../../../tuning.js';
+import {radians} from '../../../units.js';
 import {findOrgan, updateField} from '../../model/document.js';
 import {organCells} from '../vision.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
@@ -32,7 +33,6 @@ const NEAR = Object.freeze({
   least : .02,
   most : .9
 });
-const radians = d => d * Math.PI / 180;
 
 liveKind('near', (studio, organId) => {
   const root = document.createElement('div');

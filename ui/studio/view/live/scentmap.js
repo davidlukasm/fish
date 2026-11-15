@@ -4,6 +4,7 @@
 // half of a scent, with a grip at its place and one on the patch's edge for its width; and the
 // scent or stone chosen in the fish panel as a cross.
 import {scentColors, scentNames} from '../../../brain_model.js';
+import {degrees, radians} from '../../../units.js';
 import {TUNING} from '../../../schema.js';
 import {scentAffinities, scentTuning, tuningHalfOffset} from '../../../tuning.js';
 import {chip, clamp, drag, el, path, picture, txt} from './kit.js';
@@ -22,7 +23,6 @@ const MAP = Object.freeze({
   widest : .8
 });
 const STONE = Object.freeze([ 2 * MAP.cx - 26, 22 ]);
-const degrees = r => r * 180 / Math.PI, radians = d => d * Math.PI / 180;
 const vector = ({q1, q2}) => {
   const z = clamp(q2, -1, 1), r = Math.sqrt(1 - z * z), phi = Math.PI * (q1 + 1);
   return [ r * Math.cos(phi), r * Math.sin(phi), z ];
