@@ -15,8 +15,8 @@
 // The input: when the closer begins, before or after the opener; there only if the fish has
 // both. The water through the gills and the credit are drawn against the plan's own measures
 // (mouthCourse.gillWaterReference: the gills' water at a wide open mouth and a full command;
-// creditReference: what the throat would take if the stream ran full for the opener's whole
-// twitch, more than any beat reaches).
+// creditReference: what the throat takes over the opener's whole twitch at a full command; a
+// beat whose opener is not cut short by the snap comes close to it, one that is stays below).
 // STOPGAP: the four kinds of food and the force on each (anatomy.mouthForces). They belong to a
 // probe of food before the mouth in the fish panel; until that exists they stay here.
 import {t, tList} from '../../../strings.js';
