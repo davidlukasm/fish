@@ -1,25 +1,55 @@
-// The skin's pain cells' live inspector: what the cells report of a wound while it closes.
+// The skin's pain cells' live inspector: a strip of skin over time. The wound is cut into it at
+// the bite and closes as the fish heals; above the skin, what the cells report of it, which ends
+// before the wound has closed.
 // Read in the engine (physiology.hh, harm_body; body_plan.cc, the skin cells' wedge of weights and
 // the damage stimulus; physiology.cc, healing; feeding.cc and physiology_parameters.cc, bite_wound;
 // embryo.cc): every harm takes from the fish's health; a bite is booked on the sector it comes
 // from, split between the two nearest sector centres. Pain cells weigh the sectors like the other
-// skin cells. A fed fish heals each step and the booked wounds shrink with it.
-// The wound is the fish panel's probe (probes.js), where it lies and how deep it is; the bite
-// falls at the start of the course. The fish, the skin the cells feel and the grip for its width
-// are the fish panel's too (body.js, feltSkin; anatomy_handles.js); here is only what it cannot
-// show: the course over time. The cells' place is the plan's report (anatomy.felt).
-// Not in the pictures: harm without a place (hunger, illness, age), which lies evenly on all
+// skin cells. A fed fish heals each step and the booked wounds shrink with it. The answer is
+// bounded, and the cells get used to a wound that stays.
+// The wound is the fish panel's probe (probes.js), where it lies and how deep it is. The fish,
+// the skin the cells feel and the grip for its width are the fish panel's too (body.js, feltSkin;
+// anatomy_handles.js); here is only what it cannot show: the time after the bite. The cells'
+// place is the plan's report (anatomy.felt); what they send over the steps is reckoned with the
+// engine's rule for a bounded answer and for getting used (sense.js, runOf).
+// Not in the picture: harm without a place (hunger, illness, age), which lies evenly on all
 // sectors; that a hungry fish does not heal.
 import {SKIN_RESPONSE} from '../../../schema.js';
-import {t} from '../../../strings.js';
+import {percent, t} from '../../../strings.js';
 import {contactHalfAngle} from '../../../tuning.js';
 import {findOrgan} from '../../model/document.js';
-import {addPicture, liveKind} from './kit.js';
-import {BOUNDED, closingWound, keysOf, senseCourse, STEPS} from './sense.js';
+import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {
+  between,
+  BOUNDED,
+  closingWound,
+  keysOf,
+  runOf,
+  setGate,
+  setUsed,
+  silentStep,
+  STEPS,
+  usedFor
+} from './sense.js';
 import {placeOf, turnTo, wedge} from './skin.js';
 
 const word = (key, values) => t('studio.live.pain.' + key, values);
 const ROUND_MS = 12000, BITE_STEP = 12;
+// The strip: steps from L to R; the skin's line; below it the wound, `deep` high for the deepest
+// wound the fish panel's probe can make; above it the report, `loud` high when all cells send.
+const STRIP = Object.freeze({
+  height : 190,
+  L : 34,
+  R : 288,
+  skin : 84,
+  deep : 70,
+  deepest : .5,
+  loud : 34,
+  gap : 6,
+  bubble : 12,
+  marks : [ 300, 600, 900 ],
+  least : .02
+});
 // Match harm_body's linear split, including across the seam behind the fish.
 function woundShares(bearing, count) {
   const position = (turnTo(bearing) + 180) * count / 360 - .5, lower = Math.floor(position),
@@ -31,22 +61,20 @@ function woundShares(bearing, count) {
 liveKind('pain', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-pain aid-live-sense-ache';
-  const ache = addPicture(root);
-  const own = {chosen : 0};
+  const strip = addPicture(root);
   // The fish panel's wound, if it is this organ's.
   const wound = () => {
     const probe = studio.state.senseProbe;
     return probe?.kind === 'wound' && probe.organ === organId ? probe : null;
   };
-  let step = 0;
+  let step = 0, bubble = null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
   // What the cells meet of the wound: the sectors it is booked on, as the cells weigh them
   // (16 x weight, at most all of it).
-  function share() {
-    const cell = organ()?.centers[0], probe = wound();
-    if (!cell || !probe)
+  function share(cell, probe) {
+    if (!probe)
       return 0;
     const weights = wedge(placeOf(studio, cell), contactHalfAngle(cell.field ?? 0));
     let met = 0;
@@ -54,32 +82,111 @@ liveKind('pain', (studio, organId) => {
       met += weights.length * weights[sector] * part;
     return met;
   }
-  const course = senseCourse(ache, {
-    name : 'ache',
-    own,
-    tires : true,
-    most : 1,
-    input : () => closingWound(wound()?.strength ?? 0, BITE_STEP, SKIN_RESPONSE.heal_rate),
-    mark : {at : SKIN_RESPONSE.bite_wound, word : word('bite')},
-    scale : BOUNDED,
-    words : {course : word('course'), used : word('used'), steps : word('steps')},
-    keys : () => keysOf([ {id : '', centers : organ().centers} ], BOUNDED),
-    share,
-    doc : () => studio.state.document,
-    draft,
-    settle,
-    redraw : () => show()
-  });
+  // The wound over the steps, what the cells meet of it and send, and when they fall silent:
+  // because they have got used to it (the wound alone would still be felt), or because it has
+  // closed below what they feel.
+  function courseOf(cell) {
+    const probe = wound(), part = share(cell, probe);
+    const key = keysOf([ {id : '', centers : [ cell ]} ], BOUNDED)[0];
+    const depth = closingWound(probe?.strength ?? 0, BITE_STEP, SKIN_RESPONSE.heal_rate),
+          met = depth.map(v => clamp(v * part)), sent = runOf(key, met, true).sent,
+          silent = silentStep(key, met), last = Math.min(...BOUNDED.gates(key));
+    return {
+      key,
+      part,
+      depth,
+      met,
+      sent,
+      silent,
+      used : silent > 0 && silent < met.length && met[silent] > last
+    };
+  }
+  function draw(cell) {
+    const S = STRIP, {svg, under, live} = picture(strip, S.height), c = courseOf(cell);
+    const X = st => S.L + (S.R - S.L) * st / STEPS,
+          stOf = x => clamp(Math.round((x - S.L) / (S.R - S.L) * STEPS), 0, STEPS),
+          D = depth => S.skin + S.deep * clamp(depth / S.deepest), top = S.skin - S.gap, every = 4;
+    el('rect',
+       {x : S.L, y : S.skin, width : S.R - S.L, height : S.deep + 14, class : 'aid-live-flesh'},
+       under);
+    // The wound: cut at the bite, closing step by step.
+    el('path', {
+      d : path(c.depth.filter((_, st) => st % every === 0).map((v, n) => [X(n * every), D(v)])) +
+              ` L${X(STEPS)} ${S.skin} L${S.L} ${S.skin} Z`,
+      class : 'aid-live-wound'
+    },
+       live);
+    el('path', {d : `M${S.L} ${S.skin} H${S.R}`, class : 'aid-live-skinline'}, live);
+    // A full bite's depth, to read the wound against.
+    const by = D(SKIN_RESPONSE.bite_wound);
+    el('path', {d : `M${S.L - 6} ${by} h6`, class : 'aid-live-axis'}, live);
+    txt(live, S.L - 8, by + 3, word('bite'), {'text-anchor' : 'end', class : 'aid-live-small'});
+    // How small a wound the cells still feel here: below this depth they send nothing. Its grip
+    // sets the threshold.
+    const feels = c.part > 0 ? c.key.gate / c.part : S.deepest, gy = D(feels);
+    el('path', {d : `M${S.L} ${gy} H${S.R}`, class : 'aid-live-keyline k0'}, live);
+    txt(live, S.R, gy + 11, word('felt'), {'text-anchor' : 'end', class : 'aid-live-small'});
+    if (c.part > 0)
+      drag(svg,
+           el('rect', {
+             x : S.L - 5,
+             y : gy - 5,
+             width : 10,
+             height : 10,
+             rx : 2.5,
+             class : 'aid-live-keygrip k0 on'
+           },
+              live),
+           p => draft(setGate(studio.state.document, c.key,
+                              clamp((p.y - S.skin) / S.deep, S.least, 1) * S.deepest * c.part)),
+           'paingate', 'grip', settle);
+    // What the cells send, above the skin, over the same steps.
+    el('path', {
+      d : path(c.sent.filter((_, st) => st % every === 0)
+                   .map((v, n) => [X(n * every), top - S.loud * clamp(v)])) +
+              ` L${X(STEPS)} ${top} L${S.L} ${top} Z`,
+      class : 'aid-live-glow k0',
+      opacity : .55
+    },
+       live);
+    // Where they fall silent. If they have got used to the wound, the wound is still open under
+    // the mark, and the grip there sets how fast they get used.
+    if (c.silent > 0 && c.silent < STEPS) {
+      const sx = X(c.silent);
+      el('path',
+         {d : `M${sx} ${top - S.loud} V${D(c.depth[c.silent])}`, class : 'aid-live-keymark k0'},
+         live);
+      if (c.used) {
+        txt(live, sx + 5, top - S.loud + 8, word('used'), {class : 'aid-live-small'});
+        drag(svg, el('circle', {cx : sx, cy : top - S.loud, r : 5}, live),
+             p => draft(setUsed(studio.state.document, c.key, usedFor(c.key, c.met, stOf(p.x)))),
+             'painused', 'grip', settle);
+      }
+    }
+    for (const st of S.marks)
+      txt(live, X(st), S.height - 4, String(st), {'text-anchor' : 'end', class : 'aid-live-small'});
+    txt(live, S.L, S.height - 4, word('steps'), {class : 'aid-live-small'});
+    // The report now, as the fish panel shows it: a bubble that moves along the steps.
+    const g = el('g', {class : 'aid-probe-answer'}, live);
+    el('circle', {r : S.bubble}, g);
+    const text = txt(g, 0, 4, '', {'text-anchor' : 'middle'});
+    bubble = at => {
+      const now = clamp(between(c.sent, at));
+      g.setAttribute('transform', `translate(${X(at).toFixed(1)} ${top - S.loud - S.bubble - 4})`);
+      g.style.setProperty('--lit', now.toFixed(2));
+      text.textContent = percent(now);
+    };
+  }
   function show() {
-    if (!organ()?.centers[0])
+    const cell = organ()?.centers[0];
+    if (!cell)
       return;
-    course.draw();
+    draw(cell);
     tick(0);
   }
   function tick(dt) {
     step = (step + dt * STEPS / ROUND_MS) % STEPS;
-    course.moment(step);
-    course.pulse(dt, step);
+    bubble?.(step);
   }
   return {root, show, tick};
 });

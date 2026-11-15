@@ -1915,11 +1915,10 @@
       "reports": "meldet ab"
     },
     "pain": {
-      "cells": "Schmerzzellen",
-      "course": "Signalverlauf bei einer Wunde",
-      "used": "an Schmerz gewöhnt",
+      "used": "gewöhnt",
+      "felt": "kleiner tut nicht weh",
       "steps": "Schritte",
-      "bite": "ein voller Biss"
+      "bite": "Biss"
     },
     "gland": {
       "steps": "{n} Schritte"
