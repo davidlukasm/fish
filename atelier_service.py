@@ -222,7 +222,7 @@ def sight_line(sight):
 
 
 SENSE_SCENES = {"smell": 1, "touch": 2, "flow": 3, "wound": 4, "gut": 5, "taste": 6,
-                "balance": 7, "attack": 8, "fins": 9}
+                "balance": 7, "attack": 8, "fins": 9, "mouth": 10}
 
 
 def fin_scene_values(sense):
@@ -233,19 +233,32 @@ def fin_scene_values(sense):
     for phase in phases:
         if not isinstance(phase, dict):
             raise Refusal("studio.errors.invalidProbe")
-        pair, steps = phase.get("pair", 0), phase.get("steps", 256)
-        if type(pair) is not int or type(steps) is not int:
+        steps = phase.get("steps", 256)
+        if type(steps) is not int:
             raise Refusal("studio.errors.invalidProbe")
+        if "pairs" in phase:
+            pairs = phase["pairs"]
+            if not isinstance(pairs, list) or len(pairs) != 2:
+                raise Refusal("studio.errors.invalidProbe")
+        else:
+            pair = phase.get("pair", 0)
+            if type(pair) is not int or not 0 <= pair < 2:
+                raise Refusal("studio.errors.invalidProbe")
+            pairs = [{}, {}]
+            pairs[pair] = phase
         tail = phase.get("tail", 0)
-        values.extend([steps, pair, int(tail) if isinstance(tail, bool) else tail])
-        for side in ("left", "right"):
-            drive = phase.get(side, {})
-            if not isinstance(drive, dict):
+        values.extend([steps, int(tail) if isinstance(tail, bool) else tail])
+        for pair in pairs:
+            if not isinstance(pair, dict):
                 raise Refusal("studio.errors.invalidProbe")
-            stroke = drive.get("stroke", 0)
-            if type(stroke) is not int:
-                raise Refusal("studio.errors.invalidProbe")
-            values.extend([stroke, drive.get("strength", 0)])
+            for side in ("left", "right"):
+                drive = pair.get(side, {})
+                if not isinstance(drive, dict):
+                    raise Refusal("studio.errors.invalidProbe")
+                stroke = drive.get("stroke", 0)
+                if type(stroke) is not int:
+                    raise Refusal("studio.errors.invalidProbe")
+                values.extend([stroke, drive.get("strength", 0)])
     return values
 
 
@@ -259,6 +272,11 @@ def sense_line(sense):
         raise Refusal("studio.errors.invalidProbe")
     if sense["kind"] == "fins":
         values = fin_scene_values(sense)
+    elif sense["kind"] == "mouth":
+        delay, gills = sense.get("delay", 0), sense.get("gills", True)
+        if type(delay) is not int or type(gills) is not bool:
+            raise Refusal("studio.errors.invalidProbe")
+        values = [delay, int(gills)]
     else:
         values = [sense.get(key, 0) for key in ("bearing", "distance", "strength", "scent", "nutrient")]
     if sense["kind"] == "smell":

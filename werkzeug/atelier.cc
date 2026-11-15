@@ -102,42 +102,53 @@ SightScene read_sight(std::istream &in) {
          "invalid sight scene");
   return scene;
 }
+struct FinDrive {
+  int stroke = 0;
+  float strength = 0;
+};
 struct FinPhase {
-  int steps = 0, pair = 0;
+  int steps = 0;
   float tail = 0;
-  std::array<int, 2> stroke{};
-  std::array<float, 2> strength{};
+  std::array<std::array<FinDrive, 2>, fishsim::SIDE_FINS> pairs{};
 };
 struct SenseScene {
   int kind = 0, scent = 0;
   double bearing = 0, distance = 0, strength = 0, nutrient = 0;
   double flow_bearing = 0, flow_strength = 0;
   std::vector<FinPhase> fins;
+  int bite_delay = 0;
+  bool pump_gills = false;
 };
 namespace sense_scene {
 constexpr int smell = 1, touch = 2, flow = 3, wound = 4, gut = 5, taste = 6, balance = 7;
-constexpr int attack = 8, fins = 9;
+constexpr int attack = 8, fins = 9, mouth = 10;
 }
 constexpr double SENSE_SCENE_REACH = 40, SENSE_SCENE_STRENGTH = 20;
 constexpr int FIN_COURSE_STEPS = 512, FIN_COURSE_PHASES = 16, FIN_COURSE_SAMPLE = 4;
 SenseScene read_sense_scene(std::istream &in) {
   SenseScene scene;
   ensure(bool(in >> scene.kind), "invalid sense scene");
+  if (scene.kind == sense_scene::mouth) {
+    ensure(bool(in >> scene.bite_delay >> scene.pump_gills) &&
+               between(scene.bite_delay, -fishsim::MAX_STROKE_STEPS, fishsim::MAX_STROKE_STEPS),
+           "invalid mouth course");
+    return scene;
+  }
   if (scene.kind == sense_scene::fins) {
     int count = 0, total = 0;
     ensure(bool(in >> count) && count > 0 && count <= FIN_COURSE_PHASES, "invalid fin course");
     for (int i = 0; i < count; ++i) {
       FinPhase phase;
-      ensure(bool(in >> phase.steps >> phase.pair >> phase.tail) && phase.steps > 0 &&
-                 phase.steps <= FIN_COURSE_STEPS - total && phase.pair >= 0 &&
-                 phase.pair < fishsim::SIDE_FINS && between(phase.tail, 0, 1),
+      ensure(bool(in >> phase.steps >> phase.tail) && phase.steps > 0 &&
+                 phase.steps <= FIN_COURSE_STEPS - total && between(phase.tail, 0, 1),
              "invalid fin course phase");
-      for (int side = 0; side < 2; ++side)
-        ensure(bool(in >> phase.stroke[side] >> phase.strength[side]) &&
-                   (phase.stroke[side] == fishsim::fin_stroke::back ||
-                    phase.stroke[side] == fishsim::fin_stroke::front) &&
-                   between(phase.strength[side], 0, 1),
-               "invalid fin course command");
+      for (auto &pair : phase.pairs)
+        for (auto &drive : pair)
+          ensure(bool(in >> drive.stroke >> drive.strength) &&
+                     (drive.stroke == fishsim::fin_stroke::back ||
+                      drive.stroke == fishsim::fin_stroke::front) &&
+                     between(drive.strength, 0, 1),
+                 "invalid fin course command");
       total += phase.steps;
       scene.fins.push_back(phase);
     }
@@ -163,18 +174,27 @@ SenseScene read_sense_scene(std::istream &in) {
            "invalid smell flow");
   return scene;
 }
-void fin_course_report(const Genome &g, const std::vector<FinPhase> &phases) {
+fishsim::Body adult_actuation_probe(const Genome &g) {
   namespace fs = fishsim;
   const auto &layout = *g.interface;
   fs::Body body;
   body.hatched = true;
   body.tissue = fs::BODY_TISSUE;
   body.organ_mass = layout.organ_mass;
-  body.energy = fs::reserve_capacity(body);
   body.jaw_length = layout.jaw_length;
+  body.gut_length = layout.gut_length;
+  body.blunt_teeth = layout.blunt_teeth;
   body.undulation = layout.undulation;
+  body.energy = fs::reserve_capacity(body);
+  body.mouth.opening = fs::MOUTH_REST;
   body.activate_brain(g, false);
   body.refresh_organs(g);
+  return body;
+}
+void fin_course_report(const Genome &g, const std::vector<FinPhase> &phases) {
+  namespace fs = fishsim;
+  const auto &layout = *g.interface;
+  auto body = adult_actuation_probe(g);
   const fs::PhysiologyParameters physiology;
   // Start far enough from the bed to watch the entire course in free water.
   const double radius = fs::body_radius(body),
@@ -202,11 +222,13 @@ void fin_course_report(const Genome &g, const std::vector<FinPhase> &phases) {
   sample();
   for (const auto &phase : phases) {
     std::array<float, fs::STROKE_COUNT> commands{};
-    for (int side = 0; side < 2; ++side) {
-      const auto &strokes = phase.stroke[side] == fs::fin_stroke::front ? fs::FRONT_STROKES
-                                                                      : fs::BACK_STROKES;
-      commands[strokes[phase.pair][side]] = phase.strength[side];
-    }
+    for (int pair = 0; pair < fs::SIDE_FINS; ++pair)
+      for (int side = 0; side < 2; ++side) {
+        const auto &command = phase.pairs[pair][side];
+        const auto &strokes =
+            command.stroke == fs::fin_stroke::front ? fs::FRONT_STROKES : fs::BACK_STROKES;
+        commands[strokes[pair][side]] = command.strength;
+      }
     for (int elapsed = 0; elapsed < phase.steps; ++elapsed) {
       const int tail_side = step % (left + right) < left ? 0 : 1;
       commands[fs::TAIL_STROKES[tail_side]] = phase.tail;
@@ -226,6 +248,44 @@ void fin_course_report(const Genome &g, const std::vector<FinPhase> &phases) {
   if (step % FIN_COURSE_SAMPLE != 0)
     sample();
   std::cout << ']';
+}
+void mouth_course_report(const Genome &g, const SenseScene &scene) {
+  namespace fs = fishsim;
+  const auto &layout = *g.interface;
+  auto body = adult_actuation_probe(g);
+  const fs::PhysiologyParameters physiology;
+  const int opens = std::max(0, -scene.bite_delay), closes = opens + scene.bite_delay;
+  const int opener_steps = layout.stroke_timing[fs::StrokeSuction].whole(),
+            closer_steps = layout.stroke_timing[fs::StrokeBite].whole(),
+            gill_steps = layout.stroke_timing[fs::StrokeGill].whole(),
+            last = std::max(opens + std::max(opener_steps, gill_steps), closes + closer_steps);
+  std::vector<int> port(g.blueprint->neurons.size(), -1);
+  for (const auto &effector : layout.effectors)
+    port[effector.neuron] = effector.port;
+  body.set_actuation_probe([&](std::uint32_t i, float) {
+    switch (port[i]) {
+    case fs::organ_port::suction:
+      return body.age >= opens && body.age < opens + opener_steps ? 1.f : 0.f;
+    case fs::organ_port::jaw:
+      return body.age >= closes && body.age < closes + closer_steps ? 1.f : 0.f;
+    case fs::organ_port::gills:
+      return scene.pump_gills && body.age >= opens && body.age < opens + gill_steps ? 1.f : 0.f;
+    default:
+      return 0.f;
+    }
+  });
+  std::cout << ",\"mouthCourse\":{\"firstStep\":" << -opens
+            << ",\"rakerRetention\":" << fs::raker_retention(body.raker_density)
+            << ",\"samples\":[";
+  for (int step = 0; step <= last; ++step) {
+    body.age = step;
+    fs::anatomical_action(body, layout, physiology);
+    const auto &mouth = body.mouth;
+    std::cout << (step ? ",[" : "[") << mouth.opening << ',' << mouth.flow << ','
+              << fs::gill_water(body) << ',' << (mouth.closing ? "true" : "false") << ','
+              << mouth.gape << ',' << mouth.credit << ']';
+  }
+  std::cout << "]}";
 }
 void sense_report(const field::Substrate &t,
                   const std::shared_ptr<const fishsim::BrainInterface> &interface,
@@ -676,6 +736,7 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
   }
   std::cout << ']';
   std::cout << ",\"finArms\":[";
+  std::vector<std::array<bool, fishsim::fin::count>> fin_channels(groups.size());
   for (std::size_t i = 0; i < groups.size(); ++i) {
     double force = 0, lever = 0, arm = 0;
     for (const auto &e : a.effectors) {
@@ -685,12 +746,25 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
       force += e.strength;
       lever += e.strength * std::abs(e.lever);
       arm += e.strength * e.arm;
+      fin_channels[i][fishsim::side_fin_index(e.port == fishsim::organ_port::pelvic,
+                                               e.lever < 0 ? 0 : 1)] = true;
     }
     std::cout << (i ? "," : "");
     if (force > 0)
       std::cout << '[' << force << ',' << lever / force << ',' << arm / force << ']';
     else
       std::cout << "null";
+  }
+  std::cout << "],\"finChannels\":[";
+  for (std::size_t i = 0; i < fin_channels.size(); ++i) {
+    std::cout << (i ? ",[" : "[");
+    bool first = true;
+    for (int channel = fishsim::fin::left; channel < fishsim::fin::count; ++channel)
+      if (fin_channels[i][channel]) {
+        std::cout << (first ? "" : ",") << channel;
+        first = false;
+      }
+    std::cout << ']';
   }
   std::cout << ']';
   // Where a cell of every development site would lie in this body, and the gut, as pressure
@@ -1161,13 +1235,14 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
   readiness_report(*g.interface, t, false);
   const auto *attack = sense && sense->kind == sense_scene::attack ? &*sense : nullptr;
   const auto *fins = sense && sense->kind == sense_scene::fins ? &*sense : nullptr;
+  const auto *mouth = sense && sense->kind == sense_scene::mouth ? &*sense : nullptr;
   anatomy_report(g, groups, false, attack);
   if (light_spread) {
     const auto sample = light_example(plan);
     light_spread_report(sample, *fishsim::body_interface(sample), groups, true);
   }
   std::optional<fishsim::Ecosystem> probe_tank;
-  if (sight || (sense && !attack && !fins && sense->kind != sense_scene::gut &&
+  if (sight || (sense && !attack && !fins && !mouth && sense->kind != sense_scene::gut &&
                 sense->kind != sense_scene::flow && sense->kind != sense_scene::balance))
     probe_tank.emplace(SIGHT_TANK_SEED);
   if (sight)
@@ -1179,6 +1254,8 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
   }
   if (fins)
     fin_course_report(g, fins->fins);
+  else if (mouth)
+    mouth_course_report(g, *mouth);
   else if (sense && !attack)
     sense_report(t, g.interface, groups, *sense, probe_tank ? &probe_tank->field : nullptr);
   std::cout << '}';
