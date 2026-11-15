@@ -281,16 +281,17 @@ liveKind('gland', (studio, organId) => {
        live);
     // The knob moves from where it was taken, wherever on it the pointer came down: pulled
     // straight up or down the length stays, pulled along the picture the strength stays.
-    let taken = null;
-    drag(svg, el('circle', {cx : mid, cy : ky, r : 5.5, class : 'aid-live-posture'}, live), p => {
-      taken ??= {x : p.x - mid, y : p.y - ky};
-      const x = p.x - taken.x, y = p.y - taken.y, up = y < (top + base) / 2,
-            off = up ? top - y : y - base;
-      own.command = (up ? 1 : -1) *
-                    clamp((off - GLAND.knob[0]) / (GLAND.knob[1] - GLAND.knob[0]), GLAND.least, 1);
-      own.work = workAt(x);
-      show();
-    }, 'glandcommand', 'knob');
+    drag(svg, el('circle', {cx : mid, cy : ky, r : 5.5, class : 'aid-live-posture'}, live),
+         (p, from) => {
+           const x = p.x - (from.x - mid), y = p.y - (from.y - ky), up = y < (top + base) / 2,
+                 off = up ? top - y : y - base;
+           own.command =
+               (up ? 1 : -1) *
+               clamp((off - GLAND.knob[0]) / (GLAND.knob[1] - GLAND.knob[0]), GLAND.least, 1);
+           own.work = workAt(x);
+           show();
+         },
+         'glandcommand', 'knob');
     txt(live, L, base + 14, 0, {'text-anchor' : 'middle', class : 'aid-live-small'});
     txt(live, mid, base + 14, own.work, {'text-anchor' : 'middle', class : 'aid-live-small'});
     txt(live, R, base + 14, word('steps', {n : own.work + GLAND.rest}),

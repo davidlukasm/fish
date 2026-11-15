@@ -108,7 +108,8 @@ export function drag(svg, thing, move, name, kind = 'grip', done = null) {
       p.y = ev.clientY;
       return p.matrixTransform(svg.getScreenCTM().inverse());
     };
-    const onMove = ev => move(at(ev));
+    // `move` gets where the pointer is and where it came down.
+    const from = at(e), onMove = ev => move(at(ev), from);
     const up = () => {
       held = null;
       window.removeEventListener('pointermove', onMove);
