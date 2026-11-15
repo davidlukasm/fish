@@ -618,6 +618,36 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
     std::cout << ']';
     source_written = true;
   }
+  // The estimate of each substance's level when all its glands pour at full drive from an empty
+  // blood, then stop: it rises with the glands' cell time and falls with their residence, three
+  // time constants each. Binding and a partial drive are left out.
+  std::cout << "],\"hormoneCourse\":[";
+  // How far each substance's level is worth showing: a little beyond what its glands reach, all
+  // of it when nothing pours it. The receptor curves are drawn over the same span.
+  std::array<double, field::HORMONES> hormone_span{};
+  {
+    constexpr int SAMPLES = 32;
+    const double height = fishsim::PhysiologyParameters{}.hormones.height;
+    for (int k = 0; k < field::HORMONES; ++k) {
+      double drive = 0;
+      for (const auto &source : hormone_sources)
+        drive += source[k];
+      const double rise = a.hormone_timing[k].steps, stay = a.hormone_residence[k],
+                   target = std::min(1., height * drive), on = std::ceil(3 * rise),
+                   off = std::ceil(3 * stay);
+      std::cout << (k ? "," : "") << "{\"on\":" << on << ",\"off\":" << off << ",\"rise\":[";
+      for (int i = 0; i <= SAMPLES; ++i)
+        std::cout << (i ? "," : "")
+                  << fishsim::HormoneState::approach(0, target, rise, on * i / SAMPLES);
+      const double top = fishsim::HormoneState::approach(0, target, rise, on);
+      hormone_span[k] = top > 0 ? std::clamp(1.25 * top, .02, 1.) : 1.;
+      std::cout << "],\"fall\":[";
+      for (int i = 0; i <= SAMPLES; ++i)
+        std::cout << (i ? "," : "")
+                  << fishsim::HormoneState::approach(top, 0, stay, off * i / SAMPLES);
+      std::cout << "],\"span\":" << hormone_span[k] << '}';
+    }
+  }
   std::cout << "],\"pigmentTimes\":[";
   for (int k = 0; k < fishsim::rgb::count; ++k)
     std::cout << (k ? "," : "") << a.pigment_timing[k].steps;
@@ -1215,7 +1245,7 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
     } else
       std::cout << "null";
     if (learning)
-      learning_group_report(groups[i], reference_cells[i], *learning, int(i));
+      learning_group_report(groups[i], reference_cells[i], *learning, int(i), hormone_span);
     std::cout << '}';
   }
   std::cout << ']';
