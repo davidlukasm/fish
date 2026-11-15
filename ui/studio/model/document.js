@@ -415,11 +415,6 @@ export function centerIndex(doc, id) {
     }
   return -1;
 }
-export function profileIndex(doc, organId, profileId) {
-  const organ = findOrgan(doc, organId);
-  const center = organ?.centers.find(c => c.profile === profileId);
-  return center ? centerIndex(doc, center.id) : -1;
-}
 export const groupReport = (doc, report, key, id) => report?.[key]?.[centerIndex(doc, id)] ?? null;
 // Pectoral and pelvic fins may hold a second muscle per side: the antagonist with the other
 // stroke.
@@ -1404,8 +1399,6 @@ export function organTypes(organ, key) {
   }
   return [...types.values() ];
 }
-export const typeOfCenter = (organ, centerId) =>
-    organTypes(organ).find(type => type.centers.some(c => c.id === centerId)) ?? null;
 export function substanceRead(wheel, center) {
   const indices = Array.from({length : wheel.bloodSubstances}, (_, i) => i);
   return indices.reduce((best, i) =>

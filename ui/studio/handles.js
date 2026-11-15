@@ -10,17 +10,13 @@ import {RHYTHM_TAU} from './model/region_cells.js';
 import {hasColourTuning, nominalSpectrum} from './model/retina.js';
 import {effectorPatch} from './view/effectors.js';
 import {clamp} from '../units.js';
-import {kindLimit, kindNodes} from './model/organs.js';
+import {kindNodes} from './model/organs.js';
 import {gutProbePatch, probeFlow, probeHandle, probePatch} from './view/probes.js';
 import {
   findCenter,
   findOrgan,
   groupReport,
   setBends,
-  setMuscleSprint,
-  setNodeCopies,
-  setMuscleFibre,
-  muscleFibre,
   setOrganNodes,
   updateCenter,
   updateField,
@@ -526,27 +522,12 @@ export const handleMethods = {
                               'cells:' + drag.id);
   },
   effectorPointer(drag, fx, fy) {
-    const doc = this.state.document, organ = findOrgan(doc, drag.id), sites = this.state.sites;
-    const patch =
-        organ && effectorPatch(drag.name, fx, fy, kindLimit(organ, sites), organ, drag.marks);
-    if (!patch)
+    const doc = this.state.document;
+    const patch = findOrgan(doc, drag.id) && effectorPatch(drag.name, fx, fy, drag.marks);
+    const cell = patch && findCenter(doc, patch.id)?.center;
+    if (!cell || !Object.entries(patch.center).some(([ key, value ]) => cell[key] !== value))
       return;
-    const cell = 'center' in patch ? findCenter(doc, patch.id)?.center : null;
-    const changed =
-        'center' in patch
-            ? cell && Object.entries(patch.center).some(([ key, value ]) => cell[key] !== value) &&
-                  updateCenter(doc, patch.id, patch.center)
-        : 'nodes' in patch ? patch.nodes !== kindNodes(organ).length &&
-                                 setOrganNodes(doc, organ.id, patch.nodes, sites)
-        : 'sprint' in patch
-            ? patch.sprint !== organ.sprint && setMuscleSprint(doc, organ.id, patch.sprint)
-        : 'fibre' in patch
-            ? patch.fibre !== muscleFibre(organ) && setMuscleFibre(doc, organ.id, patch.fibre)
-            : patch.copies !== kindNodes(organ)[0]?.copies &&
-                  setNodeCopies(doc, organ.id, patch.copies);
-    if (!changed)
-      return;
-    this.draftDesign(changed, 'effector:' + drag.id);
+    this.draftDesign(updateCenter(doc, patch.id, patch.center), 'effector:' + drag.id);
   },
   spectrumPointer(event) {
     const drag = this.handleDrag, target = this.spectrumTarget(drag.target);

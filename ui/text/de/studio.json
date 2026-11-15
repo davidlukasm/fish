@@ -1570,11 +1570,9 @@
   },
   "sense": {
     "cellsHandle": "{n} von {most} Zellen; ziehen fügt Zellen hinzu oder nimmt sie weg",
-    "adaptHandle": "Nach {n} Schritten gleichen Reizes antworten die Zellen nicht mehr; ziehen: schneller oder langsamer gewöhnen",
     "cellsWord": "{n} {n:Zelle|Zellen}",
     "sensitivityWord": "Empfindlichkeit",
-    "gateWord": "Schwelle",
-    "adaptWord": "Gewöhnung {n} {n:Schritt|Schritte}"
+    "gateWord": "Schwelle"
   },
   "effectPicture": {
     "free": "ohne Bindung",

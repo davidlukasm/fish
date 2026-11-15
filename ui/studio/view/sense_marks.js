@@ -26,13 +26,8 @@ export const SENSE_MARK = Object.freeze({
   // wide, so it stays inside the picture at either edge.
   word : 17,
   middle : 150,
-  beside : 3,
-  // The adaptation arc leaves a gap, so its two ends never meet.
-  sweep : 1.7 * Math.PI,
-  segments : 28,
-  fade : .12
+  beside : 3
 });
-const TURN = 2 * Math.PI;
 const point = p => fixed(p.x) + ',' + fixed(p.y);
 const parsePoint = text => {
   const [x, y] = text.split(',').map(Number);
@@ -146,26 +141,6 @@ export const gateHandle = (least, most, state, center, title) =>
                    '" data-sense-center="' + escapeText(center.id) + '"',
                t('studio.sense.gateWord'));
 
-// Adaptation as an arc round the picture: it starts where the stimulus comes from and fades along
-// the time the cells take to get used to it, longer the slower they adapt.
-export function adaptationMarks(centre, radius, start, center) {
-  const S = SENSE_MARK, share = clamp(center.tau ?? 0), sweep = S.sweep * share;
-  const at = angle =>
-      ({x : centre.x + radius * Math.cos(angle), y : centre.y + radius * Math.sin(angle)});
-  let arc = '';
-  for (let k = 0; k < S.segments; ++k) {
-    const a = start + sweep * k / S.segments, b = start + sweep * (k + 1) / S.segments;
-    arc += '<path class="aid-sense-adapt" stroke-opacity="' +
-           fixed(1 - (1 - S.fade) * k / S.segments) + '" d="M' + point(at(a)) + ' A' +
-           fixed(radius) + ' ' + fixed(radius) + ' 0 0 1 ' + point(at(b)) + '"/>';
-  }
-  const steps = Math.round(adaptationSteps(share));
-  return arc +
-         handleMark('adaptation', at(start + sweep), t('studio.sense.adaptHandle', {n : steps}),
-                    'data-arc="' + point(centre) + ',' + fixed(radius) + ',' + fixed(start) + '"',
-                    t('studio.sense.adaptWord', {n : steps}));
-}
-
 // The change a handle makes, from the pointer in the picture's own units.
 export function senseMarkPatch(state, drag, p) {
   const h = drag.marks;
@@ -192,15 +167,6 @@ export function senseMarkPatch(state, drag, p) {
     const [from, width, window, settled] = h.fade.split(',').map(Number);
     const steps = window ** clamp((p.x - from) / width) / settled;
     return {tau : adaptationOf(Math.max(steps, adaptationSteps(0)))};
-  }
-  if (drag.handle === 'adaptation') {
-    const [cx, cy, , start] = h.arc.split(',').map(Number);
-    const turned = ((Math.atan2(p.y - cy, p.x - cx) - start) % TURN + TURN) % TURN;
-    // In the gap past the arc's end the nearer end wins.
-    const share = turned <= SENSE_MARK.sweep ? turned / SENSE_MARK.sweep
-                  : turned - SENSE_MARK.sweep < (TURN - SENSE_MARK.sweep) / 2 ? 1
-                                                                              : 0;
-    return {tau : share};
   }
   return null;
 }

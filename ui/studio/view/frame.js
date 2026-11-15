@@ -162,14 +162,6 @@ export function fishFront(direction, sizes = finSizes()) {
   return Math.max(...bounds.map(([ x, y ]) =>
       (x - BODY_MIDDLE.x) * direction.x + (y - BODY_MIDDLE.y) * direction.y));
 }
-export const fieldPoint = (field, angle, r) => {
-  const d = bodyDirection(angle);
-  return {x : field.cx + d.x * r, y : field.cy + d.y * r};
-};
-export const fieldFish = (field, scale, cls) =>
-    '<path class="' + cls + '" d="' + fishPath() + '" transform="translate(' +
-    fixed(field.cx - BODY_MIDDLE.x * scale) + ' ' + fixed(field.cy - BODY_MIDDLE.y * scale) +
-    ') scale(' + scale + ')"/>';
 const finBase = (x, side, F = OUTLINE.fins) =>
     BODY_FRAME.middle + (skinAt(x, side) - BODY_FRAME.middle) * F.inset;
 export function skinAt(x, side) {

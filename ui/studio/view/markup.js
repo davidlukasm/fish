@@ -23,4 +23,3 @@ export const placedGlyph = (path, size, {x = 0, y = 0} = {},
   place : ' x="' + fixed(x - size / 2) + '" y="' + fixed(y - size / 2) + '"'
 });
 
-export const pointMarks = p => ({'.aid-vector-point,.aid-wheel-halo' : {cx : p.x, cy : p.y}});

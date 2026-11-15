@@ -1,8 +1,7 @@
 import {HORMONE_EFFECT} from '../../schema.js';
 import {receptorResponse} from '../model/document.js';
 import {nerveClass} from '../model/organs.js';
-import {previewContextOf, previewInputOf} from './development.js';
-import {motorResponse} from './drive.js';
+import {previewContextOf} from './development.js';
 
 export function driveContext(state, center) {
   const context = previewContextOf(state), wheel = state.capabilities;
@@ -17,5 +16,3 @@ export function driveContext(state, center) {
     adaptationSpan : wheel?.neural?.adaptationSpan
   };
 }
-export const organCommand = (state, center) =>
-    motorResponse(center, previewInputOf(state), driveContext(state, center));
