@@ -89,48 +89,60 @@ double kept_between(const LearningContext::Probe &probe, float initial_trace, fl
 // How each receptor of the group answers its own substance from none to its span (a hormone's
 // span is what its glands reach, a body signal's all of it), with the rest of the blood as the
 // life band sets it: the curve the hormone tool draws, from the engine's response.
+// One receptor's answer over its own substance, from none to its span (a hormone's span is what its
+// glands reach, a body signal's all of it), the rest of the blood as the life band sets it.
+void receptor_curve(const Receptor &plan, const field::HormoneReceptor &receptor,
+                    const LearningContext &context,
+                    const std::array<double, field::HORMONES> &spans) {
+  constexpr int SAMPLES = 32;
+  std::cout << '[';
+  for (int i = 0; i <= SAMPLES; ++i) {
+    auto blood = context;
+    const int substance = plan.substance;
+    const double level =
+        (substance < field::HORMONES ? spans[substance] : 1.) * double(i) / SAMPLES;
+    if (substance < field::HORMONES)
+      blood.levels[substance] = level;
+    else if (substance == field::MATURITY_SUBSTANCE)
+      blood.maturity = level;
+    else if (substance == field::RESERVE_SUBSTANCE)
+      blood.reserve = level;
+    else if (substance == field::FATIGUE_SUBSTANCE)
+      blood.fatigue = level;
+    else
+      blood.cell_maturity = level;
+    std::cout << (i ? "," : "")
+              << receptor.response(blood.levels, blood.maturity, blood.reserve, blood.fatigue,
+                                   blood.cell_maturity);
+  }
+  std::cout << ']';
+}
+// The curves the hormone tool draws, from the engine's response: each effect's receptor, and the
+// receptor that lets the cell come into being (its answer, clamped to 0…1, is how fast it forms).
 void receptor_curves(const Group &group, const field::Neuron &cell, const LearningContext &context,
                      const std::array<double, field::HORMONES> &spans) {
-  constexpr int SAMPLES = 32;
   std::cout << ",\"responses\":[";
   for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect) {
     if (effect)
       std::cout << ',';
     const auto &plan = group.receptors[effect];
-    if (!plan.active || !field::hormone_effect_present(cell, effect)) {
+    if (!plan.active || !field::hormone_effect_present(cell, effect))
       std::cout << "null";
-      continue;
-    }
-    const auto receptor = planned_receptor(plan, effect);
-    std::cout << '[';
-    for (int i = 0; i <= SAMPLES; ++i) {
-      auto blood = context;
-      const int substance = plan.substance;
-      const double level =
-          (substance < field::HORMONES ? spans[substance] : 1.) * double(i) / SAMPLES;
-      if (substance < field::HORMONES)
-        blood.levels[substance] = level;
-      else if (substance == field::MATURITY_SUBSTANCE)
-        blood.maturity = level;
-      else if (substance == field::RESERVE_SUBSTANCE)
-        blood.reserve = level;
-      else if (substance == field::FATIGUE_SUBSTANCE)
-        blood.fatigue = level;
-      else
-        blood.cell_maturity = level;
-      std::cout << (i ? "," : "")
-                << receptor.response(blood.levels, blood.maturity, blood.reserve, blood.fatigue,
-                                     blood.cell_maturity);
-    }
-    std::cout << ']';
+    else
+      receptor_curve(plan, planned_receptor(plan, effect), context, spans);
   }
-  std::cout << ']';
+  std::cout << "],\"birthResponse\":";
+  if (group.growth.active)
+    receptor_curve(group.growth, planned_receptor(group.growth, field::GROWTH_RECEPTOR), context,
+                   spans);
+  else
+    std::cout << "null";
 }
 void learning_group_report(const Group &group, const field::Neuron *cell,
                            const LearningContext &context, int index,
                            const std::array<double, field::HORMONES> &spans) {
   if (!cell) {
-    std::cout << ",\"effects\":null,\"responses\":null,\"learning\":null";
+    std::cout << ",\"effects\":null,\"responses\":null,\"birthResponse\":null,\"learning\":null";
     return;
   }
   std::array<float, field::HORMONE_EFFECTS> effects{};

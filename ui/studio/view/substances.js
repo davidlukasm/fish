@@ -277,16 +277,23 @@ function engineAnswer(state, centerId, effect) {
   const doc = state.document, found = findCenter(doc, centerId);
   const report = state.outlinePreview ?? state.anatomy;
   const group = found ? report?.groups?.[centerIndex(doc, centerId)] : null;
-  const receptor = found?.center.receptors?.[effect];
+  // The birth receptor's answer, clamped to 0…1, is how fast the cell forms.
+  const birth = effect === BIRTH;
+  const receptor = birth ? found?.center.growth : found?.center.receptors?.[effect];
   const span =
       receptor && receptor.substance < HORMONES.levels ? levelSpan(state, receptor.substance) : 1;
   const scale =
-      effect === HORMONE_EFFECT.death ? GROWTH_SCALE : EFFECT_SCALE[effect] ?? SHARE_SCALE;
+      birth || effect === HORMONE_EFFECT.death ? GROWTH_SCALE : EFFECT_SCALE[effect] ?? SHARE_SCALE;
+  const curve = (birth ? group?.birthResponse : group?.responses?.[effect]) ?? null;
+  const at = receptor && curve
+                 ? clamp(bloodLevel(previewContextOf(state), receptor.substance) / span) *
+                       (curve.length - 1)
+                 : NaN;
   const R = RECEPTOR;
   return {
     receptor,
-    curve : group?.responses?.[effect] ?? null,
-    now : group?.effects?.[effect],
+    curve,
+    now : birth ? curve?.[Math.round(at)] : group?.effects?.[effect],
     span,
     scale,
     x : level => R.left + (R.right - R.left) * clamp(level / span),
@@ -356,20 +363,22 @@ export function receptorGripPatch(state, centerId, effect, handle, start, to) {
   return null;
 }
 export function effectCurve(state, receptor, effect, target = null) {
-  if (effect === GROWTH || effect === BIRTH)
+  if (effect === GROWTH)
     return growthCurve(state, receptor, effect, target);
   const centerId = target ? target.slice(0, target.lastIndexOf(':')) : null;
   const answer = centerId ? engineAnswer(state, centerId, effect) : null, R = RECEPTOR;
   const words = tList('studio.axes.effects');
+  const name = effect === BIRTH ? label('development.birth') : words[effect];
   const text = (value, x, y, anchor = 'start') => '<text class="aid-curve-label" x="' + fixed(x) +
                                                   '" y="' + fixed(y) + '" text-anchor="' + anchor +
                                                   '">' + escapeText(value) + '</text>';
-  const scale = answer?.scale ?? EFFECT_SCALE[effect] ?? SHARE_SCALE;
+  const scale =
+      answer?.scale ?? (effect === BIRTH ? GROWTH_SCALE : EFFECT_SCALE[effect]) ?? SHARE_SCALE;
   const y = answer?.y ?? (() => R.bottom);
   const levels = [ scale.low, ...(scale.low < 0 && scale.high > 0 ? [ 0 ] : []), scale.high ];
   let body =
       '<path class="aid-chart-axis" d="M' + R.left + ' ' + R.top + ' V' + R.bottom + ' H' +
-      R.right + '"/>' + text(words[effect], R.left, 12) +
+      R.right + '"/>' + text(name, R.left, 12) +
       levels.map(v => text(curveNumber(v), R.left - 4, y(scale.response(v)) + 4, 'end')).join('');
   if (scale.low < 0 && scale.high > 0)
     body +=
@@ -394,8 +403,8 @@ export function effectCurve(state, receptor, effect, target = null) {
          (target ? ' data-receptor-curve="' + escapeText(target) + '"' : '') + '>' + body +
          '</svg>';
 }
-// Behelf: the growth and birth receptors' answer the engine does not report yet, so this one
-// still reckons it here (receptorCurve).
+// Behelf: the body's growth receptor's answer the engine does not report yet, so this one still
+// reckons it here (receptorCurve).
 function growthCurve(state, receptor, effect, target = null) {
   const curve = receptorCurve(state, receptor, effect);
   const {bounded, axis, scale, response, atFraction, x, y} = curve;
@@ -684,13 +693,19 @@ function bloodCurves(state, index, context) {
   const rows = receivers(doc, index, wheel).flatMap(cell => {
     const organ = findOrgan(doc, cell.organId), name = organTitle(organ, state.sites);
     const group = state.anatomy?.groups?.[centerIndex(doc, cell.id)];
-    return boundEffects(cell, index, wheel).flatMap(effect => {
-      const curve = cell.receptors[effect]?.substance === index ? group?.responses?.[effect] : null;
+    const births = birthAffinity(cell, index, wheel) >= NOTICEABLE_AFFINITY ? [ BIRTH ] : [];
+    return [...boundEffects(cell, index, wheel), ...births ].flatMap(effect => {
+      const birth = effect === BIRTH, receptor = birth ? cell.growth : cell.receptors[effect];
+      const curve = receptor?.substance !== index ? null
+                    : birth                       ? group?.birthResponse
+                                                  : group?.responses?.[effect];
       const key = name + ':' + effect + ':' + (curve ?? []).join(',');
       if (seen.has(key))
         return [];
       seen.add(key);
-      return [ {id : cell.id, effect, name, curve, value : group?.effects?.[effect]} ];
+      const value = birth ? curve?.[Math.round(clamp(present / span) * (curve.length - 1))]
+                          : group?.effects?.[effect];
+      return [ {id : cell.id, effect, name, curve, value} ];
     });
   });
   if (!rows.length)
@@ -701,8 +716,10 @@ function bloodCurves(state, index, context) {
   return '<section class="aid-hormone-receivers" style="--substance:' + substanceColor(index) +
          '"><h4>' + label('hormoneCard.acts') + '</h4>' + bloodAxis(index, now, span) +
          rows.map(({id, effect, name, curve, value}) => {
-               const scale = effect === HORMONE_EFFECT.death ? GROWTH_SCALE
-                                                             : EFFECT_SCALE[effect] ?? SHARE_SCALE;
+               const birth = effect === BIRTH;
+               const scale = birth || effect === HORMONE_EFFECT.death
+                                 ? GROWTH_SCALE
+                                 : EFFECT_SCALE[effect] ?? SHARE_SCALE;
                const y = response => C.bottom - (C.bottom - C.top) *
                                                     (scale.value(response) - scale.low) /
                                                     (scale.high - scale.low);
@@ -720,10 +737,13 @@ function bloodCurves(state, index, context) {
                          : '';
                return '<button data-select-center="' + escapeText(id) + '" data-select-effect="' +
                       effect + '"><span class="aid-hormone-receiver-heading"><span>' +
-                      escapeText(name) + '</span>' + boundEffect(effect, 0) + '<small>' +
-                      escapeText(words[effect]) + '</small></span><svg viewBox="0 0 ' + C.width +
-                      ' ' + C.height + '" aria-hidden="true"><path class="aid-chart-axis" d="M' +
-                      C.left + ' ' + C.top + ' V' + C.bottom + ' H' + C.right + '"/>' + drawn +
+                      escapeText(name) + '</span>' +
+                      (birth ? glyph(BIRTH_ICON, ICON.mark, {line : true})
+                             : boundEffect(effect, 0)) +
+                      '<small>' + escapeText(birth ? label('development.birth') : words[effect]) +
+                      '</small></span><svg viewBox="0 0 ' + C.width + ' ' + C.height +
+                      '" aria-hidden="true"><path class="aid-chart-axis" d="M' + C.left + ' ' +
+                      C.top + ' V' + C.bottom + ' H' + C.right + '"/>' + drawn +
                       '<path class="aid-hormone-level-mark" d="M' + fixed(now) + ' ' + C.top +
                       ' V' + C.bottom + '"/></svg></button>';
              })
