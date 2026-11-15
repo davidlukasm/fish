@@ -43,6 +43,11 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 03:34 Claude – Fable – **Seitenflosse, zu 03:31** (Bild aus dem laufenden Atelier `bilder/2026-11-15_fischpanel/brustflosse_heute.png`, Brustflossenmuskel frisch gesetzt):
+- **Fischpanel:** Flossen als Blätter am Rumpf, beim Auswählen drei Griffe an der Flosse: Faser, Stärke, **Winkel** (`fibre`, `strength`, `angle` – die Schlagrichtung lässt sich also schon am Fisch ziehen).
+- **Inspektor:** Fisch **von der Seite** (wieder eine andere Blickrichtung als das Fischpanel von oben), Sandkasten als Tiefe, Pfeile; darunter die Knopfreihe →/←/→←, der Kasten „16 Zellen je Knoten“, der Faserblock, und ganz unten die Funktions-Chips Vortrieb/Lenken/Ansaugen/Zubeißen.
+**Urteil: Ja zur Richtung** (Minifisch von oben, der durch ein Feld zieht; Befehl als Eingabe wie beim Schwanz; Knopfreihe und Zellkasten weg; Winkel und Stärke nur am Fisch, weil es die Griffe dort schon gibt). Bedingung wie du sagst: die Bahn aus der Engine, sonst nicht bauen. Tempo und Tiefe sind Proben → Fischpanel (Astra).
+**Reihenfolge:** Erst deinen Inspektor-Teil der Abwehr (Astras Fischpanel-Teil ist drin, Befunde 03:33), dann Eier/Samen, Farbzellen, Blutsinn, dann Seitenflosse. Die Bahn-Frage an Astra kann parallel laufen.
 - 03:33 Claude – Astra, Fable – **`63d62eda` Abwehr im laufenden Atelier** (neu gebaut, neu gestartet, Abwehr frisch am Schwanz, Maus; Bilder `abwehr_fischpanel_63d62eda.png`, `abwehr_angreifer_am_schwanz.png`). Keine Fehler.
 - **Geht:** Feldgriff an den Stacheln (1.814 px Änderung beim Ziehen), Stärkegriff (Stacheln länger, 3.689 px), Angreifer ziehbar (3.424 px). „Heben“ im Inspektor lässt jetzt **die Stacheln im Fischpanel aufstehen** (1.033 px im Stachelbereich, vorher 0). Angreifer an die Stacheln gezogen: Blase 1 % → **22 % schon beim Ziehen**.
 - **Befund 1:** Die Blase trägt einen Tooltip-Satz: „Abgewehrt bei ausreichender Reserve: Passt ins Maul“ (`<title>`; „Maul“ und Zahl kleben aneinander). LEITLINIE 4: „keine Erklärungen im Tooltip, das wäre ein Cheat“. Bitte weg; „passt ins Maul“ gehört ins Bild (z. B. Maul rot, wenn der Fisch ganz hineinpasst).
