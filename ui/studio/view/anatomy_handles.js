@@ -25,6 +25,8 @@ import {fixed, escapeText} from './markup.js';
 import {label} from './kit.js';
 import {clamp} from '../../units.js';
 
+// A grip on the fish, in screen units: big enough to find and catch at any zoom.
+const GRIP = Object.freeze({hit : 16, ring : 8, arrow : 1.5});
 const SKIN_SENSES = Object.freeze([ 'touch', 'pain', 'lateral' ]);
 // How far the grip is dragged along the fish from the narrowest field to the widest.
 const FIELD_SPAN = 320;
@@ -102,8 +104,8 @@ export function anatomyHandlesSvg(state) {
              .map(s => '<g data-anatomy-handle="' + s.key + '" data-anatomy-organ="' +
                        escapeText(s.id) + '"' + steadyAt(s.point, zoom) + '>' +
                        '<title>' + escapeText(label('direct.' + s.key)) +
-                       '</title><circle class="hit" r="13"/><circle r="5"/>' +
-                       '<path d="' +
+                       '</title><circle class="hit" r="' + GRIP.hit + '"/><circle r="' + GRIP.ring +
+                       '"/><path transform="scale(' + GRIP.arrow + ')" d="' +
                        (s.axis === 'x' ? 'M-9 0h18m-3-3 3 3-3 3M-6-3-3 0-6 3'
                                        : 'M0-9v18m-3-3 3 3 3-3M-3-6 3-3 3-6') +
                        '"/></g>')

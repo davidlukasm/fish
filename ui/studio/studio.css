@@ -1102,7 +1102,7 @@
 .aid-wire-group.selected .aid-wire-ink,.aid-wire-group.aid-pulse-used .aid-wire-ink{opacity:1}
 
 .aid-anatomy-handles g{cursor:grab;pointer-events:all}
-.aid-anatomy-handles circle{fill:#102c33;stroke:#e9dba7;stroke-width:1.4}
+.aid-anatomy-handles circle{fill:#102c33;stroke:#e9dba7;stroke-width:2}
 .aid-anatomy-handles .hit{fill:transparent;stroke:none}
 .aid-anatomy-handles path{fill:none;stroke:#e9dba7;stroke-width:1;pointer-events:none}
 .aid-region-graph{width:100%;display:block;overflow:visible;--circuit:#9dccbf;color:var(--circuit)}
