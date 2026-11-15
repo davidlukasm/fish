@@ -582,6 +582,57 @@ void sense_spread_report(const field::Substrate &planned, const fishsim::BrainIn
   }
   std::cout << ']';
 }
+// The swim bladder as the atelier estimates it, over the fish's maturity with the rest of the
+// blood from the life band: its capacity from the cells that are there (group_life), the lift of a
+// full bladder (bladder_lift, as the fish moves), and how far one step at full command fills or
+// empties it (bladder_fill_after, as the fish's step).
+void bladder_estimate_report(const fishsim::BrainInterface &a, const field::Substrate &t,
+                             const std::vector<Group> &groups,
+                             const std::vector<const field::Neuron *> &cells,
+                             const LearningContext &context,
+                             const fishsim::PhysiologyParameters &physiology) {
+  constexpr int SAMPLES = 32;
+  std::vector<std::pair<int, double>> parts;
+  double all = 0;
+  for (const auto &e : a.effectors) {
+    if (e.port != fishsim::organ_port::bladder)
+      continue;
+    const auto &place = t.neurons[e.neuron].location;
+    const auto found = std::find_if(groups.begin(), groups.end(),
+                                    [&](const auto &g) { return g.contains(place); });
+    parts.push_back({found == groups.end() ? -1 : int(found - groups.begin()), e.strength});
+    all += e.strength;
+  }
+  const double full = a.capacities[fishsim::organ_port::bladder];
+  // The share of the bladder's cells there at a maturity scales the planned capacity and drive.
+  const auto there = [&](double maturity) {
+    auto blood = context;
+    blood.maturity = maturity;
+    double sum = 0;
+    for (const auto &[g, strength] : parts)
+      if (g < 0 || !cells[g] || group_life(groups[g], *cells[g], blood).allowed())
+        sum += strength;
+    return all > 0 ? sum / all : 0.;
+  };
+  std::cout << ",\"bladderEstimate\":{\"sinking\":" << physiology.sinking << ",\"life\":[";
+  for (int i = 0; i <= SAMPLES; ++i) {
+    const double share = there(double(i) / SAMPLES), capacity = full * share,
+                 drive = all * share;
+    std::cout << (i ? "," : "") << "{\"capacity\":" << capacity
+              << ",\"liftFull\":" << fishsim::bladder_lift(capacity, 1, physiology) << ",\"hover\":";
+    // The fill at which lift meets weight; none when even a full bladder does not carry the fish.
+    const double lift = fishsim::bladder_lift(capacity, 1, physiology);
+    if (lift > 0)
+      std::cout << physiology.sinking / lift;
+    else
+      std::cout << "null";
+    std::cout
+              << ",\"fillStep\":" << fishsim::bladder_fill_after(0, drive, 0, physiology)
+              << ",\"emptyStep\":" << 1 - fishsim::bladder_fill_after(1, 0, drive, physiology)
+              << '}';
+  }
+  std::cout << "]}";
+}
 std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &groups, bool developed,
                                 const SenseScene *attack = nullptr,
                                 const LearningContext *learning = nullptr,
@@ -1257,6 +1308,8 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
   std::cout << ']';
   adult.energy = fishsim::reserve_capacity(adult);
   fin_twitch_report(a, fishsim::body_mass(adult), physiology);
+  if (learning)
+    bladder_estimate_report(a, t, groups, reference_cells, *learning, physiology);
   return group;
 }
 void readiness_report(const fishsim::BrainInterface &a, const field::Substrate &t, bool developed) {

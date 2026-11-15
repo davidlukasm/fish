@@ -91,31 +91,30 @@ const SAC = {
 const sacLength = capacity => SAC.atRest + SAC.growth * clamp(capacity / SAC.scale);
 const activeAt = (group, maturity) => (group.end === null || maturity < group.end) &&
                                       (group.start === null || maturity >= group.start);
-const capacityOf = (groups, maturity) => groups.reduce(
-    (sum, group) => sum + (activeAt(group, maturity) ? group.copies / MAX_COPIES : 0), 0);
-const liftAt = (capacity, physics) => physics.strength * capacity / (1 + capacity);
-const hoverAt = (capacity, physics) => {
-  const lift = liftAt(capacity, physics);
-  return lift > 0 ? physics.sinking / lift : Infinity;
-};
+// The engine's estimate of the bladder at a maturity, the rest of the blood from the life band
+// (anatomy.bladderEstimate: capacity of the cells there, lift when full, the fill at which it
+// hovers, one step's fill and emptying at full command).
+const estimateAt = (estimate, maturity) =>
+    estimate?.life?.[Math.round(clamp(maturity) * (estimate.life.length - 1))] ?? null;
+const hoverOf = at => at?.hover ?? Infinity;
 const bounds = key => [Math.max(activationLevel(0), key.gate - key.spread),
                        Math.min(activationLevel(1), key.gate + key.spread)];
 const curve = (samples, x, y) =>
     path(samples.flatMap((sample, step) => step % PLOT_STRIDE ? [] : [ [ x(step), y(sample) ] ]));
 
-function trial(input, groups, physics) {
-  const capacity = capacityOf(groups, input.maturity), lift = liftAt(capacity, physics),
-        swimming = input.maturity >= HATCH,
-        hover = swimming ? hoverAt(capacity, physics) : Infinity;
+function trial(input, estimate) {
+  const now = estimateAt(estimate, input.maturity), sinking = estimate?.sinking ?? 0;
+  const capacity = now?.capacity ?? 0, lift = now?.liftFull ?? 0,
+        swimming = input.maturity >= HATCH, hover = swimming ? hoverOf(now) : Infinity;
   const filling = [], depth = [], push = [];
   let level = input.start, at = 1;
   for (let step = 0; step <= STEPS; step++) {
-    const force = swimming ? (lift * level - physics.sinking) / (physics.sinking || lift || 1) : 0;
+    const force = swimming ? (lift * level - sinking) / (sinking || lift || 1) : 0;
     filling.push(level);
     depth.push(at);
     push.push(force);
-    level =
-        clamp(level + physics.rate * capacity * (step < input.stop ? input.fill : -input.empty));
+    level = clamp(level + (step < input.stop ? (now?.fillStep ?? 0) * input.fill
+                                             : -(now?.emptyStep ?? 0) * input.empty));
     at = clamp(at - force / FALL_STEPS);
   }
   const rises =
@@ -135,6 +134,7 @@ function timeAxis(parent, chart, x) {
 }
 
 liveKind('bladder', (studio, organId) => {
+  const estimate = () => (studio.state.outlinePreview ?? studio.state.anatomy)?.bladderEstimate;
   const root = document.createElement('div');
   root.className = 'aid-live-bladder';
   const kind = document.createElement('strong');
@@ -408,7 +408,7 @@ liveKind('bladder', (studio, organId) => {
                        {left, right, top, base, icons, indent, gap} = LIFE;
     const x = maturity => left + (right - left) * maturity, y = levelY(LIFE);
     const maturityAt = px => clamp((px - left) / (right - left));
-    const hover = maturity => hoverAt(capacityOf(groups, maturity), state.capabilities.buoyancy);
+    const hover = maturity => hoverOf(estimateAt(estimate(), maturity));
     const cuts =
         [...new Set([
           HATCH, 1,
@@ -520,8 +520,7 @@ liveKind('bladder', (studio, organId) => {
     HATCH = hatchOf(studio);
     state = next;
     organ = findOrgan(state.document, organId);
-    const physics = state.capabilities?.buoyancy;
-    if (!organ || !physics)
+    if (!organ)
       return;
     groups = organTypes(organ, 'float').map(({id, centers}) => ({
                                               type : id,
@@ -549,7 +548,7 @@ liveKind('bladder', (studio, organId) => {
       chosenGroup = groups[0]?.type;
     if (!keys.some(key => key.type === chosenKey))
       chosenKey = keys[0]?.type;
-    model = trial(input, groups, physics);
+    model = trial(input, estimate());
     kind.textContent = !model.swimming    ? word('egg')
                        : model.hover <= 1 ? word('hover', {p : percent(model.hover)})
                                           : word('tooSmall');

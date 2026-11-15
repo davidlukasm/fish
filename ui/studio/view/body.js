@@ -800,20 +800,16 @@ function organChosen(state, organ) {
          (selected?.kind === 'assembly' &&
           (findAssembly(state.document, selected.id)?.organIds.some(own) ?? false));
 }
-// How much of an organ is there at the life band's blood, as the engine estimates it
-// (anatomy.groups[].life): the share of its cell types that have formed and not yet died. An
-// estimate of the conditions now, not of the fish's past.
-// A birth answer this small forms the cell only after a long while; the picture counts it as not
-// yet there (an estimate: the engine forms the cell at a rate proportional to the answer).
-const ABSENT = .18, FORMING = .05;
+// How much of an organ the life band's blood allows, as the engine estimates it
+// (anatomy.groups[].life.allowed): the share of its cell types that may be there now. The
+// conditions now, not whether the cells are already built or have died before.
+const ABSENT = .18;
 function organPresence(state, organ) {
   const groups = (state.outlinePreview ?? state.anatomy)?.groups;
   if (!groups || !organ.centers?.length)
     return 1;
-  const there = organ.centers.filter(c => {
-    const life = groups[centerIndex(state.document, c.id)]?.life;
-    return !life || !(life.dying || (life.forming !== null && life.forming < FORMING));
-  });
+  const there = organ.centers.filter(
+      c => groups[centerIndex(state.document, c.id)]?.life?.allowed ?? true);
   return there.length / organ.centers.length;
 }
 const BODY_SHADE = Object.freeze({reach : 150, flank : .08, back : .12});

@@ -89,6 +89,34 @@ double kept_between(const LearningContext::Probe &probe, float initial_trace, fl
 // How each receptor of the group answers its own substance from none to its span (a hormone's
 // span is what its glands reach, a body signal's all of it), with the rest of the blood as the
 // life band sets it: the curve the hormone tool draws, from the engine's response.
+// Whether this blood allows a group's cells, from the same receptors the fish reads: the
+// conditions now, not whether a cell is already built or already died (that needs the fish's past
+// and its building budget, substrate.cc:607-626). A cell forms at a rate proportional to the birth
+// answer, clamped to 0…1 (substrate.cc:606-610); an answer under FORMING would take thousands of
+// steps, so it counts as not allowed. Without a birth receptor it may form from the start. It dies
+// once the death answer passes one half (substrate.cc:601).
+struct GroupLife {
+  static constexpr float FORMING = .05f;
+  std::optional<float> forming;
+  bool dying = false;
+  bool allowed() const { return !dying && (!forming || *forming >= FORMING); }
+};
+GroupLife group_life(const Group &group, const field::Neuron &cell, const LearningContext &context) {
+  GroupLife life;
+  if (group.growth.active) {
+    auto unborn = context;
+    unborn.cell_maturity = 0;
+    life.forming = std::clamp(planned_receptor(group.growth, field::GROWTH_RECEPTOR)
+                                  .response(unborn.levels, unborn.maturity, unborn.reserve,
+                                            unborn.fatigue, unborn.cell_maturity),
+                              0.f, 1.f);
+  }
+  life.dying = field::hormone_effect_present(cell, field::Death) &&
+               planned_receptor(group.receptors[field::Death], field::Death)
+                       .response(context.levels, context.maturity, context.reserve,
+                                 context.fatigue, context.cell_maturity) > .5f;
+  return life;
+}
 // One receptor's answer over its own substance, from none to its span (a hormone's span is what its
 // glands reach, a body signal's all of it), the rest of the blood as the life band sets it.
 void receptor_curve(const Receptor &plan, const field::HormoneReceptor &receptor,
@@ -185,24 +213,14 @@ void learning_group_report(const Group &group, const field::Neuron *cell,
   }
   std::cout << ']';
   receptor_curves(group, *cell, context, spans);
-  // Whether the cell is there at this blood, estimated from the same receptors the fish reads: it
-  // forms while its birth receptor answers above zero (substrate.cc:606-610; without one it forms
-  // from the start), and dies once its death answer passes one half (substrate.cc:601).
+  const auto life = group_life(group, *cell, context);
   std::cout << ",\"life\":{\"forming\":";
-  if (group.growth.active) {
-    auto unborn = context;
-    unborn.cell_maturity = 0;
-    std::cout << std::clamp(planned_receptor(group.growth, field::GROWTH_RECEPTOR)
-                                .response(unborn.levels, unborn.maturity, unborn.reserve,
-                                          unborn.fatigue, unborn.cell_maturity),
-                            0.f, 1.f);
-  } else
+  if (life.forming)
+    std::cout << *life.forming;
+  else
     std::cout << "null";
-  std::cout << ",\"dying\":"
-            << (field::hormone_effect_present(*cell, field::Death) && effects[field::Death] > .5f
-                    ? "true"
-                    : "false")
-            << '}';
+  std::cout << ",\"dying\":" << (life.dying ? "true" : "false")
+            << ",\"allowed\":" << (life.allowed() ? "true" : "false") << '}';
   std::cout << ",\"learning\":";
   if (cell->role != field::Role::Nerve) {
     std::cout << "null";

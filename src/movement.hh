@@ -20,6 +20,9 @@ struct TwitchTurn {
 // Estimate one fully paid twitch from rest in open water at its mean torque and fixed mass.
 TwitchTurn isolated_twitch_turn(double torque, const StrokeTiming &, double mass,
                                const PhysiologyParameters &);
+// The bladder's lift at a fill, for a bladder of this capacity: weight and lift both grow with the
+// body, so it depends only on capacity and fill. Move and the atelier's estimate share it.
+double bladder_lift(double capacity, double fill, const PhysiologyParameters &);
 void move_body(Body &, const Field *, const PhysiologyParameters &, bool protected_life = false);
 void limit_swimming(Body &, const Field &, const PhysiologyParameters &);
 void advance_body(Body &, const Genome &, const Field *, const PhysiologyParameters &,
