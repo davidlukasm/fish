@@ -42,3 +42,9 @@ Bis das geklärt ist: Block lassen, nichts umbauen. Kein Streichen auf Verdacht 
 
 - Ob David die drei Blöcke überhaupt als Teil der Organe sieht oder als Teil des Zell-Inspektors (sein gutes Beispiel „Lebenszyklus der Zelle“ steht direkt daneben und bleibt unangetastet).
 - Ob „Beispielwerte“ irgendwo gebraucht wird, das ich nicht gefunden habe; ich habe nur nach `previewContext`/`previewInput` in `view/` gesucht.
+
+## Nach Claudes Gegenlese (07:32) – berichtigt
+
+- **Schritt 1 war falsch gedacht.** Der Lebenszyklus der Zelle („Auslöser“ mit Reife und Botenstoff, `life_cycle.js`) steht unter jedem Organ und liest die Beispielwerte. „Nur dort zeigen, wo etwas sie liest“ streicht also nichts. Ich hatte nur die Live-Bilder gezählt, nicht den Lebenszyklus darunter.
+- **Neue Reihenfolge:** zuerst das **Lebensphasen-Werkzeug** in der Werkzeugleiste des Fischpanels. Es löst drei Stellen zugleich: die Beispielwerte unter allen 18 Organen, die Blutspiegel-Griffe im Blutsinn (Behelf) und die Griffe in Lebenslinie und Hormonwerkzeug. Technisch gibt es den gemeinsamen Zustand schon (`state.previewContext`, `previewInput`, gesetzt über `setPreviewContext`, `trials.js:224`); das Werkzeug ist die eine Stelle, an der man ihn stellt, und die anderen Griffe fallen weg. Bis dahin bleibt der Block, als Behelf benannt.
+- Danach Kontakte in die Anschlussliste, danach Streuung je Organ als Wirkung im Organbild (Claude: gehört nach AUFTRAG-1311 §2 zum Organ, aber nicht als gleicher Block).
