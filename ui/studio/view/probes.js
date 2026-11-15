@@ -362,7 +362,7 @@ export function gutProbeControls(state, organ) {
 function visibleProbe(state) {
   const probe = state.senseProbe, faintest = state.anatomy?.lightDimmest;
   const organ = probe ? findOrgan(state.document, probe.organ) : null;
-  return organ && probe.kind !== 'gut' && isChosen(state.selected, organ) &&
+  return organ && probe.kind !== 'gut' && probe.kind !== 'fins' && isChosen(state.selected, organ) &&
                  (probe.kind === 'ground' || faintest > 0)
              ? {probe, organ, faintest, zoom : zoomOf(state)}
              : null;

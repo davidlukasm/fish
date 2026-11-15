@@ -1,189 +1,190 @@
-// The side fin muscle's live inspector: the fish from the side with its fin as an oar, and what a
-// beat does to the fish.
-// Read in the engine (src/body_plan.cc:89-128, fin_mechanics; src/movement.cc:9-19, 78-97):
-//   a side fin cell beats at its angle: straight back at 0, outward up to 90 degrees, inward down
-//   to -90; along the body its force pushes the fish and turns it with the cell's lever, as an
-//   oar does; across the body it pushes the fish away from the fin's side and turns it with the
-//   cell's arm ahead of or behind the body's middle;
-//   a fin grips the water 1 - 0.5 x s / (1 + s), s the fish's speed over its cruising speed:
-//   fully at a stand, half at great speed; in the ground it grips 4 x depth x (1 - depth) of what
-//   is missing: fully when the fish is half dug in.
-// The fish looks to the left, as in the fish panel. The fin's side of the fish is its lower edge
-// here, across is up. The antagonist beats forward: everything its beat does is turned round.
-// Not in the picture: that the ground's resistance across adds to a fin's grip there.
-// Speed and depth are the picture's own knobs; the fish panel has no probe for them.
-import {FIN_STROKE, SIDE_FIN, STROKE_GRIP} from '../../../schema.js';
-import {degrees, radians} from '../../../units.js';
-import {findOrgan, finAngle, finStroke, groupReport, setFinAngle} from '../../model/document.js';
-import {addPicture, clamp, drag, el, liveKind, picture} from './kit.js';
+// The side fin muscle's live inspector: a small fish in still water, moved by its side fins.
+// Read in the engine (body_plan.cc, fin_mechanics: a side fin cell beats at its angle and pushes,
+// shifts and turns the fish with its lever and arm; movement.cc, move_body: the body's step in
+// the water; werkzeug/atelier.cc, fin_course_report: the fish of this plan, grown and fed, in
+// still open water, driven by the commands tried here through the same muscles and the same step
+// as in the aquarium).
+// The water is seen from the side, as the aquarium is: down is down, a turn raises or lowers the
+// snout. The fish looks to the left, as in the fish panel.
+// The way the fish takes is the plan's report (anatomy.finCourse: place in body radii, heading,
+// step and the fins' tension, every fourth step). Nothing of it is reckoned here.
+// The fins themselves, where they sit, their angle, strength and fibres are the fish panel's
+// (anatomy_handles.js). Here are the inputs: the commands to this muscle and to its twin on the
+// other side, each as a beat that lasts as long and is as strong as its knob is pulled. Above
+// the line the muscle beats backward, below it forward: pulled across, the muscle's stroke turns
+// round.
+// Not in the picture: the other pair of side fins and the tail beating along (the report drives
+// one pair at a time); the ground.
+import {FIN_STROKE} from '../../../schema.js';
+import {degrees} from '../../../units.js';
+import {
+  addAntagonist,
+  antagonistOf,
+  findOrgan,
+  finStroke,
+  setFinStroke
+} from '../../model/document.js';
+import {sideIndex, sideOf} from '../../model/layout.js';
+import {isPelvicMuscle} from '../../model/organs.js';
+import {label} from '../kit.js';
+import {addPicture, chip, clamp, drag, el, liveKind, path, picture} from './kit.js';
 import {fishLeft} from './skin.js';
 
-const FIN = Object.freeze({
-  height : 206,
-  cx : 168,
-  cy : 96,
-  s : 2.5,
-  hinge : [ 8, 30 ],
-  blade : 38,
-  arrow : 50,
-  swing : 24,
-  round : 2400,
-  fast : 3,
-  ring : 100,
-  streak : {x : 104, y : 34, long : [ 8, 70 ]},
-  sand : {x : 8, y : 158, w : 56, h : 36, span : 22}
+// The water: `box` wide and high, a body radius at most `radius` pixels, `edge` free round the
+// way. The beats: steps from L to R, `steps` in all, a beat at most `longest`; a row's line at
+// rows[k], a full beat `high` from it; a pull of `turn` across the line turns the stroke round.
+const SWIM = Object.freeze({
+  height : 236,
+  box : [ 300, 150 ],
+  radius : 22,
+  edge : 26,
+  fish : 31,
+  L : 30,
+  R : 288,
+  steps : 128,
+  longest : 64,
+  every : 4,
+  rows : [ 180, 214 ],
+  high : 14,
+  least : .15,
+  turn : 6,
+  round : 6000
 });
+const SIDES = Object.freeze([ 'left', 'right' ]);
 
 liveKind('fin', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-fin';
-  const oar = addPicture(root);
-  // What is tried: the fish's speed over its cruising speed, and how deep it lies in the ground.
-  const own = {speed : .3, bury : 0};
-  const film = {blade : null, effects : null, angle : 0, hx : 0, hy : 0, phase : 0};
+  const water = addPicture(root);
+  // What is tried: for this muscle and its twin, how long the beat lasts (steps) and how strong
+  // the command is. Not part of the fish.
+  const own = {beats : [ {steps : 16, strength : 1}, {steps : 0, strength : 1} ]};
+  let clock = 0, film = null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
-  function drawOar(muscle) {
-    const {svg, live} = picture(oar, FIN.height,
-                                fixed => {
-                                  fishLeft(fixed, FIN.cx, FIN.cy, FIN.s);
-                                  el('rect', {
-                                    x : FIN.sand.x,
-                                    y : FIN.sand.y,
-                                    width : FIN.sand.w,
-                                    height : FIN.sand.h,
-                                    rx : 4,
-                                    class : 'aid-live-fin-ground'
-                                  },
-                                     fixed);
-                                }),
-                {cx, cy} = FIN, hx = cx - FIN.hinge[0], hy = cy + FIN.hinge[1],
-                angle = SIDE_FIN.angle * (2 * finAngle(muscle) - 1), a = radians(angle),
-                sense = finStroke(muscle) === FIN_STROKE.front ? -1 : 1;
-    // How well the fin grips: the water by the fish's speed, the ground by how deep it lies in it.
-    const water = 1 - (1 - STROKE_GRIP.fin_at_speed) * own.speed / (1 + own.speed),
-          ground = 4 * own.bury * (1 - own.bury), grip = water + (1 - water) * ground,
-          {document, anatomy} = studio.state;
-    let weight = 0, push = 0, across = 0, turn = 0;
-    for (const cell of muscle.centers) {
-      const arms = groupReport(document, anatomy, 'finArms', cell.id);
-      if (!arms)
-        continue;
-      const [force, lever, arm] = arms, bearing = radians(SIDE_FIN.angle * cell.q1),
-                           along = Math.cos(bearing), sideways = Math.sin(bearing);
-      weight += force;
-      push += force * along;
-      across += force * sideways;
-      turn += force * (along * lever + sideways * arm);
+  // The commands as the engine takes them: phases in which the same fins beat, then the glide.
+  function phasesOf(muscles) {
+    const pair = isPelvicMuscle(muscles[0]) ? 1 : 0, phases = [];
+    const ends = [...new Set(own.beats.map((b, k) => muscles[k] ? b.steps : 0)) ]
+                     .filter(steps => steps > 0)
+                     .sort((a, b) => a - b);
+    let from = 0;
+    for (const end of [...ends, SWIM.steps]) {
+      const phase = {steps : end - from, pair};
+      muscles.forEach((muscle, k) => {
+        if (muscle && own.beats[k].steps > from)
+          phase[SIDES[sideIndex(sideOf(muscle))]] = {
+            stroke : finStroke(muscle),
+            strength : own.beats[k].strength
+          };
+      });
+      if (phase.steps > 0)
+        phases.push(phase);
+      from = end;
     }
-    if (weight > 0) {
-      push *= sense * grip / weight;
-      across *= sense * grip / weight;
-      turn *= sense / weight;
-    }
-    // What the beat does to the fish: it pushes it along, across, and turns it.
-    const effects = el('g', {class : 'aid-live-fin-effect'}, live);
-    const arrow = (x0, y0, x1, y1) => {
-      const long = Math.hypot(x1 - x0, y1 - y0);
-      if (long < 4)
-        return;
-      const ux = (x1 - x0) / long, uy = (y1 - y0) / long;
-      el('path', {
-        d : `M${x0} ${y0} L${x1} ${y1} m${- 7 * ux + 4.5 * uy} ${- 7 * uy - 4.5 * ux} L${x1} ${
-            y1} l${- 7 * ux - 4.5 * uy} ${- 7 * uy + 4.5 * ux}`
-      },
-         effects);
-    };
-    // Along is to the left, across away from the fin, up.
-    arrow(cx - 80, cy, cx - 80 - FIN.arrow * push, cy);
-    arrow(cx, cy - 40, cx, cy - 40 - FIN.arrow * across);
-    if (Math.abs(turn) > .03) {
-      // The turn: an arc before the snout, as long as the turn, away from the fin's side.
-      const r = FIN.ring, to = -70 * turn,
-            at = d => [cx - r * Math.cos(radians(d)), cy + r * Math.sin(radians(d))],
-            [ x0, y0 ] = at(0), [ x1, y1 ] = at(to), way = to > 0 ? 1 : -1;
-      el('path', {d : `M${x0} ${y0} A${r} ${r} 0 0 ${to > 0 ? 0 : 1} ${x1} ${y1}`}, effects);
-      const tx = Math.sin(radians(to)) * way, ty = Math.cos(radians(to)) * way;
-      el('path', {
-        d : `M${x1 - 7 * tx + 4.5 * ty} ${y1 - 7 * ty - 4.5 * tx} L${x1} ${y1} L${
-            x1 - 7 * tx - 4.5 * ty} ${y1 - 7 * ty + 4.5 * tx}`
-      },
-         effects);
-    }
-    // The fin: a blade at its hinge, pointing where it beats: straight back is to the right here,
-    // outward down.
-    const blade = el('path', {
-      d : `M0 -4 Q${FIN.blade * .6} -9 ${FIN.blade} 0 Q${FIN.blade * .6} 9 0 4 Z`,
-      class : 'aid-live-fin-blade k0'
-    },
-                     live);
-    Object.assign(film, {blade, effects, angle, hx, hy});
-    const tip = [ hx + FIN.blade * Math.cos(a), hy + FIN.blade * Math.sin(a) ];
-    drag(svg,
-         el('rect', {
-           x : tip[0] - 4.5,
-           y : tip[1] - 4.5,
-           width : 9,
-           height : 9,
-           rx : 2.5,
-           class : 'aid-live-keygrip k0 on'
-         },
-            live),
-         p => draft(setFinAngle(
-             studio.state.document, organId,
-             (clamp(degrees(Math.atan2(p.y - hy, Math.max(0, p.x - hx))) / SIDE_FIN.angle, -1, 1) +
-              1) /
-                 2,
-             studio.state.sites)),
-         'finangle', 'grip', settle);
-    // The fish's speed: the water streaming past it, the longer the faster; the knob at its end.
-    const S = FIN.streak, long = S.long[0] + (S.long[1] - S.long[0]) * own.speed / FIN.fast;
-    for (const dy of [-9, 0, 9])
-      el('path',
-         {d : `M${S.x} ${S.y + dy} h${long * (dy ? .7 : 1)}`, class : 'aid-live-fin-stream'}, live);
-    drag(svg,
-         el('circle', {cx : S.x + long, cy : S.y, r : 5, class : 'aid-live-fin-streamknob'}, live),
-         p => {
-           own.speed = clamp((p.x - S.x - S.long[0]) / (S.long[1] - S.long[0])) * FIN.fast;
-           show();
-         },
-         'finspeed', 'knob');
-    // How deep the fish lies in the ground: the little fish is dragged down into the sand.
-    const G = FIN.sand, iy = G.y - 8 + G.span * own.bury;
-    fishLeft(live, G.x + 30, iy, .5);
-    if (own.bury > 0)
-      el('rect',
-         {x : G.x, y : G.y, width : G.w, height : G.h, rx : 4, class : 'aid-live-fin-ground over'},
-         live);
-    drag(svg,
-         el('circle', {cx : G.x + 8, cy : iy, r : 5, class : 'aid-live-sandknob'}, live), p => {
-           own.bury = clamp((p.y - G.y + 8) / G.span);
-           show();
-         }, 'finbury', 'knob');
-    beat();
+    return phases;
   }
-  // The fin beats; what it does shows while it beats.
-  function beat() {
-    if (!film.blade)
-      return;
-    const pull = film.phase < .35 ? Math.sin(Math.PI * film.phase / .35) : 0;
-    film.blade.setAttribute('transform', `translate(${film.hx} ${film.hy}) rotate(${
-                                             (film.angle - FIN.swing * (1 - pull)).toFixed(1)})`);
-    film.effects.setAttribute('opacity', (.3 + .7 * pull).toFixed(2));
+  function draw(muscles) {
+    const S = SWIM, {svg, under, live} = picture(water, S.height), probe = studio.state.senseProbe,
+          course = probe?.kind === 'fins' && probe.organ === organId
+                       ? studio.state.anatomy?.finCourse ?? []
+                       : [];
+    el('rect',
+       {x : 0, y : 0, width : S.box[0], height : S.box[1], rx : 6, class : 'aid-live-ground'},
+       under);
+    // The way: as large as the water allows, the fish drawn to its measure.
+    const xs = course.map(([ x ]) => -x), ys = course.map(([, y ]) => y),
+          span = values => values.length ? [ Math.min(...values), Math.max(...values) ] : [ 0, 0 ],
+          [ x0, x1 ] = span(xs), [ y0, y1 ] = span(ys),
+          unit = Math.min(S.radius, (S.box[0] - 2 * S.edge) / Math.max(x1 - x0, 1e-6),
+                          (S.box[1] - 2 * S.edge) / Math.max(y1 - y0, 1e-6)),
+          at = ([ x, y ]) => [S.box[0] / 2 + unit * (-x - (x0 + x1) / 2),
+                              S.box[1] / 2 + unit * (y - (y0 + y1) / 2)],
+          mine = muscles.map(muscle => muscle ? 1 + (isPelvicMuscle(muscle) ? 2 : 0) +
+                                                    sideIndex(sideOf(muscle))
+                                              : -1);
+    if (course.length > 1)
+      el('path', {d : path(course.map(at)), class : 'aid-live-track-line'}, live);
+    // Where a fin pulls, the way carries its colour.
+    for (const row of course) {
+      const [x, y] = at(row), pulls = mine.map(k => k >= 0 && row[4]?.[k] > 0);
+      pulls.forEach(
+          (pull, k) =>
+              pull &&
+              el('circle', {cx : x, cy : y, r : 2.6 - k, class : 'aid-live-petal k' + k}, live));
+    }
+    const fish = el('g', {}, live);
+    fishLeft(fish, 0, 0, unit / S.fish);
+    // The beats: one row for this muscle, one for its twin.
+    const X = step => S.L + (S.R - S.L) * step / S.steps,
+          stepAt = x => clamp(Math.round((x - S.L) / (S.R - S.L) * S.steps / S.every) * S.every, 0,
+                              S.longest);
+    muscles.forEach((muscle, k) => {
+      if (!muscle)
+        return;
+      const beat = own.beats[k], line = S.rows[k],
+            sense = finStroke(muscle) === FIN_STROKE.front ? 1 : -1,
+            top = line + sense * S.high * beat.strength, end = X(beat.steps);
+      el('path', {d : `M${S.L} ${line} H${S.R}`, class : 'aid-live-axis'}, live);
+      if (beat.steps > 0)
+        el('path', {
+          d : `M${S.L} ${line} V${top} H${end} V${line} Z`,
+          class : 'aid-live-petal k' + k,
+          opacity : .7
+        },
+           live);
+      drag(svg, el('circle', {cx : end, cy : top, r : 5.5, class : 'aid-live-posture'}, live),
+           (p, from) => {
+             const x = p.x - (from.x - end), off = (p.y - (from.y - top) - line) * sense;
+             beat.steps = stepAt(x);
+             beat.strength = clamp(Math.abs(off) / S.high, S.least, 1);
+             // Pulled across the line: the muscle strokes the other way.
+             if (off < -S.turn)
+               draft(setFinStroke(studio.state.document, muscle.id,
+                                  sense > 0 ? FIN_STROKE.back : FIN_STROKE.front,
+                                  studio.state.sites));
+             show();
+           },
+           'finbeat' + k, 'knob', settle);
+    });
+    // A muscle without its antagonist can get one.
+    if (!antagonistOf(studio.state.document, muscles[0], studio.state.sites))
+      chip(live, 12, S.rows[0], '+', () => {
+        const added = addAntagonist(studio.state.document, organId, studio.state.sites);
+        if (!added)
+          return studio.notice(label('status.noRoom'));
+        studio.changeDocument(added.document, {kind : 'organ', id : added.organId});
+      }, true, 6);
+    const now = el('path', {class : 'aid-live-now'}, live);
+    film = step => {
+      const k = clamp(step / S.every, 0, Math.max(0, course.length - 1)), a = course[Math.floor(k)],
+            b = course[Math.ceil(k)] ?? a;
+      if (a) {
+        const f = k - Math.floor(k),
+              [ x, y ] = at([ a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f ]);
+        fish.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${
+                                           (-degrees(a[2] + (b[2] - a[2]) * f)).toFixed(1)})`);
+      }
+      now.setAttribute('d', `M${X(step).toFixed(1)} ${S.rows[0] - S.high - 4} V${
+                                S.rows[muscles[1] ? 1 : 0] + S.high + 4}`);
+    };
+    film(clock);
   }
   function show() {
     const muscle = organ();
-    if (!muscle?.centers.length)
+    if (!muscle)
       return;
-    drawOar(muscle);
+    const muscles = [ muscle, findOrgan(studio.state.document, muscle.pair) ?? null ];
+    studio.setFinCommand(organId, phasesOf(muscles));
+    draw(muscles);
   }
   return {
     root,
     show,
     tick(dt) {
-      film.phase = (film.phase + dt / FIN.round) % 1;
-      beat();
+      clock = (clock + dt * SWIM.steps / SWIM.round) % SWIM.steps;
+      film?.(clock);
     }
   };
 });

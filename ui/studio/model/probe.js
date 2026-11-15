@@ -72,7 +72,9 @@ export function groundColour(probe) {
   return probe.buried ? sediment_color
                       : bare_surface_color.map((value, i) => value + coverage * (algae_color[i] - value));
 }
-export const senseScene = probe => probe && probe.kind !== 'ground' ? {
+// The commands tried on the side fins go to the engine as they are (design.js, setFinCommand).
+export const senseScene = probe => probe?.kind === 'fins' ? {kind : 'fins', phases : probe.phases}
+                                   : probe && probe.kind !== 'ground' ? {
   kind : probe.kind,
   bearing : probe.bearing,
   distance : probe.kind === 'attack' ? probe.gape : probe.distance,

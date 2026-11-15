@@ -116,7 +116,7 @@ const ORGAN_PANELS = Object.freeze({
   muscle : (state, organ) => {
     const code = organFunction(organ, state.sites);
     return code === MOTOR_KIND.forward ? livePlace('tail', organ)
-           : code === MOTOR_KIND.turn  ? livePlace('fin', organ) + muscleSettings(state, organ)
+           : code === MOTOR_KIND.turn  ? livePlace('fin', organ)
            : code === MOTOR_KIND.suction || code === MOTOR_KIND.aggression
                ? livePlace('mouth', organ) + muscleSettings(state, organ)
                : '';

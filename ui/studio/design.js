@@ -161,6 +161,15 @@ export const designMethods = {
     const probe = this.state.senseProbe;
     return probe && findOrgan(this.state.document, probe.organ) ? senseScene(probe) : null;
   },
+  // The commands the side fin's inspector tries: the engine answers with the way the fish takes
+  // (anatomy.finCourse).
+  setFinCommand(organId, phases) {
+    const probe = this.state.senseProbe, key = JSON.stringify(phases);
+    if (probe?.kind === 'fins' && probe.organ === organId && probe.key === key)
+      return;
+    this.state.senseProbe = {kind : 'fins', organ : organId, phases, key};
+    this.requestDesign();
+  },
   setAttackCommand(command) {
     const probe = this.state.senseProbe;
     if (probe?.kind === 'attack' && probe.strength !== command) {
@@ -325,7 +334,7 @@ export const designMethods = {
   refreshProbeControls() {
     this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
     this.redrawBlocks('gutProbeControls', findOrgan, organ => gutProbeControls(this.state, organ));
-    if ([ 'smell', 'taste', 'touch', 'wound', 'flow', 'balance', 'attack', 'ground' ].includes(
+    if ([ 'smell', 'taste', 'touch', 'wound', 'flow', 'balance', 'attack', 'ground', 'fins' ].includes(
             this.state.senseProbe?.kind))
       mountLive(this.root, this);
   },

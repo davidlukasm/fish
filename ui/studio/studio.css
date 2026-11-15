@@ -1400,12 +1400,6 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-gape.fits{stroke:#ef8f8f}
 .aid-live-notch{fill:var(--aid-chip);stroke:var(--key);stroke-width:1;opacity:.92}
 .aid-live-notch.on{stroke-width:2}
-.aid-live-fin-effect{fill:none;stroke:#f4efd8;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
-.aid-live-fin-blade{fill:var(--key);stroke:var(--aid-limit);stroke-width:1.2}
-.aid-live-fin-stream{fill:none;stroke:#9cc8f0;stroke-width:1.6;stroke-linecap:round;opacity:.8}
-.aid-live-knob.aid-live-fin-streamknob{fill:#9cc8f0}
-.aid-live-fin-ground{fill:#b9a678;opacity:.85}
-.aid-live-fin-ground.over{opacity:.55;pointer-events:none}
 .aid-live-mouth-muscle{fill:var(--key);opacity:.6}
 .aid-live-mouth-muscle.own{opacity:.95;stroke:#f1dda6;stroke-width:1.2}
 .aid-live-mouth-jaw{fill:none;stroke:#f4efd8;stroke-width:6;stroke-linecap:round}
