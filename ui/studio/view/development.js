@@ -35,8 +35,10 @@ export function previewSubstances(doc, wheel) {
 export function previewPatch(key, p, marks) {
   const left = Number(marks.levelLeft), right = Number(marks.levelRight),
         bottom = Number(marks.levelBottom), top = Number(marks.levelTop);
+  // A level axis may show only part of the level (data-level-span, the hormone pictures).
+  const span = Number(marks.levelSpan) || 1;
   return Number.isFinite(left) && Number.isFinite(right) && right > left
-             ? {[key] : clamp((p.x - left) / (right - left))}
+             ? {[key] : span * clamp((p.x - left) / (right - left))}
          : Number.isFinite(bottom) && Number.isFinite(top) && bottom > top
              ? {[key] : clamp((bottom - p.y) / (bottom - top))}
              : {};

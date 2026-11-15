@@ -26,6 +26,9 @@ public:
   const auto &integrated() const { return integrated_; }
   double work() const { return work_; }
   void set_levels(field::Hormones);
+  // Where a level that heads for `target` with time constant `tau` stands after `steps`: the one
+  // law of rise and residence, for a step of the fish and for the atelier's estimate alike.
+  static double approach(double level, double target, double tau, double steps);
   static double work_cost(const field::Hormones &, const field::Hormones &,
                           const HormoneParameters &);
   void advance(const field::Hormones &, const field::Hormones &, double paid,
