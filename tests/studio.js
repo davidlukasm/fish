@@ -4038,10 +4038,10 @@ async function checkHormoneSystems(model, capabilities) {
       1e-9);
   // The pictures that replaced sliders set their values from where the handle is let go.
   const developmentView = await import('../ui/studio/view/development.js');
-  assert.deepEqual(developmentView.previewPatch('situation', {x : 0, y : 0}, {}),
-                   {maturity : 0, input : 1}, 'The young corner holds the strongest input');
-  assert.deepEqual(developmentView.previewPatch('situation', {x : 1e3, y : 1e3}, {}),
-                   {maturity : 1, input : developmentView.PREVIEW_INPUT_LOW});
+  const level = {levelLeft : '12', levelRight : '88'};
+  assert.deepEqual(developmentView.previewPatch('maturity', {x : 0, y : 0}, level), {maturity : 0},
+                   'The level drawn to its left end is the youngest fish');
+  assert.deepEqual(developmentView.previewPatch('maturity', {x : 1e3, y : 0}, level), {maturity : 1});
   const probesView = await import('../ui/studio/view/probes.js');
   assert.equal(probesView.gutProbePatch('strength', {x : 0, y : 0}).strength, 1,
                'Food up to the top fills the gut');
