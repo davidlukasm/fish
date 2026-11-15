@@ -38,10 +38,10 @@ const ROUND_MS = 12000;
 // high; under the skin the report, `loud` high when all cells send. A hair leans by up to `lean`
 // degrees, for the strongest current the scale knows.
 const BAND = Object.freeze({
-  height : 190,
+  height : 204,
   L : 34,
   R : 288,
-  skin : 96,
+  skin : 112,
   water : 62,
   lines : 7,
   hair : 36,
@@ -127,6 +127,12 @@ liveKind('lateral', (studio, organId) => {
       hair(X(st), bend, {class : 'aid-live-hair k0'});
     // How far a hair must lean before its cells report it: the dashed hair at the start, with the
     // grip at its tip. A hair leans below that too.
+    // The arc is the way its tip can go, from upright to the full lean.
+    el('path', {
+      d : path(Array.from({length : 13}, (_, n) => tip(B.L, B.least + (1 - B.least) * n / 12))),
+      class : 'aid-live-track-line'
+    },
+       live);
     hair(B.L, c.key.gate, {class : 'aid-live-keyline k0'});
     const [gx, gy] = tip(B.L, c.key.gate);
     txt(live, gx + 8, gy - 5, word('reports'), {class : 'aid-live-small'});
@@ -157,6 +163,8 @@ liveKind('lateral', (studio, organId) => {
     // grip there sets how fast they get used.
     if (c.silent > 0 && c.silent < STEPS) {
       const sx = X(c.silent);
+      // The way the grip can go.
+      el('path', {d : `M${B.L} ${floor + B.loud} H${B.R}`, class : 'aid-live-track-line'}, live);
       el('path',
          {d : `M${sx} ${B.skin - B.hair} V${floor + B.loud}`, class : 'aid-live-keymark k0'}, live);
       txt(live, sx + 5, floor + B.loud, word('used'), {class : 'aid-live-small'});
@@ -168,14 +176,15 @@ liveKind('lateral', (studio, organId) => {
     for (const st of B.marks)
       txt(live, X(st), B.height - 4, String(st), {'text-anchor' : 'end', class : 'aid-live-small'});
     txt(live, B.L, B.height - 4, word('steps'), {class : 'aid-live-small'});
-    // The report now, as the fish panel shows it: a bubble that moves along the steps.
+    // The report now, as the fish panel shows it: a bubble that moves along the steps, above the
+    // water.
     const g = el('g', {class : 'aid-probe-answer', 'pointer-events' : 'none'}, live);
     el('circle', {r : B.bubble}, g);
     const text = txt(g, 0, 4, '', {'text-anchor' : 'middle'});
     bubble = at => {
       const now = clamp(between(c.sent, at));
       g.setAttribute('transform',
-                     `translate(${X(at).toFixed(1)} ${floor + B.loud + B.bubble + 2})`);
+                     `translate(${X(at).toFixed(1)} ${B.skin - B.water - B.bubble - 4})`);
       g.style.setProperty('--lit', now.toFixed(2));
       text.textContent = percent(now);
     };

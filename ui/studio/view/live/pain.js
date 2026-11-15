@@ -104,6 +104,7 @@ liveKind('pain', (studio, organId) => {
       met,
       sent,
       silent,
+      closed,
       used : silent > 0 && (closed < 0 || silent < closed - UNSURE)
     };
   }
@@ -163,6 +164,12 @@ liveKind('pain', (studio, organId) => {
          {d : `M${sx} ${top - S.loud} V${D(c.depth[c.silent])}`, class : 'aid-live-keymark k0'},
          live);
       if (c.used) {
+        // The way the grip can go: up to where the wound closes below what the cells feel.
+        el('path', {
+          d : `M${S.L} ${top - S.loud} H${X(c.closed < 0 ? SPAN : c.closed)}`,
+          class : 'aid-live-track-line'
+        },
+           live);
         txt(live, sx + 5, top - S.loud + 8, word('used'), {class : 'aid-live-small'});
         drag(svg, el('circle', {cx : sx, cy : top - S.loud, r : 5}, live),
              p => draft(setUsed(studio.state.document, c.key, usedFor(c.key, c.met, stOf(p.x)))),

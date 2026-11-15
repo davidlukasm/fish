@@ -1386,6 +1386,7 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-skinline{fill:none;stroke:#e9e2c6;stroke-width:2.2;stroke-linejoin:round}
 .aid-live-rimdot{fill:var(--aid-panel-edge)}
 .aid-live-thing{fill:currentColor}
+.aid-live-track-line{fill:none;stroke:#6f9aa0;stroke-width:1;stroke-dasharray:1.5 3;stroke-linecap:round}
 .aid-live-wound{fill:#0c2b33;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
 .aid-live-bite{fill:var(--aid-chip);stroke:currentColor;stroke-width:1.6;stroke-dasharray:3 2.5;vector-effect:non-scaling-stroke}
 .aid-live-sore{fill:#ef8f8f;opacity:.3}
