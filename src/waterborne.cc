@@ -54,6 +54,37 @@ WaterborneSample sample_waterborne(const Field &f, double x, double y, Waterborn
 WaterborneSample waterborne_sample(const Field &f, double x, double y) {
   return sample_waterborne(f, x, y, nullptr);
 }
+std::array<int, 2> waterborne_grid_shape(double width, double height) {
+  constexpr double min_cell = 24, cells = 12000;
+  const double cell = std::max(min_cell, std::sqrt(width * height / cells));
+  return {int(std::ceil(width / cell)), int(std::ceil(height / cell))};
+}
+double estimate_open_water_odor(Point offset, Point current, Point cell, double source_energy,
+                                int channel, const EnvironmentParameters &p) {
+  const Point drift{std::clamp(current.x * p.waterborne_drift, -cell.x, cell.x),
+                    std::clamp(current.y * p.waterborne_drift, -cell.y, cell.y)};
+  const double mixing = std::min(p.odor_mixing, MAX_DIFFUSION_SHARE * cell.x * cell.y),
+               lifetime = p.odor_lifetimes().at(channel);
+  // A fixed quadrature over ages of the continuous source. Each contribution spreads from the
+  // place that the uniform stream has carried it to, with the variance of the grid's transport.
+  const double half_offset = std::sqrt(3. / 5.) / 2;
+  const std::array<double, 3> ages{.5 - half_offset, .5, .5 + half_offset};
+  constexpr std::array<double, 3> weights{5. / 18, 4. / 9, 5. / 18};
+  const auto variance = [mixing](double age, double step, double travel) {
+    const double v = std::abs(travel);
+    // Linear interpolation at both the source and the nose contributes step^2 / 3.
+    return step * step / 3 + age * (2 * mixing + v * (step - v));
+  };
+  double sum = 0;
+  for (std::size_t i = 0; i < ages.size(); ++i) {
+    const double age = .5 + ages[i] * ODOR_PREVIEW_STEPS,
+                 vx = variance(age, cell.x, drift.x), vy = variance(age, cell.y, drift.y),
+                 x = offset.x - age * drift.x, y = offset.y - age * drift.y;
+    sum += weights[i] * std::exp(-age / lifetime - .5 * (x * x / vx + y * y / vy)) /
+           (2 * PI * std::sqrt(vx * vy));
+  }
+  return source_energy * p.odor_emission * ODOR_PREVIEW_STEPS * sum;
+}
 std::array<double, 2> Field::odor_probe(const SensoryProbe &probe,
                                         const std::array<Point, 2> &points, int channel) const {
   std::array<double, 2> result{};
