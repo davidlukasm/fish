@@ -12,18 +12,17 @@
 // sectors; that a hungry fish does not heal.
 import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
+import {degrees, radians} from '../../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, updateCenter} from '../../model/document.js';
-import {drag, el, liveKind, picture} from './kit.js';
+import {addPicture, drag, el, liveKind, picture} from './kit.js';
 import {BOUNDED, keysOf, senseCourse, STEPS} from './sense.js';
-import {fishAbove, placeOf, sectorAngle, sectorOf, wedge} from './skin.js';
+import {fishAbove, placeOf, sectorAngle, sectorOf, turnTo, wedge} from './skin.js';
 
 const word = (key, values) => t('studio.live.pain.' + key, values);
 const ROUND_MS = 12000, BITE_STEP = 12;
 const WOUND =
     Object.freeze({height : 132, cx : 150, cy : 66, s : 2.5, rx : 70, ry : 27, bite : 13});
-const radians = d => d * Math.PI / 180, degrees = r => r * 180 / Math.PI;
-const turnTo = a => ((a + 540) % 360) - 180;
 
 liveKind('pain', (studio, organId) => {
   const root = document.createElement('div');
@@ -33,14 +32,9 @@ liveKind('pain', (studio, organId) => {
     h.textContent = words;
     root.appendChild(h);
   };
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
-  const fish = svgOf();
+  const fish = addPicture(root);
   heading(word('cells'));
-  const ache = svgOf();
+  const ache = addPicture(root);
   const own = {chosen : 0, input : {rise : BITE_STEP, height : 0, stop : 0}};
   let step = 0, share = 0, clock = null;
   const organ = () => findOrgan(studio.state.document, organId);

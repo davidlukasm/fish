@@ -14,9 +14,9 @@ import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
-import {clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {BOUNDED} from './sense.js';
-import {placeOf, sectorOf, wedge} from './skin.js';
+import {placeOf, sectorOf, turnTo, wedge} from './skin.js';
 
 const word = (key, values) => t('studio.live.touch.' + key, values);
 const pressureOf = impact => SKIN_RESPONSE.touch_rest + (1 - SKIN_RESPONSE.touch_rest) * impact /
@@ -32,17 +32,11 @@ const CUT = Object.freeze({
   dent : 20,
   least : .06
 });
-const turnTo = a => ((a + 540) % 360) - 180;
 
 liveKind('touch', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-touch aid-live-sense-touch';
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
-  const cut = svgOf();
+  const cut = addPicture(root);
   let pressure = 0;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');

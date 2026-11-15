@@ -12,21 +12,17 @@
 // report (anatomy.lateral).
 // Not in the pictures: sediment; the fish's own speed and turning apart from the water's.
 import {t} from '../../../strings.js';
+import {degrees, radians} from '../../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
-import {clamp, drag, el, liveKind, path, picture} from './kit.js';
+import {addPicture, clamp, drag, el, liveKind, path, picture} from './kit.js';
 import {INTENSITY, keysOf, senseCourse, STEPS} from './sense.js';
-import {fishAbove} from './skin.js';
+import {fishAbove, sectorAngle, turnTo} from './skin.js';
 
 const word = (key, values) => t('studio.live.lateral.' + key, values);
 const ROUND_MS = 12000;
 const ROSE =
     Object.freeze({height : 180, cx : 150, cy : 90, body : 30, petal : 22, water : 64, fish : .68});
-const radians = d => d * Math.PI / 180, degrees = r => r * 180 / Math.PI;
-const turnTo = a => ((a + 540) % 360) - 180;
-// A sector's angle from the snout, to the fish's right, in degrees (simulation_types.hh,
-// sector_angle).
-const sectorAngle = (k, count) => -180 + (k + .5) * 360 / count;
 // A place round the fish, which is drawn snout to the left with its right side down.
 const roseAt =
     (angle, r) => [ROSE.cx - r * Math.cos(radians(angle)), ROSE.cy + r * Math.sin(radians(angle))];
@@ -40,14 +36,9 @@ liveKind('lateral', (studio, organId) => {
     root.appendChild(h);
     return h;
   };
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
-  const rose = svgOf();
+  const rose = addPicture(root);
   heading(word('cells'));
-  const flow = svgOf();
+  const flow = addPicture(root);
   const own = {chosen : 0};
   let step = 0, share = 0;
   const current = () => studio.state.senseProbe?.kind === 'flow' ? studio.state.senseProbe : null;

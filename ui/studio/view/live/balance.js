@@ -9,10 +9,11 @@
 // slots; motor_region.js, flee to turn and escape); that connection is made and shown in the
 // inspector's list of ports (circuit.js, outletsSection).
 import {t} from '../../../strings.js';
+import {degrees, radians} from '../../../units.js';
 import {findOrgan, updateCenter} from '../../model/document.js';
-import {clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {answer, BOUNDED, IRRITANT} from './sense.js';
-import {fishLeft} from './skin.js';
+import {fishLeft, turnTo} from './skin.js';
 
 const word = (key, values) => t('studio.live.balance.' + key, values);
 const TILT = Object.freeze({
@@ -27,20 +28,13 @@ const TILT = Object.freeze({
   most : .95,
   fish : 1.25
 });
-const radians = d => d * Math.PI / 180, degrees = r => r * 180 / Math.PI;
-const turnTo = a => ((a + 540) % 360) - 180;
 // A hair's direction from the snout, in degrees: 0 to the snout, 90 to the flank, 180 to the tail.
 const hairOf = q1 => 90 * (1 + (q1 ?? 0)), qualityOf = hair => clamp(hair / 90 - 1, -1, 1);
 
 liveKind('balance', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-balance';
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
-  const tilt = svgOf();
+  const tilt = addPicture(root);
   // The posture tried: where the snout points (0 to the left, as in the fish panel; 90 down). Not
   // part of the fish.
   const tried = {tilt : 25};

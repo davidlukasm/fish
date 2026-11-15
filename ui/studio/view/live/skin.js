@@ -27,7 +27,8 @@ export function fishAbove(parent, x, y, s) {
 // A sector's place round the body, in degrees from the snout to the fish's right
 // (simulation_types.hh, sector_angle), and the sector a direction falls in.
 export const SECTORS = 16;
-const turnTo = a => ((a + 540) % 360) - 180;
+// An angle in degrees brought into -180..180.
+export const turnTo = a => ((a + 540) % 360) - 180;
 export const sectorAngle = (k, count = SECTORS) => -180 + (k + .5) * 360 / count;
 export const sectorOf = (angle, count = SECTORS) =>
     clamp(Math.floor((turnTo(angle) + 180) * count / 360), 0, count - 1);

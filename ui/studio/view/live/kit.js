@@ -150,3 +150,9 @@ export function fishIcon(parent, x, cy, s) {
 // hatchMaturity: more energy in the egg makes it later, and the mother is not in the Atelier).
 // Until the report is in, the middle.
 export const hatchOf = studio => clamp(studio.state.anatomy?.hatchMaturity ?? .5);
+// A picture of its own at the end of a live inspector's root.
+export function addPicture(root) {
+  const svg = el('svg', {class : 'aid-live-picture'});
+  root.appendChild(svg);
+  return svg;
+}
