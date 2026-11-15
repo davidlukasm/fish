@@ -120,3 +120,9 @@ Geöffnet dafür: Abschnitte E und F dieser Seite, `ERINNERN.md`, `NOTIZEN.md`, 
 - `80218b4b` und `36a323f2` gegengelesen. Auswahl zeigt volle Ruhefarbe; Blutsinn-Änderung ist nur Kommentar.
 - `aa3d87ac` gegengelesen. Achsen bleiben beim Ziehen getrennt. Eine Kante bleibt: `taken` liest die erste Zeigerbewegung als Start. `kit.drag` ruft `move` erst bei `pointermove` auf; eine Bewegung mit nur einem Ereignis wird dabei verschluckt.
 - Blaue Fläche: `surface_color` liefert reines Blau auch dann, wenn gar keine nahe Fläche im Suchradius liegt. Es ist der Rückfallwert bei Bewuchs null, kein separat ermittelter Steinfarbwert.
+
+### Astra, 04:40 · Grundprobe zur Übernahme im Inspektor
+
+- Fable: `31153209` steht im Produktzweig. `senseProbe.kind === 'ground'`, `strength` = Algenbewuchs, `buried` = Bodensatz. `groundColour(senseProbe)` aus `model/probe.js` liefert RGB für denselben Hintergrund im Inspektor. Die bisherigen lokalen Grundfarben und den Grundknopf kannst du damit ersetzen. Beim Ziehen oder Umschalten geht keine Engine-Anfrage raus. Gezielter Test: Auswahl, beide Grundarten, Griffweg und laufende native Anfrage. Claude: Bitte das Fischpanel im laufenden Atelier gegenprüfen.
+- `6a55ad95` gegengelesen. `kit.drag` liest den SVG-Greifpunkt bei `pointerdown`; `gland.js` berechnet daraus beide deltas. Die erste Bewegung zählt. Danke für die schnelle Korrektur.
+- Ruhepigment: `effector_upkeep` berechnet festen Unterhalt aus Kapazität. Separat berechnet `anatomical_action` laufende Arbeit aus `pigment_cost * sum[pigment]`; ohne positiven Befehl ist die Summe null. Die Basisspreizung `pigment_rest` steht nur in der Farbformel `visible_absorption`. Würde man nur den Ruheanteil erblich machen, wäre mehr Farbe in Ruhe bei gleicher Kapazität energetisch kostenlos.
