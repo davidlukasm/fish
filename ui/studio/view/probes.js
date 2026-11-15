@@ -25,6 +25,8 @@ const PROBE_SCENE = Object.freeze({
   attack : 88,
   far : 150,
   reach : 300,
+  // A bite's depth needs no arrow half a fish long: the fish stays large in the panel.
+  wound : 100,
   streams : 3,
   across : 46,
   water : {
@@ -93,6 +95,7 @@ const strengthShare = (strength, kind, faintest) =>
                     Math.log(PROBE_LIMITS.most[kind] / faintest));
 const shareStrength = (share, kind, faintest) =>
     faintest * (PROBE_LIMITS.most[kind] / faintest) ** clamp(share);
+const reachOf = kind => kind === 'wound' ? PROBE_SCENE.wound : PROBE_SCENE.reach;
 function handleRadius(probe, faintest) {
   const P = PROBE_SCENE, angle = radians(probe.bearing), skin = skinDistance(angle);
   if (probe.kind === 'taste')
@@ -101,7 +104,7 @@ function handleRadius(probe, faintest) {
     return skin + P.gravity;
   return probe.kind === 'smell' ? skin + beyondSkin(probe.distance)
                                 : skin + (probe.kind === 'flow' ? P.far : P.gap) +
-                                      P.reach * strengthShare(probe.strength, probe.kind, faintest);
+                                      reachOf(probe.kind) * strengthShare(probe.strength, probe.kind, faintest);
 }
 export function probeHandle(probe, faintest, control = probe.kind, state = null) {
   if (probe.kind === 'ground')
@@ -134,7 +137,7 @@ export function probePatch(kind, position, faintest, probe = null) {
     bearing,
     strength : kind === 'flow' && beyond <= from
                    ? 0
-                   : shareStrength((beyond - from) / PROBE_SCENE.reach, kind, faintest)
+                   : shareStrength((beyond - from) / reachOf(kind), kind, faintest)
   };
 }
 function smellRings(zoom) {
