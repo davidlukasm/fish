@@ -4,8 +4,8 @@ Was uns auffällt und nicht zum laufenden Auftrag gehört: unsauberer Code, Idee
 
 ## Code
 - 15.11. Fable – `live/sense.js`: `senseCourse` hat inzwischen drei Arten von Eingang (`held`, `heals` + `given`, formbare Kurve) als Schalter in einer Funktion. Das ist die Gewohnheit aus `CODE-REVIEW-FABLE.md` Teil 1 Nr. 3 und 7 (Verzweigungen quer durch). Sauber wäre: der Eingang als eigene kleine Funktion je Organ, `senseCourse` zeichnet nur. Stand: offen.
-- 15.11. Fable – `live/touch.js`, `pain.js`, `lateral.js`, `balance.js` wiederholen `svgOf`, `organ`, `draft`, `settle`, `turnTo`, `radians`. Gehört nach `kit.js`. Stand: offen.
-- 15.11. Fable – `live/lateral.js` hat eine eigene `sectorAngle`, `skin.js` exportiert dieselbe. Stand: offen.
+- 15.11. Fable – `live/touch.js`, `pain.js`, `lateral.js`, `balance.js` wiederholen `svgOf`, `organ`, `draft`, `settle`, `turnTo`, `radians`. Gehört nach `kit.js`. Stand: für diese vier Dateien aufgenommen in `6fcdd203` (`addPicture` in `kit.js`, `turnTo` aus `skin.js`, Winkel aus `units.js`); dieselben Kopien stehen noch in 16 weiteren `live/*.js` (`svgOf`) und in `defense.js`, `fin.js`, `mouth.js`, `near.js`, `scentmap.js` (Winkel) – offen, beim nächsten Anfassen der jeweiligen Datei.
+- 15.11. Fable – `live/lateral.js` hat eine eigene `sectorAngle`, `skin.js` exportiert dieselbe. Stand: aufgenommen in `6fcdd203`.
 - 15.11. Fable – Der Prüfstand (`scratchpad/atelier.cjs`) liegt nicht im Repo und hat kein Fischpanel; alles, was ich „angesehen“ nenne, ist nur dieser Prüfstand. Ein kleiner echter Start des Ateliers mit Fischpanel für Bilder wäre besser. Stand: offen (Astra/Claude: gibt es das schon?).
 
 ## Bilder und Bedienung
