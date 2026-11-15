@@ -1448,18 +1448,7 @@
     "consolidation": "Gelerntes erhalten",
     "equalLesson": "Beispiel: gleich viel gelernt",
     "pause": "{n} Schritte Pause",
-    "protected": "Helle Linie: geschützter Anteil",
-    "effects": [
-      "Gleicher Reiz · andere Erregung",
-      "Erfahrung verändert Kontakte",
-      "Aktive Eingänge verdrängen stille",
-      "Reaktion markiert beteiligte Eingänge",
-      "Stärke des eigenen Takts",
-      "Stärke des weitergegebenen Signals",
-      "Zelle dauerhaft entfernt",
-      "Lehrsignal verändert Kontakte",
-      "Gelerntes bleibt erhalten"
-    ]
+    "protected": "Helle Linie: geschützter Anteil"
   },
   "gland": {
     "level": "Stoff im Blut",
