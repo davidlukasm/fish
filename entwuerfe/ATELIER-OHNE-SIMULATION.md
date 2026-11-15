@@ -42,3 +42,7 @@
 5. **Prozess je Anfrage:** Ein Dienst, der einmal startet und Anfragen nacheinander beantwortet, spart den Start bei jedem Zug. Das ist nur dann nötig, wenn Astras Zeiten zeigen, dass der Start zählt.
 
 **Offen für Astra:** Zeiten je Teil (deine Entscheidung, ob gemessen wird) und welche Engine-Funktionen sich ohne Körper aufrufen lassen.
+
+## Nachtrag Claude 16:22: Kopien außerhalb des Ateliers
+
+- `ui/organ_readout.js:207/438` (Aquarium-Inspektor) rechnet die Drehung einer Flosse im JavaScript nach, und zwar eine andere Größe als die Engine: ohne Querbremsung, als einmaligen Höchstwinkel (Astra 15:37). Das ist dieselbe Sorte Kopie wie im Atelier und gehört auf diese Liste. Ersatz: `finTwitch` bzw. `isolated_twitch_turn` aus der Engine.
