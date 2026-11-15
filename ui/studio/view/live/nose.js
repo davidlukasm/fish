@@ -22,7 +22,7 @@ import {
 import {label} from '../kit.js';
 import {addPicture, el, hatchOf, liveKind} from './kit.js';
 import {sampleColour, scentMap} from './scentmap.js';
-import {INTENSITY, keysOf, senseCourse, steady, STEPS, typeLife} from './sense.js';
+import {INTENSITY, keysOf, lastDrawn, senseCourse, steady, STEPS, typeLife} from './sense.js';
 
 const word = (key, values) => t('studio.live.nose.' + key, values);
 const ROUND_MS = 12000, MOST = 4, NEW_WIDTH = .25;
@@ -64,6 +64,7 @@ liveKind('nose', (studio, organId) => {
     own.chosen = types().length;
     change(added.document);
   }
+  const drawnOf = lastDrawn();
   const course = senseCourse(smell, {
     name : 'smell',
     own,
@@ -71,7 +72,7 @@ liveKind('nose', (studio, organId) => {
     most : MOST,
     words : {course : word('course'), used : word('used'), steps : word('steps')},
     scale : INTENSITY,
-    keys : () => keysOf(types(), INTENSITY),
+    keys : () => keysOf(types(), INTENSITY).map(k => drawnOf(studio.state, k, INTENSITY)),
     input : () => steady(total),
     share : ({cell}) => {
       const affinity = scentAffinities(cell.q1, cell.q2, cell.qwidth);

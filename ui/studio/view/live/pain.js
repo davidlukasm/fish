@@ -20,12 +20,12 @@ import {contactHalfAngle} from '../../../tuning.js';
 import {findOrgan} from '../../model/document.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, reportBubble, txt} from './kit.js';
 import {
+  bandOf,
   between,
   BOUNDED,
   closingWound,
-  drawnKey,
+  lastDrawn,
   keysOf,
-  LEVELS,
   runOf,
   setGate,
   setSpread,
@@ -76,7 +76,8 @@ liveKind('pain', (studio, organId) => {
     const probe = studio.state.senseProbe;
     return probe?.kind === 'wound' && probe.organ === organId ? probe : null;
   };
-  let step = 0, bubble = null, span = spanOf(SKIN_RESPONSE.bite_wound), drawn = null;
+  let step = 0, bubble = null, span = spanOf(SKIN_RESPONSE.bite_wound);
+  const drawnOf = lastDrawn();
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -98,9 +99,7 @@ liveKind('pain', (studio, organId) => {
     const probe = wound(), part = share(cell, probe);
     // The cells' thresholds are those the engine drew. Its run comes in after a change has
     // settled; until then the last run's stand, and before the first the plan's one threshold.
-    const key = drawnKey(studio.state, keysOf([ {id : '', centers : [ cell ]} ])[0], drawn);
-    if (!key.stale)
-      drawn = key.drawn;
+    const key = drawnOf(studio.state, keysOf([ {id : '', centers : [ cell ]} ])[0]);
     const depth = closingWound(probe?.strength ?? 0, BITE_STEP, SKIN_RESPONSE.heal_rate),
           met = depth.map(v => clamp(v * part)), sent = runOf(key, met, true).sent,
           silent = silentStep(key, met), last = Math.min(1, ...BOUNDED.gates(key)),
@@ -143,11 +142,10 @@ liveKind('pain', (studio, organId) => {
     // pale while they are the last run's. The grip on the plan's threshold sets it, the grip on
     // the band's edge how far the cells may spread.
     const feels = c.part > 0 ? c.key.gate / c.part : S.deepest, gy = D(feels),
-          reach = c.key.spread / 2,
-          edge = c.part > 0 ? D(Math.min(LEVELS[1], c.key.gate + reach) / c.part) : gy;
+          [ least, most ] = bandOf(c.key), edge = c.part > 0 ? D(most / c.part) : gy;
     if (c.part > 0) {
-      const top = D(Math.max(LEVELS[0], c.key.gate - reach) / c.part);
-      if (reach > 0)
+      const top = D(least / c.part);
+      if (most > least)
         el('rect', {
           x : S.L,
           y : top,

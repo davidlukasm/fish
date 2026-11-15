@@ -13,6 +13,7 @@
 #include "field/functions.hh"
 #include "field/development_sites.hh"
 #include "atelier_connections.hh"
+#include "atelier_learning.hh"
 #include "field/dynamics.hh"
 #include "cppn/output_schema.hh"
 #include "evolution/constants.hh"
@@ -660,7 +661,8 @@ void sense_spread_report(const field::Substrate &planned, const fishsim::BrainIn
   std::cout << ']';
 }
 std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &groups, bool developed,
-                                const SenseScene *attack = nullptr) {
+                                const SenseScene *attack = nullptr,
+                                const LearningContext *learning = nullptr) {
   const auto &t = *g.blueprint;
   const auto &a = *g.interface;
   std::cout << ",\"hormoneTimes\":[";
@@ -1180,6 +1182,7 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
   }
   std::cout << '}';
   std::vector<int> group(t.neurons.size(), -1), sites(groups.size()), cells(groups.size());
+  std::vector<const field::Neuron *> reference_cells(learning ? groups.size() : 0, nullptr);
   struct ReceptorSum {
     double baseline = 0, sensitivity = 0, half = 0, affinity = 0;
   };
@@ -1205,6 +1208,8 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
         break;
       }
     if (group[i] >= 0) {
+      if (learning && !reference_cells[group[i]])
+        reference_cells[group[i]] = &n;
       ++cells[group[i]];
       if (n.role == field::Role::Nerve) {
         const auto c = field::cell_class(n);
@@ -1287,6 +1292,8 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
                 << c.pace / nerve_cells[i] << ',' << c.modulator / nerve_cells[i] << ']';
     } else
       std::cout << "null";
+    if (learning)
+      learning_group_report(groups[i], reference_cells[i], *learning, int(i));
     std::cout << '}';
   }
   std::cout << ']';
@@ -1305,8 +1312,11 @@ void readiness_report(const fishsim::BrainInterface &a, const field::Substrate &
   std::cout << ",\"resources\":" << (!t.resource_limited ? "true" : "false") << '}';
 }
 void design_report(const Plan &plan, const std::optional<SightScene> &sight,
-                   const std::optional<SenseScene> &sense, bool light_spread) {
+                   const std::optional<SenseScene> &sense, bool light_spread,
+                   const LearningContext &learning) {
   const auto &groups = plan.groups;
+  ensure(!learning.probe || std::size_t(learning.probe->group) < groups.size(),
+         "unknown learning probe group");
   Genome g;
   g.blueprint = std::make_shared<const field::Substrate>(planned_substrate(groups));
   const auto &t = *g.blueprint;
@@ -1318,7 +1328,7 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
   const auto *attack = sense && sense->kind == sense_scene::attack ? &*sense : nullptr;
   const auto *fins = sense && sense->kind == sense_scene::fins ? &*sense : nullptr;
   const auto *mouth = sense && sense->kind == sense_scene::mouth ? &*sense : nullptr;
-  anatomy_report(g, groups, false, attack);
+  anatomy_report(g, groups, false, attack, &learning);
   if (light_spread) {
     const auto sample = light_example(plan);
     const auto binding = fishsim::body_interface(sample);
@@ -1662,8 +1672,9 @@ int main(int argc, char **argv) {
       std::optional<SenseScene> sense;
       if (seen)
         sense = read_sense_scene(std::cin);
+      const auto learning = read_learning_context(std::cin);
       std::string name;
-      design_report(read_plan(std::cin, name, true), sight, sense, light_spread);
+      design_report(read_plan(std::cin, name, true), sight, sense, light_spread, learning);
       std::cout << '\n';
       return 0;
     }
