@@ -32,7 +32,7 @@ const TILT = Object.freeze({
   fish : 1.25,
   aside : 22,
   bubble : 10,
-  beyond : 28
+  beyond : 18
 });
 // A hair's direction from the snout, in degrees: 0 to the snout, 90 to the flank, 180 to the tail.
 const hairOf = q1 => 90 * (1 + (q1 ?? 0)), qualityOf = hair => clamp(hair / 90 - 1, -1, 1);
