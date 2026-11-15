@@ -34,8 +34,7 @@ import {
   SWITCH_SYMBOL,
   VALUE_DIGITS
 } from './kit.js';
-import {pairingChoice, portsSection, regionSettings, slotsSection} from './circuit.js';
-import {organPorts} from '../model/regions.js';
+import {limitAtPorts, pairingChoice, portsSection, regionSettings, slotsSection} from './circuit.js';
 import {strandInspector} from './nerve_inspector.js';
 import {chemistry, hormoneInspector} from './substances.js';
 import {learningInspector} from './learning.js';
@@ -218,9 +217,7 @@ function organInspector(state, organ) {
       // limit is set at its incoming lines, where the organ has them (circuit.js, portsSection).
       // Where the organ leads and what leads to it, its ports above and the fish panel's lines
       // show.
-      (center?.role === 'sensor' ||
-               (center?.role === 'motor' &&
-                organPorts(state.document, organ, state.sites).some(port => port.dir === 'in'))
+      (center?.role === 'sensor' || limitAtPorts(state, organ, center)
            ? ''
            : contactPlan(state, isRegion(organ) && state.selected?.kind !== 'center' ? organ.centers
                                                                                      : [ center ]));

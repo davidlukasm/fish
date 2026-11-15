@@ -72,8 +72,13 @@ export function slotsSection(state, organ) {
 // that limit, and one grip at the receiving end of the first sets it for all of them.
 const PORT_LINE = Object.freeze({least : 1, span : 5});
 export const PORT_LIMIT_DRAG = 60;
+// A working cell takes its limit here when contacts reach it through a port; a nerve cell keeps it
+// beside its teaching limit in its contact plan.
+export const limitAtPorts = (state, organ, center) =>
+    center?.role === 'motor' &&
+    organPorts(state.document, organ, state.sites).some(port => port.dir === 'in');
 export function portsSection(state, organ, center = null) {
-  const limit = center && center.role !== 'sensor' ? center.electrical_limit : null;
+  const limit = limitAtPorts(state, organ, center) ? center.electrical_limit : null;
   let gripped = limit === null;
   const rows =
       organPorts(state.document, organ, state.sites)
