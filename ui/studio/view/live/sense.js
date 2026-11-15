@@ -386,13 +386,6 @@ export function senseCourse(svg, {
                       class : 'aid-live-keyband rule k' + i + (on ? ' on' : '')
                     },
                                   live) ];
-      if (k.drawn)
-        for (const gate of gates)
-          el('path', {
-            d : `M${L} ${IY(gate)} H${R}`,
-            class : 'aid-live-keyline cell k' + i + (k.stale ? ' stale' : '')
-          },
-             live);
       if (on)
         shapes.push(el('path', {
           d : `${path(felt.map((f, st) => [X(st), IY(Math.max(f, low))]))} L${R} ${IY(low)} L${L} ${
@@ -405,6 +398,19 @@ export function senseCourse(svg, {
         shape.classList.add('aid-live-chip');
         shape.addEventListener('pointerdown', choose(i));
       }
+      // The band is only its edges, so that what the cells feel stays to be read in it; at the
+      // axis a short filled strip of its height.
+      if (bottom > top)
+        el('rect',
+           {x : L, y : top, width : 5, height : bottom - top, class : 'aid-live-keystrip k' + i},
+           live);
+      if (k.drawn)
+        for (const gate of gates)
+          el('path', {
+            d : `M${L} ${IY(gate)} H${R}`,
+            class : 'aid-live-keyline cell k' + i + (k.stale ? ' stale' : '')
+          },
+             live);
       if (tires && on)
         el('path', {d : path(felt.map((f, st) => [X(st), IY(f)])), class : 'aid-live-felt'}, live);
       const line = el('path', {
