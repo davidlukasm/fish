@@ -593,6 +593,29 @@ void light_spread_report(const field::Substrate &t, const fishsim::BrainInterfac
   }
   std::cout << "]}";
 }
+// The thresholds the cells of each sense group actually drew, from the same example as the
+// light spread: every cell of the group that senses what its first cell senses, in the measure of
+// "begins" in the sense report. A picture spreads its one threshold into these.
+void sense_spread_report(const field::Substrate &t, const fishsim::BrainInterface &binding,
+                         const std::vector<Group> &groups) {
+  std::cout << ",\"senseSpread\":[";
+  for (std::size_t i = 0; i < groups.size(); ++i) {
+    std::cout << (i ? "," : "");
+    int sense = -1;
+    std::size_t count = 0;
+    for (const auto &r : binding.sensory) {
+      if (r.visual() || !groups[i].contains(t.neurons[r.neuron].location))
+        continue;
+      if (sense < 0)
+        sense = r.dominant_sense();
+      if (r.dominant_sense() != sense)
+        continue;
+      std::cout << (count++ ? "," : "[") << (r.intensity() ? r.response_threshold : r.threshold);
+    }
+    std::cout << (count ? "]" : "null");
+  }
+  std::cout << ']';
+}
 std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &groups, bool developed,
                                 const SenseScene *attack = nullptr) {
   const auto &t = *g.blueprint;
@@ -1253,7 +1276,9 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
   anatomy_report(g, groups, false, attack);
   if (light_spread) {
     const auto sample = light_example(plan);
-    light_spread_report(sample, *fishsim::body_interface(sample), groups, true);
+    const auto binding = fishsim::body_interface(sample);
+    light_spread_report(sample, *binding, groups, true);
+    sense_spread_report(sample, *binding, groups);
   }
   std::optional<fishsim::Ecosystem> probe_tank;
   if (sight || (sense && !attack && !fins && !mouth && sense->kind != sense_scene::gut &&

@@ -416,6 +416,12 @@ export function centerIndex(doc, id) {
   return -1;
 }
 export const groupReport = (doc, report, key, id) => report?.[key]?.[centerIndex(doc, id)] ?? null;
+// The thresholds a sense group's cells drew in the design run's example (atelier.cc,
+// sense_spread_report), in the measure of the sense report's "begins"; null until that run is in.
+export const drawnThresholds = (state, id) =>
+    state.senseSpread?.document === state.document
+        ? state.senseSpread.report[centerIndex(state.document, id)] ?? null
+        : null;
 // Pectoral and pelvic fins may hold a second muscle per side: the antagonist with the other
 // stroke.
 function matchingOrgan(doc, type, side, sites, code = null, stroke = FIN_STROKE.back,
