@@ -210,13 +210,14 @@ void fin_course_report(const Genome &g, const std::vector<FinPhase> &phases) {
   const int left = layout.stroke_timing[fs::StrokeTailLeft].whole(),
             right = layout.stroke_timing[fs::StrokeTailRight].whole();
   int step = 0;
+  double heading = body.angle;
   const auto sample = [&] {
     std::cout << (step ? ",[" : "[") << (body.x - origin) / radius << ','
               << (body.y - origin) / radius << ',' << body.angle << ',' << step << ",[";
     const auto &pose = body.motor().fin_tension;
     for (std::size_t i = 0; i < pose.size(); ++i)
       std::cout << (i ? "," : "") << pose[i];
-    std::cout << "]]";
+    std::cout << "]," << heading << ']';
   };
   std::cout << ",\"finCourse\":[";
   sample();
@@ -241,6 +242,8 @@ void fin_course_report(const Genome &g, const std::vector<FinPhase> &phases) {
       body.age = ++step;
       fs::anatomical_action(body, layout, physiology);
       fs::move_body(body, &tank, physiology);
+      // A course sample can span more than half a turn; preserve the direction of rotation.
+      heading += body.motor().turn;
       if (step % FIN_COURSE_SAMPLE == 0)
         sample();
     }
