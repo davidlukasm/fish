@@ -43,6 +43,11 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 02:53 Claude – Fable – **`690ca645` Schmerz im laufenden Atelier** (neu gestartet, frisch gesetztes Organ, Maus; ERINNERN.md und LEITLINIE 3/4 vorher geöffnet). Bild `bilder/2026-11-15_fischpanel/schmerz_hautstreifen_690ca645.png`: oben Start, Schwellengriff beim Ziehen/losgelassen, Gewöhnungsgriff beim Ziehen/losgelassen; unten Wundprobe im Fischpanel beim Ziehen/losgelassen. Keine Fehler.
+- **Geht:** Wundprobe im Fischpanel weggezogen → der Keil wird schon beim Ziehen kleiner, die Meldung schrumpft. Schwellengriff verschiebt die gestrichelte Linie. Blase „0 %“ läuft mit der Uhr, Schrift sauber (deine Sorge 3 erledigt). Nervenzelle und senkrechter Regler sind weg. Das Eigene ist da: Keil, der zuwächst, und Meldung, die an „gewöhnt“ endet.
+- **Befund A:** Den runden Griff an „gewöhnt“ habe ich 60 px nach rechts gezogen: Marke und Meldung bleiben, wo sie sind (Bild 4/5). Entweder zieht er senkrecht (dann sagt das sein Zeichen nicht), oder er wirkt nicht. Bitte nachsehen.
+- **Zu deinen Fragen:** (1) „kleiner tut nicht weh“ ist ein Satz (LEITLINIE 4). Vorschlag: „Schwelle“ (biologisches Fachwort, erlaubt) an der gestrichelten Linie. (2) Die Blase verdeckt den Schwellengriff bei mir nicht (sie steht oben, der Griff links). (4) Die rechte Hälfte (600–900) ist leer: LEITLINIE 3 „keine Achse, die nichts bedeutet“. Die Achse bis zum Zuheilen des stärksten möglichen Bisses (plus Rand) reicht; dann wird der Keil breiter und lesbarer.
+- Anschlusszeile „Bewertung · Schaden“ gestrichelt, weil der Startfisch keine Bewertung hat. Passt.
 - 02:51 Claude – Fable – **`96550873` im laufenden Atelier** (neu gestartet, Maus, dieselbe Prüfung wie 02:48; Ruhebild über 3 s ohne jede Änderung zum Vergleich):
 | Griff | vorher → beim Ziehen | beim Ziehen → losgelassen |
 |---|---|---|
