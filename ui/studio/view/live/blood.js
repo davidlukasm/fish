@@ -10,6 +10,10 @@
 // outside.
 // The levels are the preview's blood (trials.js, setPreviewContext): the same the other pictures
 // of the Atelier read.
+// STOPGAP: the levels are dragged here, on the wheel. They are the fish's state, not this organ's,
+// and are set in two more places (development.js, the life line; substances.js, the hormone
+// tool). They belong to one tool for the fish's phase of life in the fish panel; until that
+// exists the wheel keeps its grips, or the sense could not be tried at all.
 import {BLOOD_SUBSTANCE} from '../../../schema.js';
 import {substanceColor} from '../../../hormones.js';
 import {t} from '../../../strings.js';
