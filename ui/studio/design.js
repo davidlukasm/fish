@@ -255,6 +255,8 @@ export const designMethods = {
     this.shownDesign = this.state.document;
     if (anatomy.lightSpread)
       this.state.lightSpread = {document : this.state.document, report : anatomy.lightSpread};
+    if (anatomy.senseSpread)
+      this.state.senseSpread = {document : this.state.document, report : anatomy.senseSpread};
     this.state.outlinePreview = null;
     this.state.anatomy = anatomy;
     if (this.state.station === 'hub')

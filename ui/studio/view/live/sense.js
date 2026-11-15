@@ -1,7 +1,8 @@
 // A sense's cells in a live inspector: what its keys (types of cells) send over the steps of an
 // input tried on them. A key's threshold is where its cells' activation starts (document.js,
 // threshold; tuning.js, activationLevel); its cells' thresholds spread around it by twice the
-// plan's spread either way (distribution.hh, draw_traits), shown as CELLS cells spread evenly.
+// plan's spread either way (distribution.hh, draw_traits): as the engine drew them where a
+// picture asks for that, else shown as CELLS cells spread evenly.
 // Cells that tire get used to the input from the first step on: what they are used to moves
 // towards it by its share 1 / steps each step, and they answer what the input exceeds it by
 // (cppn_brain.cc, adapted_response).
@@ -14,7 +15,7 @@ import {
   planOfUnit,
   unitOfPlan
 } from '../../../tuning.js';
-import {updateCellDistribution, updateCenter} from '../../model/document.js';
+import {drawnThresholds, updateCellDistribution, updateCenter} from '../../model/document.js';
 import {TUNING} from '../../../schema.js';
 import {chip, clamp, drag, el, fishIcon, path, picture, txt} from './kit.js';
 
@@ -23,9 +24,15 @@ export const STEPS = 900, CELLS = 7, LEVELS = [ activationLevel(0), activationLe
 export const USED = [ adaptationSteps(0), LONGEST_ADAPTATION ];
 export const SENSE_BOX = Object.freeze(
     {L : 92, R : 292, LX : 44, I0 : 150, I1 : 254, row : 34, rowL : 6, rowR : 294, rowGap : 10});
+// A key's cells' thresholds. Where the picture gives the thresholds the engine drew for the
+// cells in the design run's example (`drawn`; document.js, drawnThresholds), those: none of them
+// if no cell drew the sense. STOPGAP for the pictures that do not yet: CELLS cells spread evenly
+// over the plan's spread, a reckoning of the Atelier's own beside the engine's draw.
 export const cellGates = k =>
-    Array.from({length : CELLS},
-               (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5), LEVELS[0], LEVELS[1]));
+    k.drawn
+        ? k.drawn.map(gate => clamp(gate, LEVELS[0], LEVELS[1]))
+        : Array.from({length : CELLS}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5),
+                                                       LEVELS[0], LEVELS[1]));
 // A cell's answer to a stimulus past its threshold and what it is used to (body_plan.cc, the
 // bounded answer of a sense cell).
 export const answer = (x, gate, used) => {
@@ -56,6 +63,8 @@ export const BOUNDED = Object.freeze({
 // it is used to raises the threshold by as much (body_plan.cc, excess_response).
 const FAINTEST = TUNING.threshold_min,
       REACH = Math.log(TUNING.threshold_range) / -Math.log(FAINTEST);
+// A key's cells' thresholds as places: STOPGAP as in cellGates, where the picture gives none the
+// engine drew.
 const places = k => Array.from(
     {length : CELLS}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5), 0, REACH));
 export const INTENSITY = Object.freeze({
@@ -63,7 +72,8 @@ export const INTENSITY = Object.freeze({
   val : v => v > 0 ? Math.exp(Math.log(FAINTEST) * (1 - clamp(v))) : 0,
   gate : cell => REACH * unitOfPlan(cell.threshold),
   spread : cell => 2 * cell.distribution.spread_physiology * REACH,
-  gates : k => places(k).map(v => Math.exp(Math.log(FAINTEST) * (1 - v))),
+  span : [ 0, REACH ],
+  gates : k => k.drawn ?? places(k).map(v => Math.exp(Math.log(FAINTEST) * (1 - v))),
   answer : (s, gate, used) => {
     const excess = s - gate - used;
     return excess > 0 ? excess / (excess + gate + used) : 0;
@@ -89,7 +99,7 @@ export function runOf(k, stim, tires, scale = BOUNDED) {
         used = [];
   let u = 0;
   for (const s of stim) {
-    sent.push(gates.reduce((sum, g) => sum + reply(s, g, u), 0) / CELLS);
+    sent.push(gates.length ? gates.reduce((sum, g) => sum + reply(s, g, u), 0) / gates.length : 0);
     used.push(u);
     u += (s - u) * pace;
   }
@@ -162,6 +172,17 @@ export const keysOf = (types, scale = BOUNDED) => types.map(type => {
     used : adaptationSteps(cell.tau)
   };
 });
+// A key with the thresholds the engine drew for its cells (document.js, drawnThresholds). The
+// engine's run comes in after a change has settled; until then the `last` run's thresholds,
+// `stale`, and before the first run the plan's one threshold.
+export const drawnKey = (state, k, last, scale = BOUNDED) => {
+  const fresh = drawnThresholds(state, k.id);
+  return {
+    ...k,
+    drawn : fresh ?? last ?? scale.gates({...k, spread : 0}).slice(0, 1),
+    stale : !fresh
+  };
+};
 export const setGate = (doc, k, gate, scale = BOUNDED) =>
     updateCenter(doc, k.id, {threshold : scale.threshold(gate)});
 export const setSpread = (doc, k, spread, scale = BOUNDED) =>

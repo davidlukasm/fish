@@ -72,19 +72,35 @@ export function slotsSection(state, organ) {
 // that limit, and one grip at the receiving end of the first sets it for all of them.
 const PORT_LINE = Object.freeze({least : 1, span : 5});
 export const PORT_LIMIT_DRAG = 60;
-// A working cell takes its limit here when contacts reach it through a port; a nerve cell keeps it
-// beside its teaching limit in its contact plan.
-export const limitAtPorts = (state, organ, center) =>
-    center?.role === 'motor' &&
-    organPorts(state.document, organ, state.sites).some(port => port.dir === 'in');
+// A working cell takes its limit here, at the lines that reach it, or at an empty one while
+// nothing does; a nerve cell keeps it beside its teaching limit in its contact plan.
+export const limitAtPorts = (state, organ, center) => center?.role === 'motor';
+// An incoming line as thick as the cells' limit, with the grip at its receiving end if asked.
+const limitStyle = limit =>
+    ' style="border-top-width:' + (PORT_LINE.least + PORT_LINE.span * limit).toFixed(1) + 'px"';
+const limitGrip = (center, limit) =>
+    '<span class="aid-port-grip" data-port-limit="' + escapeText(center.id) +
+    '" data-port-value="' + limit + '" title="' +
+    escapeText(joinParts([ label('contacts.electrical_limit'), percent(limit) ])) + '"></span>';
 export function portsSection(state, organ, center = null) {
   const limit = limitAtPorts(state, organ, center) ? center.electrical_limit : null;
   let gripped = limit === null;
+  const ports = organPorts(state.document, organ, state.sites);
+  // Both sides of a paired organ can meet this one at the same port: then each row names its side.
+  const plainName = ({dir, other, slot}) =>
+      dir + ':' + (other ? organTitle(other, state.sites) : '') + ':' + slot?.key;
+  const count = new Map();
+  for (const port of ports)
+    count.set(plainName(port), (count.get(plainName(port)) ?? 0) + 1);
   const rows =
-      organPorts(state.document, organ, state.sites)
-          .map(({dir, other, kind, slot, slots, joined}) => {
+      ports
+          .map(port => {
+            const {dir, other, kind, slot, slots, joined} = port;
             const fill = joined ? 'filled' : other ? 'free' : 'absent';
-            const name = other ? organTitle(other, state.sites) : label('organs.' + kind);
+            const side = other?.side && count.get(plainName(port)) > 1
+                             ? ' ' + label('inspector.side.' + (other.side < 0 ? 'left' : 'right'))
+                             : '';
+            const name = other ? organTitle(other, state.sites) + side : label('organs.' + kind);
             const own = icon(organ.type, ICON.part);
             const far = other ? '<button data-select-organ="' + escapeText(other.id) + '" title="' +
                                     escapeText(name) + '">' + icon(other.type, ICON.part) +
@@ -95,33 +111,30 @@ export function portsSection(state, organ, center = null) {
             const grip = thick && !gripped;
             gripped ||= grip;
             const line =
-                '<span class="aid-port-line"' +
-                (thick ? ' style="border-top-width:' +
-                             (PORT_LINE.least + PORT_LINE.span * limit).toFixed(1) + 'px"'
-                       : '') +
-                '>' +
+                '<span class="aid-port-line"' + (thick ? limitStyle(limit) : '') + '>' +
                 (other && !joined
                      ? '<button class="aid-slot-add" data-port-organ="' + escapeText(organ.id) +
                            '" data-port-other="' + escapeText(other.id) + '" data-port-key="' +
                            escapeText(slot.key) + '" data-port-dir="' + dir + '" title="' +
                            label('wiring.connect') + '">+</button>'
                      : '') +
-                (grip ? '<span class="aid-port-grip" data-port-limit="' + escapeText(center.id) +
-                            '" data-port-value="' + limit + '" title="' +
-                            escapeText(
-                                joinParts([ label('contacts.electrical_limit'), percent(limit) ])) +
-                            '"></span>'
-                      : '') +
-                '</span>';
+                (grip ? limitGrip(center, limit) : '') + '</span>';
             return '<li class="' + fill + '">' +
                    (dir === 'out' ? own + line + far : far + line + own) + '<small>' +
                    escapeText(name.replace(/\u00ad/g, '')) + ' · ' +
                    escapeText((slots ?? [ slot ]).map(slotTitle).join(', ')) + '</small></li>';
           })
           .join('');
-  return rows ? '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +
-                    '"><ul class="aid-ports">' + rows + '</ul></section>'
-              : '';
+  // Nothing reaches the working cell and no organ offers to: one line without a sender says so
+  // and carries the grip.
+  const unfed = gripped ? ''
+                        : '<li class="unfed"><span class="aid-port-absent aid-port-none"></span>' +
+                              '<span class="aid-port-line"' + limitStyle(limit) + '>' +
+                              limitGrip(center, limit) + '</span>' + icon(organ.type, ICON.part) +
+                              '</li>';
+  return rows || unfed ? '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +
+                             '"><ul class="aid-ports">' + rows + unfed + '</ul></section>'
+                       : '';
 }
 function regionTeacher(state, organ) {
   const learners = organ.centers.filter(isLearner);

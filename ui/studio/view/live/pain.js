@@ -23,9 +23,12 @@ import {
   between,
   BOUNDED,
   closingWound,
+  drawnKey,
   keysOf,
+  LEVELS,
   runOf,
   setGate,
+  setSpread,
   setUsed,
   silentStep,
   usedFor
@@ -73,7 +76,7 @@ liveKind('pain', (studio, organId) => {
     const probe = studio.state.senseProbe;
     return probe?.kind === 'wound' && probe.organ === organId ? probe : null;
   };
-  let step = 0, bubble = null, span = spanOf(SKIN_RESPONSE.bite_wound);
+  let step = 0, bubble = null, span = spanOf(SKIN_RESPONSE.bite_wound), drawn = null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -93,10 +96,14 @@ liveKind('pain', (studio, organId) => {
   // closed below what they feel.
   function courseOf(cell) {
     const probe = wound(), part = share(cell, probe);
-    const key = keysOf([ {id : '', centers : [ cell ]} ], BOUNDED)[0];
+    // The cells' thresholds are those the engine drew. Its run comes in after a change has
+    // settled; until then the last run's stand, and before the first the plan's one threshold.
+    const key = drawnKey(studio.state, keysOf([ {id : '', centers : [ cell ]} ])[0], drawn);
+    if (!key.stale)
+      drawn = key.drawn;
     const depth = closingWound(probe?.strength ?? 0, BITE_STEP, SKIN_RESPONSE.heal_rate),
           met = depth.map(v => clamp(v * part)), sent = runOf(key, met, true).sent,
-          silent = silentStep(key, met), last = Math.min(...BOUNDED.gates(key)),
+          silent = silentStep(key, met), last = Math.min(1, ...BOUNDED.gates(key)),
           closed = met.findIndex((v, st) => st > BITE_STEP && v <= last);
     return {
       span : spanOf(probe?.strength ?? SKIN_RESPONSE.bite_wound),
@@ -128,9 +135,34 @@ liveKind('pain', (studio, organId) => {
     const by = D(SKIN_RESPONSE.bite_wound);
     el('path', {d : `M${S.L - 6} ${by} h6`, class : 'aid-live-axis'}, live);
     txt(live, S.L - 8, by + 3, word('bite'), {'text-anchor' : 'end', class : 'aid-live-small'});
-    // How small a wound the cells still feel here: below this depth they send nothing. Its grip
-    // sets the threshold.
-    const feels = c.part > 0 ? c.key.gate / c.part : S.deepest, gy = D(feels);
+    // How small a wound the cells still feel here: below this depth they send nothing. Each cell
+    // has its own depth, drawn by the engine within the plan's threshold and its spread either
+    // way, within the thresholds a cell can have (distribution.hh, draw_traits; the way from the
+    // plan's value to a threshold is straight, tuning.js, so the band is as wide either way):
+    // that band is the plan's, the lines in it the engine's,
+    // pale while they are the last run's. The grip on the plan's threshold sets it, the grip on
+    // the band's edge how far the cells may spread.
+    const feels = c.part > 0 ? c.key.gate / c.part : S.deepest, gy = D(feels),
+          reach = c.key.spread / 2,
+          edge = c.part > 0 ? D(Math.min(LEVELS[1], c.key.gate + reach) / c.part) : gy;
+    if (c.part > 0) {
+      const top = D(Math.max(LEVELS[0], c.key.gate - reach) / c.part);
+      if (reach > 0)
+        el('rect', {
+          x : S.L,
+          y : top,
+          width : S.R - S.L,
+          height : Math.max(0, edge - top),
+          class : 'aid-live-keyband k0'
+        },
+           live);
+      for (const gate of BOUNDED.gates(c.key))
+        el('path', {
+          d : `M${S.L} ${D(gate / c.part)} H${S.R}`,
+          class : 'aid-live-keyline k0 cell' + (c.key.stale ? ' stale' : '')
+        },
+           live);
+    }
     el('path', {d : `M${S.L} ${gy} H${S.R}`, class : 'aid-live-keyline k0'}, live);
     txt(live, S.R, gy + 11, word('felt'), {'text-anchor' : 'end', class : 'aid-live-small'});
     if (c.part > 0)
@@ -147,6 +179,21 @@ liveKind('pain', (studio, organId) => {
            p => draft(setGate(studio.state.document, c.key,
                               clamp((p.y - S.skin) / S.deep, S.least, 1) * S.deepest * c.part)),
            'paingate', 'grip', settle);
+    if (c.part > 0)
+      drag(svg,
+           el('rect', {
+             x : S.R - 5,
+             y : edge - 4,
+             width : 10,
+             height : 8,
+             rx : 2.5,
+             class : 'aid-live-keygrip k0 on'
+           },
+              live),
+           p => draft(setSpread(
+               studio.state.document, c.key,
+               2 * Math.max(0, clamp((p.y - S.skin) / S.deep) * S.deepest * c.part - c.key.gate))),
+           'painspread', 'grip', settle);
     // What the cells send, above the skin, over the same steps.
     el('path', {
       d : path(shown(c.sent).map((v, n) => [X(n * every), top - S.loud * clamp(v)])) +

@@ -1176,7 +1176,9 @@ async function checkBloodReceptors(model, capabilities) {
             /data-preview-handle="(\d+)" data-level-left="([^"]+)" data-level-right="([^"]+)" cx="([^"]+)" cy="([^"]+)"/g)
       ];
       assert.deepEqual(levels.map(m => Number(m[1])), expected);
-      assert.equal((picture.match(/class="aid-preview-level-row"/g) ?? []).length, expected.length);
+      assert.equal((picture.match(/class="aid-preview-level-row"/g) ?? []).length,
+                   expected.length + 1);
+      assert.equal((picture.match(/data-preview-handle="maturity"/g) ?? []).length, 1);
       for (const mark of levels) {
         const left = Number(mark[2]), right = Number(mark[3]);
         assert.ok(right - left >= 40,
@@ -4047,10 +4049,11 @@ async function checkHormoneSystems(model, capabilities) {
                'Food up to the top fills the gut');
   assert.equal(probesView.gutProbePatch('strength', {x : 0, y : 1e3}).strength, 0);
   const planView = await import('../ui/studio/view/contact_plan.js');
-  assert.equal(planView.contactCapacityPatch('teaching_limit', {x : 1e3, y : 0}, {}).teaching_limit,
-               1, 'The wedge drawn out to its end allows the strongest contact');
+  const grip = {limitY : '50', limitValue : '0.5'};
+  assert.equal(planView.contactCapacityPatch('teaching_limit', {x : 0, y : -1e3}, grip).teaching_limit,
+               1, 'The grip drawn up allows the strongest contact');
   assert.equal(
-      planView.contactCapacityPatch('electrical_limit', {x : 0, y : 0}, {}).electrical_limit, 0);
+      planView.contactCapacityPatch('electrical_limit', {x : 0, y : 1e3}, grip).electrical_limit, 0);
   const half = tuning.tuningHalfOffset(.3);
   assert.ok(Math.abs(tuning.tuningAffinity(half, .3) - .5) < 1e-9);
   const pigmentSite =
@@ -4487,7 +4490,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   };
   const planningInspector = panels.inspector(planned);
   assert.match(planningInspector, /aid-contact-plan/);
-  assert.match(planningInspector, /data-preview-handle="situation"/);
+  assert.match(planningInspector, /data-preview-handle="maturity"/);
   assert.match(planningInspector, /aid-life-cycle/);
   assert.doesNotMatch(planningInspector, /NaN|undefined|studio\.[a-zA-Z]/);
 

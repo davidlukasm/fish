@@ -1404,8 +1404,6 @@
     "far": "fern"
   },
   "cellPicture": {
-    "electrical_limit": "Signalstärke",
-    "teaching_limit": "Lehrwirkung",
     "capacity": "Kontaktplätze",
     "variation": "Streuung beim Zellbau",
     "spread_physiology": "Zellantwort",

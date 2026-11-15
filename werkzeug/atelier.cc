@@ -593,6 +593,38 @@ void light_spread_report(const field::Substrate &t, const fishsim::BrainInterfac
   }
   std::cout << "]}";
 }
+// The thresholds the cells of each sense group actually drew, from the same example as the
+// light spread, in the measure of "begins" in the sense report: every drawn cell of the group that
+// senses what its planned cell senses (the nominal plan, as in the sense report; the site, not the
+// plan's function code, decides the sense of a pressure cell). A site's copies share the sense its
+// centre drew, so a whole group can turn into another sense; then its list is empty, never the
+// other sense's thresholds. A group whose plan senses nothing non-visual has none (null).
+void sense_spread_report(const field::Substrate &planned, const fishsim::BrainInterface &nominal,
+                         const field::Substrate &t, const fishsim::BrainInterface &binding,
+                         const std::vector<Group> &groups) {
+  std::cout << ",\"senseSpread\":[";
+  for (std::size_t i = 0; i < groups.size(); ++i) {
+    std::cout << (i ? "," : "");
+    int sense = -1;
+    for (const auto &r : nominal.sensory)
+      if (!r.visual() && groups[i].contains(planned.neurons[r.neuron].location)) {
+        sense = r.dominant_sense();
+        break;
+      }
+    if (sense < 0) {
+      std::cout << "null";
+      continue;
+    }
+    std::size_t count = 0;
+    std::cout << '[';
+    for (const auto &r : binding.sensory)
+      if (!r.visual() && r.dominant_sense() == sense &&
+          groups[i].contains(t.neurons[r.neuron].location))
+        std::cout << (count++ ? "," : "") << (r.intensity() ? r.response_threshold : r.threshold);
+    std::cout << ']';
+  }
+  std::cout << ']';
+}
 std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &groups, bool developed,
                                 const SenseScene *attack = nullptr) {
   const auto &t = *g.blueprint;
@@ -1253,7 +1285,9 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
   anatomy_report(g, groups, false, attack);
   if (light_spread) {
     const auto sample = light_example(plan);
-    light_spread_report(sample, *fishsim::body_interface(sample), groups, true);
+    const auto binding = fishsim::body_interface(sample);
+    light_spread_report(sample, *binding, groups, true);
+    sense_spread_report(t, *g.interface, sample, *binding, groups);
   }
   std::optional<fishsim::Ecosystem> probe_tank;
   if (sight || (sense && !attack && !fins && !mouth && sense->kind != sense_scene::gut &&

@@ -1,8 +1,8 @@
 import {FIN_STROKE, MOTOR_KIND} from '../../schema.js';
 
-// `works`, where a port is made for one kind of muscle work: the work its muscle does and, for a
-// fin, which way it strokes. The engine wires any muscle to any such port; the work only says which
-// muscle a free port is offered to.
+// `works`, where an output is made for one kind of working organ (organs.js, slot): its type and,
+// for a muscle, the work it does and which way a fin strokes. The engine wires any working cell to
+// any output; `works` only says which organ a free output is offered to.
 const port = (key, dir, node, fits = [], required = false, works = null) =>
     ({key, dir, node, fits, required, works});
 const unit = initial => ({least : 0, most : 1, initial, step : .01});
@@ -27,12 +27,12 @@ export const REGION_TYPES = Object.freeze([
       port('urge', 'in', 'urge', [], true), port('steer', 'in', 'steer'),
       port('escape', 'in', 'escape'),
       port('stroke', 'out', [ 'oscillator', 'rest' ], [ 'muscle' ], true,
-           {kind : MOTOR_KIND.forward}),
+           {type : 'muscle', kind : MOTOR_KIND.forward}),
       port('fin', 'in', 'fin'),
       port('row', 'out', [ 'row', 'recoverOpponent' ], [ 'muscle' ], false,
-           {kind : MOTOR_KIND.turn, stroke : FIN_STROKE.back}),
+           {type : 'muscle', kind : MOTOR_KIND.turn, stroke : FIN_STROKE.back}),
       port('recover', 'out', [ 'recover', 'rowOpponent' ], [ 'muscle' ], false,
-           {kind : MOTOR_KIND.turn, stroke : FIN_STROKE.front})
+           {type : 'muscle', kind : MOTOR_KIND.turn, stroke : FIN_STROKE.front})
     ],
     settings : {cycle : unit(.6), finCycle : unit(.6), alternation : unit(1)}
   },
@@ -54,8 +54,10 @@ export const REGION_TYPES = Object.freeze([
       port('eggFullness', 'in', 'eggReady', [ 'eggs' ]),
       port('spermFullness', 'in', 'spermReady', [ 'sperm' ]), port('intake', 'out', 'intake'),
       port('satiety', 'out', 'satiety'), port('pause', 'out', 'pause'),
-      port('investment', 'out', 'investment'), port('lay', 'out', 'eggReady'),
-      port('spermRelease', 'out', 'spermReady'), port('hatch', 'out', 'hatch')
+      port('investment', 'out', 'investment'),
+      port('lay', 'out', 'eggReady', [], false, {type : 'eggs'}),
+      port('spermRelease', 'out', 'spermReady', [], false, {type : 'sperm'}),
+      port('hatch', 'out', 'hatch')
     ],
     settings : {reserve : unit(1), rest : unit(1), maturity : {...unit(.5), least : .01}}
   },
