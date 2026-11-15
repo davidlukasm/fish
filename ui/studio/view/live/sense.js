@@ -383,7 +383,7 @@ export function senseCourse(svg, {
                       y : Math.min(top, IY(k.gate) - 1.5),
                       width : R - L,
                       height : Math.max(bottom - top, 3),
-                      class : 'aid-live-keyband k' + i + (on ? ' on' : '')
+                      class : 'aid-live-keyband rule k' + i + (on ? ' on' : '')
                     },
                                   live) ];
       if (k.drawn)
@@ -472,15 +472,16 @@ export function senseCourse(svg, {
              draft(setGate(doc(), k, vOf(p.y), scale));
            },
            name + 'key' + i, 'grip', settle);
-      // How far the cells' thresholds may spread: the grip on the band's upper edge.
-      const sx = R - 8 - 13 * i, top = IY(bandOf(k, scale)[1]);
+      // How far the cells' thresholds may spread: the grip in the middle of the band's upper
+      // edge; away from the threshold either way widens the band.
+      const sx = (L + R) / 2 + 13 * i, top = IY(bandOf(k, scale)[1]);
       drag(svg,
            el('rect',
               {x : sx - 5, y : top - 4, width : 10, height : 8, rx : 2.5, class : keyGrip(i, on)},
               live),
            p => {
              own.chosen = i;
-             draft(setSpread(doc(), k, clamp(2 * (vOf(p.y) - k.gate), 0, .8), scale));
+             draft(setSpread(doc(), k, clamp(2 * Math.abs(vOf(p.y) - k.gate), 0, .8), scale));
            },
            name + 'spread' + i, 'grip', settle);
     });
