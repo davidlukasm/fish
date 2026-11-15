@@ -15,7 +15,7 @@ import {planTrace, cppnTrace} from './model/trace.js';
 import {routedLinks} from './model/regions.js';
 import {createPlanPlayer} from './view/pulse.js';
 import {nodeLocation} from './view/places.js';
-import {PREVIEW_INPUT_LOW, previewContextOf} from './view/development.js';
+import {previewContextOf} from './view/development.js';
 import {clamp} from '../units.js';
 import {label} from './view/kit.js';
 import {acceptedGenome} from './view/compiler.js';
@@ -232,8 +232,6 @@ export const trialMethods = {
       next.reserve = clamp(value);
     else if (Number(key) === BLOOD_SUBSTANCE.fatigue)
       next.fatigue = clamp(value);
-    else if (key === 'input')
-      this.state.previewInput = clamp(value, PREVIEW_INPUT_LOW);
     else if (Number.isInteger(Number(key)) && Number(key) >= 0 &&
              Number(key) < next.hormones.length)
       next.hormones[Number(key)] = clamp(value);

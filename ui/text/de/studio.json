@@ -1260,7 +1260,6 @@
     "birthDefault": "Bei ausgeschaltetem Rezeptor verwendet die Zelle die Standardantwort 1.",
     "range": "Kontaktreichweite in Körperlängen",
     "crossing": "Seitenführung −1 … +1",
-    "exampleInput": "Beispieleingang der Organneuronen",
     "inputAxis": "Eingang",
     "unnamedSubstance": "Botenstoff {n}",
     "currentResponse": "Antwort bei den Beispielwerten",
@@ -1303,9 +1302,7 @@
     "units": {
       "percent": "Anteil der maximal möglichen Stärke",
       "response": "Antwort vor Begrenzung auf −1 … +1"
-    },
-    "inputAt": "Eingang {n}",
-    "maturityAt": "Reife {p}"
+    }
   },
   "symbols": {
     "add": "+"
