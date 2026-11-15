@@ -1905,9 +1905,8 @@
       "apart": "berührt nichts"
     },
     "lateral": {
-      "cells": "Strömungszellen",
-      "course": "Signalverlauf bei Strömung",
-      "used": "an Strömung gewöhnt",
+      "reports": "meldet ab",
+      "used": "gewöhnt",
       "steps": "Schritte"
     },
     "touch": {
