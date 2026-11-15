@@ -91,3 +91,20 @@ Pflichtlektüre wie oben, 18:18–18:21 neu geöffnet.
 | Seitenlinie mit Wasserbahnen | – | – | nicht begonnen |
 
 Weiter offen für alle: A3 Kosten in der Kopfzeile (Bericht liefert seit `e6ce7dc4` den Ruheunterhalt je Gruppe), A4 „Beispielwerte“/„Streuung beim Zellbau“/„Kontakte im Bauplan“, A6 Verbindungen (nur Kiemen „Darm ›“, Gleichgewicht „Motorik“), B je Organ (Kiefer/Seitenflosse alter Muskelblock, Drüse feste 144 Schritte, Pigment Grundfarbe, Darm-Lebensbild mit Ei), Hormon-, Lern-, Lebensphasen-Werkzeug ruhen.
+
+## G. Stand 15.11. 03:05 (Fable; was seit David 02:11 geändert ist, mit Gegenleser)
+Geöffnet dafür: Abschnitte E und F dieser Seite, `ERINNERN.md`, `NOTIZEN.md`, der Kanal ab 02:11. „Atelier“ = von Claude im laufenden Atelier mit der Maus geprüft; „Code“ = Diff von Astra oder Claude ganz gelesen. Ich selbst habe alles nur im Prüfstand ohne Fischpanel gesehen. Nichts davon hat David abgenommen.
+
+| Änderung | Commits | Atelier | Code | Bleibt offen |
+|---|---|---|---|---|
+| Anschlüsse je Organ: Symbol, Leitung, Ziel; frei mit (+), fehlendes Zielorgan blass (A6) | `7829b4c7`, `828e6ed8`, `4ce141b9`, `53e78806` | ja (frei, verbunden, Sprung, ohne Motorik) | Astra (gleichseitig, gekreuzt, beidseitig am echten Plan) | Anschlüsse im Fischpanel nicht eigens gezeichnet; Doppelung mit der alten Liste bei Darm/Eiern/Drüse nicht angesehen |
+| Kein zweiter Fisch im Inspektor (Schmerz, Seitenlinie); Feldbreite als Griff an der gefärbten Hautstrecke im Fischpanel, auch Tastsinn | `910b6cf6`, `2a526e75`, `53e78806`, `2523d6ac`, `7ba651fa` | ja (Strecke und Schnitt folgen beim Ziehen) | Astra | Seitenlinie: Zellkreise im Fischpanel folgen beim Ziehen noch nicht |
+| Alle Griffe am Fisch größer und wirksam beim Ziehen | `7376a922`, `96550873` | ja (gemessen) | Claude | Flossen springen nach dem Loslassen nach (Größe aus dem Planbericht) → Astra |
+| Gleichgewicht: Lage = Schwerkraftprobe im Fischpanel (Astra `c4d57393`), Rose folgt, eigener Knopf weg, wirkliche Körperseite | `2a2b6ecc` | ja (gleiche Zahlen Fischpanel/Rose) | – | Ei; Kopfwort; „Aufrichten“ gibt es nur als Flucht-Drehung (Systemfrage) |
+| Tastsinn: Schnitt mit Drucktiefe, Bericht in der Blase | `2523d6ac`, `bfc53e4e`, `1af63ece` | ja bis auf die letzte Lage der Blase | Claude (`818bd26e`) | Stufen selbst gerechnet (zwei Quellen); Ei; Kopfwort |
+| Schmerz: Hautstreifen über die Zeit (Keil wächst zu, Marke „gewöhnt“), Griffe Schwelle/Gewöhnung | `690ca645`, `eb2518d7`, `5e30533a` | ja (beide Griffe, Probe im Fischpanel) | steht aus (Astra) | Kopfwort; Lebensbild |
+| Seitenlinie: Haare im Wasser über die Zeit, Schwellenhaar, Marke „gewöhnt“ | `996c823d`, `768b6743`, `5e30533a` | ja (beide Griffe, Strömung im Fischpanel) | steht aus (Astra) | 16 Abtastpunkte der Abmachung vom 14.11. nicht gezeichnet (das Fischpanel zeigt sie); Kopfwort; Lebensbild |
+| Ein Zeichen für die Meldung: Blase wie im Fischpanel in allen vier | `bfc53e4e`, `1af63ece` | ja | steht aus | Nase/Barteln/Blutsinn/Nahsinn zeigen die Meldung noch anders |
+| Verlauf mit einem Eingang; gemeinsame Helfer an einer Stelle | `8aacaa26`, `6fcdd203`, `2e630d92`, `916735c1` | Nase und Schmerz ja | Astra (`6fcdd203`), Rest steht aus | `senseCourse` benutzt nur noch die Nase |
+
+**Nicht angefasst seit 14.11. (Abschnitte E/F gelten weiter):** Blutsinn, Abwehr, Pigment, Seitenflosse, Maul/Kiefer, Drüse, Nahsinn, Nase/Barteln (rotes X), Darm-Lebensbild mit Ei, Schwimmblase-Lebensbild; für alle: Fischpanel bedienen und neben den Inspektor legen (David 02:17) ist nur bei Gleichgewicht, Tastsinn, Schmerz, Seitenlinie geschehen. Offen für alle: Kopfwort und Kosten (A2/A3; Vorschlag für die vier Sinne im Kanal 03:02), „Beispielwerte“/„Streuung“ (A4), eigenes Lebensbild je Organ (A1/A5; hängt am Lebensphasen-Werkzeug im Fischpanel).
