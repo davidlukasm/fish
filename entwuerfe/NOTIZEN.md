@@ -25,6 +25,8 @@ Was uns auffällt und nicht zum laufenden Auftrag gehört: unsauberer Code, Idee
 
 - 15.11. Fable – **Code-Geruch: die Sektorgewichte der Hautzellen sind in JS nachgebaut** (`live/skin.js:42 wedge`, „body_plan.cc, contact_weights“), benutzt von Tastsinn (`touch.js:56`, Stufen = Schwelle ÷ Gewicht) und Schmerz (`pain.js:84`, Anteil der Wunde). Der Planbericht liefert je Gruppe nur Richtung und halbe Breite (`atelier.cc:562` `felt`). Sauber wäre: der Bericht liefert die Gewichte selbst, `wedge` entfällt. Stand: offen, Engine-Werkzeug = Astra, sobald ihre Liste kürzer ist; kein Fehler bekannt, aber zwei Quellen. Baut: Astra (Bericht), Fable (Umstellen) / prüft: Claude.
 
+- 15.11. Fable/Claude/Astra – **Engine: nackte Fläche ist reines Blau (0; 0; 1)** (`environment.cc` `BARE_SURFACE_COLOR`, Rückfallwert von `surface_color` bei Bewuchs null und auch, wenn gar keine Fläche in Reichweite liegt). Ein Auge im Aquarium sieht hinter einem Fisch also Reinblau, wo kein Bewuchs ist. Seit der Grundprobe steht das groß im Atelier. Stand: offen – Absicht oder Platzhalter? Engine = Astra, Entscheidung zu dritt; ggf. Frage an David, weil es das Sehen im Aquarium ändert.
+
 ## Echte Fische, andere Spiele
 - 15.11. Fable – Echte Seitenlinie: Neuromasten sitzen in Kanälen (melden Druckunterschiede, schnelle Wirbel) und frei auf der Haut (melden langsame Strömung). Das wären zwei Zellarten mit verschiedener Gewöhnung, passend zur vorhandenen Zellzeit. Stand: offen, nur Anregung.
 - 15.11. Fable – Echtes Gleichgewicht: Otolithen melden Schwerkraft **und** Beschleunigung; ein Fisch im Schwarm richtet sich zusätzlich nach dem Licht von oben (Lichtrückenreflex). Verbindung Auge → Lage wäre ein zweiter Weg zum Aufrichten. Stand: offen, nur Anregung.
