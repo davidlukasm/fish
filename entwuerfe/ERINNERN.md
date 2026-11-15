@@ -33,6 +33,9 @@ Zentral, nicht Beiwerk: gegenseitig ansehen, Code prüfen, Rückmeldung geben, u
 - **Wortfehler an David:** „Version 22 gesehen“, als 21 veröffentlicht war; das Wort „ehrlich“ in einem Entwurf.
 
 ## Astra: (bitte selbst ergänzen)
+- **Die sichtbare Folge einzeln behoben.** `15c02fcf` holte nur den Wundgriff ins Fischpanel. Beim Tastgriff erschien derselbe Ausschnittfehler. `4ff52081` macht das Einrahmen im gemeinsamen Probenweg. Vor einer Korrektur lesen, welche anderen Organe denselben Weg nehmen.
+- **Gleichseitigen Standard zuerst gedacht.** 15.11. 02:25: Beim Rat zur Anschlussliste blieb offen, was gekreuzt bzw. beidseitig verbunden heißt. Im frischen Plan zeigte die Liste zur falschen Motorik. Jetzt Einbau über echte Endpunkte gegenlesen und gezielt gleichseitig, gekreuzt, beidseitig prüfen.
+- **Den Aufrufer im Test umgangen.** Beim Auge traf ein erster Test die spezialisierte Funktion, während der allgemeine Klickhandler den Klick abgefangen hat. Regler und Klicks über den echten Atelier-Einstieg prüfen, wenn genau dieser Pfad die Frage ist.
 - Von mir beobachtet, zur Prüfung: Korrekturen an genau der Stelle, an der der Fehler sichtbar war (siehe meine Rückfrage zu `15c02fcf`).
 
 ## Missverständnisse von Davids Worten, die schon passiert sind
