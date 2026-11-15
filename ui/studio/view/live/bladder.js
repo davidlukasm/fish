@@ -14,6 +14,7 @@ import {
 } from '../../model/document.js';
 import {nodeLimit, ORGAN_BY_KEY} from '../../model/organs.js';
 import {label} from '../kit.js';
+import {previewContextOf} from '../development.js';
 import {boundedAnswer} from '../sensitivity.js';
 import {
   chip,
@@ -89,33 +90,30 @@ const SAC = {
   scale : ORGAN_BY_KEY.bladder.nodes - 1
 };
 const sacLength = capacity => SAC.atRest + SAC.growth * clamp(capacity / SAC.scale);
-const activeAt = (group, maturity) => (group.end === null || maturity < group.end) &&
-                                      (group.start === null || maturity >= group.start);
-const capacityOf = (groups, maturity) => groups.reduce(
-    (sum, group) => sum + (activeAt(group, maturity) ? group.copies / MAX_COPIES : 0), 0);
-const liftAt = (capacity, physics) => physics.strength * capacity / (1 + capacity);
-const hoverAt = (capacity, physics) => {
-  const lift = liftAt(capacity, physics);
-  return lift > 0 ? physics.sinking / lift : Infinity;
-};
+// The engine's estimate of the bladder at a maturity, the rest of the blood from the life band
+// (anatomy.bladderEstimate: capacity of the cells there, lift when full, the fill at which it
+// hovers, one step's fill and emptying at full command).
+const estimateAt = (estimate, maturity) =>
+    estimate?.life?.[Math.round(clamp(maturity) * (estimate.life.length - 1))] ?? null;
+const hoverOf = at => at?.hover ?? Infinity;
 const bounds = key => [Math.max(activationLevel(0), key.gate - key.spread),
                        Math.min(activationLevel(1), key.gate + key.spread)];
 const curve = (samples, x, y) =>
     path(samples.flatMap((sample, step) => step % PLOT_STRIDE ? [] : [ [ x(step), y(sample) ] ]));
 
-function trial(input, groups, physics) {
-  const capacity = capacityOf(groups, input.maturity), lift = liftAt(capacity, physics),
-        swimming = input.maturity >= HATCH,
-        hover = swimming ? hoverAt(capacity, physics) : Infinity;
+function trial(input, estimate) {
+  const now = estimate?.now, sinking = estimate?.sinking ?? 0;
+  const capacity = now?.capacity ?? 0, lift = now?.liftFull ?? 0,
+        swimming = input.maturity >= HATCH, hover = swimming ? hoverOf(now) : Infinity;
   const filling = [], depth = [], push = [];
   let level = input.start, at = 1;
   for (let step = 0; step <= STEPS; step++) {
-    const force = swimming ? (lift * level - physics.sinking) / (physics.sinking || lift || 1) : 0;
+    const force = swimming ? (lift * level - sinking) / (sinking || lift || 1) : 0;
     filling.push(level);
     depth.push(at);
     push.push(force);
-    level =
-        clamp(level + physics.rate * capacity * (step < input.stop ? input.fill : -input.empty));
+    level = clamp(level + (step < input.stop ? (now?.fillStep ?? 0) * input.fill
+                                             : -(now?.emptyStep ?? 0) * input.empty));
     at = clamp(at - force / FALL_STEPS);
   }
   const rises =
@@ -135,6 +133,7 @@ function timeAxis(parent, chart, x) {
 }
 
 liveKind('bladder', (studio, organId) => {
+  const estimate = () => (studio.state.outlinePreview ?? studio.state.anatomy)?.bladderEstimate;
   const root = document.createElement('div');
   root.className = 'aid-live-bladder';
   const kind = document.createElement('strong');
@@ -153,7 +152,7 @@ liveKind('bladder', (studio, organId) => {
   const input = {fill : .9, stop : 330, empty : .7, start : 0, maturity : 1};
   const film = {lines : [], nerves : [], thresholds : []};
   let state, organ, groups, keys, model, step = 0, chosenGroup = '', chosenKey = '';
-  const draft = doc => doc && studio.draftDesign(doc, 'live:bladder:' + organId, 'refreshLive');
+  const draft = doc => doc && studio.draftDesign(doc, 'live:bladder:' + organId, 'refreshLive', 'bladder');
   const settle = () => studio.drafted && studio.settleGraphic();
   const change = doc => doc && studio.changeDocument(doc, studio.state.selected);
   const repaint = () => show(studio.state);
@@ -265,7 +264,9 @@ liveKind('bladder', (studio, organId) => {
       add('pressure', {threshold : planOfUnit(activationQuality(gate))});
     }, room('pressure', keys.length), 6);
     film.size = null;
-    const active = groups.filter(group => activeAt(group, input.maturity)),
+    const report = state.outlinePreview ?? state.anatomy;
+    const active = groups.filter(group => group.centers.some(center =>
+        groupReport(state.document, report, 'groups', center.id)?.life?.allowed ?? true)),
           count = active.reduce((sum, group) => sum + group.count, 0);
     if (!count)
       return;
@@ -408,12 +409,15 @@ liveKind('bladder', (studio, organId) => {
                        {left, right, top, base, icons, indent, gap} = LIFE;
     const x = maturity => left + (right - left) * maturity, y = levelY(LIFE);
     const maturityAt = px => clamp((px - left) / (right - left));
-    const hover = maturity => hoverAt(capacityOf(groups, maturity), state.capabilities.buoyancy);
-    const cuts =
-        [...new Set([
-          HATCH, 1,
-          ...groups.flatMap(group => [group.start, group.end]).filter(at => at > HATCH && at < 1)
-        ]) ].sort((a, b) => a - b);
+    const hover = maturity => hoverOf(estimateAt(estimate(), maturity));
+    const samples = estimate()?.life ?? [];
+    const cuts = [HATCH];
+    for (let i = 1; i < samples.length; ++i) {
+      const at = (i - .5) / (samples.length - 1);
+      if (at > HATCH && samples[i].hover !== samples[i - 1].hover)
+        cuts.push(at);
+    }
+    cuts.push(1);
     el('rect',
        {x : left, y : top, width : right - left, height : base - top, class : 'aid-live-ground'},
        under);
@@ -507,25 +511,20 @@ liveKind('bladder', (studio, organId) => {
          groups.length > 1, 6);
     chip(live, right + indent + 8, icons, '+', () => add('float', {}), room('float', groups.length),
          6);
-    const current = hover(input.maturity), cx = x(input.maturity),
-          cy = input.maturity < HATCH || current > 1 ? base : y(current);
+    const cx = x(input.maturity);
     el('path', {d : `M${cx} ${top} V${base}`, class : 'aid-live-input'}, live);
-    drag(svg, el('circle', {cx, cy, r : 5.5}, live), p => {
-      input.maturity = maturityAt(p.x);
-      repaint();
-    }, 'bladder-maturity', 'knob');
   }
 
   function show(next) {
     HATCH = hatchOf(studio);
     state = next;
     organ = findOrgan(state.document, organId);
-    const physics = state.capabilities?.buoyancy;
-    if (!organ || !physics)
+    if (!organ)
       return;
     groups = organTypes(organ, 'float').map(({id, centers}) => ({
                                               type : id,
                                               id : centers[0].id,
+                                              centers,
                                               count : centers.length,
                                               perNode : centers[0].copies,
                                               copies : centers.reduce(
@@ -549,7 +548,8 @@ liveKind('bladder', (studio, organId) => {
       chosenGroup = groups[0]?.type;
     if (!keys.some(key => key.type === chosenKey))
       chosenKey = keys[0]?.type;
-    model = trial(input, groups, physics);
+    input.maturity = previewContextOf(state).maturity;
+    model = trial(input, estimate());
     kind.textContent = !model.swimming    ? word('egg')
                        : model.hover <= 1 ? word('hover', {p : percent(model.hover)})
                                           : word('tooSmall');

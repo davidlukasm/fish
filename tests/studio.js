@@ -1037,7 +1037,7 @@ async function checkBloodReceptors(model, capabilities) {
   assert.ok(gland);
   const blood = {...empty, reserve : .4, hormones : [...empty.hormones ]};
   blood.hormones[0] = .6;
-  const design = document => JSON.parse(execFileSync(
+  const design = (document, context = blood) => JSON.parse(execFileSync(
       'python3', ['-B', '-c',
                   'import json,sys; from atelier_service import run; print(json.dumps(run(json.load(sys.stdin))))'],
       {
@@ -1045,7 +1045,7 @@ async function checkBloodReceptors(model, capabilities) {
         input : JSON.stringify({
           operation : 'design',
           plan : model.compileDocument(document, wheel.sites),
-          blood
+          blood : context
         }),
         encoding : 'utf8',
         timeout : 5000
@@ -1136,6 +1136,21 @@ async function checkBloodReceptors(model, capabilities) {
     if (index !== B.cell_maturity)
       assert.ok(substances.chemistry(state, model.findCenter(doc, id).organ, center)
                     .includes(substances.substanceName(state, index)));
+  }
+  {
+    const site = wheel.sites.find(s => s.id === 366);
+    const bladder = model.addOrgan(model.newDocument('Schwimmblase'), 'bladder', wheel.sites,
+                                   sitePoint(site));
+    let document = bladder.document;
+    for (const center of model.findOrgan(document, bladder.organId).centers)
+      document = model.updateReceptor(document, center.id, E.death,
+                                      {...receptor, half : .5, substance : B.maturity});
+    const {bladderEstimate} = design(document, {...empty, maturity : .51});
+    assert.ok(bladderEstimate.life[16].capacity > 0,
+              'The maturity plot includes a working bladder at its 0.50 sample');
+    assert.equal(bladderEstimate.now.capacity, 0,
+                 'The live bladder uses the exact 0.51 maturity beyond the death threshold');
+    assert.equal(bladderEstimate.now.hover, null);
   }
   const region =
       model.addOrgan(model.newDocument('Region'), 'olfaction', wheel.sites, {x : 380, y : 325});
@@ -4120,8 +4135,7 @@ async function checkHormoneSystems(model, capabilities) {
     tool : 'learn',
     effect : E.learning
   });
-  assert.match(learner, /data-learning-memory/);
-  assert.match(learner, /aid-episode-arrow teach none/);
+  assert.match(learner, /data-live="learn"/);
   for (const effect of [E.teaching, E.learning, E.competition, E.eligibility])
     assert.match(learner,
                  new RegExp('data-learn-substance="off"[^>]*data-learn-effect="' + effect + '"'));
@@ -5080,10 +5094,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       selected : {kind : 'center', id : learnNode.centerId},
       effect : HORMONE_EFFECT.learning
     });
-    assert.ok(learnPanel.includes('data-learning-handle="rate"') &&
-              learnPanel.includes('data-response-property="mode"') &&
-              learnPanel.includes('data-learning-handle="trace"'));
-    assert.match(learnPanel, /Schonfrist neuer Kontakte/);
+    assert.match(learnPanel, /data-live="learn"/);
     const automatic =
         model.addOrgan(model.newDocument('Region'), 'olfaction', sites, {x : 380, y : 325});
     const regionCenter = automatic.centerId;
@@ -5121,10 +5132,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       assert.equal(model.receptorResponse(sitesResult, cell().receptors[effect]), .25,
                    'Removing the substance preserves the constant local gain');
     }
-    const traceHandle = /data-learning-handle="trace" cx="([^"]+)"/.exec(learnPanel);
-    const learnCell = model.findCenter(learnNode.document, learnNode.centerId).center;
-    assert.ok(Math.abs(learningView.learnTracePatch(traceHandle[1] / 300).learning_tau -
-                       learnCell.learning_tau) < 1e-2);
     const taughtDoc =
         model.bindReceptor(learnNode.document, learnNode.centerId, HORMONE_EFFECT.teaching, 0);
     const excitationDoc = model.addSubstance(
@@ -5151,7 +5158,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                             'data-center-id="' + learnNode.centerId + '" data-learn-effect="' +
                             HORMONE_EFFECT.teaching + '"'),
                  'The bound teaching substance is selected in the learning tool');
-    assert.match(taughtPanel, /aid-episode-arrow teach"/);
     const probesView = await import('../ui/studio/view/probes.js');
     const {probeFor} = await import('../ui/studio/model/probe.js');
     for (const [type, at] of [[ 'nose', {x : 200, y : 330} ], [ 'touch', {x : 400, y : 265} ]]) {

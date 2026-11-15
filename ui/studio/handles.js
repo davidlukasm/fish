@@ -30,7 +30,6 @@ import {dataAttribute, fixed} from './view/markup.js';
 import {driveContext, wireMarks, wirePatch} from './view/panels.js';
 import {PANEL_WIDTH, panelStyle} from './view/shell.js';
 import {GROWTH, BIRTH, receptorGripPatch, wheelWidthPatch} from './view/substances.js';
-import {learnMemoryPatch} from './view/learning.js';
 import {nerveTissuePatch} from './view/nerve_cell.js';
 import {variationPatch} from './view/cell_tissue.js';
 import {contactCapacityPatch} from './view/contact_plan.js';
@@ -58,7 +57,6 @@ const HANDLES = Object.freeze({
   receptor : {follow : 'receptorPointer'},
   capacity : {follow : 'capacityPointer'},
   variation : {follow : 'variationPointer'},
-  memory : {follow : 'memoryPointer'},
   drive : {follow : 'drivePointer'},
   life : {follow : 'lifePointer'},
   portLimit : {follow : 'portLimitPointer'},
@@ -140,12 +138,6 @@ export const GRIPS = Object.freeze([
       size : {width : g.viewBox.baseVal.width, height : g.viewBox.baseVal.height},
       least : studio.state.anatomy?.contrastLeast
     })
-  },
-  {
-    graphic : '[data-learning-memory]',
-    handle : '[data-learning-handle]',
-    held : 'memory',
-    start : (studio, g, h) => ({id : g.dataset.learningMemory, handle : h.dataset.learningHandle})
   },
   {
     graphic : '[data-capacity]',
@@ -423,15 +415,6 @@ export const handleMethods = {
         for (const mark of control.element.querySelectorAll(selector))
           for (const [name, value] of Object.entries(attributes))
             mark.setAttribute(name, fixed(value));
-  },
-  memoryPointer(event) {
-    const drag = this.handleDrag, center = findCenter(this.state.document, drag.id)?.center;
-    if (!center)
-      return;
-    const {fx, fy} = pointerShare(event, drag.rect);
-    const patch = learnMemoryPatch(this.state, center, drag.handle, fx, fy);
-    if (patch)
-      this.draftDesign(updateCenter(this.state.document, drag.id, patch), 'memory:' + drag.id);
   },
   spectrumTarget({spectrumId : id, profileId}) {
     const organ = findOrgan(this.state.document, id);

@@ -162,6 +162,19 @@ export const designMethods = {
     const probe = this.state.senseProbe;
     return probe && findOrgan(this.state.document, probe.organ) ? senseScene(probe) : null;
   },
+  // The example the learning inspector tries on a cell: a sender and the cell are active
+  // together at middling strength, the teacher comes `delay` steps later, the cell expects
+  // `prediction` of it the second time, and the two rounds lie `interval` steps apart
+  // (anatomy.groups, learning: step1 without and step2 with that expectation, what stays of a
+  // contact between the rounds, what being active together alone does).
+  setLearnProbe(centerId, delay, prediction, interval) {
+    const probe = this.state.learnProbe;
+    if (probe?.center === centerId && probe.delay === delay && probe.prediction === prediction &&
+        probe.interval === interval)
+      return;
+    this.state.learnProbe = {center : centerId, delay, prediction, interval};
+    this.requestDesign();
+  },
   // The mouth's inspector tries one beat of the mouth: the closer begins `delay` steps after the
   // opener, the gills pump along or not (anatomy.mouthCourse).
   setMouthCommand(organId, delay, gills) {
@@ -199,7 +212,8 @@ export const designMethods = {
     this.designRunning = true;
     this.designPending = false;
     const request = ++this.designRequest, fishRequest = this.newFishRequest;
-    const spineDraft = draft?.key.startsWith('spine-'), colourDraft = draft?.key === 'colour';
+    const spineDraft = draft?.key.startsWith('spine-'), colourDraft = draft?.key === 'colour',
+          learningDraft = draft?.key === 'learning', bladderDraft = draft?.key === 'bladder';
     const scene = draft ? {sense : spineDraft ? this.senseScene() : null} : {
       lightSpread : this.state.lightSpread?.document !== document,
       sight : sightScene(probe),
@@ -207,11 +221,28 @@ export const designMethods = {
     };
     // The blood every estimate of the engine is made at is the life tool's (atelier_service.py,
     // learning_context_line).
-    this.api(requestBody('design', {plan, ...scene, blood : previewContextOf(this.state)}))
+    const learnProbe = this.state.learnProbe,
+          group = learnProbe ? centerIndex(document, learnProbe.center) : -1,
+          learning = group < 0 ? null : {
+            group,
+            delay : learnProbe.delay,
+            pre : .5,
+            post : .5,
+            teaching : 1,
+            prediction : learnProbe.prediction,
+            interval : learnProbe.interval
+          };
+    this.api(requestBody('design', {
+          plan,
+          ...scene,
+          blood : previewContextOf(this.state),
+          ...(learning ? {learning} : {})
+        }))
         // An answer for the design shown is shown even when a test stimulus has moved on since:
         // the eyes and senses follow a dragged one step by step instead of waiting for it to
         // rest.
-        .then(anatomy => {
+        .then(report => {
+          const anatomy = {...report, learnProbe : learning ? learnProbe : null};
           if (draft) {
             // Follow the drag with the last completed outline, even as the pointer moves on.
             if (this.drafted && this.draftPreview === draft &&
@@ -225,13 +256,18 @@ export const designMethods = {
                                                       report?.spineGroups, report?.attackProbe],
                                        draft.key === 'field' && report?.lateral,
                                        draft.key === 'receptor' &&
-                                           report?.groups?.map(g => g.responses)]);
+                                           report?.groups?.map(g => g.responses),
+                                       learningDraft && [
+                                         report?.learnProbe,
+                                         report?.groups?.[learning?.group]?.learning
+                                       ],
+                                       bladderDraft && report?.bladderEstimate]);
               };
               const previous = shape();
               this.state.outlinePreview = anatomy;
               if (shape() !== previous) {
                 this.refreshScene();
-                if (colourDraft)
+                if (colourDraft || learningDraft || bladderDraft)
                   this.refreshLive();
                 // A receptor's curve is the engine's: the inspector follows each answer.
                 if (draft.key === 'receptor')
@@ -257,6 +293,16 @@ export const designMethods = {
     const probesOnly = this.shownDesign === this.state.document;
     const spineChange = JSON.stringify(this.state.anatomy?.attackProbe?.spines) !==
                         JSON.stringify(anatomy.attackProbe?.spines);
+    // A new blood from the life band changes which cells are there and how receptors answer.
+    const groupsOf = (report, key) => JSON.stringify(report?.groups?.map(g => g[key]));
+    const lifeChange = groupsOf(this.state.anatomy, 'life') !== groupsOf(anatomy, 'life');
+    const answerChange = groupsOf(this.state.anatomy, 'effects') !== groupsOf(anatomy, 'effects') ||
+                         JSON.stringify(this.state.anatomy?.hormoneCourse) !==
+                             JSON.stringify(anatomy.hormoneCourse);
+    const learningChange = this.state.anatomy?.learnProbe !== anatomy.learnProbe ||
+                           groupsOf(this.state.anatomy, 'learning') !== groupsOf(anatomy, 'learning');
+    const bladderChange = JSON.stringify(this.state.anatomy?.bladderEstimate) !==
+                          JSON.stringify(anatomy.bladderEstimate);
     this.shownDesign = this.state.document;
     if (anatomy.lightSpread)
       this.state.lightSpread = {document : this.state.document, report : anatomy.lightSpread};
@@ -271,8 +317,13 @@ export const designMethods = {
     const traced = this.traceAnswered(request);
     if (probesOnly) {
       if (!traced) {
-        if (spineChange)
+        if (spineChange || lifeChange)
           this.refreshScene();
+        if ((answerChange && this.state.tool === 'hormone') ||
+            ((answerChange || learningChange) && this.state.tool === 'learn'))
+          this.refreshInspector();
+        else if (bladderChange)
+          this.refreshLive();
         this.refreshVision();
         this.drawSight();
         this.refreshProbes();

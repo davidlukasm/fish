@@ -314,6 +314,7 @@
 
 
 .aid-anatomical-organ{cursor:grab}
+.aid-anatomical-organ.aid-life-restricted{stroke-dasharray:3 2}
 .aid-anatomical-organ:hover{filter:drop-shadow(0 0 5px var(--aid-hover))}
 .aid-wire-field{display:flex;flex-direction:column;align-items:center;margin:12px 0}
 .aid-wire-search{width:185px;max-width:100%;touch-action:none;cursor:crosshair}
@@ -1168,6 +1169,13 @@
 .aid-live-keyarc{fill:none;stroke:var(--key);stroke-opacity:.3;stroke-width:5;pointer-events:none}
 .aid-live-keytick{fill:none;stroke:var(--key);stroke-width:1.8;pointer-events:none}
 .aid-live-keytick.stale{stroke-opacity:.4}
+.aid-live-teach{fill:none;stroke:var(--aid-teach,#f0c674);stroke-width:1.6}
+.aid-live-cue.jump,.aid-live-teach.jump{stroke-width:3;stroke-linecap:round}
+.aid-live-teach.expected{stroke-dasharray:3 2;stroke-opacity:.85}
+.aid-live-weight{fill:none;stroke:#e8efe6;stroke-width:2}
+.aid-live-cue{fill:none;stroke:var(--key);stroke-width:1.6}
+.aid-live-quiet{fill:none;stroke:#e8efe6;stroke-opacity:.45;stroke-width:1.2}
+.aid-live-missing{fill:#f08a7a}
 .aid-live-pain .aid-live-keyband{fill:var(--key);fill-opacity:.18;stroke:var(--key);stroke-opacity:.7;stroke-width:.8;pointer-events:none}
 .aid-live-keymark{fill:none;stroke:var(--key);stroke-width:2.5}
 .aid-live-keygrip{fill:var(--key);stroke:var(--aid-ink);stroke-width:1}

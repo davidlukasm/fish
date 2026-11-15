@@ -125,6 +125,10 @@ struct EffectorActivity {
   std::vector<double> cells;
 };
 EffectorActivity effector_activity(const std::vector<float> &, const BrainInterface &);
+// The bladder's fill after one step of filling and emptying drive: the fish's step and the
+// atelier's estimate share it.
+double bladder_fill_after(double fill, double fill_drive, double empty_drive,
+                          const PhysiologyParameters &);
 struct OrganDrive {
   std::array<double, HORMONE_ORGANS> values{};
   std::uint32_t present = 0;

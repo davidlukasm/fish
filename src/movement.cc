@@ -100,6 +100,9 @@ void advance_body(Body &b, const Genome &g, const Field *world,
     move_body(b, world, physiology, protected_life);
   b.finish_step();
 }
+double bladder_lift(double capacity, double fill, const PhysiologyParameters &p) {
+  return p.bladder_strength * capacity / (1 + capacity) * fill;
+}
 void move_body(Body &b, const Field *world, const PhysiologyParameters &physiology,
                bool protected_life) {
   double old_x = b.x, old_y = b.y, mass = body_mass(b),
@@ -163,9 +166,7 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
   uy = (along + b.motor_.thrust) * hy + (across + side_thrust) * hx;
   // Weight and the bladder's lift both grow with the body, so a full bladder carries a fish of
   // any size and the fill at which it hovers depends only on the bladder's capacity.
-  const double bladder_capacity = b.bladder_capacity,
-               lift = (world ? physiology.bladder_strength : 0) * bladder_capacity /
-                      (1 + bladder_capacity) * b.bladder_fill;
+  const double lift = world ? bladder_lift(b.bladder_capacity, b.bladder_fill, physiology) : 0;
   b.buoyancy_force = ((world ? physiology.sinking : 0) - lift) * mass;
   uy += b.buoyancy_force / mass;
   // A fish on the mud stands on its side fins: spread on the ground they hold it up against

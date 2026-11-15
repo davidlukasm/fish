@@ -1222,6 +1222,7 @@
     "less": "− {name}"
   },
   "development": {
+    "lifeRestricted": "Die aktuellen Blutwerte begrenzen die Zellentwicklung.",
     "title": "Zellbildung, Aktivität und Tod",
     "explanation": "Die Geburtsantwort sammelt Entwicklungsfortschritt über die schnelle Zellzeit. Ausgabe und endgültiger Tod haben eigene Rezeptoren. Die Kurven zeigen die Mittelwerte des Bauplans; Streuung erzeugt Unterschiede zwischen Zellen.",
     "baseline": "Grundantwort",
@@ -1713,6 +1714,18 @@
     "touch": {
       "pressure": "Druck",
       "reports": "meldet ab"
+    },
+    "learn": {
+      "cue": "Reiz",
+      "trace": "Spur",
+      "teach": "Lehrer",
+      "cell": "Zelle",
+      "contact": "Kontakt",
+      "first": "Durchgang 1",
+      "second": "Durchgang 2",
+      "expected": "erwartet",
+      "quiet": "stiller Eingang",
+      "steps": "Schritte"
     },
     "pain": {
       "used": "gewöhnt",

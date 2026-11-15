@@ -1315,6 +1315,10 @@ void tire_fibres(const BrainInterface &layout, const MuscleDemand &demand,
   for (const auto &e : layout.effectors)
     reserve[e.neuron] = std::clamp(reserve[e.neuron], 0., 1.);
 }
+double bladder_fill_after(double fill, double fill_drive, double empty_drive,
+                          const PhysiologyParameters &p) {
+  return std::clamp(fill + p.bladder_rate * (fill_drive - empty_drive), 0., 1.);
+}
 EffectorActivity effector_activity(const std::vector<float> &state, const BrainInterface &layout) {
   EffectorActivity activity;
   auto &sum = activity.sum;
@@ -1511,9 +1515,8 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
       moving + p.transfer_cost * (b.reproduction_.egg_transfer + b.reproduction_.sperm_transfer) +
       p.pigment_cost * sum[organ_port::pigment];
   const double combat = contraction(StrokeBite) + contraction(StrokeDefense);
-  const double bladder_delta =
-      std::clamp(b.bladder_fill + p.bladder_rate * (bladder[0] - bladder[1]), 0., 1.) -
-      b.bladder_fill;
+  const double bladder_delta = bladder_fill_after(b.bladder_fill, bladder[0], bladder[1], p) -
+                               b.bladder_fill;
   const double extra = p.bladder_cost * std::abs(bladder_delta) +
                        HormoneState::work_cost(secretion, activity.binding, p.hormones);
   const double cost = muscle + combat + extra,
