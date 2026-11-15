@@ -29,3 +29,18 @@ Auftrag (David 07:37, `AUFTRAG-1411.md` Punkt 6): ein Lebensphasen-Werkzeug im A
 ## Offen
 - Darf das Werkzeug die Vorschau-Reife ersetzen, oder bleibt `previewControls`? (Ein Modell als Quelle: nur eine „jetzt“-Reife.)
 - Hormonwerkzeug (Astra) und Lebensphasen-Werkzeug teilen das Blut der Vorschau. Abstimmen, wer den Knopf besitzt.
+
+## Nachtrag 15.11. 02:20 (nach Davids Frage: „Wie interagiert das Werkzeug mit dem Fischpanel, oder habt ihr nur über Inspektoren nachgedacht?“)
+Ehrliche Antwort an David: fast nur über Inspektoren. Zum Fischpanel stand oben nur Punkt 3.
+
+**Befund im Code (`dd89af3e`):** Die Vorschau-Reife (`previewContext`, `controller.js:100`, `development.js:93ff`) wird nur von Inspektoren gelesen: `life_cycle.js:76`, `learning.js:72/127/162`, `substances.js:102/630`, `live/blood.js:271`, `preview.js:8`, `trials.js:227`. Das Fischpanel zeichnet den Fisch unabhängig davon.
+
+**Ort:** Der Werkzeugkasten ist die Leiste links im Fischpanel (Platzieren, Verschalten, Hormone, Lernen, Reizen, Entfernen, Ausschnitt). „Ein eigenes Werkzeug im Werkzeugkasten“ (David) heißt also: ein Werkzeug „Leben“ in dieser Leiste. Gewählt, wird das **Fischpanel selbst** zur Lebensansicht; die Lebenslinie mit „jetzt“ sitzt im Fischpanel, nicht über den Inspektoren.
+
+**Was das Fischpanel je Phase zeigen müsste (zu prüfen im Code, bevor gezeichnet wird):**
+- Ei: Fisch in der Schale; nur Zellen, die schon gebildet sind (Bildungsrezeptor); Netzhautwellen über dem Auge (`substrate.cc:704–728`, laufen, solange die Erregbarkeit der Zellen reicht; enden nur, wenn das Organ sie über Reife/Hormon senkt, LEITLINIE 0); Muskeln zucken (Schlupfimpuls, `embryo.cc:38–41`); das Auge meldet keinen Kontrast (`cppn_brain.cc:407–411`); Proben, die im Ei nicht gelten (Futter, Sehprobe), sind nicht da.
+- Schlupf: Gesehenes blendet über die Zellzeit ein (`birth_exposure`, `physiology.hh:437–441`).
+- Jung → erwachsen: Körper wächst (`body_scale`), Maulöffnung und Beute mit; Farbe nach den dann lebenden Pigmentzellen; Eier/Samen kommen dazu.
+- Inspektoren folgen derselben Phase und zeigen nicht, was in ihr nicht gilt.
+
+**Offen zur Abwägung (Fable, Astra):** Ersetzt „jetzt“ im Fischpanel die Vorschau-Reife ganz (ein Modell)? Wie verhalten sich Hormone und Lernen, die dieselbe Vorschau lesen? Darf der Fisch im Fischpanel im Ei-Zustand bearbeitet werden (Zellen setzen), oder nur angesehen?
