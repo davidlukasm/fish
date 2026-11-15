@@ -611,10 +611,11 @@ export const handleMethods = {
     const patch = probePatch(drag.control, position, faintest, probe);
     const smellFlow = drag.control === 'flow' && probe.kind === 'smell';
     const manual = probe.manual || drag.control !== 'attack-gape';
-    this.state.senseProbe = smellFlow ? {...probe, flow : patch} : {...probe, ...patch, manual};
-    this.keepInView(
-        probeHandle(smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, faintest,
-                    drag.control, this.state));
+    this.state.senseProbe =
+        smellFlow ? {...probe, flow : patch} : {...probe, ...patch, manual};
+    this.keepInView(probeHandle(
+        smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, faintest, drag.control,
+        this.state));
     this.refreshProbes();
     if (probe.kind !== 'ground')
       this.requestDesign();

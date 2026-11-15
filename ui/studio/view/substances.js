@@ -109,8 +109,6 @@ const RECEPTOR = Object.freeze({
   bottom : 112,
   grip : 9,
   flat : .02,
-  leastBound : .1,
-  clamped : .999,
   steepDrag : 60
 });
 function engineAnswer(state, centerId, effect) {
@@ -189,16 +187,9 @@ export function receptorGripPatch(state, centerId, effect, handle, start, to) {
   const span = state.capabilities?.sensitivitySpan ?? 1;
   if (handle === 'baseline')
     return {baseline : clamp(start.receptor.baseline + delta, -1)};
-  // The end of the curve moves by the sensitivity times how much is bound there; that share is
-  // read off the engine's curve where it was taken, so the grip stays under the pointer.
-  if (handle === 'sensitivity') {
-    const end = answer.curve?.at(-1), r = start.receptor;
-    // At the clamp (±1) the curve hides how much is bound; then the grip moves one to one.
-    const bound = r.sensitivity && Number.isFinite(end) && Math.abs(end) < R.clamped
-                      ? Math.max(R.leastBound, Math.min(1, (end - r.baseline) / r.sensitivity))
-                      : 1;
-    return {sensitivity : Math.max(-span, Math.min(span, r.sensitivity + delta / bound))};
-  }
+  // The grip moves the value by how far it is dragged; the curve that follows is the engine's.
+  if (handle === 'sensitivity')
+    return {sensitivity : Math.max(-span, Math.min(span, start.receptor.sensitivity + delta))};
   if (handle === 'half') {
     const [low, high] = state.capabilities?.halfRange ?? [ 0, Infinity ];
     const from = Math.max(1, start.x - R.left), now = Math.max(1, to.x - R.left);
@@ -490,7 +481,7 @@ const ANSWER = Object.freeze({width : 120, height : 18, left : 6, right : 114, y
 function bloodCurves(state, index, context) {
   const {document : doc, capabilities : wheel} = state, A = ANSWER;
   const span = levelSpan(state, index), present = bloodLevel(context, index);
-  const seen = new Set();
+  const seen = new Map();
   const rows = receivers(doc, index, wheel).flatMap(cell => {
     const organ = findOrgan(doc, cell.organId), name = organTitle(organ, state.sites);
     const group = (state.outlinePreview ?? state.anatomy)?.groups?.[centerIndex(doc, cell.id)];
@@ -500,11 +491,17 @@ function bloodCurves(state, index, context) {
       const curve = receptor?.substance !== index ? null
                     : birth                       ? group?.birthResponse
                                                   : group?.responses?.[effect];
-      const key = name + ':' + effect + ':' + (curve ?? []).join(',');
-      if (seen.has(key))
+      // Cells that answer the same way share one row; their organs stand side by side in it.
+      const key = effect + ':' + (curve ?? []).map(v => v.toFixed(3)).join(',');
+      const row = seen.get(key);
+      if (row) {
+        if (!row.names.includes(name))
+          row.names.push(name);
         return [];
-      seen.add(key);
-      return [ {id : cell.id, effect, name, curve} ];
+      }
+      const fresh = {id : cell.id, effect, names : [ name ], curve};
+      seen.set(key, fresh);
+      return [ fresh ];
     });
   });
   if (!rows.length)
@@ -512,7 +509,7 @@ function bloodCurves(state, index, context) {
   const words = tList('studio.axes.effects');
   return '<section class="aid-hormone-receivers" style="--substance:' + substanceColor(index) +
          '"><h4>' + label('hormoneCard.acts') + '</h4>' +
-         rows.map(({id, effect, name, curve}) => {
+         rows.map(({id, effect, names, curve}) => {
                const birth = effect === BIRTH;
                const scale = birth || effect === HORMONE_EFFECT.death
                                  ? GROWTH_SCALE
@@ -539,8 +536,8 @@ function bloodCurves(state, index, context) {
                           A.y + '" r="3"/></svg>';
                }
                return '<button class="aid-hormone-row" data-select-center="' + escapeText(id) +
-                      '" data-select-effect="' + effect + '"><span>' + escapeText(name) +
-                      '</span>' +
+                      '" data-select-effect="' + effect + '"><span>' +
+                      escapeText(names.join(' · ')) + '</span>' +
                       (birth ? glyph(BIRTH_ICON, ICON.mark, {line : true})
                              : boundEffect(effect, 0)) +
                       '<small>' +
