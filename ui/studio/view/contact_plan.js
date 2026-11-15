@@ -20,8 +20,10 @@ const word = key => label('contacts.' + key);
 // The planned contacts as a drawing: the senders on the left, the chosen cells in the middle, the
 // receivers on the right, one line per planned contact, as thick as the strongest contact it may
 // grow, dashed where it teaches, in the colour of its sign. A single chosen cell shows its
-// contact seats round it and the handles for how many it takes (its rim) and how strong an
-// electrical or a teaching contact to it may grow (the two wedges below).
+// contact seats round it with the handle for how many it takes (its rim), and at the end of its
+// first incoming electrical and first incoming teaching line the grip that sets how strong such a
+// contact to it may grow: every line of that kind follows. Without such a line yet, an empty one
+// carries the grip.
 const PLAN = Object.freeze({
   width : 300,
   columns : [ 34, 150, 266 ],
@@ -37,7 +39,9 @@ const PLAN = Object.freeze({
   seat : 2.2,
   seats : 24,
   handle : 6,
-  wedges : {from : 60, to : 240, rows : [ 24, 58 ], thick : 9, margin : 12, label : 10}
+  // The limit's grip: its size, how far from the cell it sits, how far apart the empty lines run
+  // and how far up a full limit lies.
+  grip : {width : 8, height : 11, back : 5, apart : 14, drag : 60}
 });
 const point = p => fixed(p.x) + ' ' + fixed(p.y);
 function limits(source, target) {
@@ -50,7 +54,7 @@ function limits(source, target) {
   };
 }
 // A sensor takes no contacts; a working cell's only limit is its electrical one.
-const WEDGES = Object.freeze({
+const LIMITS = Object.freeze({
   sensor : [],
   motor : [ 'electrical_limit' ],
   nerve : [ 'electrical_limit', 'teaching_limit' ]
@@ -98,8 +102,8 @@ export function contactCapacityPatch(key, p, marks) {
     const [cx] = marks.cell.split(',').map(Number);
     return {field : clamp((p.x - cx - PLAN.cell) / PLAN.reach)};
   }
-  const W = PLAN.wedges;
-  return {[key] : clamp((p.x - W.from) / (W.to - W.from))};
+  // Up makes the lines thicker.
+  return {[key] : clamp(Number(marks.limitValue) + (Number(marks.limitY) - p.y) / PLAN.grip.drag)};
 }
 export function contactPlan(state, chosen, wire = null) {
   chosen = chosen.filter(Boolean);
@@ -125,11 +129,11 @@ export function contactPlan(state, chosen, wire = null) {
   const single = middle.length === 1 && !wire;
   const rows = Math.max(senders.length, middle.length, receivers.length, single ? 3 : 1);
   const span = P.top * 2 + (rows - 1) * P.step;
-  const wedges = single ? WEDGES[centers[middle[0]].role] ?? [] : [];
+  const settable = single ? LIMITS[centers[middle[0]].role] ?? [] : [];
   // Without a planned contact and without anything to set there is nothing to draw.
-  if (!edges.length && !wedges.length)
+  if (!edges.length && !settable.length)
     return '';
-  const height = span + (wedges.length ? P.wedges.rows[wedges.length - 1] + P.wedges.margin : 0);
+  const height = span;
   const place = new Map();
   const column = (list, x) => list.forEach(
       (i, k) => place.set(x + ':' + i, {x, y : span / 2 + (k - (list.length - 1) / 2) * P.step}));
@@ -174,6 +178,11 @@ export function contactPlan(state, chosen, wire = null) {
                    '</title></path>';
           })
           .join('');
+  // Which kinds of line reach the chosen cell: a kind none reaches gets an empty line for its grip.
+  const arriving = new Set(shown.filter(edge => single && own.has(edge.to) && !own.has(edge.from))
+                               .map(edge => limits(centers[edge.from], centers[edge.to]).teaching
+                                                ? 'teaching_limit'
+                                                : 'electrical_limit'));
   const mark = (i, x) => {
     const c = centers[i], p = place.get(x + ':' + i);
     const seats = c.role === 'sensor' ? ''
@@ -223,13 +232,13 @@ export function contactPlan(state, chosen, wire = null) {
          (single ? ' data-capacity="' + escapeText(chosenCell.id) + '"' : '') + ' viewBox="0 0 ' +
          P.width + ' ' + height + '" role="img" aria-label="' + word('title') + '">' + headings +
          lines + marks +
-         (single ? capacity(neural, chosenCell, {x : inner, y : span / 2}, radius, span) : '') +
+         (single ? capacity(neural, chosenCell, {x : inner, y : span / 2}, radius, arriving) : '') +
          '</svg></div></details>';
 }
-// The chosen cell with its seats, the rim that sets how many it has and the two wedges that set
-// how strong its electrical and its teaching contacts may grow.
-function capacity(neural, cell, at, radius, span) {
-  const P = PLAN, W = P.wedges, sensor = cell.role === 'sensor', count = seatCount(neural, cell);
+// The chosen cell with its seats, the rim that sets how many it has and the grips that set how
+// strong its electrical and its teaching contacts may grow, each where those lines arrive.
+function capacity(neural, cell, at, radius, arriving) {
+  const P = PLAN, G = P.grip, sensor = cell.role === 'sensor', count = seatCount(neural, cell);
   const shown = sensor ? 0 : Math.min(P.seats, count);
   const grip = (key, p, title, geometry = '') =>
       '<circle class="aid-graphic-handle" data-capacity-handle="' + key + '" ' + geometry +
@@ -244,17 +253,23 @@ function capacity(neural, cell, at, radius, span) {
                                    fixed(at.y + radius * Math.sin(a)) + '" r="' + P.seat + '"/>';
                           })
                     .join('');
-  const wedge = (key, k) => {
-    const y = span + W.rows[k], value = cell[key], x = W.from + (W.to - W.from) * value;
-    return '<g class="' + key + '"><text class="aid-plan-label" x="' + W.from + '" y="' +
-           (y - W.label) + '">' + escapeText(word(key)) +
-           '</text><path class="aid-plan-wedge" d="M' + W.from + ' ' + y + ' L' + W.to + ' ' +
-           fixed(y - W.thick / 2) + ' V' + fixed(y + W.thick / 2) + 'Z"/>' +
-           '<path class="aid-plan-wedge-fill" d="M' + W.from + ' ' + y + ' L' + fixed(x) + ' ' +
-           fixed(y - W.thick / 2 * value) + ' V' + fixed(y + W.thick / 2 * value) + 'Z"/>' +
-           grip(key, {x, y},
-                namedText(label('cellPicture.' + key), formatNumber(value, VALUE_DIGITS))) +
-           '</g>';
+  const limit = (key, k, list) => {
+    // The grips sit just above and below where the lines meet the cell, electrical first.
+    const value = cell[key], arrives = arriving.has(key);
+    const y = at.y + (k - (list.length - 1) / 2) * G.apart;
+    const x = at.x - Math.sqrt(Math.max(0, radius * radius - (y - at.y) ** 2)) - G.back;
+    // No line of this kind arrives yet: an empty one, as thick as the limit, carries the grip.
+    const empty =
+        arrives ? ''
+                : '<path class="aid-plan-edge empty' + (key === 'teaching_limit' ? ' teach' : '') +
+                      '" d="M' + (P.columns[0] + P.mark) + ' ' + fixed(y) + ' H' + fixed(x) +
+                      '" stroke-width="' + fixed(P.line.least + P.line.span * value) + '"/>';
+    return empty + '<rect class="aid-plan-grip ' + key + '" data-capacity-handle="' + key +
+           '" data-limit-y="' + fixed(y) + '" data-limit-value="' + value + '" x="' +
+           fixed(x - G.width / 2) + '" y="' + fixed(y - G.height / 2) + '" width="' + G.width +
+           '" height="' + G.height + '" rx="2"><title>' +
+           escapeText(namedText(label('cellPicture.' + key), formatNumber(value, VALUE_DIGITS))) +
+           '</title></rect>';
   };
   return '<g class="aid-plan-cell">' +
          (sensor
@@ -273,5 +288,5 @@ function capacity(neural, cell, at, radius, span) {
               ? grip('field', {x : at.x + radius, y : at.y}, label('cellPicture.capacity'),
                      'data-cell="' + fixed(at.x) + ',' + fixed(at.y) + '"')
               : '') +
-         (WEDGES[cell.role] ?? []).map(wedge).join('');
+         (LIMITS[cell.role] ?? []).map(limit).join('');
 }
