@@ -289,7 +289,7 @@ export const handleMethods = {
     const doc = anatomyPatch(this.state, spec, p[spec.axis] - origin[spec.axis]);
     if (doc)
       this.draftDesign(doc, 'anatomy:' + spec.id + ':' + spec.key,
-                       spec.scene ? 'refreshScene' : undefined);
+                       spec.scene ? 'refreshFishAndLive' : undefined);
   },
   regionPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;

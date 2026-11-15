@@ -35,7 +35,8 @@ export function anatomyHandles(state, id = state.selected?.id) {
   if (!organ)
     return [];
   const at = organLocation(organ, state.sites, state.document), specs = [];
-  // `scene`: the fish itself shows the setting, so it is redrawn while the grip is dragged.
+  // `scene`: the fish itself shows the setting, so it and the organ's live pictures are redrawn
+  // while the grip is dragged.
   const add = (key, point, value, axis, span, scene = false) =>
       specs.push({id : organ.id, key, point, value, axis, span, scene});
   if (organ.type === 'gut') {
