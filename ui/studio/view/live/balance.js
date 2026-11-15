@@ -4,13 +4,17 @@
 // over the flank (0) to the tail (1), the other side mirrors it. The stimulus is how far the hair
 // points down, whatever the fish does. The answer is bounded and the cells do not get used to it,
 // so a posture holds its report for as long as it lasts: no time axis.
-// The posture is the stimulus and the picture's own round knob; the fish panel has no probe for
-// it. The report rights the fish only through the motor region's "feel" input (organs.js, motor
-// slots; motor_region.js, flee to turn and escape); that connection is made and shown in the
+// The posture is the stimulus: the fish panel's gravity probe (probes.js; the direction of
+// "down" round the fish), and what the cells report of it is the engine's (anatomy.senseProbe).
+// The rose round the fish is what the fish panel cannot show: the report for every posture. It
+// is reckoned here with the engine's rule for a bounded answer (sense.js, answer). The report
+// rights the fish only through the motor region's "feel" input (organs.js, motor slots;
+// motor_region.js, flee to turn and escape); that connection is made and shown in the
 // inspector's list of ports (circuit.js, outletsSection).
 import {t} from '../../../strings.js';
 import {degrees, radians} from '../../../units.js';
-import {findOrgan, updateCenter} from '../../model/document.js';
+import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
+import {sideOf} from '../../model/layout.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {answer, BOUNDED, IRRITANT} from './sense.js';
 import {fishLeft, turnTo} from './skin.js';
@@ -23,7 +27,6 @@ const TILT = Object.freeze({
   hair : 30,
   ring : 72,
   petal : 20,
-  knob : 100,
   least : .03,
   most : .95,
   fish : 1.25
@@ -35,38 +38,45 @@ liveKind('balance', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-balance';
   const tilt = addPicture(root);
-  // The posture tried: where the snout points (0 to the left, as in the fish panel; 90 down). Not
-  // part of the fish.
-  const tried = {tilt : 25};
+  // Where the snout points (0 to the left, as in the fish panel; 90 down), from the fish panel's
+  // probe: its bearing is where "down" lies round the fish, 90 for a level fish.
+  const LEVEL = 90;
+  const tried = {tilt : 0};
+  const heard = cell =>
+      groupReport(studio.state.document, studio.state.anatomy, 'senseProbe', cell.id);
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
   // Round the fish a rose of postures: for every way the snout can point, a petal as long as the
   // cells report there; this organ's cells outside the ring, its twin's (their hair mirrored, with
-  // their own direction and threshold) inside it, if the fish has the twin. The round knob turns
-  // the fish; the grip at the hair's tip sets where the hair points; the grip at the rose's end
-  // sets the threshold. At each hair's tip, what its cells report in the posture tried.
+  // their own direction and threshold) inside it, if the fish has the twin. The fish lies as the
+  // fish panel's probe turns it; the grip at the hair's tip sets where the hair points; the grip
+  // at the rose's end sets the threshold. At each hair's tip the bolt of its stimulus, and round
+  // the tip the glow of what the engine reports for its cells.
   function drawTilt(own, twin) {
-    const {svg, live} = picture(
-        tilt, TILT.height,
-        fixed => {
-          el('path', {d : `M278 172 v26 m-5 -7 l5 7 l5 -7`, class : 'aid-live-arrow'}, fixed);
-          txt(fixed, 278, 210, word('down'), {'text-anchor' : 'middle', class : 'aid-live-small'});
-        }),
-                {cx, cy, ring, petal} = TILT, cell = own.centers[0],
-                sides =
-                    [ {cell, side : 1, k : 0}, twin && {cell : twin.centers[0], side : -1, k : 1} ]
-                        .filter(Boolean)
-                        .map(s => ({...s, hair : hairOf(s.cell.q1), gate : BOUNDED.gate(s.cell)})),
-                at = (angle,
-                      r) => [cx - r * Math.cos(radians(angle)), cy + r * Math.sin(radians(angle))],
-                down = (snout, s) => Math.max(0, Math.sin(radians(snout + s.side * s.hair))),
-                report = (snout, s) => answer(down(snout, s), s.gate, 0);
+    const {svg,
+           live} =
+        picture(tilt, TILT.height,
+                fixed => {
+                  el('path', {d : `M278 172 v26 m-5 -7 l5 7 l5 -7`, class : 'aid-live-arrow'},
+                     fixed);
+                  txt(fixed, 278, 210, word('down'),
+                      {'text-anchor' : 'middle', class : 'aid-live-small'});
+                }),
+           {cx, cy, ring, petal} = TILT, cell = own.centers[0], face = sideOf(own) || 1,
+           sides =
+               [ {cell, side : face, k : 0}, twin && {cell : twin.centers[0], side : -face, k : 1} ]
+                   .filter(Boolean)
+                   .map(s => ({...s, hair : hairOf(s.cell.q1), gate : BOUNDED.gate(s.cell)})),
+           at =
+               (angle, r) => [cx - r * Math.cos(radians(angle)), cy + r * Math.sin(radians(angle))],
+           down = (snout, s) => Math.max(0, Math.sin(radians(snout + s.side * s.hair))),
+           report = (snout, s) => answer(down(snout, s), s.gate, 0);
     el('circle', {cx, cy, r : ring, class : 'aid-live-rim'}, live);
     for (const s of sides) {
       const outline = [], inner = [];
       for (let a = 0; a <= 360; a += 3) {
-        outline.push(at(a, ring + s.side * petal * report(a, s) * (s.side > 0 ? 1 : .7)));
+        outline.push(at(a, ring + (s.k ? -.7 : 1) * petal * report(a, s)));
         inner.unshift(at(a, ring));
       }
       el('path', {
@@ -79,13 +89,17 @@ liveKind('balance', (studio, organId) => {
     }
     // The ring between the two sides' roses, so that they stay apart where both report.
     el('circle', {cx, cy, r : ring, class : 'aid-live-ringline'}, live);
+    // Where the fish lies now on the rose: a tick across the ring where its snout points.
+    const [t0x, t0y] = at(tried.tilt, ring - petal),
+                [ t1x, t1y ] = at(tried.tilt, ring + petal + 4);
+    el('path', {d : `M${t0x} ${t0y} L${t1x} ${t1y}`, class : 'aid-live-arrow'}, live);
     const body = el('g', {transform : `rotate(${- tried.tilt} ${cx} ${cy})`}, live);
     fishLeft(body, cx, cy, TILT.fish);
     // At each hair's tip the stimulus as the bolt it is in every sense (how far gravity bends the
     // hair), and round the tip the glow of what the cells report of it.
     for (const s of [...sides].reverse()) {
       const [x, y] = at(tried.tilt + s.side * s.hair, TILT.hair), pull = down(tried.tilt, s),
-                now = report(tried.tilt, s),
+                now = clamp(heard(s.cell) ?? 0),
                 [ px, py ] = at(tried.tilt + s.side * s.hair, TILT.hair + 14);
       if (now > 0)
         el('circle', {
@@ -107,7 +121,7 @@ liveKind('balance', (studio, organId) => {
     }
     el('circle', {cx, cy, r : 5.5, class : 'aid-live-soma k0 on'}, live);
     const angleOf = p => degrees(Math.atan2(p.y - cy, cx - p.x)), mine = sides[0],
-          [ hx, hy ] = at(tried.tilt + mine.hair, TILT.hair);
+          [ hx, hy ] = at(tried.tilt + face * mine.hair, TILT.hair);
     drag(svg,
          el('rect', {
            x : hx - 4.5,
@@ -118,25 +132,22 @@ liveKind('balance', (studio, organId) => {
            class : 'aid-live-keygrip k0 on'
          },
             live),
-         p => draft(updateCenter(studio.state.document, cell.id,
-                                 {q1 : qualityOf(clamp(turnTo(angleOf(p) - tried.tilt), 0, 180))})),
+         p => draft(
+             updateCenter(studio.state.document, cell.id,
+                          {q1 : qualityOf(clamp(face * turnTo(angleOf(p) - tried.tilt), 0, 180))})),
          'balancehair', 'grip', settle);
-    const [ex, ey] = at(degrees(Math.asin(clamp(mine.gate))) - mine.hair, ring + 8);
+    const [ex, ey] = at(degrees(Math.asin(clamp(mine.gate))) - face * mine.hair, ring + 8);
     drag(svg, el('circle', {cx : ex, cy : ey, r : 4.5}, live),
          p => draft(updateCenter(studio.state.document, cell.id, {
            threshold : BOUNDED.threshold(
-               clamp(Math.sin(radians(clamp(turnTo(angleOf(p) + mine.hair), 0, 90))), TILT.least,
-                     TILT.most))
+               clamp(Math.sin(radians(clamp(turnTo(angleOf(p) + face * mine.hair), 0, 90))),
+                     TILT.least, TILT.most))
          })),
          'balancegate', 'grip', settle);
-    const [kx, ky] = at(tried.tilt, TILT.knob);
-    drag(svg, el('circle', {cx : kx, cy : ky, r : 5.5, class : 'aid-live-posture'}, live), p => {
-      tried.tilt = angleOf(p);
-      show();
-    }, 'balancetilt', 'knob');
   }
   function show() {
-    const own = organ();
+    const own = organ(), probe = studio.state.senseProbe;
+    tried.tilt = LEVEL - (probe?.kind === 'balance' ? probe.bearing : LEVEL);
     if (own?.centers[0])
       drawTilt(own, findOrgan(studio.state.document, own.pair));
   }
