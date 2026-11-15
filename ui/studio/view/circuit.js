@@ -72,11 +72,9 @@ export function slotsSection(state, organ) {
 // that limit, and one grip at the receiving end of the first sets it for all of them.
 const PORT_LINE = Object.freeze({least : 1, span : 5});
 export const PORT_LIMIT_DRAG = 60;
-// A working cell takes its limit here when contacts reach it through a port; a nerve cell keeps it
-// beside its teaching limit in its contact plan.
-export const limitAtPorts = (state, organ, center) =>
-    center?.role === 'motor' &&
-    organPorts(state.document, organ, state.sites).some(port => port.dir === 'in');
+// A working cell takes its limit here, at the lines that reach it, or at an empty one while
+// nothing does; a nerve cell keeps it beside its teaching limit in its contact plan.
+export const limitAtPorts = (state, organ, center) => center?.role === 'motor';
 export function portsSection(state, organ, center = null) {
   const limit = limitAtPorts(state, organ, center) ? center.electrical_limit : null;
   let gripped = limit === null;
@@ -130,9 +128,20 @@ export function portsSection(state, organ, center = null) {
                    escapeText((slots ?? [ slot ]).map(slotTitle).join(', ')) + '</small></li>';
           })
           .join('');
-  return rows ? '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +
-                    '"><ul class="aid-ports">' + rows + '</ul></section>'
-              : '';
+  // Nothing reaches the working cell and no organ offers to: one line without a sender says so
+  // and carries the grip.
+  const unfed =
+      gripped ? ''
+              : '<li class="unfed"><span class="aid-port-absent aid-port-none"></span>' +
+                    '<span class="aid-port-line" style="border-top-width:' +
+                    (PORT_LINE.least + PORT_LINE.span * limit).toFixed(1) +
+                    'px"><span class="aid-port-grip" data-port-limit="' + escapeText(center.id) +
+                    '" data-port-value="' + limit + '" title="' +
+                    escapeText(joinParts([ label('contacts.electrical_limit'), percent(limit) ])) +
+                    '"></span></span>' + icon(organ.type, ICON.part) + '</li>';
+  return rows || unfed ? '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +
+                             '"><ul class="aid-ports">' + rows + unfed + '</ul></section>'
+                       : '';
 }
 function regionTeacher(state, organ) {
   const learners = organ.centers.filter(isLearner);
