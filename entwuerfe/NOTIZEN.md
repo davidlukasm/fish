@@ -27,6 +27,8 @@ Was uns auffällt und nicht zum laufenden Auftrag gehört: unsauberer Code, Idee
 
 - 15.11. Fable/Claude/Astra – **Engine: nackte Fläche ist reines Blau (0; 0; 1)** (`environment.cc` `BARE_SURFACE_COLOR`, Rückfallwert von `surface_color` bei Bewuchs null und auch, wenn gar keine Fläche in Reichweite liegt). Ein Auge im Aquarium sieht hinter einem Fisch also Reinblau, wo kein Bewuchs ist. Seit der Grundprobe steht das groß im Atelier. Stand: offen – Absicht oder Platzhalter? Engine = Astra, Entscheidung zu dritt; ggf. Frage an David, weil es das Sehen im Aquarium ändert.
 
+- 15.11. Astra/Claude/Fable – **Braune Fische in Ruhe** (David 13.11.: „müssen möglich sein“). Ergebnis: Mit dem heutigen Farbmodell erreichbar, aber nur über **mehrere Stellen je Zelltyp** (`setOrganNodes`); der Inspektor bietet je Typ nur „Kopien“ (= Kapazität/16, eine Stelle), damit bleibt Blau in Ruhe ≥ 0,246 (Ziel 0,15). Keine Engine-Änderung nötig; Lücke ist im Inspektor/Fischpanel: weitere Stellen eines Typs setzen können. Ruheanteil als Gen verworfen (wäre kostenlos). Stand: offen. Baut: offen (Fischpanel-Griff = Astra, Inspektor = Fable) / prüft: Claude.
+
 ## Echte Fische, andere Spiele
 - 15.11. Fable – Echte Seitenlinie: Neuromasten sitzen in Kanälen (melden Druckunterschiede, schnelle Wirbel) und frei auf der Haut (melden langsame Strömung). Das wären zwei Zellarten mit verschiedener Gewöhnung, passend zur vorhandenen Zellzeit. Stand: offen, nur Anregung.
 - 15.11. Fable – Echtes Gleichgewicht: Otolithen melden Schwerkraft **und** Beschleunigung; ein Fisch im Schwarm richtet sich zusätzlich nach dem Licht von oben (Lichtrückenreflex). Verbindung Auge → Lage wäre ein zweiter Weg zum Aufrichten. Stand: offen, nur Anregung.
