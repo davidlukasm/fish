@@ -601,7 +601,9 @@ liveKind('gut', (studio) => {
       }, id + 'key' + i, 'grip', settle);
       const sx = R - 8 - 13 * i, top = IY(Math.max(...gates)), bottom = IY(Math.min(...gates));
       el('path', {d : `M${sx} ${top} V${Math.max(bottom, top + 4)}`, class : 'aid-live-spread'}, live);
-      drag(svg, el('circle', {cx : sx, cy : top, r : 4.5}, live), p => {
+      const spreadGrip = el('circle', {cx : sx, cy : top, r : 4.5}, live);
+      el('title', {}, spreadGrip).textContent = word('spread');
+      drag(svg, spreadGrip, p => {
         own.chosen = i;
         draft(setSpread(k, clamp(2 * (vOf(p.y) - k.gate), 0, .8)));
       }, id + 'spread' + i, 'grip', settle);
@@ -765,7 +767,9 @@ liveKind('gut', (studio) => {
         draft(setGate(k, vOf(p.x)));
       }, 'feedkey' + i, 'grip', settle);
       el('path', {d : `M${x} ${base + 8} H${far}`, class : 'aid-live-spread'}, live);
-      drag(svg, el('circle', {cx : far, cy : base + 8, r : 4.5}, live), p => {
+      const spreadGrip = el('circle', {cx : far, cy : base + 8, r : 4.5}, live);
+      el('title', {}, spreadGrip).textContent = word('spread');
+      drag(svg, spreadGrip, p => {
         own.chosen = i;
         draft(setSpread(k, clamp(2 * (vOf(p.x) - k.gate), 0, .8)));
       }, 'feedspread' + i, 'grip', settle);
