@@ -17,7 +17,7 @@
 import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {contactHalfAngle} from '../../../tuning.js';
-import {findOrgan} from '../../model/document.js';
+import {drawnThresholds, findOrgan} from '../../model/document.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, reportBubble, txt} from './kit.js';
 import {
   between,
@@ -26,6 +26,7 @@ import {
   keysOf,
   runOf,
   setGate,
+  setSpread,
   setUsed,
   silentStep,
   usedFor
@@ -93,7 +94,12 @@ liveKind('pain', (studio, organId) => {
   // closed below what they feel.
   function courseOf(cell) {
     const probe = wound(), part = share(cell, probe);
-    const key = keysOf([ {id : '', centers : [ cell ]} ], BOUNDED)[0];
+    // The cells' thresholds are those the engine drew, once its run for this fish is in.
+    const key = {
+      ...keysOf([ {id : '', centers : [ cell ]} ], BOUNDED)[0],
+      drawn : drawnThresholds(studio.state, cell.id),
+      cells : cell.copies
+    };
     const depth = closingWound(probe?.strength ?? 0, BITE_STEP, SKIN_RESPONSE.heal_rate),
           met = depth.map(v => clamp(v * part)), sent = runOf(key, met, true).sent,
           silent = silentStep(key, met), last = Math.min(...BOUNDED.gates(key)),
@@ -128,9 +134,15 @@ liveKind('pain', (studio, organId) => {
     const by = D(SKIN_RESPONSE.bite_wound);
     el('path', {d : `M${S.L - 6} ${by} h6`, class : 'aid-live-axis'}, live);
     txt(live, S.L - 8, by + 3, word('bite'), {'text-anchor' : 'end', class : 'aid-live-small'});
-    // How small a wound the cells still feel here: below this depth they send nothing. Its grip
-    // sets the threshold.
-    const feels = c.part > 0 ? c.key.gate / c.part : S.deepest, gy = D(feels);
+    // How small a wound the cells still feel here: below this depth they send nothing. Each cell
+    // has its own depth, the cells' thresholds spreading round the plan's; the grip on the plan's
+    // sets the threshold, the grip on the deepest how far the cells spread.
+    const feels = c.part > 0 ? c.key.gate / c.part : S.deepest, gy = D(feels),
+          gates = BOUNDED.gates(c.key), far = Math.max(...gates);
+    if (c.part > 0)
+      for (const gate of gates)
+        el('path', {d : `M${S.L} ${D(gate / c.part)} H${S.R}`, class : 'aid-live-keyline k0 cell'},
+           live);
     el('path', {d : `M${S.L} ${gy} H${S.R}`, class : 'aid-live-keyline k0'}, live);
     txt(live, S.R, gy + 11, word('felt'), {'text-anchor' : 'end', class : 'aid-live-small'});
     if (c.part > 0)
@@ -147,6 +159,21 @@ liveKind('pain', (studio, organId) => {
            p => draft(setGate(studio.state.document, c.key,
                               clamp((p.y - S.skin) / S.deep, S.least, 1) * S.deepest * c.part)),
            'paingate', 'grip', settle);
+    if (c.part > 0)
+      drag(svg,
+           el('rect', {
+             x : S.R - 5,
+             y : D(far / c.part) - 4,
+             width : 10,
+             height : 8,
+             rx : 2.5,
+             class : 'aid-live-keygrip k0 on'
+           },
+              live),
+           p => draft(setSpread(
+               studio.state.document, c.key,
+               2 * Math.max(0, clamp((p.y - S.skin) / S.deep) * S.deepest * c.part - c.key.gate))),
+           'painspread', 'grip', settle);
     // What the cells send, above the skin, over the same steps.
     el('path', {
       d : path(shown(c.sent).map((v, n) => [X(n * every), top - S.loud * clamp(v)])) +
