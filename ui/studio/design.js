@@ -163,13 +163,16 @@ export const designMethods = {
     return probe && findOrgan(this.state.document, probe.organ) ? senseScene(probe) : null;
   },
   // The example the learning inspector tries on a cell: the teacher comes `delay` steps after
-  // the sender fired with the cell, and the cell expects `prediction` of it (anatomy.groups,
-  // learning: step1 without and step2 with that expectation).
-  setLearnProbe(centerId, delay, prediction) {
+  // the sender fired with the cell, the cell expects `prediction` of it the second time, and
+  // the two rounds lie `interval` steps apart (anatomy.groups, learning: step1 without and step2
+  // with that expectation, what stays of a contact between the rounds, what firing together
+  // alone does).
+  setLearnProbe(centerId, delay, prediction, interval) {
     const probe = this.state.learnProbe;
-    if (probe?.center === centerId && probe.delay === delay && probe.prediction === prediction)
+    if (probe?.center === centerId && probe.delay === delay && probe.prediction === prediction &&
+        probe.interval === interval)
       return;
-    this.state.learnProbe = {center : centerId, delay, prediction};
+    this.state.learnProbe = {center : centerId, delay, prediction, interval};
     this.requestDesign();
   },
   learnScene() {
@@ -181,7 +184,8 @@ export const designMethods = {
       pre : 1,
       post : 1,
       teaching : 1,
-      prediction : probe.prediction
+      prediction : probe.prediction,
+      interval : probe.interval
     };
   },
   // The commands the side fin's inspector tries: the engine answers with the way the fish takes

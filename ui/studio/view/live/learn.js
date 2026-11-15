@@ -9,16 +9,15 @@
 // expects of the teacher is no surprise.
 // An ESTIMATE, as the engine gives it for the plan's cell at the life tool's blood
 // (anatomy.groups, learning): the share of the trace kept each step and the steps to 1/e of it;
-// the two steps of the weight for this example, without and with the expectation; what an
-// unused contact loses each step; the contact's limit. No brain is built and nothing runs. The
-// lines between those values are drawn here: the trace and the loss as that share step after
-// step, the weight from a start at half its limit.
+// for this example the two steps of the weight, without and with the expectation, what firing
+// together alone does to the contact and to a still one beside it, and the share of each that
+// stays between the rounds; the contact's limit. No brain is built and nothing runs. Both
+// contacts start at half their limit and have no past. Only the lines between those values are
+// drawn here: the trace as that share step after step, the weight evenly down to what stays.
 // The example's knobs (round) are inputs: when the teacher comes after the sender, how much of
 // it the cell expects in the second round. The cell's grips (square) are its settings: how long
 // the trace lasts, how fast the cell learns, how it treats what does not fire with it.
-// Not in the picture: what firing together alone does to the contact (strengthening, pushing
-// out, cancelling) - the engine's report has no estimate of it, so the grip for it shows only
-// where it stands; consolidation; the making and loss of contacts.
+// Not in the picture: consolidation; the making and loss of contacts.
 import {t} from '../../../strings.js';
 import {findCenter, groupReport, updateCenter} from '../../model/document.js';
 import {PORT_LIMIT_DRAG} from '../circuit.js';
@@ -38,7 +37,6 @@ const STRIP = Object.freeze({
   teach : 118,
   weight : 196,
   rise : 56,
-  lean : 12,
   least : .02
 });
 liveKind('learn', (studio, centerId) => {
@@ -51,7 +49,8 @@ liveKind('learn', (studio, centerId) => {
   const center = () => findCenter(studio.state.document, centerId)?.center;
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + centerId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
-  const ask = () => studio.setLearnProbe(centerId, probe.teach - probe.cue, probe.expected);
+  const ask = () =>
+      studio.setLearnProbe(centerId, probe.teach - probe.cue, probe.expected, STRIP.round);
   function draw(cell) {
     const S = STRIP, {svg, live} = picture(strip, S.height), n = 2 * S.round,
           L = groupReport(studio.state.document, studio.state.anatomy, 'groups', centerId)
@@ -129,21 +128,36 @@ liveKind('learn', (studio, centerId) => {
     // engine estimates for this example; between them what an unused contact loses each step.
     // Under it a still input from the same start, losing as much.
     const limit = L.limits.electrical, Y = w => S.weight - S.rise * clamp(w / limit),
-          loss = steps => Math.pow(1 - L.forgetUnused, steps), start = limit / 2;
+          start = limit / 2;
     el('path', {d : `M${S.L} ${Y(limit)} H${S.R}`, class : 'aid-live-track-line'}, live);
-    const quiet = [], weight = [];
-    let w = start;
-    for (let st = 0; st <= n; st += 2) {
-      const at = st % S.round;
-      if (known && at >= probe.teach && at < probe.teach + 2)
-        w = Math.min(limit, w + (st < S.round ? L.step1 : L.step2));
-      else
-        w *= loss(2);
-      weight.push([ X(st), Y(w) ]);
-      quiet.push([ X(st), Y(start * loss(st)) ]);
+    // A contact through the two rounds: what firing together does to it at the sender's firing
+    // (`fires`), the teacher's step (`steps`), and between the rounds the share of it that stays
+    // (`stays`) - the engine's values at those moments; between them the line runs evenly down
+    // to what stays, and on at the same pace after the second round.
+    const course = (fires, steps, stays) => {
+      const pts = [], keep = Math.pow(stays, 2 / S.round);
+      let w = start;
+      for (let st = 0; st <= n; st += 2) {
+        const at = st % S.round, second = st >= S.round;
+        if (at >= probe.cue && at < probe.cue + 2)
+          w += fires;
+        if (at >= probe.teach && at < probe.teach + 2)
+          w += steps[second ? 1 : 0];
+        else
+          w *= keep;
+        w = clamp(w, 0, limit);
+        pts.push([ X(st), Y(w) ]);
+      }
+      return pts;
+    };
+    const quiet = known ? course(L.quietChange, [ 0, 0 ], L.quietKeptBetween) : [],
+          weight = known ? course(L.coactiveChange, [ L.step1, L.step2 ], L.keptBetween) : [];
+    if (!known) {
+      el('path', {d : `M${S.L} ${Y(start)} H${S.R}`, class : 'aid-live-turn missing'}, live);
+      return;
     }
     el('path', {d : path(quiet), class : 'aid-live-quiet'}, live);
-    el('path', {d : path(weight), class : 'aid-live-weight' + (known ? '' : ' stale')}, live);
+    el('path', {d : path(weight), class : 'aid-live-weight'}, live);
     txt(live, S.R, quiet.at(-1)[1] + 10, word('quiet'),
         {'text-anchor' : 'end', class : 'aid-live-small'});
     // How fast the cell learns: the grip on the first step's top. Up makes it learn faster.
@@ -162,23 +176,23 @@ liveKind('learn', (studio, centerId) => {
              studio.state.document, centerId,
              {qwidth : clamp(cell.qwidth + (from.y - p.y) / PORT_LIMIT_DRAG, S.least, 1)})),
          'learnrate', 'grip', settle);
-    // How the cell treats what does not fire with it: the grip beside the still input, as far
-    // down as the cell pushes it out, as far up as it cancels what fires with it instead.
-    const [qx, qy] = quiet[Math.floor(S.round / 2)], lean = S.lean * clamp(L.mode, -1, 1);
-    el('path', {d : `M${qx} ${qy - S.lean} V${qy + S.lean}`, class : 'aid-live-track-line'}, live);
+    // How the cell treats what does not fire with it: the grip on the still input just after
+    // the sender has fired. Down, the cell pushes the still input out; up, it leaves it and
+    // cancels what fires with it instead.
+    const [qx, qy] = quiet[Math.ceil((probe.cue + 14) / 2)];
     drag(svg,
          el('rect', {
            x : qx - 5,
-           y : qy + lean - 4,
+           y : qy - 4,
            width : 10,
            height : 8,
            rx : 2.5,
            class : 'aid-live-keygrip k0 on'
          },
             live),
-         (p, from) =>
-             draft(updateCenter(studio.state.document, centerId,
-                                {mode : clamp((cell.mode ?? 0) + (p.y - from.y) / S.lean, -1, 1)})),
+         (p, from) => draft(updateCenter(
+             studio.state.document, centerId,
+             {mode : clamp((cell.mode ?? 0) + 2 * (p.y - from.y) / PORT_LIMIT_DRAG, -1, 1)})),
          'learnmode', 'grip', settle);
   }
   function show() {
