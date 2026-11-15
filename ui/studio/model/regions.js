@@ -390,18 +390,27 @@ export function regionSlots(doc, organ) {
     return {...slot, filled};
   });
 }
-// Where an organ can plug in: the input ports of other organs made for its kind, each with
-// whether this organ, or its twin of the other side, already sits on it. Of a paired target the
-// one on the organ's own side: a wire to it reaches both.
+// Where an organ can plug in: the input ports of other organs made for its kind. First the
+// ports it really sits on, on whichever side the wire leads; then, for a port not yet taken,
+// the free one on the organ's own side (of a paired target a wire reaches both sides).
 export function organOutlets(doc, source) {
-  const twin = findOrgan(doc, source.pair), mine = new Set([ source.id, twin?.id ]);
-  return doc.organs
-      .filter(target => !mine.has(target.id) &&
-                        (!target.pair || target.side === (source.side || target.side)))
-      .flatMap(
-          target =>
-              regionSlots(doc, target)
-                  .filter(slot => slot.dir === 'in' && slot.fits.includes(source.type) &&
-                                  slotCenters(target, slot.key, 'in').length)
-                  .map(slot => ({target, slot, joined : slot.filled.some(o => mine.has(o.id))})));
+  const twin = findOrgan(doc, source.pair);
+  const ports =
+      doc.organs.filter(target => target.id !== source.id && target.id !== twin?.id)
+          .flatMap(
+              target =>
+                  regionSlots(doc, target)
+                      .filter(slot => slot.dir === 'in' && slot.fits.includes(source.type) &&
+                                      slotCenters(target, slot.key, 'in').length)
+                      .map(
+                          slot => (
+                              {target, slot, joined : slot.filled.some(o => o.id === source.id)})));
+  // A paired target and its twin are one place to plug in.
+  const place = ({target, slot}) =>
+      slot.key + ':' + (target.pair ? [ target.id, target.pair ].sort()[0] : target.id);
+  const taken = new Set(ports.filter(port => port.joined).map(place));
+  return ports.filter(
+      port => port.joined ||
+              (!taken.has(place(port)) &&
+               (!port.target.pair || port.target.side === (source.side || port.target.side))));
 }
