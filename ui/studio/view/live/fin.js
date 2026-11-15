@@ -17,7 +17,9 @@
 // The small fish is the fish panel's fish in little: its outline and its side fins as the plan
 // has them (frame.js, fishPath and sideFins; body.js, outlineSizes).
 // ASSUMED for the picture: a fin swings from its rest by a fixed angle at full tension, backward
-// on a muscle's back stroke and forward on its front stroke.
+// on a muscle's back stroke and forward on its front stroke. The fish keeps its size so that its
+// fins stay readable: on a short way it is in the way's measure, on a long way larger than it;
+// the lines of depth, a body radius apart, give the measure then.
 // Not in the picture: the tail beating along; the ground.
 import {FIN, FIN_STROKE} from '../../../schema.js';
 import {degrees} from '../../../units.js';
@@ -45,6 +47,7 @@ const SWIM = Object.freeze({
   box : [ 300, 150 ],
   radius : 22,
   edge : 26,
+  lines : 12,
   L : 30,
   R : 288,
   steps : 128,
@@ -134,7 +137,7 @@ liveKind('fin', (studio, organId) => {
     el('rect',
        {x : 0, y : 0, width : S.box[0], height : S.box[1], rx : 6, class : 'aid-live-ground'},
        under);
-    // The way: as large as the water allows, the fish drawn to its measure.
+    // The way: as large as the water allows, at most in the fish's own measure.
     const span = values => values.length ? [ Math.min(...values), Math.max(...values) ] : [ 0, 0 ],
           [ x0, x1 ] = span(course.map(([ x ]) => -x)),
           [ y0, y1 ] = span(course.map(([, y ]) => y)),
@@ -142,8 +145,11 @@ liveKind('fin', (studio, organId) => {
                           (S.box[1] - 2 * S.edge) / Math.max(y1 - y0, 1e-6)),
           at = ([ x, y ]) => [S.box[0] / 2 + unit * (-x - (x0 + x1) / 2),
                               S.box[1] / 2 + unit * (y - (y0 + y1) / 2)];
-    // The water's depth: a line for every body radius the fish sinks or rises.
-    for (let depth = Math.ceil((y0 + y1) / 2 - S.box[1] / 2 / unit);; ++depth) {
+    // The water's depth: a line for every body radius the fish sinks or rises; on a long way,
+    // where they would crowd, for every few.
+    const apart = Math.max(1, Math.ceil(S.lines / unit));
+    for (let depth = apart * Math.ceil(((y0 + y1) / 2 - S.box[1] / 2 / unit) / apart);;
+         depth += apart) {
       const [, y] = at([ 0, depth ]);
       if (y >= S.box[1])
         break;
@@ -161,7 +167,7 @@ liveKind('fin', (studio, organId) => {
       });
     }
     // The fish with its fins, as the fish panel draws it; a fin that has a row carries its colour.
-    const fish = el('g', {}, live), small = unit / BODY_RADIUS,
+    const fish = el('g', {}, live), small = S.radius / BODY_RADIUS,
           drawn = el('g', {
             transform :
                 `scale(${small.toFixed(4)}) translate(${- BODY_MIDDLE.x} ${- BODY_MIDDLE.y})`
