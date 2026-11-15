@@ -19,7 +19,7 @@ Nicht gelesen: Strahlen und Verdeckung im Einzelnen (`retina.cc:520–660, 690�
 8. **Zwei Augen:** Nur im Mittelbereich (`vision_binocular_angle`) zählt eine Zelle für beide Augen zur Hälfte; sonst nur für ihr Auge (`retina.cc:421–431`). Eingegraben sieht das Auge weniger (`exposure`, `:107–113`).
 
 ## Lebenslauf (Engine)
-- **Ei:** Kein Kontrast (`birth_exposure` = 0, `cppn_brain.cc:405–411`). Stattdessen **Netzhautwellen**: spontanes Zünden mit 0,004 × Erregbarkeit², Kopplung an 6 Nachbarn, Erholungszeit (`substrate.cc:704–728`, `dynamics.hh:25–27`). Erregbarkeit = 1 − Schwelle + Hormonwirkung „Erregung“ (`retinal_tissue.hh:60`, `substrate.cc:716`). Die Wellen laufen, solange die Erregbarkeit reicht; beenden kann sie nur das Organ selbst über eine Reife- oder Hormonantwort (LEITLINIE 0). Nicht geprüft: ob die Wellen beim Startfisch nach dem Schlupf enden.
+- **Ei:** Kein Kontrast (`birth_exposure` = 0, `cppn_brain.cc:405–411`). Stattdessen **Netzhautwellen**: spontanes Zünden mit 0,004 × Erregbarkeit², Kopplung an 6 Nachbarn, Erholungszeit (`substrate.cc:704–728`, `dynamics.hh:25–27`). Erregbarkeit = 1 − Schwelle + Hormonwirkung „Erregung“ (`retinal_tissue.hh:60`, `substrate.cc:716`). Die Wellen laufen, solange die Erregbarkeit reicht; beenden kann sie nur das Organ selbst über eine Reife- oder Hormonantwort (LEITLINIE 0). **Nachgerechnet, ob sie enden:** Ruhend zündet eine Zelle, wenn Erregbarkeit × 1 > 0,22 (`substrate.cc:719–723`). Das Augen-Organ des Ateliers setzt die Schwelle −0,6 (`model/retina.js:26`), daraus Zellwert (−0,6 + 1)/2 = 0,2 (`development.cc:62–65`), Erregbarkeit 0,8. Ohne Hormonwirkung „Erregung“ von mindestens −0,58 laufen die Wellen also **das ganze Leben** weiter und werden auch nach dem Schlupf zur Meldung addiert (`substrate.cc:744–747`). Im Atelier-Auge ist kein Auslöser gesetzt (Bild 18:25: „lebt mit dem Fisch, immer aktiv“). **Befund:** Das Auge des Ateliers beendet seine Wellen nicht; LEITLINIE 0 nennt genau das als Aufgabe der Netzhaut („ihre Reifeantwort beendet sie“). Vorschlag: Das Auge bekommt in der Vorlage eine Reifeantwort, die die Erregung um den Schlupf senkt; sichtbar im Lebensphasen-Werkzeug (Wellen über dem Auge bis zum Schlupf).
 - **Schlupf:** Das Gesehene blendet über die Zellzeit der Zelle ein (`physiology.hh:437–441`).
 - **Danach:** Sehen wie oben. Auslöser (Bildung, Aktivität, Tod) wie bei jeder Zelle.
 
@@ -33,7 +33,11 @@ Nicht gelesen: Strahlen und Verdeckung im Einzelnen (`retina.cc:520–660, 690�
 ## Antwort auf Davids Frage: Ist das Sehbild für AN/AUS ungeeignet?
 **Heute ja, aber nur wegen zweier Lücken, die sich schließen lassen. Grundsätzlich ist es der richtige Ort** (LEITLINIE 2.1: „Was die App schon gut zeigt, wird mitbenutzt: die Sehbilder des Auges“; LEITLINIE 3: Proben ins Fischpanel, der Inspektor zeigt den Effekt).
 1. **Das Sehbild wirft AN- und AUS-Zellen zusammen.** `eyeTypeAnswers` bildet die Zeilen aus Farbton, Spektrum, Gegenfarbe und Schwelle, **nicht** aus dem Dunkelanteil (`organ_readout.js:123–126`). Eine AN- und eine AUS-Zelle derselben Farbe landen in **einer** Zeile und werden gemittelt. Der Bericht liefert den Dunkelanteil schon (`RECEPTOR.dark_share`, Index 26).
-2. **Die Sehprobe ist immer ein Licht.** Das Testlicht hat Farbe und Größe, aber keine Helligkeit (`atelier.cc:273–278`, `hue_light`). Eine AUS-Zelle meldet nur, was dunkler ist als sein Umfeld. Vor dem Hintergrund des Prüfbeckens meldet sie das Testlicht höchstens in Farbkanälen, in denen es dunkler ist als der Grund. Was sie dort tatsächlich meldet, ist nicht gemessen (@Astra).
+2. **Die Sehprobe ist immer ein farbiges Licht** (`atelier.cc:273–278`). Nachgerechnet statt gemessen (David 02:22: „Hier muss man nichts messen. Alles, was passiert, steht im Code.“):
+   - `hue_light` (`receptor_tuning.hh:24–32`, Kanalabstand 120°) gibt in dem Kanal seines Farbtons 1 und in den Kanälen, die 120° oder weiter weg liegen, **0**. Ein rotes Licht ist (1, 0, 0), ein gelbes (1, 1, 0).
+   - Das Objekt verdeckt den Hintergrund (`retina.cc:583, 664`). Im Feld bleibt in den fehlenden Kanälen nur der Dunst (`vision_ambient`), im Umfeld liegt dazu der beleuchtete Grund.
+   - Also ist das Feld **in den Farben, die das Licht nicht hat, dunkler als das Umfeld**: Eine AUS-Zelle für Grün oder Blau meldet ein rotes Testlicht als dunklen Fleck, eine AN-Zelle für Rot als hellen. Meine Aussage von 02:20 („die AUS-Zelle hat kaum einen Reiz“) war falsch.
+   - Was fehlt, ist ein Objekt, das in **allen** Farben dunkler ist als der Grund (Schatten, Krabbe auf Schlamm). Dafür bräuchte die Probe eine Helligkeit.
 
 **Vorschlag zur Abwägung (kein Entwurf):**
 - **Sehbild:** Je Farbtyp und Polung eine eigene Zeile. AN-Zeilen hell markiert, AUS-Zeilen dunkel markiert, gemischte Typen mit beiden Hälften. Damit sieht man am echten Bild, wo der Fisch Helles und wo Dunkles meldet, etwa am Rand eines Objekts.
@@ -48,6 +52,7 @@ Nicht gelesen: Strahlen und Verdeckung im Einzelnen (`retina.cc:520–660, 690�
 
 ## Befunde
 - `eyeTypeAnswers` ignoriert den Dunkelanteil (oben, 1).
-- Die Sehprobe kann nicht dunkel sein (oben, 2).
+- Die Sehprobe kann nicht in allen Farben dunkel sein (oben, 2).
+- Die Netzhautwellen enden im Atelier-Auge nie (Lebenslauf).
 - Kein Wort im Panel für Wellen und Einblenden. Gehört ins Lebensphasen-Werkzeug.
 - Alt, nur gemeldet: „39 Beispielzellen“, „Bauplan“, Textzeile „Mitte 180° · Breite 100 % · Gegenfarbe hemmt 0 %“.
