@@ -5,20 +5,22 @@ import {
   muscleAreas,
   musclePosition
 } from '../model/anatomy.js';
-import {halfWidth} from '../model/layout.js';
+import {BODY_FRAME, halfWidth} from '../model/layout.js';
 import {organLocation} from './places.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
-import {ORGAN_BY_KEY} from '../model/organs.js';
-import {BODY_FRAME} from '../model/layout.js';
+import {muscleLabelIndex, ORGAN_BY_KEY} from '../model/organs.js';
+import {tList} from '../../strings.js';
 import {steadyAt, zoomOf} from './frame.js';
+import {workTone} from './muscles.js';
 import {tone} from './names.js';
 
 export function placementHints(state, kind, value, moving = null) {
   if (!state.sites.length)
     return {svg : '', legend : []};
   const type = kind === 'organ' ? value : 'brain', M = BODY_FRAME.middle;
-  const areas = type === 'muscle' ? muscleAreas(state.sites) : [ placementArea(type) ];
+  const muscle = type === 'muscle',
+        areas = muscle ? muscleAreas(state.sites) : [ placementArea(type) ];
   const paths = areas.flatMap(
       area => (state.placementSide === 'middle' && area.neural ? [ 0 ] : [ -1, 1 ]).map(side => {
         const outer = [], inner = [];
@@ -28,11 +30,18 @@ export function placementHints(state, kind, value, moving = null) {
           outer.push({x, y : M + side * width * (area.neural ? 1 : area.outer)});
           inner.push({x, y : M + side * width * (area.neural ? 0 : area.inner)});
         }
-        return '<path d="M' +
+        const colour = muscle ? workTone(area) : null;
+        const paint = colour ? ` stroke="${colour}" fill="${colour}" fill-opacity=".16"` : '';
+        return '<path' + paint + ' d="M' +
                [...outer, ...inner.reverse() ].map(p => fixed(p.x) + ' ' + fixed(p.y)).join(' L') +
                'Z"/>';
       }));
-  return {svg : '<g class="aid-placement-area">' + paths.join('') + '</g>', legend : []};
+  const titles = muscle ? tList('studio.muscleTitles') : [];
+  const legend = muscle ? areas.map(area => ({
+    colour : workTone(area),
+    name : titles[muscleLabelIndex(area.code, area.pelvic)]
+  })) : [];
+  return {svg : '<g class="aid-placement-area">' + paths.join('') + '</g>', legend};
 }
 export function hintLegend(legend) {
   return legend
