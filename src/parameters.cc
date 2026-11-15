@@ -179,7 +179,7 @@ public:
       {"spine_max", &world.physiology_.spine_max, 0, 1, false, "body", 0.01, true},
       {"wall_restitution", &world.physiology_.wall_restitution, 0, 1, false, "body", 0.01, true},
       {"spine_abrasion", &world.physiology_.spine_abrasion, 0, 1, false, "body", 0.0001, true},
-      {"stroke_turn", &world.physiology_.stroke_turn, 0, 180, false, "energy", 0.1, true},
+      {"stroke_turn", &world.physiology_.stroke_turn, 0, 180, false, "energy", 0.01, true},
       {"stroke_push", &world.physiology_.stroke_push, 0, 10, false, "energy", 0.0001, true},
       {"muscle_cost", &world.physiology_.muscle_cost, 0, 2, false, "energy", 0.00001, true},
       {"suction_range", &world.physiology_.suction_range, .25, 4, false, "energy", 0.01, false},
