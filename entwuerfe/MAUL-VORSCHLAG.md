@@ -48,3 +48,16 @@ Der Verlauf eines Schlags aus `advance_mouth`, nicht nachgebaut: je Schritt `ope
 2. Ob Ermüdung beim Maul überhaupt sichtbar wird (kurze Zuckungen) – erst am Verlauf der Engine zu sehen.
 3. Lippen, Zähne, Gesichtslänge (Davids Punkte zur Zeichnung des Kopfs) gehören zum Fischpanel-Bild; dazu sage ich hier nichts, weil ich es nicht sehe.
 4. „Schritte sind hier fraglich“ (David): Die Zeitachse in Schritten zu beschriften ist dann falsch; besser ohne Zahl, nur „ein Schlag“.
+
+## Nach der Gegenlese (05:45)
+
+Claude 05:32 (gegen Davids Wortlaut), alles angenommen:
+1. Kieferlänge, Zahnform, Faser und Stärke sind Griffe am Fisch (`anatomy_handles.js:65–76`); die zwei doppelten Griffe im Inspektor (`mouth.js:147–157`) fallen weg.
+2. David 13.11.: „das Diagramm selbst kann der Fisch animiert darstellen“ – ist das Maul gewählt, öffnet und schließt es **im Fischpanel** im Takt desselben Schlags.
+3. Der Saugstrom sieht aus wie im Aquarium (`ui/animals.js:85, 218–242, 322`), nicht wie Geruch oder Echolot.
+4. Statt zweier Befehlskurven **ein Griff: „Schließer beginnt … nach dem Öffner“**. Befehl voll.
+5. Lippen dicker, Muskeln nicht durchscheinend, Zähne größer: Zeichnung des Kopfs im Fischpanel, Astra.
+6. Keine Schrittzahl, keine Achsenwörter „offen / Wasser / Biss“.
+7. Die Knopfreihe der Muskelart fällt für **alle** Muskeln weg (Claude 05:34), nicht nur beim Maul.
+
+Astra 05:34 (Engine), berichtigt meinen Abschnitt „Wasserstrom“: `MouthState.filtered` ist **geschlucktes Plankton** und in `swallowed` enthalten (`feeding.cc:136–143`). Das durchströmende Wasser kommt aus `gill_water` (`physiology.hh:410–415`); die Reusen halten davon einen Teil des Planktons zurück (`raker_retention`, `feeding.cc:535–544`). Im Bild also: Wasser strömt durch Maul und Kiemen **hindurch**; was die Reusen zurückhalten und was als Bissen hineinkommt, geht in den Schlund. Astra hält die Größen im Bericht getrennt und baut den nativen Maulschlag und den Kopf im Fischpanel.
