@@ -19,7 +19,7 @@ import {BODY_FRAME, sideOf} from '../model/layout.js';
 import {organLocation, gutShape} from './places.js';
 import {gutTurns} from '../../fish_organs.js';
 import {mouthShare} from '../../fish_forms.js';
-import {muscleShape} from './muscles.js';
+import {muscleNode, muscleShape} from './muscles.js';
 import {feltEnd, spineHandles} from './body.js';
 import {jawShare, steadyAt, zoomOf, SNOUT_TIP, HEAD} from './frame.js';
 import {fixed, escapeText} from './markup.js';
@@ -77,16 +77,23 @@ export function anatomyHandles(state, id = state.selected?.id) {
   if (code === MOTOR_KIND.aggression) {
     const jaw = muscleTrait(state.document, code, 'jaw_length', state.sites);
     const rim = HEAD.mouth[1] * mouthShare(jaw) / mouthShare(BODY_UNIT.trait_middle);
-    // The jaw's length is pulled at the end of the jawbone, just outside it, so the jaw muscle under
-    // the bone stays free to be dragged.
-    const reach = HEAD.jaw_back * jawShare(jaw);
-    add('jaw_length', {
-      x : SNOUT_TIP.x + HEAD.mouth_in + reach,
-      y : BODY_FRAME.middle + side * (HEAD.jaw_spread + (GRIP.hit + GRIP.ring) / zoomOf(state))
-    },
-        jaw, 'x', 90);
-    add('blunt_teeth', {x : SNOUT_TIP.x + 8, y : SNOUT_TIP.y + side * (rim + GRIP.hit / zoomOf(state))},
-        muscleTrait(state.document, code, 'blunt_teeth', state.sites), 'y', side * 40);
+    const zoom = zoomOf(state), gap = (GRIP.hit + GRIP.ring) / zoom;
+    const x = SNOUT_TIP.x + HEAD.mouth_in + HEAD.jaw_back * jawShare(jaw);
+    const teeth = {x : SNOUT_TIP.x + 8, y : SNOUT_TIP.y + side * (rim + GRIP.hit / zoom)};
+    const marks = specs.map(spec => spec.point);
+    marks.push(teeth);
+    if (shape)
+      organ.centers.forEach((_, index) => marks.push(muscleNode(organ, index, state.sites)));
+    let outward = side * BODY_FRAME.middle + HEAD.jaw_spread + gap;
+    // Keep the bone's horizontal endpoint and leave room to grab the muscle and its other grips.
+    for (const mark of marks) {
+      const dx = x - mark.x;
+      if (Math.abs(dx) < gap)
+        outward = Math.max(outward, side * mark.y + Math.sqrt(gap * gap - dx * dx));
+    }
+    add('jaw_length', {x, y : side * outward}, jaw, 'x', 90);
+    add('blunt_teeth', teeth, muscleTrait(state.document, code, 'blunt_teeth', state.sites), 'y',
+        side * 40);
   }
   if (code === MOTOR_KIND.forward && shape)
     add('undulation', shape.from, muscleTrait(state.document, code, 'undulation', state.sites), 'y',
