@@ -257,6 +257,12 @@ export const designMethods = {
     const probesOnly = this.shownDesign === this.state.document;
     const spineChange = JSON.stringify(this.state.anatomy?.attackProbe?.spines) !==
                         JSON.stringify(anatomy.attackProbe?.spines);
+    // A new blood from the life band changes which cells are there and how receptors answer.
+    const groupsOf = (report, key) => JSON.stringify(report?.groups?.map(g => g[key]));
+    const lifeChange = groupsOf(this.state.anatomy, 'life') !== groupsOf(anatomy, 'life');
+    const answerChange = groupsOf(this.state.anatomy, 'effects') !== groupsOf(anatomy, 'effects') ||
+                         JSON.stringify(this.state.anatomy?.hormoneCourse) !==
+                             JSON.stringify(anatomy.hormoneCourse);
     this.shownDesign = this.state.document;
     if (anatomy.lightSpread)
       this.state.lightSpread = {document : this.state.document, report : anatomy.lightSpread};
@@ -271,8 +277,10 @@ export const designMethods = {
     const traced = this.traceAnswered(request);
     if (probesOnly) {
       if (!traced) {
-        if (spineChange)
+        if (spineChange || lifeChange)
           this.refreshScene();
+        if (answerChange && [ 'hormone', 'learn' ].includes(this.state.tool))
+          this.refreshInspector();
         this.refreshVision();
         this.drawSight();
         this.refreshProbes();

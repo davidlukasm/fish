@@ -165,7 +165,8 @@ void learning_group_report(const Group &group, const field::Neuron *cell,
                            const LearningContext &context, int index,
                            const std::array<double, field::HORMONES> &spans) {
   if (!cell) {
-    std::cout << ",\"effects\":null,\"responses\":null,\"birthResponse\":null,\"learning\":null";
+    std::cout << ",\"effects\":null,\"responses\":null,\"birthResponse\":null,\"life\":null,"
+                 "\"learning\":null";
     return;
   }
   std::array<float, field::HORMONE_EFFECTS> effects{};
@@ -184,6 +185,24 @@ void learning_group_report(const Group &group, const field::Neuron *cell,
   }
   std::cout << ']';
   receptor_curves(group, *cell, context, spans);
+  // Whether the cell is there at this blood, estimated from the same receptors the fish reads: it
+  // forms while its birth receptor answers above zero (substrate.cc:606-610; without one it forms
+  // from the start), and dies once its death answer passes one half (substrate.cc:601).
+  std::cout << ",\"life\":{\"forming\":";
+  if (group.growth.active) {
+    auto unborn = context;
+    unborn.cell_maturity = 0;
+    std::cout << std::clamp(planned_receptor(group.growth, field::GROWTH_RECEPTOR)
+                                .response(unborn.levels, unborn.maturity, unborn.reserve,
+                                          unborn.fatigue, unborn.cell_maturity),
+                            0.f, 1.f);
+  } else
+    std::cout << "null";
+  std::cout << ",\"dying\":"
+            << (field::hormone_effect_present(*cell, field::Death) && effects[field::Death] > .5f
+                    ? "true"
+                    : "false")
+            << '}';
   std::cout << ",\"learning\":";
   if (cell->role != field::Role::Nerve) {
     std::cout << "null";
