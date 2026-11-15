@@ -79,10 +79,6 @@ export function chemistry(state, organ, center) {
          (center.role === 'nerve' ? open('learn', 'inspector.editLearning') : '') +
          '</div></section>';
 }
-function bound(receptor, c) {
-  const x = (c / receptor.half) ** (2 ** receptor.steepness);
-  return x / (1 + x);
-}
 const EFFECT_SCALE = Object.freeze({
   [HORMONE_EFFECT.consolidation] : {low : -1, high : 1, value : r => r, response : v => v},
   [HORMONE_EFFECT.excitation] : {low : -1, high : 1, value : r => r, response : v => v},
@@ -94,167 +90,11 @@ const SHARE_SCALE =
     Object.freeze({low : 0, high : 1, value : r => (1 + r) / 2, response : v => 2 * v - 1});
 const GROWTH_SCALE =
     Object.freeze({low : 0, high : 1, value : r => Math.max(0, r), response : v => v});
-function receptorCurve(state, receptor, effect) {
-  const bounded = receptor.substance >= HORMONES.levels && effect !== GROWTH;
-  const [halfMin, halfMax] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
-  const scale = effect === GROWTH  ? GROWTH_SCALE
-                : effect === BIRTH ? EFFECT_SCALE[HORMONE_EFFECT.excitation]
-                                   : EFFECT_SCALE[effect] ?? SHARE_SCALE;
-  const context = previewContextOf(state), wheel = state.capabilities;
-  const concentration = (c, r = receptor) => {
-    if (!wheel)
-      return c;
-    let sum = 0;
-    for (let i = 0; i < (effect === GROWTH ? HORMONES.levels : wheel.regulators); ++i) {
-      const level = i === r.substance ? c : bloodLevel(context, i);
-      sum += receptorAffinity(wheel, r, i) * level;
-    }
-    return sum;
-  };
-  const occupancy = (c, r = receptor) => bound(r, concentration(c, r));
-  const response = (c, r = receptor) =>
-      !r.active           ? (effect === HORMONE_EFFECT.output || effect === BIRTH ? 1 : 0)
-      : effect === GROWTH ? clamp(r.sensitivity * occupancy(c, r))
-                          : clamp(r.baseline + r.sensitivity * occupancy(c, r), -1);
-  const atFraction = f => bounded ? f : halfMin * Math.pow(halfMax / halfMin, f);
-  const fraction = c => bounded ? c : Math.log(c / halfMin) / Math.log(halfMax / halfMin);
-  const x = f => CURVE.left + (CURVE.right - CURVE.left) * f;
-  const y = v =>
-      CURVE.bottom - (CURVE.bottom - CURVE.top) * (v - scale.low) / (scale.high - scale.low);
-  return {
-    bounded,
-    axis : bounded ? substanceName(state, receptor.substance) : label('axes.concentrationLog'),
-    halfMin,
-    halfMax,
-    scale,
-    concentration,
-    occupancy,
-    response,
-    atFraction,
-    fraction,
-    x,
-    y
-  };
-}
-const STEEP_PROBE = 2;
-function steepProbe(k, receptor) {
-  const left = k.atFraction(0), right = k.atFraction(1);
-  const low = k.concentration(left), high = k.concentration(right);
-  if (!(high > low))
-    return null;
-  for (const ratio of [STEEP_PROBE, 1 / STEEP_PROBE]) {
-    const share = (receptor.half * ratio - low) / (high - low);
-    if (share > 0 && share < 1)
-      return left + share * (right - left);
-  }
-  const middle = k.atFraction(.5);
-  return k.concentration(middle) === receptor.half ? null : middle;
-}
-// Where the answer turns and how sharply only show while it changes at all; a flat answer has
-// only its two ends to drag.
-const FLAT_ANSWER = .02;
-function curveHandles(state, receptor, effect, target) {
-  const k = receptorCurve(state, receptor, effect);
-  const probe = steepProbe(k, receptor);
-  const at = c => [k.x(clamp(k.fraction(c))), k.y(k.scale.value(k.response(c)))];
-  const least = k.response(k.atFraction(0)), most = k.response(k.atFraction(1));
-  const turns = Math.abs(most - least) > FLAT_ANSWER;
-  const handles = [
-    ...(effect === GROWTH ? [] : [ [ 'baseline', [ k.x(0), k.y(k.scale.value(least)) ] ] ]),
-    [ 'sensitivity', [ k.x(1), k.y(k.scale.value(most)) ] ],
-    ...(turns ? [ [ 'half', at(receptor.half) ] ] : []),
-    ...(turns && probe !== null && (state.capabilities?.steepnessSpan ?? 0) > 0
-            ? [ [ 'steepness', at(probe) ] ]
-            : [])
-  ];
-  return handles
-      .map(([ key, [ hx, hy ] ]) =>
-               '<circle class="aid-spectrum-handle curve-' + key + '" data-curve-handle="' + key +
-               '" cx="' + fixed(hx) + '" cy="' + fixed(hy) + '" r="' + CURVE.handle + '"><title>' +
-               escapeText(label('inspector.curve.' + key)) + '</title></circle>')
-      .join('');
-}
-export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
-  const k = receptorCurve(state, receptor, effect), span = state.capabilities?.sensitivitySpan ?? 1;
-  const px = fx * CURVE.width, py = fy * CURVE.height;
-  const v = k.scale.low +
-            clamp((CURVE.bottom - py) / (CURVE.bottom - CURVE.top)) * (k.scale.high - k.scale.low);
-  const r = clamp(k.scale.response(v), effect === GROWTH ? 0 : -1);
-  const clampSpan = value => Math.max(-span, Math.min(span, value));
-  if (handle === 'baseline')
-    return {baseline : clamp(r - receptor.sensitivity * k.occupancy(k.atFraction(0)), -1)};
-  if (handle === 'sensitivity') {
-    const full = k.occupancy(k.atFraction(1)), base = effect === GROWTH ? 0 : receptor.baseline;
-    return full > 0 ? {sensitivity : clampSpan((r - base) / full)} : null;
-  }
-  const f = clamp((px - CURVE.left) / (CURVE.right - CURVE.left));
-  if (handle === 'half')
-    return {half : Math.max(k.halfMin, Math.min(k.halfMax, k.atFraction(f)))};
-  const base = effect === GROWTH ? 0 : receptor.baseline;
-  const share = receptor.sensitivity ? (r - base) / receptor.sensitivity : 0;
-  if (!(share > 0 && share < 1))
-    return null;
-  const probe = steepProbe(k, receptor);
-  if (probe === null)
-    return null;
-  const n = Math.log(share / (1 - share)) / Math.log(k.concentration(probe) / receptor.half);
-  if (!Number.isFinite(n))
-    return null;
-  return {
-    steepness :
-        Math.max(0, Math.min(state.capabilities?.steepnessSpan ?? 0, Math.log2(Math.max(1, n))))
-  };
-}
 export const GROWTH = 'growth';
 export const BIRTH = 'birth';
-const CURVE = Object.freeze({
-  width : 260,
-  height : 150,
-  left : 36,
-  right : 250,
-  top : 26,
-  bottom : 112,
-  points : 80,
-  handle : 6
-});
-const curveAxes = () => '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' + CURVE.top + ' V' +
-                        CURVE.bottom + ' H' + CURVE.right + '"/>';
-const CURVE_KEY =
-    Object.freeze({gap : 4, strip : 6, steps : 12, title : 12, ticks : 22, along : 36});
-function curveKey(colour, bounded) {
-  const K = CURVE_KEY, step = (CURVE.right - CURVE.left) / K.steps;
-  return bounded
-             ? ''
-             : Array
-                   .from({length : K.steps},
-                         (_, k) => '<rect class="aid-curve-amount" x="' +
-                                   fixed(CURVE.left + k * step) + '" y="' + (CURVE.bottom + K.gap) +
-                                   '" width="' + fixed(step) + '" height="' + K.strip + '" fill="' +
-                                   colour + '" fill-opacity="' + fixed((k + 1) / K.steps) + '"/>')
-                   .join('');
-}
 const CURVE_DIGITS = 3;
 const curveNumber = value => formatNumber(
     value, Math.max(CURVE_DIGITS, value ? -Math.floor(Math.log10(Math.abs(value))) : 0));
-function curveLabels({axis, scale, atFraction, x, y}, effect) {
-  const unit = effect === GROWTH  ? label('axes.growth')
-               : effect === BIRTH ? label('axes.birth')
-                                  : tList('studio.axes.effects')[effect];
-  const text = (value, x, y, anchor = 'start') => '<text class="aid-curve-label" x="' + fixed(x) +
-                                                  '" y="' + fixed(y) + '" text-anchor="' + anchor +
-                                                  '">' + escapeText(value) + '</text>';
-  const levels = [ scale.low, ...(scale.low < 0 && scale.high > 0 ? [ 0 ] : []), scale.high ];
-  return text(unit, CURVE.left, CURVE_KEY.title) +
-         levels
-             .map(v =>
-                      text(curveNumber(v), CURVE.left - CURVE_KEY.gap, y(v) + CURVE_KEY.gap, 'end'))
-             .join('') +
-         [ 0, .5, 1 ]
-             .map((f, i) => text(curveNumber(atFraction(f)), x(f), CURVE.bottom + CURVE_KEY.ticks,
-                                 [ 'start', 'middle', 'end' ][i]))
-             .join('') +
-         text(axis, x(.5), CURVE.bottom + CURVE_KEY.along, 'middle');
-}
 // A receptor's answer as the engine computes it (anatomy.groups[].responses): over its substance
 // from none to the span the hormone pictures share, the rest of the blood as the life band sets
 // it, with the point where the life band's blood puts it (anatomy.groups[].effects). The square
@@ -274,17 +114,25 @@ const RECEPTOR = Object.freeze({
   steepDrag : 60
 });
 function engineAnswer(state, centerId, effect) {
-  const doc = state.document, found = findCenter(doc, centerId);
+  const doc = state.document, body = effect === GROWTH;
+  const found = body ? null : findCenter(doc, centerId);
   const report = state.outlinePreview ?? state.anatomy;
   const group = found ? report?.groups?.[centerIndex(doc, centerId)] : null;
-  // The birth receptor's answer, clamped to 0…1, is how fast the cell forms.
+  // The birth receptor's answer, clamped to 0…1, is how fast the cell forms; the body's growth
+  // receptor allows growth from 0 to 1 (anatomy.growthResponse).
   const birth = effect === BIRTH;
-  const receptor = birth ? found?.center.growth : found?.center.receptors?.[effect];
+  const receptor = body    ? doc.growth
+                   : birth ? found?.center.growth
+                           : found?.center.receptors?.[effect];
   const span =
       receptor && receptor.substance < HORMONES.levels ? levelSpan(state, receptor.substance) : 1;
-  const scale =
-      birth || effect === HORMONE_EFFECT.death ? GROWTH_SCALE : EFFECT_SCALE[effect] ?? SHARE_SCALE;
-  const curve = (birth ? group?.birthResponse : group?.responses?.[effect]) ?? null;
+  const scale = body || birth || effect === HORMONE_EFFECT.death
+                    ? GROWTH_SCALE
+                    : EFFECT_SCALE[effect] ?? SHARE_SCALE;
+  const curve = (body    ? report?.growthResponse
+                 : birth ? group?.birthResponse
+                         : group?.responses?.[effect]) ??
+                null;
   const at = receptor && curve
                  ? clamp(bloodLevel(previewContextOf(state), receptor.substance) / span) *
                        (curve.length - 1)
@@ -293,7 +141,7 @@ function engineAnswer(state, centerId, effect) {
   return {
     receptor,
     curve,
-    now : birth ? curve?.[Math.round(at)] : group?.effects?.[effect],
+    now : body || birth ? curve?.[Math.round(at)] : group?.effects?.[effect],
     span,
     scale,
     x : level => R.left + (R.right - R.left) * clamp(level / span),
@@ -317,7 +165,8 @@ function engineGrips(state, answer, effect) {
   const along = f => [x(f * span), y(curve[Math.round(f * (curve.length - 1))])];
   const half = turns ? crossing(curve, .5) : null, steep = turns ? crossing(curve, .25) : null;
   return [
-    [ 'baseline', [ x(0), y(first) ] ], [ 'sensitivity', [ x(span), y(last) ] ],
+    ...(effect === GROWTH ? [] : [ [ 'baseline', [ x(0), y(first) ] ] ]),
+    [ 'sensitivity', [ x(span), y(last) ] ],
     ...(half === null ? [] : [ [ 'half', [ x(half * span), y((first + last) / 2) ] ] ]),
     ...(steep === null || !((state.capabilities?.steepnessSpan ?? 0) > 0)
             ? []
@@ -363,17 +212,18 @@ export function receptorGripPatch(state, centerId, effect, handle, start, to) {
   return null;
 }
 export function effectCurve(state, receptor, effect, target = null) {
-  if (effect === GROWTH)
-    return growthCurve(state, receptor, effect, target);
-  const centerId = target ? target.slice(0, target.lastIndexOf(':')) : null;
-  const answer = centerId ? engineAnswer(state, centerId, effect) : null, R = RECEPTOR;
+  const centerId = target && effect !== GROWTH ? target.slice(0, target.lastIndexOf(':')) : null;
+  const answer = target ? engineAnswer(state, centerId, effect) : null, R = RECEPTOR;
   const words = tList('studio.axes.effects');
-  const name = effect === BIRTH ? label('development.birth') : words[effect];
+  const name = effect === GROWTH  ? label('inspector.growth')
+               : effect === BIRTH ? label('development.birth')
+                                  : words[effect];
   const text = (value, x, y, anchor = 'start') => '<text class="aid-curve-label" x="' + fixed(x) +
                                                   '" y="' + fixed(y) + '" text-anchor="' + anchor +
                                                   '">' + escapeText(value) + '</text>';
-  const scale =
-      answer?.scale ?? (effect === BIRTH ? GROWTH_SCALE : EFFECT_SCALE[effect]) ?? SHARE_SCALE;
+  const scale = answer?.scale ??
+                (effect === BIRTH || effect === GROWTH ? GROWTH_SCALE : EFFECT_SCALE[effect]) ??
+                SHARE_SCALE;
   const y = answer?.y ?? (() => R.bottom);
   const levels = [ scale.low, ...(scale.low < 0 && scale.high > 0 ? [ 0 ] : []), scale.high ];
   let body =
@@ -404,39 +254,6 @@ export function effectCurve(state, receptor, effect, target = null) {
   return '<svg viewBox="0 0 ' + R.width + ' ' + R.height + '" class="aid-response-chart"' +
          (target ? ' data-receptor-curve="' + escapeText(target) + '"' : '') + '>' + body +
          '</svg>';
-}
-// Behelf: the body's growth receptor's answer the engine does not report yet, so this one still
-// reckons it here (receptorCurve).
-function growthCurve(state, receptor, effect, target = null) {
-  const curve = receptorCurve(state, receptor, effect);
-  const {bounded, axis, scale, response, atFraction, x, y} = curve;
-  const points = Array
-                     .from({length : CURVE.points + 1},
-                           (_, i) => fixed(x(i / CURVE.points)) + ',' +
-                                     fixed(y(scale.value(response(atFraction(i / CURVE.points))))))
-                     .join(' ');
-  let marks = '';
-  if (scale.low < 0 && scale.high > 0)
-    marks += '<path class="aid-chart-zero" d="M' + CURVE.left + ' ' + fixed(y(0)) + ' H' +
-             CURVE.right + '"/>';
-  if (effect === HORMONE_EFFECT.death)
-    marks += '<rect class="aid-death-zone" x="' + CURVE.left + '" y="' + CURVE.top + '" width="' +
-             (CURVE.right - CURVE.left) + '" height="' + fixed(y(DEATH_RESPONSE) - CURVE.top) +
-             '"/>';
-  const unit = effect === GROWTH  ? label('inspector.growth')
-               : effect === BIRTH ? label('development.birth')
-                                  : label('effects.' + effect);
-  const along = bounded ? axis : label('inspector.concentration');
-  return '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height + '" class="aid-response-chart"' +
-         (target ? ' data-receptor-curve="' + escapeText(target) + '"' : '') + '><title>' +
-         escapeText(joinParts([
-           unit,
-           namedText(along, t('studio.axes.range',
-                              {from : curveNumber(atFraction(0)), to : curveNumber(atFraction(1))}))
-         ])) +
-         '</title>' + marks + curveAxes() + curveKey(substanceColor(receptor.substance), bounded) +
-         curveLabels(curve, effect) + '<polyline class="aid-response-line" points="' + points +
-         '"/>' + (target ? curveHandles(state, receptor, effect, target) : '') + '</svg>';
 }
 // The wheel is wide enough for the body's three signals, a sixteenth of a turn apart in their
 // quarter, to stand apart.
