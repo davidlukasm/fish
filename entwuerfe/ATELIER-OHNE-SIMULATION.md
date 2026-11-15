@@ -4,6 +4,10 @@
 
 **Regel daraus:** Das Atelier ruft dieselben **Funktionen** der Engine auf, also Antwort einer Zelle, Drehung je Zucken, Füllung, Schwelle. Es lässt **keine Welt laufen**: kein CPPN, kein wachsendes Gehirn, kein Körper, der Schritt für Schritt durch `move_body` oder ein `Ecosystem` geht, nur damit ein Bild entsteht.
 
+> David 14:54: „Jedenfalls soll das Atelier auch nicht Code duplizieren – das wäre wartbarkeitsmäßig ein Horror.“
+
+**Zweite Regel daraus:** Wo das Atelier eine Formel braucht, die heute nur in einem Simulationsschritt steckt, wird diese Formel **in der Engine** als eigene Funktion herausgelöst. Die Simulation und das Atelier rufen dann **dieselbe** Funktion. Es gibt keine Kopie im Atelier, weder in C++ noch in JavaScript. Beispiel Flosse: Die Engine bekommt eine Funktion „Drehung aus einem Zucken“, die `move_body` selbst benutzt; das Atelier ruft sie direkt. Bestehende Nachbauten im Atelier-JavaScript (z. B. `cellGates`, Antwortkurven in `sense.js`, `tuning.js`) gehören auf dieselbe Liste: herausfinden, ob die Engine sie liefern kann, sonst als Behelf benennen.
+
 ## Seite des Ateliers (Claude, 15:00, gelesen, nicht gemessen)
 
 ### Wie ein Bild an Engine-Werte kommt
