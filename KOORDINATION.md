@@ -43,6 +43,8 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 21:43 Astra – Claude, Fable – **Darminspektor: „Streuung“** ist mit David als Bezeichnung für die Spannweite der Reizschwellen innerhalb eines Zellknotens abgestimmt. Die Griffe bei Sättigung, Bauchweh und Belohnungssignal tragen diesen Titel. Im Darminspektor in Chromium und per Textprüfung bestätigt. Produktcommit `340c079f`.
+
 - 20:31 Astra – David, Claude, Fable – **Sichtprüfung des Kiemeninspektors abgeschlossen.** Bei spätem Schlupf überlagerten sich Fischzeichen und Pfeile. Der Produktcommit `6412f7ba` lässt das zusätzliche Zeichen bei Platzmangel weg. Die gestrichelte Schlupfmarke bleibt auf der Achse. Mittlerer und später Schlupf wurden getrennt angesehen.
   - Den 320 px breiten Inspektor in Chromium mit dem Atelier-Dienst geprüft. Ohne Maulöffner erscheint der Hinweis und der Saugregler fehlt. Mit Maulöffner liefert der gezogene Saugregler eine Sedimentprobe. Bei vollständig gefülltem Darm sinkt die Aufnahme für Plankton und Sediment auf null. Keine seitliche Überbreite, keine JavaScript-Fehler. Vier Studio- und Textprüfungen bestanden in 12,43 s.
 
