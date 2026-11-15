@@ -55,7 +55,6 @@ const GLAND = Object.freeze({
   knob : [ 10, 26 ],
   least : .15,
   snap : .12,
-  round : 9000
 });
 const TURN = 2 * Math.PI;
 // Where a step stands for a command of `work` steps: the command's steps as they are, up to
@@ -90,7 +89,6 @@ liveKind('gland', (studio, organId) => {
   const blood = addPicture(root);
   // What is tried: the brain's command, from binding (-1) to pouring (1). Not part of the fish.
   const own = {chosen : 0, command : 1, work : GLAND.tried};
-  let now = null, phase = 0;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -281,23 +279,22 @@ liveKind('gland', (studio, organId) => {
       class : 'aid-live-hatch'
     },
        live);
+    // The knob moves from where it was taken, wherever on it the pointer came down: pulled
+    // straight up or down the length stays, pulled along the picture the strength stays.
+    let taken = null;
     drag(svg, el('circle', {cx : mid, cy : ky, r : 5.5, class : 'aid-live-posture'}, live), p => {
-      const up = p.y < (top + base) / 2, off = up ? top - p.y : p.y - base;
+      taken ??= {x : p.x - mid, y : p.y - ky};
+      const x = p.x - taken.x, y = p.y - taken.y, up = y < (top + base) / 2,
+            off = up ? top - y : y - base;
       own.command = (up ? 1 : -1) *
                     clamp((off - GLAND.knob[0]) / (GLAND.knob[1] - GLAND.knob[0]), GLAND.least, 1);
-      own.work = workAt(p.x);
+      own.work = workAt(x);
       show();
     }, 'glandcommand', 'knob');
     txt(live, L, base + 14, 0, {'text-anchor' : 'middle', class : 'aid-live-small'});
     txt(live, mid, base + 14, own.work, {'text-anchor' : 'middle', class : 'aid-live-small'});
     txt(live, R, base + 14, word('steps', {n : own.work + GLAND.rest}),
         {'text-anchor' : 'end', class : 'aid-live-small'});
-    now = el('path', {class : 'aid-live-now'}, live);
-    move();
-  }
-  function move() {
-    now?.setAttribute('d', `M${(GLAND.L + (GLAND.R - GLAND.L) * phase).toFixed(1)} ${
-                               GLAND.top - 2} V${GLAND.top + GLAND.rows + 2}`);
   }
   function remove(i) {
     const type = organTypes(organ())[i];
@@ -330,12 +327,5 @@ liveKind('gland', (studio, organId) => {
     own.chosen = Math.min(own.chosen, cells.length - 1);
     drawBlood(cells, cells[own.chosen]);
   }
-  return {
-    root,
-    show,
-    tick(dt) {
-      phase = (phase + dt / GLAND.round) % 1;
-      move();
-    }
-  };
+  return {root, show, tick() {}};
 });
