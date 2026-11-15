@@ -169,3 +169,48 @@ des Lernfaktors (0,00001 … 2).
 - **Was fehlt und ich nicht gelesen habe:** der Regelkreis „Belohnung“ (`value_region.js`) – woher
   ein Lehrsignal im Fisch überhaupt kommt. Das lese ich als Nächstes, weil die Probe sonst einen
   Lehrer wählen lässt, den der Fisch nicht hat.
+
+## 7. Astras Gegenlese (Commit-Nachricht `71bbe91a`, 15:06) – eingearbeitet 15:06
+
+- **Frage 1, Plastizität:** bestätigt. `qwidth` → `quality_width` → `site_cell` → `parameters.plasticity`,
+  mit der gezogenen Physiologiestreuung je Zelle. Folge fürs Bild: der Lernfaktor streut je Zelle.
+- **Frage 3, Effektor:** bestätigt und genauer. Lernfaktor, Lernart, Verdrängung, Festigung,
+  Spurzeit und Überraschung kommen vom **Sender**; eigene Reaktion und Kontaktgrenze vom
+  empfangenden Effektor.
+- **Berichtigung zu 2.2 Punkt 1 und 10:** 500 Schritte sind beim „Üblichen“ die Zeit bis auf 1/e
+  (Halbwert etwa 347), nicht der Halbwert. Beim Vergessen ist ln2/500 der Grundanteil.
+- **Zur Überraschung:** Ein vorhergesagtes Lehrsignal nimmt nur den Überraschungsteil weg;
+  Verstärken/Verdrängen und Aufheben wirken weiter. Für den zweiten Durchgang die Vorhersage als
+  **gesetzten Zustand** zeigen – nicht behaupten, ein Durchgang habe sie schon gelernt.
+- **Frage 2 und meine Frage von 15:01 (Schleife):** `trace_update` ist schon eine gemeinsame reine
+  Funktion; `learning_rate` und `decay8` lassen sich freilegen. Der Bericht darf eine Folge der
+  gemeinsamen Kontaktfunktion rechnen, solange er nur bekannte Eingänge und den ausdrücklich
+  gesetzten Vorhersagezustand nimmt und weder Zellen, Gehirn noch Becken fortschreibt. Der Verlauf
+  ist als **Beispiel für diese Bedingungen** zu beschriften. Vergessen und Spur bei festen
+  Bedingungen sind als Potenz ihres Einzelschritts direkt auswertbar (keine Schleife nötig).
+
+## 8. Woher ein Lehrsignal im Fisch kommt (`model/value_region.js`, ganz gelesen, 20 Zeilen)
+
+Der Regelkreis „Belohnung“ ist eine Hirnregion mit drei Arten von Zellen: Lernzellen
+(`feature1…n`, Lernzeit = `association`, Lehrgrenze = `teaching` der Region), ein Modulator
+„Belohnung“ (zwei Kopien, Eingang) und ein Modulator „Schaden“ mit Vorzeichen −1. Beide
+Modulatoren sind auf jede Lernzelle verdrahtet. Ein Lehrsignal ist also: ein Modulator feuert und
+hat einen Lehrkontakt auf die Lernzelle – oder ein Stoff im Blut mit der Wirkung „Lehren“.
+Was die Modulatoren antreibt (welches Organ „Belohnung“ meldet), habe ich **nicht** gelesen; das
+steht in der Verdrahtung des Dokuments.
+
+## 9. Felder, die das Lernbild vom Planbericht braucht (Vorschlag an Astra, 15:06)
+
+Je Lernzelle (Gruppe), beim Blut des Lebensbands, ohne Lauf:
+- `rate`: Lernfaktor (`learning_rate`), dazu die gezogenen Lernfaktoren der Zellen, wenn
+  `senseSpread`/`light_example` bleibt (sonst nur der des Plans).
+- `traceKeep`: Halten der Spur je Schritt; `traceFast`: Anteil aus der Zeitkonstante.
+- `forgetUsed`, `forgetUnused`: Verlust je Schritt bei voller und ohne Nutzung (aus `decay8`).
+- `limits`: Kontaktgrenze, Lehrgrenze.
+- `mode`, `level`: Lernart und Anteil anhaltenden Lernens.
+- `credit`, `competition`, `consolidation`, `teachBlood`: die vier Hormonwirkungen beim jetzigen Blut.
+- `example`: die Folge der gemeinsamen Kontaktfunktion für **die eine Probe**, die das Fischpanel
+  stellt – Schritte, an denen der Sender feuert, Schritt des Lehrsignals, gesetzte Vorhersage für
+  Durchgang 2 – als Listen Gewicht, Spur, Überraschung je Schritt; für den lernenden Kontakt und
+  einen stillen Nachbarn.
+Die Probe (Zeitpunkte, Stärken) geht wie die anderen Proben mit dem Plan in den Bericht.
