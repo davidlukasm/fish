@@ -6,8 +6,10 @@
 // Their stimulus is, summed over the sectors by weight, the water's speed against the fish there
 // as far as it comes against the cells' own place. It has no upper bound, and the cells get used
 // to it. In the egg they feel the fluid the embryo's own twitches move.
-// The current is the fish panel's probe (probes.js); it reaches every sector as far as that faces
-// it (werkzeug/atelier.cc, the flow scene). The weights are the plan's report (anatomy.lateral).
+// The current is the fish panel's probe (probes.js), its direction and its speed; it reaches
+// every sector as far as that faces it (werkzeug/atelier.cc, the flow scene). The course shows
+// the cells getting used to exactly that current while it lasts. The weights are the plan's
+// report (anatomy.lateral).
 // Not in the pictures: sediment; the fish's own speed and turning apart from the water's.
 import {t} from '../../../strings.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
@@ -46,9 +48,9 @@ liveKind('lateral', (studio, organId) => {
   const rose = svgOf();
   heading(word('cells'));
   const flow = svgOf();
-  // What is tried on the cells over time: not part of the fish.
-  const own = {chosen : 0, input : {rise : 80, height : .8, stop : 560}};
+  const own = {chosen : 0};
   let step = 0, share = 0;
+  const current = () => studio.state.senseProbe?.kind === 'flow' ? studio.state.senseProbe : null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -60,6 +62,7 @@ liveKind('lateral', (studio, organId) => {
     after : 120,
     most : 1,
     scale : INTENSITY,
+    held : () => current()?.strength ?? 0,
     words : {course : word('course'), used : word('used'), steps : word('steps')},
     keys : () => keysOf([ {id : '', centers : organ().centers} ], INTENSITY),
     share : () => share,
@@ -80,7 +83,7 @@ liveKind('lateral', (studio, organId) => {
     const place = degrees(Math.atan2(
         weights.reduce((sum, v, k) => sum + v * Math.sin(radians(sectorAngle(k, count))), 0),
         weights.reduce((sum, v, k) => sum + v * Math.cos(radians(sectorAngle(k, count))), 0)));
-    const probe = studio.state.senseProbe?.kind === 'flow' ? studio.state.senseProbe : null,
+    const probe = current(),
           against = probe ? Math.max(0, Math.cos(radians(probe.bearing - place))) : 0;
     el('circle', {cx : ROSE.cx, cy : ROSE.cy, r : ROSE.body, class : 'aid-live-rim'}, live);
     let met = 0;
