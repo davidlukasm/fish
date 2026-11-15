@@ -17,7 +17,7 @@ gelesen habe, steht es dabei.
 - `colony-core/field/development.cc` 71 (Plastizität einer Zelle = `quality_width`).
 - `werkzeug/atelier_compiler.hh` 47, 62–64, 258–263, 305–306, 346–347, 580–583 (wie der Plan
   Lernzeit, Lehrgrenze und Zellklasse in die Zelle schreibt) – **nur diese Zeilen**, nicht die Datei.
-- Atelier: `ui/studio/model/learning.js` ganz; `ui/studio/view/learning.js` nur Zeilen 1–60.
+- Atelier: `ui/studio/model/learning.js` ganz; `ui/studio/view/learning.js` Zeilen 1–200 (von 358).
   Das heutige Werkzeug im Atelier geöffnet: `bilder/2026-11-15_lernen_fable_heutiges-werkzeug.png`,
   `…-leer.png`.
 
@@ -111,8 +111,18 @@ des Lernfaktors (0,00001 … 2).
    `learning_rate`, aber im Atelier noch einmal geschrieben.
 3. Das Bild „Reiz · Lehrsignal · Reaktion“ steht im Inspektor. Reiz und Lehrsignal kommen von
    außen an die Zelle; nach unserer Regel gehört, was von außen kommt, ins Fischpanel.
-4. Die Überraschung (Punkt 4 oben) ist der Kern des Lernens am Lehrsignal. Ich habe im Werkzeug
-   nichts gesehen, das sie zeigt: dass ein angekündigtes Lehrsignal nichts mehr lehrt.
+4. **Berichtigt 15:01, nach Lesen von `view/learning.js` 60–200:** Ich schrieb, ich hätte nichts
+   gesehen, das die Überraschung zeigt. Das Bild `learningPicture` zeichnet zwei Runden und führt
+   eine „Vorhersage“ mit (`expect`), die in der zweiten Runde die Überraschung kleiner macht. Die
+   Überraschung ist also da – aber aus **eigenen Zahlen des Ateliers** (`RULE`: change 7, compete 3,
+   cancel 2,4, expect 1,6, glow 0,55, unused 0,8), die in der Engine nicht vorkommen. Das Bild ist
+   ein Schema mit erfundenen Größen, kein Engine-Wert. Im geöffneten Werkzeug war die zweite Runde
+   für mich nicht als „angekündigt, lehrt weniger“ zu lesen.
+4a. `learningValues` (Zeilen 120–145) rechnet Lernfaktor und Vergessen ein **drittes** Mal nach und
+   zeigt sie nur im Tooltip (Bedeutung nur im Tooltip, gegen LEITLINIE 4).
+4b. `traceGraphic` zeichnet die Kurve „wie viel eine spätere Folge noch verändert“ als
+   Lernfaktor × e^(−Schritte/Lernzeit) – wieder im Atelier gerechnet. Ihre zwei Griffe sind rund,
+   stellen aber Einstellungen (Lernfaktor, Lernzeit): nach unserer Regel eckig.
 5. Ein Satz im Inspektor; fünf Zeilen, deren Wirkung erst nach dem Aufklappen sichtbar ist.
 
 ## 5. Offene Fragen an Astra
@@ -124,3 +134,38 @@ des Lernfaktors (0,00001 … 2).
   bauen? Das entscheidet, was das Werkzeug zeigen darf.
 - Lernt der Effektor wirklich mit den Werten der **sendenden** Zelle (`learner = s`, Zeilen 690,
   906–917)? So lese ich es.
+
+## 6. Zum Lernteil in `HORMON-LERN-PLAN.md` (Fable, 15:01; ich baue, also entscheide ich hier – mit Gründen)
+
+- **Kopien weg: ja.** Drei Stellen rechnen heute nach (`learningFactors`, `retainedLearning`,
+  `learningValues`), dazu `traceGraphic` und die erfundenen Größen in `RULE`. Alles fällt, sobald die
+  Engine liefert. Was ich von Astra brauche, als Funktionen ohne Gehirn, im Planbericht je
+  Lernzelle: (a) Lernfaktor beim jetzigen Blut, (b) Halten der Spur je Schritt, (c) **ein
+  Lernschritt eines einzelnen Kontakts** für gegebene Werte (Eingang, Reaktion, Lehrsignal,
+  Vorhersage, Spur, Gewicht, Festigung) → neues Gewicht, neue Spur, neue Vorhersage, neue Festigung.
+  Mit (c) kann das Bild ein paar Dutzend Schritte einer Probe zeigen, ohne dass ein Fisch läuft: es
+  ist die herausgelöste Formel aus `evaluate`, die die Simulation selbst ruft.
+  **Grenze, die ich sehe:** (c) über viele Schritte zu rufen ist eine kleine Schleife über eine
+  Formel, kein Körper und kein Gehirn – aber es ist „Schritte“. Ob das unter Davids Satz fällt,
+  soll Astra mit Claude sagen, bevor ich darauf baue. Mein Grund dafür: Lernen **ist** ein Verlauf;
+  ohne Verlauf bleibt nur das Schema mit erfundenen Zahlen, das wir gerade loswerden wollen.
+- **Probe ins Fischpanel: ja, und zwar ins Werkzeug „Reizen“ nicht.** Grund: „Reizen“ gibt dem
+  Fisch einen Reiz von außen (Wunde, Strömung, Duft). Die Lernprobe wählt zwei Dinge **im** Fisch:
+  welcher Sender vor der Lernzelle feuert und wann das Lehrsignal kommt. Sie gehört an die
+  Verdrahtung im Fischpanel: der Kontakt, der lernt, ist dort eine Linie; an ihr sitzt die Probe
+  (runder Knopf am Sender „feuert“, runder Knopf am Lehrer „kommt nach n Schritten“).
+- **Überraschung: zwei Durchgänge, ja** – aber als **ein** Gewichtsverlauf mit zwei Stufen (erste
+  Stufe hoch, zweite kleiner), nicht als zwei Bilder nebeneinander. Die Vorhersage steht als
+  gestrichelte Linie am Lehrsignal: so hoch die Linie, so wenig lehrt es noch.
+- **Griffe am Gewichtsverlauf:** Lernfaktor = Höhe der ersten Stufe (eckig); Lernzeit = wie weit
+  der Lehrer nach dem Reiz noch wirkt (eckig, am Abstand Reiz–Lehrsignal, wo die Spur ausläuft);
+  Festigung und Vergessen = der Abfall nach der Probe. Verdrängung zeigt sich nur mit einem zweiten,
+  stillen Eingang: dessen Gewicht sinkt. Eigenanteil wirkt auf die Spur.
+  Für Lernfaktor, Verdrängung, Eigenanteil, Festigung gilt eure Schnittstelle: der Rezeptor wird im
+  Hormonwerkzeug gestellt, hier steht nur, was er ändert. Der **Grundwert** (Plastizität `qwidth`,
+  Lernzeit, Lernart, Lehrgrenze) wird hier gestellt.
+- **Was ich weglassen würde:** das Netz aller Nervenknoten im Inspektor. Die Knoten sind im
+  Fischpanel zu sehen und dort zu wählen; im Inspektor ist es ein zweites Bild derselben Sache.
+- **Was fehlt und ich nicht gelesen habe:** der Regelkreis „Belohnung“ (`value_region.js`) – woher
+  ein Lehrsignal im Fisch überhaupt kommt. Das lese ich als Nächstes, weil die Probe sonst einen
+  Lehrer wählen lässt, den der Fisch nicht hat.
