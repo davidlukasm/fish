@@ -14,8 +14,10 @@
 // each fin that has a muscle, this muscle's first. A beat lasts as long and is as strong as its
 // knob is pulled. Above the line the muscle beats backward, below it forward: pulled across, the
 // muscle's stroke turns round.
-// ASSUMED for the picture: the small fish is the same outline for every plan; its fins stand at
-// fixed places on it and swing with the tension the engine reports.
+// The small fish is the fish panel's fish in little: its outline and its side fins as the plan
+// has them (frame.js, fishPath and sideFins; body.js, outlineSizes).
+// ASSUMED for the picture: a fin swings from its rest by a fixed angle at full tension, backward
+// on a muscle's back stroke and forward on its front stroke.
 // Not in the picture: the tail beating along; the ground.
 import {FIN, FIN_STROKE} from '../../../schema.js';
 import {degrees} from '../../../units.js';
@@ -28,11 +30,12 @@ import {
   isFinMuscle,
   setFinStroke
 } from '../../model/document.js';
-import {sideIndex, sideOf} from '../../model/layout.js';
+import {BODY_MIDDLE, BODY_RADIUS, sideIndex, sideOf} from '../../model/layout.js';
 import {isPelvicMuscle} from '../../model/organs.js';
+import {outlineSizes} from '../body.js';
+import {fishPath, sideFins} from '../frame.js';
 import {label} from '../kit.js';
 import {addPicture, chip, clamp, drag, el, liveKind, path, picture} from './kit.js';
-import {fishLeft} from './skin.js';
 
 // The water: `box` wide and high, a body radius at most `radius` pixels, `edge` free round the
 // way. The beats: steps from L to R, `steps` in all, a beat at most `longest`; the first row's
@@ -42,7 +45,6 @@ const SWIM = Object.freeze({
   box : [ 300, 150 ],
   radius : 22,
   edge : 26,
-  fish : 31,
   L : 30,
   R : 288,
   steps : 128,
@@ -55,20 +57,8 @@ const SWIM = Object.freeze({
   turn : 6,
   round : 6000
 });
-// The fins on the small fish, in its own measure: where each is rooted, how long its blade is,
-// how far it lies back at rest and how far it swings out under full tension (degrees).
-const BLADE = Object.freeze({
-  root : {
-    [FIN.left] : [ -11, 9 ],
-    [FIN.right] : [ -12, 8 ],
-    [FIN.pelvic_left] : [ 2, 10 ],
-    [FIN.pelvic_right] : [ 1, 9 ]
-  },
-  long : 13,
-  wide : 4,
-  rest : 20,
-  swing : 70
-});
+// How far a fin swings from its rest under full tension (degrees).
+const SWING = 40;
 const CHANNELS = Object.freeze([ FIN.left, FIN.right, FIN.pelvic_left, FIN.pelvic_right ]);
 const SIDES = Object.freeze([ 'left', 'right' ]);
 const pairOf = channel => channel === FIN.pelvic_left || channel === FIN.pelvic_right ? 1 : 0;
@@ -170,23 +160,34 @@ liveKind('fin', (studio, organId) => {
           el('circle', {cx : x, cy : y, r : 2.8 - .5 * k, class : 'aid-live-petal k' + k}, live);
       });
     }
-    // The fish with its fins: the far side's behind the body and paler, the near side's on it.
-    const fish = el('g', {}, live), s = unit / S.fish, far = el('g', {opacity : .6}, fish);
-    fishLeft(fish, 0, 0, s);
-    const blades = rows.map(({channel}, k) => {
-      const [rx, ry] = BLADE.root[channel], long = BLADE.long * s, wide = BLADE.wide * s,
-                 near = sideName(channel) === SIDES[0];
+    // The fish with its fins, as the fish panel draws it; a fin that has a row carries its colour.
+    const fish = el('g', {}, live), small = unit / BODY_RADIUS,
+          drawn = el('g', {
+            transform :
+                `scale(${small.toFixed(4)}) translate(${- BODY_MIDDLE.x} ${- BODY_MIDDLE.y})`
+          },
+                     fish),
+          sizes = outlineSizes(studio.state), line = (1.2 / small).toFixed(1);
+    const blades = sideFins(sizes).map(fin => {
+      const channel = fin.pelvic     ? (fin.side < 0 ? FIN.pelvic_left : FIN.pelvic_right)
+                      : fin.side < 0 ? FIN.left
+                                     : FIN.right,
+            k = rows.findIndex(row => row.channel === channel);
       return {
         channel,
-        x : rx * s,
-        y : ry * s,
+        root : fin.root,
+        // Towards the tail on a back stroke, towards the snout on a front stroke.
+        turn : k < 0 ? 0 : -fin.side * (finStroke(rows[k].muscle) === FIN_STROKE.front ? -1 : 1),
         blade : el('path', {
-          d : `M0 0 Q${long * .5} ${- wide} ${long} 0 Q${long * .5} ${wide} 0 0 Z`,
-          class : 'aid-live-petal k' + k
+          d : fin.d,
+          class : k < 0 ? 'aid-live-head' : 'aid-live-petal k' + k,
+          style : 'stroke-width:' + line
         },
-                   near ? fish : far)
+                   drawn)
       };
     });
+    el('path', {d : fishPath(sizes), class : 'aid-live-head', style : 'stroke-width:' + line},
+       drawn);
     // The beats: a row for each fin.
     const X = step => S.L + (S.R - S.L) * step / S.steps,
           stepAt = x => clamp(Math.round((x - S.L) / (S.R - S.L) * S.steps / S.every) * S.every, 0,
@@ -239,12 +240,11 @@ liveKind('fin', (studio, organId) => {
         fish.setAttribute(
             'transform',
             `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(-degrees(heading)).toFixed(1)})`);
-        for (const {channel, x : bx, y : by, blade} of blades) {
+        for (const {channel, root, turn, blade} of blades) {
           const pull =
               (a[4]?.[channel] ?? 0) + ((b[4]?.[channel] ?? 0) - (a[4]?.[channel] ?? 0)) * f;
-          blade.setAttribute('transform',
-                             `translate(${bx.toFixed(1)} ${by.toFixed(1)}) rotate(${
-                                 (BLADE.rest + BLADE.swing * clamp(pull)).toFixed(1)})`);
+          blade.setAttribute('transform', `rotate(${(turn * SWING * clamp(pull)).toFixed(1)} ${
+                                              root.x.toFixed(1)} ${root.y.toFixed(1)})`);
         }
       }
       now.setAttribute('d', `M${X(step).toFixed(1)} ${S.row - S.high - 4} V${last + S.high + 4}`);
