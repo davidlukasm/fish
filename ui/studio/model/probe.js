@@ -29,7 +29,7 @@ const START = Object.freeze({
   flow : {bearing : 60, distance : 0, strength : .02},
   balance : {bearing : 90, distance : 0, strength : 0},
   attack : {bearing : 60, distance : 0, strength : 0, gape : 1.2},
-  ground : {bearing : 0, distance : 0, strength : .35, buried : false},
+  ground : {bearing : 0, distance : 0, strength : .35, buried : true},
   gut : {bearing : 0, distance : 0, strength : .5, nutrient : .2}
 });
 export function skinProbeBearing(document, anatomy, cellId) {
