@@ -78,6 +78,11 @@ export const stimulusOf = (input, after) => {
                     (_, st) => st <= input.stop ? input.height * clamp(st / Math.max(1, input.rise))
                                                 : top * Math.exp(-(st - input.stop) / after));
 };
+// What the fish panel's probe gives a sense over the steps, in the stimulus's own units: a
+// stimulus that stays as it is, or a wound made at a step that closes by `heals` each step.
+export const steady = level => Array(STEPS + 1).fill(level);
+export const closingWound = (depth, at, heals) => Array.from(
+    {length : STEPS + 1}, (_, st) => st < at ? 0 : Math.max(0, depth - (st - at) * heals));
 // What a key's cells send under an input, step by step, and what they have got used to by then.
 export function runOf(k, stim, tires, scale = BOUNDED) {
   const gates = scale.gates(k), reply = scale.answer, pace = tires ? 1 / k.used : 0, sent = [],
@@ -165,33 +170,27 @@ export const setUsed = (doc, k, steps) =>
     updateCenter(doc, k.id, {tau : adaptationOf(clamp(steps, USED[0], USED[1]))});
 export const keyGrip = (i, on) => 'aid-live-keygrip k' + i + (on ? ' on' : '');
 
-// One sense's course: the nerve cells, and under them one diagram over the steps: the input with
-// its two round knobs; left of it what holds the thresholds, filling with the input, with a grip
-// for each key; each key's dashed line and band across the input; for the chosen key what its
-// cells still feel as they tire and, filled, what they send.
-// `own`: which key is chosen and the input tried (rise, height, stop), kept by the inspector;
-// `keys()`: the keys now; `share(k)`: what a key's cells meet of the input, if not all of it;
-// `held()`: a constant stimulus from the fish panel, in native units. `colour()`: the input's
-// colour, if it changes; `fewer(k)`, `more(gate)`: the keys' pair of
-// buttons; `most`: how many keys there may be; `scale`: the stimulus's scale; `heals`: the input is
-// a wound that closes by this much each step (one knob: when and how deep; none where the wound
-// is `given` from outside); `mark`: a height
-// named on the input's scale. Returns draw(), and
-// what the clock moves: moment(step), pulse(dt, step).
+// One sense's course: the nerve cells, and under them one diagram over the steps: the input;
+// left of it what holds the thresholds, filling with the input, with a grip for each key; each
+// key's dashed line and band across the input; for the chosen key what its cells still feel as
+// they tire and, filled, what they send.
+// `own`: which key is chosen, kept by the inspector; `keys()`: the keys now; `input()`: the
+// stimulus step by step in native units, as the fish panel's probe gives it (steady, or
+// closingWound); `share(k)`: what a key's cells meet of the input, if not all of it; `colour()`:
+// the input's colour, if it changes; `fewer(k)`, `more(gate)`: the keys' pair of buttons; `most`:
+// how many keys there may be; `scale`: the stimulus's scale; `mark`: a height named on the
+// input's scale. Returns draw(), and what the clock moves: moment(step), pulse(dt, step).
 export function senseCourse(svg, {
   name,
   own,
   tires,
-  after,
   most = 3,
-  heals = 0,
-  given = false,
   mark = null,
   scale = BOUNDED,
   words,
   keys : keysNow,
+  input,
   share = null,
-  held = null,
   colour = null,
   fewer,
   more,
@@ -274,7 +273,7 @@ export function senseCourse(svg, {
     };
   }
   function draw() {
-    const inp = own.input, keys = keysNow(), {L, R, LX, I0, I1} = SENSE_BOX;
+    const keys = keysNow(), {L, R, LX, I0, I1} = SENSE_BOX;
     const {live} = picture(svg, I1 + 22);
     Object.assign(play,
                   {stim : null, sent : [], line : null, level : null, glow : [], nerves : null});
@@ -284,21 +283,13 @@ export function senseCourse(svg, {
     live.setAttribute('class', 'aid-live-sense-' + name);
     if (colour)
       live.style.color = colour();
-    // A wound's course: nothing, then all at once, then closing by `heals` each step.
-    const concentration = held?.();
-    const offered =
-        held ? Array(STEPS + 1).fill(scale.pos(concentration))
-        : heals
-            ? Array.from({length : STEPS + 1},
-                         (_, st) =>
-                             st < inp.rise ? 0 : Math.max(0, inp.height - (st - inp.rise) * heals))
-            : stimulusOf(inp, after);
+    const given = input(), offered = given.map(scale.pos);
     // What each key's cells meet of the input: all of it, or the share their sense gives them.
     play.offered = offered;
     const met = keys.map(k => {
       const fraction = share ? share(k) : 1;
-      return offered.map(v => {
-        const stimulus = (held ? concentration : scale.val(v)) * fraction;
+      return given.map(v => {
+        const stimulus = v * fraction;
         return scale === BOUNDED ? clamp(stimulus) : stimulus;
       });
     }),
@@ -448,21 +439,6 @@ export function senseCourse(svg, {
         draft(setSpread(doc(), k, clamp(2 * (vOf(p.y) - k.gate), 0, .8), scale));
       }, name + 'spread' + i, 'grip', settle);
     });
-    const knob = (at, part, move) =>
-        drag(svg,
-             el('circle', {cx : X(at), cy : IY(inp.height), r : 5.5, class : 'aid-live-sense-knob'},
-                live),
-             p => {
-               move(stOf(p.x));
-               inp.height = vOf(p.y);
-               redraw();
-             },
-             name + part, 'knob');
-    if (!held && !given) {
-      knob(inp.rise, 'rise', st => { inp.rise = clamp(st, 1, heals ? STEPS - 10 : inp.stop - 1); });
-      if (!heals)
-        knob(inp.stop, 'stop', st => { inp.stop = clamp(st, inp.rise + 1, STEPS - 10); });
-    }
     if (most > 1) {
       chip(live, LX - 9, I1 + 10, '−', () => fewer(keys[own.chosen]), keys.length > 1, 6);
       chip(live, LX + 9, I1 + 10, '+', () => more(newGate()), keys.length < most, 6);

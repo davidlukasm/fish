@@ -16,7 +16,7 @@ import {degrees, radians} from '../../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture} from './kit.js';
-import {INTENSITY, keysOf, senseCourse, STEPS} from './sense.js';
+import {INTENSITY, keysOf, senseCourse, steady, STEPS} from './sense.js';
 import {fishAbove, sectorAngle, turnTo} from './skin.js';
 
 const word = (key, values) => t('studio.live.lateral.' + key, values);
@@ -50,10 +50,9 @@ liveKind('lateral', (studio, organId) => {
     name : 'flow',
     own,
     tires : true,
-    after : 120,
     most : 1,
     scale : INTENSITY,
-    held : () => current()?.strength ?? 0,
+    input : () => steady(current()?.strength ?? 0),
     words : {course : word('course'), used : word('used'), steps : word('steps')},
     keys : () => keysOf([ {id : '', centers : organ().centers} ], INTENSITY),
     share : () => share,

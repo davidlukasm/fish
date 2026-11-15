@@ -22,7 +22,7 @@ import {
 import {label} from '../kit.js';
 import {el, hatchOf, liveKind} from './kit.js';
 import {sampleColour, scentMap} from './scentmap.js';
-import {INTENSITY, keysOf, senseCourse, STEPS, typeLife} from './sense.js';
+import {INTENSITY, keysOf, senseCourse, steady, STEPS, typeLife} from './sense.js';
 
 const word = (key, values) => t('studio.live.nose.' + key, values);
 const ROUND_MS = 12000, MOST = 4, NEW_WIDTH = .25;
@@ -73,12 +73,11 @@ liveKind('nose', (studio, organId) => {
     name : 'smell',
     own,
     tires : true,
-    after : 120,
     most : MOST,
     words : {course : word('course'), used : word('used'), steps : word('steps')},
     scale : INTENSITY,
     keys : () => keysOf(types(), INTENSITY),
-    held : () => total,
+    input : () => steady(total),
     share : ({cell}) => {
       const affinity = scentAffinities(cell.q1, cell.q2, cell.qwidth);
       return total > 0 ? concentrations.reduce((sum, v, k) => sum + v * affinity[k], 0) / total : 0;

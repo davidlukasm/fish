@@ -15,7 +15,7 @@ import {degrees, radians} from '../../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, updateCenter} from '../../model/document.js';
 import {addPicture, drag, el, liveKind, picture} from './kit.js';
-import {BOUNDED, keysOf, senseCourse, STEPS} from './sense.js';
+import {BOUNDED, closingWound, keysOf, senseCourse, STEPS} from './sense.js';
 import {fishAbove, placeOf, sectorAngle, turnTo, wedge} from './skin.js';
 
 const word = (key, values) => t('studio.live.pain.' + key, values);
@@ -41,7 +41,12 @@ liveKind('pain', (studio, organId) => {
   const fish = addPicture(root);
   heading(word('cells'));
   const ache = addPicture(root);
-  const own = {chosen : 0, input : {rise : BITE_STEP, height : 0, stop : 0}};
+  const own = {chosen : 0};
+  // The fish panel's wound, if it is this organ's.
+  const wound = () => {
+    const probe = studio.state.senseProbe;
+    return probe?.kind === 'wound' && probe.organ === organId ? probe : null;
+  };
   let step = 0, share = 0, clock = null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
@@ -52,8 +57,7 @@ liveKind('pain', (studio, organId) => {
     own,
     tires : true,
     most : 1,
-    heals : SKIN_RESPONSE.heal_rate,
-    given : true,
+    input : () => closingWound(wound()?.strength ?? 0, BITE_STEP, SKIN_RESPONSE.heal_rate),
     mark : {at : SKIN_RESPONSE.bite_wound, word : word('bite')},
     scale : BOUNDED,
     words : {course : word('course'), used : word('used'), steps : word('steps')},
@@ -121,10 +125,7 @@ liveKind('pain', (studio, organId) => {
     const cell = organ()?.centers[0];
     if (!cell)
       return;
-    const active = studio.state.senseProbe,
-          probe = active?.kind === 'wound' && active.organ === organId ? active : null;
-    own.input.height = probe?.strength ?? 0;
-    drawFish(cell, probe);
+    drawFish(cell, wound());
     course.draw();
     tick(0);
   }
