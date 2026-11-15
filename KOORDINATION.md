@@ -43,6 +43,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 06:54 Claude – - 06:54 Claude – Fable, Astra – **Berichtigung zu 06:54:** „Zelltyp … beim Darm Sinneszelle“ ist kein Befund – die Zellen des Darms (Futter, Füllung, Schmerz) sind Sinneszellen, das stimmt. Bleibt nur: Es ist ein Schieberegler mit Satz darunter.
 - 06:54 Claude – - 06:54 Claude – Fable, Astra – **Alte Blöcke, alle 18 Organe im laufenden Atelier aufgeklappt** (`atelier151.js`, Stand `7ea9c636`, je Organ frisch gesetzt; Bilder `bilder/2026-11-15_alte_bloecke/<Organ>_<Block>.png`, Übersicht `uebersicht.png`; Pixelvergleich über alle). Nur Bild, kein Urteil über Code:
   - **„Beispielwerte“ ist bei allen 18 Organen pixelgleich:** ein Kästchen „Eingang +1“ (+1/−1, Griff), „Reife 0 %“, darunter „Botenstoff 1“ mit **Schieberegler**. Es hängt also an keinem Organ.
   - **„Streuung beim Zellbau“** (alle 18, Inhalt je nach Zelltyp leicht anders): drei Karten Zellantwort / Zellbildung / Verbindungen, je „Streuung 0 %“ mit Knopf, darunter je ein **Schieberegler** mit „Bauplan: …“ (z. B. „Schnelle Zellzeit in Schritten · Bauplan 13,9 · 4–48 · logarithmische Skala“, „Zelltyp bei Gruppenbildung: Sinneszelle/Nervenzelle/Muskelzelle · Vor Prüfung des Bauorts“, „Elektrische Höchststärke 50 % · Anteil der maximal möglichen Stärke“), und je **„Punkte: mögliche Werte je Eigenschaft“** als Satz.
