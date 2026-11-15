@@ -167,7 +167,7 @@ liveKind('fin', (studio, organId) => {
     for (const row of course) {
       const [x, y] = at(row);
       rows.forEach(({channel}, k) => {
-        const pull = clamp(row[4]?.[channel] ?? 0);
+        const pull = clamp(Math.abs(row[4]?.[channel] ?? 0));
         if (pull > S.slack)
           el('circle', {cx : x, cy : y, r : S.pearl * pull, class : 'aid-live-petal k' + k}, live);
       });
@@ -188,8 +188,8 @@ liveKind('fin', (studio, organId) => {
       return {
         channel,
         root : fin.root,
-        // Towards the tail on a back stroke, towards the snout on a front stroke.
-        turn : k < 0 ? 0 : -fin.side * (finStroke(rows[k].muscle) === FIN_STROKE.front ? -1 : 1),
+        // The signed tension from the engine points towards the tail on the back stroke.
+        turn : k < 0 ? 0 : -fin.side,
         blade : el('path', {
           d : fin.d,
           class : k < 0 ? 'aid-live-head' : 'aid-live-petal k' + k,
@@ -255,7 +255,7 @@ liveKind('fin', (studio, organId) => {
         for (const {channel, root, turn, blade} of blades) {
           const pull =
               (a[4]?.[channel] ?? 0) + ((b[4]?.[channel] ?? 0) - (a[4]?.[channel] ?? 0)) * f;
-          blade.setAttribute('transform', `rotate(${(turn * SWING * clamp(pull)).toFixed(1)} ${
+          blade.setAttribute('transform', `rotate(${(turn * SWING * clamp(pull, -1, 1)).toFixed(1)} ${
                                               root.x.toFixed(1)} ${root.y.toFixed(1)})`);
         }
       }
