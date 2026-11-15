@@ -690,7 +690,7 @@ async function checkRedraws(model, caps, root) {
       studio.placeStimulus('light');
     counts[action] = hits;
   }
-  for (const held of ['spectrum', 'sense', 'vision', 'response']) {
+  for (const held of ['spectrum', 'probe', 'vision', 'response']) {
     const {studio, hits} = make();
     const cell = model.allCenters(doc)[0];
     studio.state.document = model.updateCenter(doc, cell.id, {field : .314159});
@@ -715,7 +715,7 @@ async function checkRedraws(model, caps, root) {
     studio.state.document = model.updateCenter(doc, cell.id, {field : .314159});
     studio.drafted = 'test';
     studio.draftStart = doc;
-    studio.handleDrag = {held : 'sense', last : {x : 0, y : 0}};
+    studio.handleDrag = {held : 'probe', last : {x : 0, y : 0}};
     studio.refreshInspector = () => { throw Error('drawing failed'); };
     assert.throws(() => studio.releaseHandle({clientX : 0, clientY : 0}), /drawing failed/);
     assert.equal(studio.handleDrag, null, 'A drawing error cannot keep dragging after release');
@@ -756,7 +756,7 @@ async function checkRedraws(model, caps, root) {
         studio.initialize();
         const cell = model.allCenters(doc)[0];
         const changed = model.updateCenter(doc, cell.id, {field : .314159});
-        studio.handleDrag = {held : 'sense', last : {x : 20, y : 30}};
+        studio.handleDrag = {held : 'probe', last : {x : 20, y : 30}};
         studio.pointer = {kind : 'organ', moved : true};
         studio.draftDesign(changed, 'interrupted');
         assert.equal(frames.size, 1);
