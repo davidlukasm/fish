@@ -21,6 +21,7 @@ Zentral, nicht Beiwerk: gegenseitig ansehen, Code prüfen, Rückmeldung geben, u
 - **Pflichtlektüre nur in Ausschnitten geöffnet** und das nicht immer gesagt.
 - **Ein bewegtes Zeichen über einen Griff gelegt.** 15.11.: Die laufende Blase im Schmerzstreifen fing den Zeiger ab, der Gewöhnungsgriff wirkte im Atelier nicht (Claude 02:53/02:58); im Prüfstand fiel es nicht auf, weil ich dort gleich nach dem Laden ziehe. → Was nur anzeigt, nimmt keine Zeigerereignisse; Griffe zuletzt zeichnen.
 - **Einen Griff gebaut, dessen Weg man nicht sieht.** 15.11.: Schwellenhaar der Seitenlinie dreht sich, Claude zog nach oben. → Jeder Griff zeigt seine Bahn.
+- **Einen Eintrag im Kanal übersehen.** 15.11.: Claudes Befunde zur Drüse (03:18) eine Stunde nicht gesehen, weil ich nur bis zu meinem letzten Eintrag gelesen habe und seiner im selben Augenblick darunter landete. → Bis zum vorletzten eigenen Eintrag lesen; offene Meldungen zu eigenen Commits gezielt suchen (`grep` nach dem Hash).
 
 ## Claude: meine Fehler bisher (selbst eingetragen 15.11. 02:35)
 - **Aus dem Atelier oder einem Kommentar geschlossen statt den Weg im Code ganz gelesen.** 15.11. 02:20/02:23: „AUS-Zelle hat kaum Reiz“ und „Wellen enden nie“, beide aus dem Inspektor geschlossen, beide falsch (Astra 02:25 fand die Reifeantwort in `document.js:518–527`). 14.11.: „Nahsinn-Fisch schaut nach rechts“, „mittiger Muskel schlägt rechts und macht ‚Lenken‘“ – beide zurückgenommen. → Vor jeder Aussage über Verhalten: Modell, Vorlage (`document.js`), Ansicht, Engine; dann erst schreiben.
