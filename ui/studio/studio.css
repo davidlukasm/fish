@@ -260,14 +260,7 @@
 .aid-sense-answer{fill:none;stroke:#8fd3c0;stroke-width:2.2;stroke-linejoin:round}
 .aid-cell-track{stroke:#5d8790;stroke-width:1;stroke-dasharray:1 3}
 .aid-command-work{fill:none;stroke:#e8c46a;stroke-width:2.4;stroke-linejoin:round}
-.aid-gate-track{stroke:#5d8790;stroke-width:2;stroke-dasharray:3 4;fill:none}
 .aid-sense-axis{fill:none;stroke:var(--aid-sketch-line);stroke-width:1}
-.aid-pull-bar{fill:#c98a7c;stroke:#e6b2a6;stroke-width:1}
-.aid-pull-bar.reserve{fill:none;stroke-dasharray:3 2}
-.aid-pull-free{fill:none;stroke:#5d8790;stroke-width:1;stroke-dasharray:2 3}
-.aid-endure-edge{fill:none;stroke-width:1;stroke-dasharray:3 3;opacity:.6}
-.aid-endure-line{fill:none;stroke-width:2.5}
-.aid-cost-bar{fill:#9cb5b2}
 .aid-hormone-influence{fill:none;stroke-width:1.8;stroke-dasharray:4 8}
 .aid-hormone-producer .aid-hormone-aura{fill:var(--hormone);fill-opacity:.17;stroke:var(--hormone);stroke-width:2.8;stroke-dasharray:3 4}
 .aid-hormone-producer .aid-hormone-core{fill:var(--hormone);fill-opacity:.66;stroke:var(--hormone);stroke-width:2.2}
@@ -323,7 +316,6 @@
 .aid-scent-halo{fill:#ffe4a01f;stroke:#ffe4a088;stroke-dasharray:3 3;pointer-events:none}
 .aid-scent-map .aid-scent-selector{fill:none;stroke:var(--aid-chosen);stroke-width:2.5;pointer-events:none}
 .aid-scent-other{fill:none;stroke:var(--aid-chosen);stroke-width:1.2;stroke-dasharray:3 3;opacity:.7;pointer-events:none}
-.aid-type-chip svg{width:16px;height:16px}
 .aid-scent-map .aid-scent-source>circle{fill:color-mix(in srgb,var(--scent) calc(var(--smelled) * 60%),var(--aid-chip));stroke:var(--scent);stroke-width:1.2}
 .aid-vector-point{fill:#efd5a1;stroke:#fff4cf;stroke-width:2.4;pointer-events:none}
 .aid-spine-field{display:block;width:100%;height:auto;margin:6px 0;touch-action:none}
@@ -621,13 +613,6 @@
 .aid-inline-name:focus{outline:none;border-color:var(--aid-chosen-edge);background:#163840}
 .aid-inline-title{font:20px Georgia,serif;padding:2px 6px;margin-left:-6px;width:100%}
 .aid-muscle-spine{fill:var(--aid-spine-fill);stroke:var(--aid-spine);stroke-width:1.6;stroke-linejoin:round}
-.aid-type-chips{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px}
-.aid-type-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:14px;border:1px solid #3d5f66;background:var(--aid-chip);color:#d8ebe5;font-size:12px;cursor:pointer}
-.aid-type-chip i{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #0a1a20}
-.aid-type-chip i.aid-substance-mark{display:inline-grid;place-items:center;width:18px;height:18px;border:1.5px solid var(--substance);color:var(--substance);font-style:normal;font-size:10px;font-weight:600}
-.aid-type-chip.active{border-color:var(--aid-chosen);box-shadow:0 0 0 2px #fffbe544}
-.aid-type-chip.add{color:var(--aid-label-text);border-style:dashed}
-.aid-type-chip.remove{padding:4px 8px;color:var(--aid-inhibit)}
 .aid-pigment-wheel{display:block;width:100%;max-width:220px;margin:4px auto;touch-action:none;cursor:crosshair}
 .aid-pigment-patches path{stroke:none}
 .aid-pigment-choice{fill:none;stroke:var(--aid-point);stroke-width:3;pointer-events:none;filter:drop-shadow(0 0 2px #000a)}
@@ -687,7 +672,6 @@
 .aid-lateral-arrow{fill:none;stroke:var(--aid-flow-light);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .aid-sense-cell{fill:var(--aid-flow-light);stroke:var(--aid-ink);stroke-width:1.2}
 .aid-sense-free{fill:none;stroke:var(--aid-sketch-line);stroke-width:.8;opacity:.6}
-.aid-sense-adapt{fill:none;stroke:var(--aid-flow);stroke-width:3;stroke-linecap:butt}
 .aid-felt.lateral .aid-lateral-point{stroke-width:2.5}
 .aid-sense-probe{pointer-events:none}
 .aid-probe-ring{fill:none;stroke:var(--aid-flow-light);stroke-opacity:.35;stroke-width:1.2;stroke-dasharray:6 6;vector-effect:non-scaling-stroke}
