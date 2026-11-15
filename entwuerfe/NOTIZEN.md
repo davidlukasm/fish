@@ -29,6 +29,8 @@ Was uns auffällt und nicht zum laufenden Auftrag gehört: unsauberer Code, Idee
 
 - 15.11. Astra/Claude/Fable – **Braune Fische in Ruhe** (David 13.11.: „müssen möglich sein“). Ergebnis: Mit dem heutigen Farbmodell erreichbar, aber nur über **mehrere Stellen je Zelltyp** (`setOrganNodes`); der Inspektor bietet je Typ nur „Kopien“ (= Kapazität/16, eine Stelle), damit bleibt Blau in Ruhe ≥ 0,246 (Ziel 0,15). Keine Engine-Änderung nötig; Lücke ist im Inspektor/Fischpanel: weitere Stellen eines Typs setzen können. Ruheanteil als Gen verworfen (wäre kostenlos). Stand: offen. Baut: offen (Fischpanel-Griff = Astra, Inspektor = Fable) / prüft: Claude.
 
+- 15.11. Claude/Fable – **Engine: ein einzelner Schlag einer Brustflosse dreht den Fisch um rund 256°** (Claude 05:45, aus `finCourse` im laufenden Atelier: 0 → −4,46 rad in 16 Schritten, `stroke_turn` 4,68). Seit der Bahn im Seitenflossen-Inspektor ist das sichtbar. Davids Frage vom 13.11. „anatomisch möglich?“ gilt hier auch. Stand: offen – Absicht oder zu starker Hebel? Engine = Astra; Entscheidung zu dritt, ggf. an David, weil es das Schwimmen im Aquarium ändert.
+
 ## Echte Fische, andere Spiele
 - 15.11. Fable – Echte Seitenlinie: Neuromasten sitzen in Kanälen (melden Druckunterschiede, schnelle Wirbel) und frei auf der Haut (melden langsame Strömung). Das wären zwei Zellarten mit verschiedener Gewöhnung, passend zur vorhandenen Zellzeit. Stand: offen, nur Anregung.
 - 15.11. Fable – Echtes Gleichgewicht: Otolithen melden Schwerkraft **und** Beschleunigung; ein Fisch im Schwarm richtet sich zusätzlich nach dem Licht von oben (Lichtrückenreflex). Verbindung Auge → Lage wäre ein zweiter Weg zum Aufrichten. Stand: offen, nur Anregung.
