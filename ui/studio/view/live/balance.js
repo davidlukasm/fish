@@ -31,7 +31,8 @@ const TILT = Object.freeze({
   most : .95,
   fish : 1.25,
   aside : 22,
-  bubble : 10
+  bubble : 10,
+  beyond : 28
 });
 // A hair's direction from the snout, in degrees: 0 to the snout, 90 to the flank, 180 to the tail.
 const hairOf = q1 => 90 * (1 + (q1 ?? 0)), qualityOf = hair => clamp(hair / 90 - 1, -1, 1);
@@ -102,7 +103,8 @@ liveKind('balance', (studio, organId) => {
     const reports = [];
     for (const s of [...sides].reverse()) {
       const [x, y] = at(tried.tilt + s.side * s.hair, TILT.hair), pull = down(tried.tilt, s),
-                now = heard(s.cell), [ bx, by ] = at(tried.tilt + s.side * s.hair, TILT.hair + 26),
+                now = heard(s.cell),
+                [ bx, by ] = at(tried.tilt + s.side * s.hair, TILT.hair + TILT.beyond),
                 [ px, py ] = at(tried.tilt + s.side * s.hair + TILT.aside, TILT.hair * .62);
       if (Number.isFinite(now))
         reports.push([ bx, by, now ]);

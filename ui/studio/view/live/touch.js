@@ -27,8 +27,9 @@ const CUT = Object.freeze({
   R : 286,
   skin : 52,
   deep : 110,
-  cells : 190,
+  cells : 180,
   bubble : 11,
+  below : 30,
   thing : 11,
   dent : 20,
   least : .06
@@ -97,8 +98,13 @@ liveKind('touch', (studio, organId) => {
         opacity : .45 + .55 * v / most
       },
          live);
-      if (k === hit && Number.isFinite(heard))
-        reportBubble(live, CUT.bubble)(x, y + CUT.bubble + 12, heard);
+      if (k === hit && Number.isFinite(heard)) {
+        // Clear of the cell it belongs to, joined to it by a short line.
+        el('path',
+           {d : `M${x} ${y + 11} V${y + CUT.below - CUT.bubble}`, class : 'aid-live-keyline k0'},
+           live);
+        reportBubble(live, CUT.bubble)(x, y + CUT.below, heard);
+      }
     });
     if (probe) {
       const top = skin + pressure * deep - thing + 1;
