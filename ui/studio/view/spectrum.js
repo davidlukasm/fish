@@ -1,5 +1,5 @@
 import {clamp} from '../../units.js';
-import {formatNumber, percent, t, tList} from '../../strings.js';
+import {t, tList} from '../../strings.js';
 import {
   HUE_CIRCLE,
   hueAffinities,
@@ -196,8 +196,3 @@ export function spectrumElement(tuning, target, label, {
              rounded(hueX(centre +
                           sigma))}" cy="${rounded(atHue(centre + sigma))}" r="${S.handle}"/></svg>`;
 }
-
-export const spectrumValues =
-    (tuning, opponent = false) => [t('units.degrees', {n : formatNumber(tuningHue(tuning.q1))}),
-                                   percent(tuning.qwidth),
-                                   ...(opponent ? [ percent(unitOfPlan(tuning.q2)) ] : [])];

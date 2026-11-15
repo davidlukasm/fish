@@ -1,14 +1,8 @@
-import {labelledText, percent, t, tList} from '../../strings.js';
+import {t, tList} from '../../strings.js';
 import {CHANNEL_MAX, clamp, degrees, FULL_TURN, radians} from '../../units.js';
 import {CONTRAST_POLARITY, RECEPTOR, VISION, VISUAL_SAMPLE} from '../../schema.js';
 import {PIXEL, retinalRaster} from '../../vision_view.js';
-import {
-  lightColor,
-  profileColor,
-  profileName,
-  spectrumElement,
-  spectrumValues
-} from './spectrum.js';
+import {lightColor, profileColor, profileName, spectrumElement} from './spectrum.js';
 import {stimulusOfShare, stimulusShare} from './sensitivity.js';
 import {livePlace} from './live/kit.js';
 import {escapeText, fixed, idSafe, pointText} from './markup.js';
@@ -361,11 +355,6 @@ export function spectrumEditor(state, organ, profile) {
   const spread = profileLightSpread(state.document, state.lightSpread, organ.id, profile.id);
   const least = state.anatomy?.contrastLeast, half = light?.half;
   const faint = least > 0 && half > 0 ? {share : stimulusShare(half, least), half, least} : null;
-  const [centre, width, opponent] = spectrumValues(profile, true);
-  const values = [
-    labelledText(label('centre'), centre), labelledText(label('width'), width),
-    labelledText(label('opponent'), opponent)
-  ].join(' · ');
   const target = {'spectrum-id' : organ.id, 'profile-id' : profile.id};
   return '<div data-spectrum-block>' +
          spectrumElement(profile, {spectrum : 'field', ...target}, label('spectrum'), {
@@ -383,8 +372,7 @@ export function spectrumEditor(state, organ, profile) {
            axis : {excite : label('excites'), inhibit : label('inhibits')},
            others : otherTypes(organ, profile, definition)
          }) +
-         contrastScene(profile, faint, target, spread) +
-         `<p class="aid-picture-caption">${escapeText(values)}</p></div>`;
+         contrastScene(profile, faint, target, spread) + '</div>';
 }
 const NEAR_BARS =
     Object.freeze({width : 300, height : 64, top : 6, base : 50, gap : 1, label : 62});
@@ -475,12 +463,7 @@ function keennessRow(tone, faint) {
              escapeText(label('keenFrom.' + tone))}</text>` +
          `<text class="aid-scene-word" x="${S.right}" y="${R.ends}" text-anchor="end">${
              escapeText(label('keenTo.' + tone))}</text>` +
-         // The half answer is named above the middle of the row, where its words always fit.
-         `<text class="aid-scene-word" x="${fixed((S.left + S.right) / 2)}" y="${
-             R.mark}" text-anchor="middle">${escapeText(t('studio.vision.keenHalf', {
-           p : percent(faint.half, faint.half < .1 ? 1 : 0)
-         }))}` +
-         `</text><circle class="aid-spectrum-handle sensitivity" data-spectrum-handle=` +
+         `<circle class="aid-spectrum-handle sensitivity" data-spectrum-handle=` +
          `"sensitivity" cx="${fixed(edge)}" cy="${fixed(mid)}" r="${S.handle}"><title>${
              escapeText(label('keenHandle'))}</title></circle>`;
 }
@@ -504,7 +487,8 @@ function contrastScene(profile, faint, target, spread) {
   const band = (cls, top) => `<rect class="${cls}" x="${S.left}" y="${top}" width="${
       S.right - S.left}" height="${S.row}" rx="6"/>`;
   let variation = '';
-  if (faint && spread?.count > 0) {
+  // How far the cells' half contrasts lie apart: shown only where they do.
+  if (faint && spread?.count > 0 && spread.half.max > spread.half.min) {
     const y = S.height + 14;
     const at = key => fixed(sceneX(stimulusShare(spread.half[key], faint.least)));
     const low = at('min'), high = at('max'), mean = at('mean');
