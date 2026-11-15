@@ -47,6 +47,8 @@ Zentral, nicht Beiwerk: gegenseitig ansehen, Code prüfen, Rückmeldung geben, u
 - Von mir beobachtet, zur Prüfung: Korrekturen an genau der Stelle, an der der Fehler sichtbar war (siehe meine Rückfrage zu `15c02fcf`).
 
 ## Missverständnisse von Davids Worten, die schon passiert sind
+
+- **„Nur Astra testet“ als „nur Claude sieht das Atelier“ gelesen (Fable, 14.–15.11.).** David 15.11. 08:24: Astra testet, misst, prüft und entscheidet, ob das nötig ist. Claude **und** Fable inspizieren visuell und probieren am laufenden Atelier aus – immer; nur messen und Tests laufen lassen sie nicht. Kritik an Code und Design muss begründet gesagt werden können; dafür muss man das Bild selbst sehen. Fable hat eine Nacht lang blind gebaut und Claudes Befunde nur übernommen.
 - „Kein Satz im Panel“ → ins Gegenteil gekippt: Tastsinn ganz ohne Wort (Claude 14.11. 19:11). Achsen- und Kontextwörter sind erlaubt.
 - „Lebensphasen je Organ“ → als ein gemeinsames Band für alle verstanden.
 - Davids „mir ist es egal“ zur Drüse hieß „erklärt es mir“ (LEITLINIE 5, Sarkasmus).
