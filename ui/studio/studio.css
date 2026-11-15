@@ -1157,7 +1157,7 @@
 .aid-live-keyarc{fill:none;stroke:var(--key);stroke-opacity:.3;stroke-width:5;pointer-events:none}
 .aid-live-keytick{fill:none;stroke:var(--key);stroke-width:1.8;pointer-events:none}
 .aid-live-keytick.stale{stroke-opacity:.4}
-.aid-live-keyband{fill:var(--key);fill-opacity:.18;stroke:var(--key);stroke-opacity:.7;stroke-width:.8;pointer-events:none}
+.aid-live-pain .aid-live-keyband{fill:var(--key);fill-opacity:.18;stroke:var(--key);stroke-opacity:.7;stroke-width:.8;pointer-events:none}
 .aid-live-keymark{fill:none;stroke:var(--key);stroke-width:2.5}
 .aid-live-keygrip{fill:var(--key);stroke:var(--aid-ink);stroke-width:1}
 .aid-live-keygrip.on{stroke:var(--aid-handle);stroke-width:2.5}
