@@ -266,9 +266,10 @@ function sideBySide(draw, colour, ends, effect) {
       draw(withIt ? ends.with : ends.without, withIt) + '<circle class="aid-effect-mark' +
       (withIt ? ' with' : '') + '" cx="' + (P.width - P.markAt) + '" cy="' + P.markAt + '" r="' +
       P.mark + '"' + (withIt ? ' style="fill:' + colour + '"' : '') + '/></g>';
-  return '<svg class="aid-effect-scene" viewBox="0 0 ' + 2 * P.width + ' ' + (P.height + 36) +
+  // The tab above names the effect; the two halves show it, without a sentence under them.
+  return '<svg class="aid-effect-scene" viewBox="0 0 ' + 2 * P.width + ' ' + (P.height + 18) +
          '" role="img" aria-label="' + escapeText(label('effects.' + effect)) + '">' +
          side(false, 0) + '<line class="aid-effect-divide" x1="' + P.width + '" y1="' + P.side +
          '" x2="' + P.width + '" y2="' + (P.height - P.side) + '"/>' + side(true, P.width) +
-         words(P.width, P.height + 29, word('effects.' + effect)) + '</svg>';
+         '</svg>';
 }
