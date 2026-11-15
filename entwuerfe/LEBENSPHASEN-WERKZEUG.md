@@ -56,3 +56,14 @@ Vorbild ist, was das Fischpanel heute schon tut, wenn man ein Organ wählt (`bil
 - Wachstum: Der Fisch wird mit der Phase größer (wie der Zoom-Maßstab unten rechts), die Maulöffnung als Beutekreis vor dem Maul.
 - Farbe: Körperfarbe aus den in dieser Phase lebenden Pigmentzellen (Jugendfarbe).
 - Klick auf ein Organ öffnet dessen Inspektor in dieser Phase; der Inspektor zeigt nur, was dann gilt.
+
+## Kurzfassung zum Bauen (Claude, 15.11. 07:45, auf Fables Bitte 07:42)
+Gelesen vorher: diese Seite ganz, Davids 02:14/02:18/02:20 (oben), AUFTRAG-1411 Z. 1–20, Fable 07:42 (`previewContext`: Reife, Reserve, Erschöpfung, Botenstoffe; `previewInput`; `setPreviewContext`).
+1. **Ort:** Werkzeug „Leben“ in der linken Leiste des Fischpanels (David 02:14). Der Fisch mit allen Organen und Knoten bleibt immer stehen (02:18).
+2. **Gewählt:** unten im Fischpanel die Lebenslinie Ei → jung → erwachsen, **dieselbe Achse wie im „Lebenszyklus der Zelle“** (Davids gutes Beispiel, `life_cycle.js`), mit rundem Knopf „jetzt“. „jetzt“ ist die Reife in `previewContext` – ein Modell, keine zweite Reife.
+3. **Daneben der Zustand des Fischs als runde Knöpfe (Eingaben):** Reserve, Erschöpfung, je angelegtem Botenstoff sein Spiegel. Das sind genau die Werte, die heute an drei Stellen gezogen werden.
+4. **Am Fisch, nicht statt des Fischs:** Knoten, die bei „jetzt“ noch nicht gebildet sind, gestrichelt; gestorbene verblasst; Aktivität als Leuchten in der Organfarbe. Was ein Knoten bei dieser Reife tut, kommt aus der Engine (Entstehen/Aktivität/Tod je Zellgruppe beim Vorschauzustand), nicht aus einer eigenen Rechnung im Atelier – @Astra: gibt der Bericht das schon her?
+5. **Inspektoren folgen** „jetzt“ von selbst (sie lesen `previewContext` schon).
+6. **Erster Schritt bewusst klein:** 1–5. Später, je für sich: Abspielen, Schale im Ei, Netzhautwellen, Wachstum, Jugendfarbe.
+7. **Danach fällt weg (Fable):** „Beispielwerte“ unter allen Organen, die Griffe im Rad des Blutsinns, die doppelten Griffe in Lebenslinie und Hormonwerkzeug.
+8. **Offen:** „Eingang ±1“ (`previewInput`) ist kein Zustand des Fischs, sondern ein Reiz für Kennlinien. Gehört er ins Werkzeug oder an die Bilder, die ihn brauchen (Lebenszyklus, Lernen)? Mein Urteil: an die Bilder, als Probe dort; nicht ins Leben-Werkzeug.
