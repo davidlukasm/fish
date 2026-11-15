@@ -5,7 +5,7 @@
 // the further above it.
 import {activationLevel, activationQuality, planOfUnit, unitOfPlan} from '../../../tuning.js';
 import {updateCellDistribution, updateCenter} from '../../model/document.js';
-import {boundedAnswer} from '../sense_curves.js';
+import {boundedAnswer} from '../sensitivity.js';
 import {clamp, drag, el, path, txt} from './kit.js';
 
 const BOX = Object.freeze(

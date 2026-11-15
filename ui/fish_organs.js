@@ -1,4 +1,3 @@
-import {FULL_TURN} from './units.js';
 import {MOTOR_TISSUE, SENSE_TISSUE, motorTissue} from './tissue.js';
 import {
   ANATOMY,
@@ -156,13 +155,6 @@ export function fishNoseShape(a, side) {
     ry : Math.min(a.faceWidth * NOSE.max_height,
                   (NOSE.height + NOSE.height_per_size * amount) * plan.height)
   };
-}
-
-const NOSE_POINT = Object.freeze({inner : .25, span : .6});
-export function fishNosePoint(a, side, direction, hue) {
-  const q = fishNoseShape(a, side), angle = Math.PI + direction,
-        band = NOSE_POINT.inner + NOSE_POINT.span * hue / FULL_TURN;
-  return [ q.x + q.rx * band * Math.cos(angle), q.y + q.ry * band * Math.sin(angle) ];
 }
 
 export function fishNosePath(g, r, a, side) {
@@ -431,27 +423,6 @@ export function fishGlandPath(g, r, a, append = false) {
   }
 }
 
-const PAIN = Object.freeze({
-  along : .19,
-  along_per_place : .08,
-  out : 1.1,
-  shift : .02,
-  length : .035,
-  length_per_spread : .02,
-  height : .022,
-  height_per_out : .009
-});
-export function fishPainShape(a, side) {
-  const f = fishForm(a, SENSE_TISSUE.inner_pressure, side),
-        p = fishFlank(a, side, PAIN.along + PAIN.along_per_place * f.y);
-  return {
-    x : p[0],
-    y : PAIN.out * p[1] + (side ? PAIN.shift : -PAIN.shift),
-    rx : PAIN.length + PAIN.length_per_spread * f.sy,
-    ry : PAIN.height + PAIN.height_per_out * f.x
-  };
-}
-
 const BLADDER = Object.freeze({
   along : .12,
   along_per_place : .23,
@@ -666,15 +637,6 @@ export function fishInjuryShape(a, side) {
         INJURY.length + INJURY.length_per_spread * f.sy + INJURY.length_per_size * a.size(f.weight),
     ry : INJURY.height + INJURY.height_per_out * f.x
   };
-}
-
-const INJURY_SPAN = Object.freeze({length : .80, height : .66});
-export function fishInjuryPoint(a, side, t, z) {
-  const q = fishInjuryShape(a, side), u = 2 * t - 1;
-  return [
-    q.x + q.rx * INJURY_SPAN.length * u,
-    q.y + q.ry * INJURY_SPAN.height * z * Math.sqrt(Math.max(0, 1 - u * u))
-  ];
 }
 
 const INJURY_PATH = Object.freeze({steps : 48, wave : .82, wave_depth : .18, waves : 6});

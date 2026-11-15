@@ -1469,9 +1469,6 @@
     "spine-strength": "Stachelhöhe"
   },
   "sense": {
-    "cellsHandle": "{n} von {most} Zellen; ziehen fügt Zellen hinzu oder nimmt sie weg",
-    "cellsWord": "{n} {n:Zelle|Zellen}",
-    "sensitivityWord": "Empfindlichkeit",
     "gateWord": "Schwelle"
   },
   "effectPicture": {

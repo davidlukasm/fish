@@ -9,14 +9,12 @@ import {updateRegion} from './model/regions.js';
 import {RHYTHM_TAU} from './model/region_cells.js';
 import {hasColourTuning, nominalSpectrum} from './model/retina.js';
 import {clamp} from '../units.js';
-import {kindNodes} from './model/organs.js';
 import {gutProbePatch, probeFlow, probeHandle, probePatch} from './view/probes.js';
 import {
   findCenter,
   findOrgan,
   groupReport,
   setBends,
-  setOrganNodes,
   updateCenter,
   updateField,
   updateGrowth,
@@ -30,7 +28,6 @@ import {cameraCoordinates} from './view/frame.js';
 import {BODY_FRAME} from './model/layout.js';
 import {dataAttribute, fixed} from './view/markup.js';
 import {driveContext, wireMarks, wirePatch} from './view/panels.js';
-import {senseMarkPatch, senseStart} from './view/sense_marks.js';
 import {PANEL_WIDTH, panelStyle} from './view/shell.js';
 import {GROWTH, BIRTH, receptorCurvePatch, wheelWidthPatch} from './view/substances.js';
 import {learnMemoryPatch} from './view/learning.js';
@@ -69,7 +66,6 @@ const HANDLES = Object.freeze({
   spectrum : {follow : 'spectrumPointer', done : 'refreshInspector'},
   probe : {follow : 'probePointer'},
   bend : {follow : 'bendPointer', keepsClick : true},
-  sense : {follow : 'sensePointer', done : 'refreshInspector'},
   vision : {follow : 'visionPointer', done : 'refreshInspector'},
   graphic : {follow : 'tuneGraphic', done : 'settleGraphic', keepsClick : true},
   preview : {follow : 'previewPointer'},
@@ -212,12 +208,6 @@ export const GRIPS = Object.freeze([
     held : 'vision',
     rect : false,
     start : (studio, g) => ({key : g.dataset.visionHandle, id : g.dataset.visionId})
-  },
-  {
-    graphic : '[data-sense-field]',
-    handle : '[data-sense-mark]',
-    held : 'sense',
-    start : (studio, g, h) => studio.senseGrip(g, h)
   },
   {
     graphic : PAD_SELECTOR,
@@ -731,36 +721,5 @@ export const handleMethods = {
     this.state.panels = {...this.state.panels, [drag.panel] : width};
     this.root.querySelector('.aid-workspace-main')
         ?.setAttribute('style', panelStyle(this.state.panels));
-  },
-  senseGrip(graphic, handle) {
-    const found =
-        findCenter(this.state.document, handle.dataset.senseCenter ?? graphic.dataset.senseField);
-    if (!found)
-      return null;
-    const box = graphic.viewBox.baseVal;
-    return {
-      id : found.center.id,
-      handle : handle.dataset.senseMark,
-      marks : {...handle.dataset},
-      size : {width : box.width, height : box.height},
-      start : senseStart(this.state, found.center)
-    };
-  },
-  sensePointer(event) {
-    const drag = this.handleDrag, found = findCenter(this.state.document, drag.id);
-    if (!found)
-      return;
-    const {fx, fy} = pointerShare(event, drag.rect);
-    const patch =
-        senseMarkPatch(this.state, drag, {x : fx * drag.size.width, y : fy * drag.size.height});
-    if (!patch)
-      return;
-    // A whole node more or less is the organ's change; everything else is the cells'.
-    const doc = 'nodes' in patch ? patch.nodes !== kindNodes(found.organ).length &&
-                                       setOrganNodes(this.state.document, found.organ.id,
-                                                     patch.nodes, this.state.sites)
-                                 : updateCenter(this.state.document, drag.id, patch);
-    if (doc)
-      this.draftDesign(doc, 'sense:' + drag.id);
   },
 };

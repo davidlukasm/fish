@@ -14,7 +14,7 @@ import {
 } from '../../model/document.js';
 import {nodeLimit, ORGAN_BY_KEY} from '../../model/organs.js';
 import {label} from '../kit.js';
-import {boundedAnswer} from '../sense_curves.js';
+import {boundedAnswer} from '../sensitivity.js';
 import {
   chip,
   clamp,

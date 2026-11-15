@@ -4330,7 +4330,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(Math.abs(actual.half - expected.half) < 2e-6);
   }
 
-  const {boundedAnswer} = await import('../ui/studio/view/sense_curves.js');
+  const {boundedAnswer} = await import('../ui/studio/view/sensitivity.js');
   for (const [index, audit] of organAudits.entries()) {
     if (audit.type === 'balance')
       for (const center of model.allCenters(audit.document)) {
