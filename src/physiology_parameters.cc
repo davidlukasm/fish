@@ -2,7 +2,7 @@
 #include <cmath>
 namespace fishsim {
 PhysiologyParameters::PhysiologyParameters()
-    : neural_cost(.5), stroke_turn(4.68), stroke_push(.0273), sinking(.012), bladder_strength(.03),
+    : neural_cost(.5), stroke_turn(.16), stroke_push(.0273), sinking(.012), bladder_strength(.03),
       bladder_rate(.002), bladder_cost(.03), muscle_cost(.00128), suction_range(2),
       bite_wound(skin_response::bite_wound), wound_weakness(.5), size_physics(1),
       sperm_capacity(40), sperm_mixing(1. / 3.), sperm_dilution(.0015), sperm_opaque(.012),

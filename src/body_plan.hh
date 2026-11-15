@@ -81,6 +81,10 @@ Point nostril_source(const Body &, Point nose, Point flow, int side);
 // Barbels hang from the snout and grow with their taste cells; they taste only what their tips
 // touch.
 Point barbel_tip(const Body &, const BrainInterface &, int side);
+inline bool barbel_reaches(Point offset, double radius, double reach) {
+  return std::hypot(offset.x, offset.y) - radius <= reach;
+}
+double barbel_stimulus(const BrainInterface::Receptor &, const Field::TipContact &, double exposure);
 double stroke_step(StrokeState &, double drive, const StrokeTiming &, double threshold);
 double stroke_shape(const StrokeState &);
 double spine_extension(double current, double force, const StrokeTiming &,

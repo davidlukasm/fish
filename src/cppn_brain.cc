@@ -373,13 +373,7 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
         const auto tip = barbel_tip(b, binding, r.lateral >= 0);
         cached = world.tip_contact(tip.x, tip.y, barbel::reach, b.identity);
       }
-      const auto &touched = *cached;
-      double taste = 0;
-      for (int k = 0; k < odor_kind::count; ++k)
-        taste += touched.taste[k] * r.scents[k];
-      // The receptive width, which a taste cell does not need, sets how much it feels instead.
-      concentration =
-          exposure * ((1 - r.spatial_width) * std::min(1., taste) + r.spatial_width * touched.felt);
+      concentration = barbel_stimulus(r, *cached, exposure);
     }
     signals[i] = adapted_response(b.perception_, i, r, concentration, advance_adaptation);
     if (b.perception_.inspect_vision)
