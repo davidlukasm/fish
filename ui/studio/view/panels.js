@@ -5,7 +5,6 @@ import {driveContext} from './preview.js';
 export {driveContext} from './preview.js';
 import {cellDevelopment, previewControls} from './development.js';
 import {visionInspector} from './vision.js';
-import {muscleSettings} from './effectors.js';
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {
@@ -118,7 +117,7 @@ const ORGAN_PANELS = Object.freeze({
     return code === MOTOR_KIND.forward ? livePlace('tail', organ)
            : code === MOTOR_KIND.turn  ? livePlace('fin', organ)
            : code === MOTOR_KIND.suction || code === MOTOR_KIND.aggression
-               ? livePlace('mouth', organ) + muscleSettings(state, organ)
+               ? livePlace('mouth', organ)
                : '';
   },
   gills : (state, organ) => livePlace('gills', organ),

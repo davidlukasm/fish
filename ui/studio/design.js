@@ -163,11 +163,19 @@ export const designMethods = {
   },
   // The commands the side fin's inspector tries: the engine answers with the way the fish takes
   // (anatomy.finCourse).
-  setFinCommand(organId, phases) {
-    const probe = this.state.senseProbe, key = JSON.stringify(phases);
-    if (probe?.kind === 'fins' && probe.organ === organId && probe.key === key)
+  setFinCommand(organId, phases) { this.tryCommand(organId, {kind : 'fins', phases}); },
+  // The mouth's inspector tries one beat of the mouth: the closer begins `delay` steps after the
+  // opener, the gills pump along or not (anatomy.mouthCourse).
+  setMouthCommand(organId, delay, gills) {
+    this.tryCommand(organId, {kind : 'mouth', delay, gills});
+  },
+  // A command an inspector tries on its organ: asked of the engine once, not again for its own
+  // answer.
+  tryCommand(organId, scene) {
+    const probe = this.state.senseProbe, key = JSON.stringify(scene);
+    if (probe?.organ === organId && probe.key === key)
       return;
-    this.state.senseProbe = {kind : 'fins', organ : organId, phases, key};
+    this.state.senseProbe = {...scene, organ : organId, key};
     this.requestDesign();
   },
   showMouthStep(organId, sample) {
@@ -338,7 +346,7 @@ export const designMethods = {
   refreshProbeControls() {
     this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
     this.redrawBlocks('gutProbeControls', findOrgan, organ => gutProbeControls(this.state, organ));
-    if ([ 'smell', 'taste', 'touch', 'wound', 'flow', 'balance', 'attack', 'ground', 'fins' ].includes(
+    if ([ 'smell', 'taste', 'touch', 'wound', 'flow', 'balance', 'attack', 'ground', 'fins', 'mouth' ].includes(
             this.state.senseProbe?.kind))
       mountLive(this.root, this);
   },

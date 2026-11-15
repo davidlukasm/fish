@@ -1,6 +1,6 @@
 import {findOrgan, groupReport, isChosen, organTypes} from '../model/document.js';
 import {profileNames} from './scents.js';
-import {ATTACK_GAPE, PROBE_LIMITS, STONE, groundColour} from '../model/probe.js';
+import {ATTACK_GAPE, PROBE_LIMITS, STONE, groundColour, isCommand} from '../model/probe.js';
 import {cssColour} from '../model/pigment.js';
 import {BODY_MIDDLE, BODY_RADIUS, sideSign} from '../model/layout.js';
 import {bodyDirection, fishFront, skinPoints, steadyAt, zoomOf} from './frame.js';
@@ -362,7 +362,7 @@ export function gutProbeControls(state, organ) {
 function visibleProbe(state) {
   const probe = state.senseProbe, faintest = state.anatomy?.lightDimmest;
   const organ = probe ? findOrgan(state.document, probe.organ) : null;
-  return organ && probe.kind !== 'gut' && probe.kind !== 'fins' && isChosen(state.selected, organ) &&
+  return organ && probe.kind !== 'gut' && !isCommand(probe) && isChosen(state.selected, organ) &&
                  (probe.kind === 'ground' || faintest > 0)
              ? {probe, organ, faintest, zoom : zoomOf(state)}
              : null;

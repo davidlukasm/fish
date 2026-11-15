@@ -1931,7 +1931,9 @@
       "steps": "{n} Schritte"
     },
     "mouth": {
-      "foods": ["Fleisch", "Pflanze, Schale", "Brocken", "Algen schaben"]
+      "foods": ["Fleisch", "Pflanze, Schale", "Brocken", "Algen schaben"],
+      "gills": "Kiemen",
+      "gut": "Darm"
     },
     "balance": {
       "down": "unten"

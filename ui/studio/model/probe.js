@@ -72,8 +72,11 @@ export function groundColour(probe) {
   return probe.buried ? sediment_color
                       : bare_surface_color.map((value, i) => value + coverage * (algae_color[i] - value));
 }
-// The commands tried on the side fins go to the engine as they are (design.js, setFinCommand).
-export const senseScene = probe => probe?.kind === 'fins' ? {kind : 'fins', phases : probe.phases}
+// The commands an inspector tries on its organ, not things in the water: they go to the engine as
+// they are (design.js, tryCommand) and the fish panel draws no probe for them.
+export const isCommand = probe => probe?.kind === 'fins' || probe?.kind === 'mouth';
+const commandScene = ({organ, key, ...scene}) => scene;
+export const senseScene = probe => isCommand(probe) ? commandScene(probe)
                                    : probe && probe.kind !== 'ground' ? {
   kind : probe.kind,
   bearing : probe.bearing,
