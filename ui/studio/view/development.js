@@ -2,6 +2,7 @@ import {BLOOD_SUBSTANCE} from '../../schema.js';
 import {
   allCenters,
   DEFAULT_BLOOD_CONTEXT,
+  findCenter,
   NOTICEABLE_AFFINITY,
   receptorAffinity
 } from '../model/document.js';
@@ -42,8 +43,14 @@ export function previewPatch(key, p, marks) {
 }
 // A cell's life cycle (when it comes into being, how active it is, when it dies) and how much its
 // copies differ.
+// Organs whose own picture carries the grip for how far their cells' thresholds spread
+// (live/pain.js, live/lateral.js, live/nose.js): their spread of physiology is set there, not
+// here a second time.
+const SPREAD_IN_PICTURE = new Set([ 'pain', 'lateral', 'nose' ]);
 export function cellDevelopment(state, center, own = false) {
   if (!center || !state.capabilities)
     return '';
-  return lifeCycle(state, center, own) + cellVariation(center);
+  const organ = findCenter(state.document, center.id)?.organ;
+  return lifeCycle(state, center, own) +
+         cellVariation(center, SPREAD_IN_PICTURE.has(organ?.type) ? [ 'spread_physiology' ] : []);
 }

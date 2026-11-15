@@ -190,11 +190,12 @@ export const designMethods = {
   },
   // The commands the side fin's inspector tries: the engine answers with the way the fish takes
   // (anatomy.finCourse).
-  setFinCommand(organId, phases) { this.tryCommand(organId, {kind : 'fins', phases});},
+  setFinCommand(organId, phases) { this.tryCommand(organId, {kind : 'fins', phases}); },
   // The mouth's inspector tries one beat of the mouth: the closer begins `delay` steps after the
   // opener, the gills pump along or not (anatomy.mouthCourse).
-  setMouthCommand(organId, delay,
-                  gills) { this.tryCommand(organId, {kind : 'mouth', delay, gills});},
+  setMouthCommand(organId, delay, gills) {
+    this.tryCommand(organId, {kind : 'mouth', delay, gills});
+  },
   // A command an inspector tries on its organ: asked of the engine once, not again for its own
   // answer.
   tryCommand(organId, scene) {
@@ -233,8 +234,8 @@ export const designMethods = {
       sight : sightScene(probe),
       sense : this.senseScene()
     };
-    // The blood every estimate is made at is the life tool's; the learning example is the
-    // learning inspector's (atelier_service.py, learning_context_line).
+    // The blood every estimate of the engine is made at is the life tool's (atelier_service.py,
+    // learning_context_line).
     const learning = this.learnScene();
     this.api(requestBody('design', {
           plan,
@@ -254,15 +255,10 @@ export const designMethods = {
                 const report = this.state.outlinePreview ?? this.state.anatomy;
                 if (colourDraft)
                   return JSON.stringify(report?.colour);
-                return JSON.stringify([
-                  outlineSizes(this.state),
-                  spineDraft &&
-                      [
-                        report?.spinesRest, report?.spinesRaised, report?.spineGroups,
-                        report?.attackProbe
-                      ],
-                  draft.key === 'field' && report?.lateral
-                ]);
+                return JSON.stringify([outlineSizes(this.state),
+                                       spineDraft && [report?.spinesRest, report?.spinesRaised,
+                                                      report?.spineGroups, report?.attackProbe],
+                                       draft.key === 'field' && report?.lateral]);
               };
               const previous = shape();
               this.state.outlinePreview = anatomy;
@@ -386,9 +382,8 @@ export const designMethods = {
   refreshProbeControls() {
     this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
     this.redrawBlocks('gutProbeControls', findOrgan, organ => gutProbeControls(this.state, organ));
-    if ([
-          'smell', 'taste', 'touch', 'wound', 'flow', 'balance', 'attack', 'ground', 'fins', 'mouth'
-        ].includes(this.state.senseProbe?.kind))
+    if ([ 'smell', 'taste', 'touch', 'wound', 'flow', 'balance', 'attack', 'ground', 'fins', 'mouth' ].includes(
+            this.state.senseProbe?.kind))
       mountLive(this.root, this);
   },
   drawSight() {

@@ -1,6 +1,7 @@
 #include "../src/genome.hh"
 #include "../src/ecology.hh"
 #include "../src/retina.hh"
+#include "../src/waterborne.hh"
 #include "../src/receptor_tuning.hh"
 #include "../src/eye_geometry.hh"
 #include "../src/observations.hh"
@@ -338,8 +339,7 @@ void mouth_course_report(const Genome &g, const SenseScene &scene) {
 }
 void sense_report(const field::Substrate &t,
                   const std::shared_ptr<const fishsim::BrainInterface> &interface,
-                  const std::vector<Group> &groups, const SenseScene &scene,
-                  fishsim::Field *world) {
+                  const std::vector<Group> &groups, const SenseScene &scene) {
   fishsim::Body body;
   body.x = body.y = fishsim::SIZE / 2;
   body.organ_mass = interface->organ_mass;
@@ -436,32 +436,38 @@ void sense_report(const field::Substrate &t,
       }
     }
   } else {
-    fishsim::SensoryProbe probe;
-    probe.kind = fishsim::probe_kind::smell;
-    probe.remaining = 1;
-    probe.x = body.x + scene.distance * radius * std::cos(bearing);
-    probe.y = body.y + scene.distance * radius * std::sin(bearing);
-    probe.scents.fill(0);
-    probe.scents[scene.scent] = 1;
-    body.set_probe(probe);
-    body.set_inspection(true, false, -1);
-    fishsim::Genome g;
-    g.interface = interface;
-    fishsim::sense_generated(body, g, *world, nullptr, false, physiology);
+    namespace fs = fishsim;
+    const double from = fs::radians(scene.flow_bearing);
+    const fs::Point stream{-scene.flow_strength * std::cos(from),
+                           -scene.flow_strength * std::sin(from)};
+    const fs::Point source{body.x + scene.distance * radius * std::cos(bearing),
+                           body.y + scene.distance * radius * std::sin(bearing)};
+    const auto [columns, rows] = fs::waterborne_grid_shape(fs::SIZE, fs::SIZE);
+    const fs::Point cell{fs::SIZE / columns, fs::SIZE / rows};
+    const auto nose = fs::nose_position(body), flow = fs::nose_flow(body, nose, stream);
+    std::array<double, fs::BrainInterface::SIDES> sampled{};
+    if (!interface->olfactory.empty())
+      for (std::size_t side = 0; side < sampled.size(); ++side) {
+        const auto at = fs::nostril_source(body, nose, flow, int(side));
+        sampled[side] = fs::estimate_open_water_odor({at.x - source.x, at.y - source.y}, stream,
+                                                     cell, fs::sensory_probe::energy,
+                                                     scene.scent, {});
+      }
     std::cout << ",\"noseProbe\":[";
-    bool first = true;
-    for (const auto &sample : body.perception().nose_samples) {
-      namespace C = fishsim::nose_sample_column;
-      std::cout << (first ? "[" : ",[");
-      for (int c = 0; c < fishsim::odor_kind::count; ++c)
-        std::cout << (c ? "," : "") << sample[C::odor + c] * (1 - sample[C::contact]);
+    for (std::size_t side = 0; side < sampled.size(); ++side) {
+      std::cout << (side ? ",[" : "[");
+      for (int c = 0; c < fs::odor_kind::count; ++c)
+        std::cout << (c ? "," : "") << (c == scene.scent ? sampled[side] : 0);
       std::cout << ']';
-      first = false;
     }
     std::cout << ']';
-    const auto &buffer = body.perception().sensor_buffer;
-    for (std::size_t i = 0; i < answers.size() && i < buffer.size(); ++i)
-      answers[i] = buffer[i];
+    for (auto i : interface->active_sensory) {
+      const auto &r = interface->sensory[i];
+      if (stirred(r)) {
+        const double concentration = sampled[r.lateral >= 0] * r.scents[scene.scent];
+        answers[i] = std::clamp(fs::receptor_response(r, concentration), 0.f, 1.f);
+      }
+    }
   }
   std::cout << ",\"senseProbe\":[";
   for (std::size_t i = 0; i < groups.size(); ++i) {
@@ -1343,22 +1349,16 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
     light_spread_report(sample, *binding, groups, true);
     sense_spread_report(t, *g.interface, sample, *binding, groups);
   }
-  std::optional<fishsim::Ecosystem> probe_tank;
-  if (sight || (sense && sense->kind == sense_scene::smell))
-    probe_tank.emplace(SIGHT_TANK_SEED);
-  if (sight)
-    sight_report(t, g.interface, groups, *sight, *probe_tank);
-  if (sense && sense->kind == sense_scene::smell && sense->flow_strength > 0) {
-    const double from = fishsim::radians(sense->flow_bearing);
-    probe_tank->field.set_uniform_flow(
-        {-sense->flow_strength * std::cos(from), -sense->flow_strength * std::sin(from)});
+  if (sight) {
+    const fishsim::Ecosystem probe_tank(SIGHT_TANK_SEED);
+    sight_report(t, g.interface, groups, *sight, probe_tank);
   }
   if (fins)
     fin_course_report(g, fins->fins);
   else if (mouth)
     mouth_course_report(g, *mouth);
   else if (sense && !attack)
-    sense_report(t, g.interface, groups, *sense, probe_tank ? &probe_tank->field : nullptr);
+    sense_report(t, g.interface, groups, *sense);
   std::cout << '}';
 }
 void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan,
