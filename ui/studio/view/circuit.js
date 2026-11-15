@@ -80,11 +80,22 @@ export const limitAtPorts = (state, organ, center) =>
 export function portsSection(state, organ, center = null) {
   const limit = limitAtPorts(state, organ, center) ? center.electrical_limit : null;
   let gripped = limit === null;
+  const ports = organPorts(state.document, organ, state.sites);
+  // Both sides of a paired organ can meet this one at the same port: then each row names its side.
+  const plainName = ({dir, other, slot}) =>
+      dir + ':' + (other ? organTitle(other, state.sites) : '') + ':' + slot?.key;
+  const count = new Map();
+  for (const port of ports)
+    count.set(plainName(port), (count.get(plainName(port)) ?? 0) + 1);
   const rows =
-      organPorts(state.document, organ, state.sites)
-          .map(({dir, other, kind, slot, slots, joined}) => {
+      ports
+          .map(port => {
+            const {dir, other, kind, slot, slots, joined} = port;
             const fill = joined ? 'filled' : other ? 'free' : 'absent';
-            const name = other ? organTitle(other, state.sites) : label('organs.' + kind);
+            const side = other?.side && count.get(plainName(port)) > 1
+                             ? ' ' + label('inspector.side.' + (other.side < 0 ? 'left' : 'right'))
+                             : '';
+            const name = other ? organTitle(other, state.sites) + side : label('organs.' + kind);
             const own = icon(organ.type, ICON.part);
             const far = other ? '<button data-select-organ="' + escapeText(other.id) + '" title="' +
                                     escapeText(name) + '">' + icon(other.type, ICON.part) +

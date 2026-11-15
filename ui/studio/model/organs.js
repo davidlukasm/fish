@@ -1,6 +1,7 @@
 import {
   GILL_FILTER,
   DIGESTION,
+  FIN_STROKE,
   HORMONES,
   MOTOR_KIND,
   PRESSURE_SOURCE,
@@ -91,8 +92,13 @@ export const nerve = (key, copies, zones) => Object.freeze({
   zones : Object.freeze(zones),
   ...NEURON_BY_KEY[key]
 });
-const slot = (key, dir, fits = [], required = false, node = null) =>
-    Object.freeze({key, dir, fits : Object.freeze(fits), required, node});
+// `works`, where an output is made for one kind of working organ (and, for a muscle, its work and
+// stroke): the organ a free output is offered to (regions.js, organPorts). Without it, a port with
+// no `fits` takes whatever is wired to it but is offered to nobody.
+const slot = (key, dir, fits = [], required = false, node = null, works = null) =>
+    Object.freeze({key, dir, fits : Object.freeze(fits), required, node, works});
+const muscleWork = (kind, stroke) =>
+    ({type : 'muscle', kind, ...(stroke === undefined ? {} : {stroke})});
 const setting = (least, most, initial, named = false) =>
     Object.freeze({least, most, initial, named});
 export const PAIRINGS = Object.freeze([ 'same', 'crossed', 'both' ]);
@@ -303,28 +309,36 @@ export const ORGANS = Object.freeze([
     namedPorts : true,
     centers : [ nerve('relay', 4, [ 1, 2, 3 ]) ],
     // Inputs name the side of the stimulus; one input may reach several nodes.
-    slots : organ =>
-        [slot('toward', 'in', [], false, [ 'turn', 'oppose' ]),
-         slot('away', 'in', [], false, 'flee'),
-         slot('feel', 'in', [ 'balance', 'touch', 'lateral' ], false, 'flee'),
-         slot('urge', 'in', [], false, 'swim'), slot('brake', 'in', [], false, 'brake'),
-         slot('near', 'in', [], false, [ 'brake', 'mouth', 'hold' ]),
-         slot('grip', 'in', [], false, 'bite'),
-         slot('full', 'in', [], false,
-              organ.centers.some(c => c.node === 'gut') ? [ 'sated', 'gut' ] : 'sated'),
-         slot('contact', 'in', [], false, 'lift'),
-         ...(organ.region.retreat ? [ slot('back', 'in', [], false, 'retreat') ] : []),
-         slot('fins', 'out', [], true, organ.region.retreat ? [ 'turn', 'backStop' ] : 'turn'),
-         slot('tail', 'out', [], true, 'swim'),
-         ...(organ.pair ? [ slot('escape', 'out', [], false, 'escape') ] : []),
-         slot('mouth', 'out', [], false, 'mouth'), slot('bite', 'out', [], false, 'bite'),
-         ...(organ.centers.some(c => c.node === 'gills')
-                 ? [ slot('gills', 'out', [], false, 'gills') ]
-                 : []),
-         ...(organ.centers.some(c => c.node === 'gut') ? [ slot('gut', 'out', [], false, 'gut') ]
-                                                       : []),
-         slot('lift', 'out', [], false, 'lift'),
-         ...(organ.region.retreat ? [ slot('reverse', 'out', [], false, 'reverse') ] : [])],
+    slots :
+        organ => [slot('toward', 'in', [], false, [ 'turn', 'oppose' ]),
+                  slot('away', 'in', [], false, 'flee'),
+                  slot('feel', 'in', [ 'balance', 'touch', 'lateral' ], false, 'flee'),
+                  slot('urge', 'in', [], false, 'swim'), slot('brake', 'in', [], false, 'brake'),
+                  slot('near', 'in', [], false, [ 'brake', 'mouth', 'hold' ]),
+                  slot('grip', 'in', [], false, 'bite'),
+                  slot('full', 'in', [], false,
+                       organ.centers.some(c => c.node === 'gut') ? [ 'sated', 'gut' ] : 'sated'),
+                  slot('contact', 'in', [], false, 'lift'),
+                  ...(organ.region.retreat ? [ slot('back', 'in', [], false, 'retreat') ] : []),
+                  slot('fins', 'out', [], true,
+                       organ.region.retreat ? [ 'turn', 'backStop' ] : 'turn',
+                       muscleWork(MOTOR_KIND.turn)),
+                  slot('tail', 'out', [], true, 'swim', muscleWork(MOTOR_KIND.forward)),
+                  ...(organ.pair ? [ slot('escape', 'out', [], false, 'escape',
+                                          muscleWork(MOTOR_KIND.forward)) ]
+                                 : []),
+                  slot('mouth', 'out', [], false, 'mouth', muscleWork(MOTOR_KIND.suction)),
+                  slot('bite', 'out', [], false, 'bite', muscleWork(MOTOR_KIND.aggression)),
+                  ...(organ.centers.some(c => c.node === 'gills')
+                          ? [ slot('gills', 'out', [], false, 'gills', {type : 'gills'}) ]
+                          : []),
+                  ...(organ.centers.some(c => c.node === 'gut')
+                          ? [ slot('gut', 'out', [], false, 'gut', {type : 'gutmuscle'}) ]
+                          : []),
+                  slot('lift', 'out', [], false, 'lift', {type : 'bladder'}),
+                  ...(organ.region.retreat ? [ slot('reverse', 'out', [], false, 'reverse',
+                                                    muscleWork(MOTOR_KIND.turn, FIN_STROKE.front)) ]
+                                           : [])],
     settings : {
       tone : setting(0, 2, 1, true),
       compete : setting(0, 1, 1, true),
