@@ -34,14 +34,15 @@ import {placeOf, turnTo, wedge} from './skin.js';
 
 const word = (key, values) => t('studio.live.pain.' + key, values);
 const ROUND_MS = 9000, BITE_STEP = 12;
-// The strip: steps from L to R, as many as the deepest wound the fish panel's probe can make
-// takes to close; the skin's line; below it the wound, `deep` high for that deepest wound; above
-// it the report, `loud` high when all cells send.
+// The strip: steps from L to R, as many as the wound the fish panel's probe makes takes to close
+// and `after` of that beyond, in whole hundreds; the skin's line; below it the wound, `deep` high
+// for the deepest wound the probe can make; above it the report, `loud` high when all cells send.
 // Steps by which the cells must fall silent before the wound has closed below what they feel,
 // to say that they have got used to it.
 const UNSURE = 3;
 const DEEPEST = .5;
-const SPAN = 100 * Math.ceil((BITE_STEP + DEEPEST / SKIN_RESPONSE.heal_rate) / 100);
+const spanOf = depth => Math.max(
+    200, 100 * Math.ceil((1 + STRIP.after) * (BITE_STEP + depth / SKIN_RESPONSE.heal_rate) / 100));
 const STRIP = Object.freeze({
   height : 190,
   L : 34,
@@ -52,7 +53,7 @@ const STRIP = Object.freeze({
   loud : 34,
   gap : 6,
   bubble : 12,
-  marks : [ 200, 400, 600 ],
+  after : .25,
   least : .02
 });
 // Match harm_body's linear split, including across the seam behind the fish.
@@ -72,7 +73,7 @@ liveKind('pain', (studio, organId) => {
     const probe = studio.state.senseProbe;
     return probe?.kind === 'wound' && probe.organ === organId ? probe : null;
   };
-  let step = 0, bubble = null;
+  let step = 0, bubble = null, span = spanOf(SKIN_RESPONSE.bite_wound);
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -98,6 +99,7 @@ liveKind('pain', (studio, organId) => {
           silent = silentStep(key, met), last = Math.min(...BOUNDED.gates(key)),
           closed = met.findIndex((v, st) => st > BITE_STEP && v <= last);
     return {
+      span : spanOf(probe?.strength ?? SKIN_RESPONSE.bite_wound),
       key,
       part,
       depth,
@@ -109,14 +111,11 @@ liveKind('pain', (studio, organId) => {
     };
   }
   function draw(cell) {
-    const S = STRIP, {svg, under, live} = picture(strip, S.height), c = courseOf(cell);
+    const S = STRIP, {svg, live} = picture(strip, S.height), c = courseOf(cell), SPAN = c.span;
     const X = st => S.L + (S.R - S.L) * st / SPAN,
           stOf = x => clamp(Math.round((x - S.L) / (S.R - S.L) * SPAN), 0, SPAN),
           D = depth => S.skin + S.deep * clamp(depth / S.deepest), top = S.skin - S.gap, every = 4,
           shown = values => values.slice(0, SPAN + 1).filter((_, st) => st % every === 0);
-    el('rect',
-       {x : S.L, y : S.skin, width : S.R - S.L, height : S.deep + 14, class : 'aid-live-flesh'},
-       under);
     // The wound: cut at the bite, closing step by step.
     el('path', {
       d : path(shown(c.depth).map((v, n) => [X(n * every), D(v)])) +
@@ -170,18 +169,19 @@ liveKind('pain', (studio, organId) => {
           class : 'aid-live-track-line'
         },
            live);
-        txt(live, sx + 5, top - S.loud + 8, word('used'), {class : 'aid-live-small'});
+        txt(live, sx + 9, top - S.loud + 3, word('used'), {class : 'aid-live-small'});
         drag(svg, el('circle', {cx : sx, cy : top - S.loud, r : 5}, live),
              p => draft(setUsed(studio.state.document, c.key, usedFor(c.key, c.met, stOf(p.x)))),
              'painused', 'grip', settle);
       }
     }
-    for (const st of S.marks)
+    for (let st = SPAN > 400 ? 200 : 100; st <= SPAN; st += SPAN > 400 ? 200 : 100)
       txt(live, X(st), S.height - 4, String(st), {'text-anchor' : 'end', class : 'aid-live-small'});
     txt(live, S.L, S.height - 4, word('steps'), {class : 'aid-live-small'});
     // The report now, as the fish panel shows it: a bubble that moves along the steps.
     const place = reportBubble(live, S.bubble);
     bubble = at => place(X(at), top - S.loud - S.bubble - 4, between(c.sent, at));
+    span = SPAN;
   }
   function show() {
     const cell = organ()?.centers[0];
@@ -191,7 +191,7 @@ liveKind('pain', (studio, organId) => {
     tick(0);
   }
   function tick(dt) {
-    step = (step + dt * SPAN / ROUND_MS) % SPAN;
+    step = (step + dt * span / ROUND_MS) % span;
     bubble?.(step);
   }
   return {root, show, tick};
