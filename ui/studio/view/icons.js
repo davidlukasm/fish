@@ -1,5 +1,6 @@
 import {STUDIO_ICON} from '../../organ_icons.js';
 
+export const GROWTH_ICON = 'M3 12c3-4 7-5 11-3l5-3v12l-5-3c-4 2-8 1-11-3zM9 11h.01';
 export const TOOL_ICON = Object.freeze({
   undo : 'M10 5 L5 10 L10 15 M5 10 H14 C20 10 21 20 14 20',
   redo : 'M14 5 L19 10 L14 15 M19 10 H10 C4 10 3 20 10 20',
@@ -8,6 +9,7 @@ export const TOOL_ICON = Object.freeze({
   hormone : STUDIO_ICON.gland,
   learn : 'M2 9l10-5 10 5-10 5zM6 11v5c0 1.6 2.7 3 6 3s6-1.4 6-3v-5M21 9.5V15',
   stimulate : STUDIO_ICON.pain,
+  life : GROWTH_ICON,
   erase : 'M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M11 10v7M14 10v7',
   pan : 'M7 13V7M11 12V4M15 12V6M19 13V9M7 13c-2-3-5-1-3 2l4 6h10c2-2 3-5 3-8'
 });
@@ -27,4 +29,3 @@ export const PHASE_ICON =
 export const BIRTH_ICON =
     'M12 21v-8M12 13c-4 0-7-3-7-7 4 0 7 3 7 7zM12 13c4 0 7-3 7-7-4 0-7 3-7 7z';
 export const BODY_SIGNAL = '#d7c294';
-export const GROWTH_ICON = 'M3 12c3-4 7-5 11-3l5-3v12l-5-3c-4 2-8 1-11-3zM9 11h.01';

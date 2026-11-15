@@ -284,7 +284,7 @@ def sense_line(sense):
     return "1 " + str(SENSE_SCENES[sense["kind"]]) + " " + " ".join(number(v) for v in values) + "\n"
 
 
-def run(data, data_dir=None, progress=None, cancel=None):
+def run(data, data_dir=None, progress=None, cancel=None, *, check_incubation=False):
     if not isinstance(data, dict):
         raise Refusal("studio.errors.invalidRequest")
     op = data.get("operation")
@@ -333,6 +333,8 @@ def run(data, data_dir=None, progress=None, cancel=None):
         args = [str(tool), op]
         args += ([str(result)] if op in ("build", "new") else
                  [str(original)] if op in ("inspect", "check") else [str(original), str(result)])
+        if op == "build" and check_incubation:
+            args.append("--incubation")
         body = encode_plan(data.get("plan")) if op == "build" else (
             edit_command(data) if op == "edit" else
             data.get("example", "blank") if op == "new" else "")

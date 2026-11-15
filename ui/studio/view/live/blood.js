@@ -15,7 +15,7 @@
 // tool). They belong to one tool for the fish's phase of life in the fish panel; until that
 // exists the wheel keeps its grips, or the sense could not be tried at all.
 import {BLOOD_SUBSTANCE} from '../../../schema.js';
-import {substanceColor} from '../../../hormones.js';
+import {bloodColour} from '../../../hormones.js';
 import {t} from '../../../strings.js';
 import {
   addOrganType,
@@ -49,14 +49,8 @@ const RING = Object.freeze({
 });
 const ROWS = Object.freeze({L : 84, R : 280, top : 8, row : 26});
 const NEW = Object.freeze({q1 : 0, q2 : 0, qwidth : .1});
-// The body's own three have one colour among the hormones' (hormones.js); here each needs its
-// own, to be told apart in a type's report.
-const BODY_COLOURS = Object.freeze({
-  [BLOOD_SUBSTANCE.maturity] : '#b7d3c9',
-  [BLOOD_SUBSTANCE.reserve] : '#f1e3a4',
-  [BLOOD_SUBSTANCE.fatigue] : '#c7a7b9'
-});
-const colourOf = index => BODY_COLOURS[index] ?? substanceColor(index);
+// The body's own three each have their own colour here, to be told apart in a type's report.
+const colourOf = bloodColour;
 // The body's own three have short names here: the ring has little room beside them.
 const BODY_WORDS = Object.freeze({
   [BLOOD_SUBSTANCE.maturity] : 'maturity',

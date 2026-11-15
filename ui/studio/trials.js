@@ -16,6 +16,7 @@ import {routedLinks} from './model/regions.js';
 import {createPlanPlayer} from './view/pulse.js';
 import {nodeLocation} from './view/places.js';
 import {previewContextOf} from './view/development.js';
+import {syncLifeBar} from './view/life_tool.js';
 import {clamp} from '../units.js';
 import {label} from './view/kit.js';
 import {acceptedGenome} from './view/compiler.js';
@@ -239,9 +240,10 @@ export const trialMethods = {
       return;
     this.clearStimulus();
     this.state.previewContext = next;
-    // Only the inspector shows example values; the fish does not depend on them.
+    // The inspector and the life tool's bar show these values; the fish does not depend on them.
     this.previewFrame ??= requestAnimationFrame(() => {
       this.previewFrame = null;
+      syncLifeBar(this.root, this.state);
       this.refreshInspector();
     });
   },

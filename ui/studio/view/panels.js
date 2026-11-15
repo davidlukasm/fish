@@ -3,7 +3,7 @@ import {centerMarker} from './scene.js';
 import {nerveEditor} from './nerve_cell.js';
 import {driveContext} from './preview.js';
 export {driveContext} from './preview.js';
-import {cellDevelopment, previewControls} from './development.js';
+import {cellDevelopment} from './development.js';
 import {visionInspector} from './vision.js';
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
@@ -34,7 +34,13 @@ import {
   SWITCH_SYMBOL,
   VALUE_DIGITS
 } from './kit.js';
-import {limitAtPorts, pairingChoice, portsSection, regionSettings, slotsSection} from './circuit.js';
+import {
+  limitAtPorts,
+  pairingChoice,
+  portsSection,
+  regionSettings,
+  slotsSection
+} from './circuit.js';
 import {strandInspector} from './nerve_inspector.js';
 import {chemistry, hormoneInspector} from './substances.js';
 import {learningInspector} from './learning.js';
@@ -455,7 +461,7 @@ export function inspector(state, shownDesign = state.document) {
   const selected = state.selected;
   if (!selected)
     return '<header class="aid-inspector-head">' + heading(label('sections.empty')) + '</header>' +
-           (state.tool === 'stimulate' ? previewControls(state) : '') + workflow();
+           workflow();
   if (selected.kind === 'wire') {
     const wire = state.document.wires.find(w => w.id === selected.id);
     return wire ? wireInspector(state, wire) : '';
@@ -470,5 +476,5 @@ export function inspector(state, shownDesign = state.document) {
   }
   const organ = selected.kind === 'organ' ? findOrgan(state.document, selected.id)
                                           : findCenter(state.document, selected.id)?.organ;
-  return previewControls(state) + (organ ? organInspector(state, organ) : '');
+  return organ ? organInspector(state, organ) : '';
 }

@@ -252,6 +252,40 @@ void fin_course_report(const Genome &g, const std::vector<FinPhase> &phases) {
     sample();
   std::cout << ']';
 }
+void fin_twitch_report(const fishsim::BrainInterface &layout, double mass,
+                       const fishsim::PhysiologyParameters &physiology) {
+  namespace fs = fishsim;
+  std::cout << ",\"finTwitch\":[";
+  for (int pair = 0; pair < fs::SIDE_FINS; ++pair)
+    for (int side = 0; side < 2; ++side) {
+      if (pair || side)
+        std::cout << ',';
+      std::cout << '[';
+      for (const bool front : {false, true}) {
+        if (front)
+          std::cout << ',';
+        const auto &strokes = front ? fs::FRONT_STROKES : fs::BACK_STROKES;
+        const int stroke = strokes[pair][side];
+        const double drive = layout.stroke_capacity[stroke];
+        if (drive <= 0 || drive < physiology.stroke_threshold) {
+          std::cout << "null";
+          continue;
+        }
+        const auto &timing = layout.stroke_timing[stroke];
+        const double torque = (bool(side) != front ? -1 : 1) * drive * layout.fin_turn[stroke];
+        const auto angle = fs::isolated_twitch_turn(torque, timing, mass, physiology);
+        std::cout << "{\"duration\":" << timing.steps
+                  << ",\"during\":" << fs::degrees(angle.during) << ",\"settled\":";
+        if (angle.settled)
+          std::cout << fs::degrees(*angle.settled);
+        else
+          std::cout << "null";
+        std::cout << '}';
+      }
+      std::cout << ']';
+    }
+  std::cout << ']';
+}
 void mouth_course_report(const Genome &g, const SenseScene &scene) {
   namespace fs = fishsim;
   const auto &layout = *g.interface;
@@ -1256,6 +1290,8 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
     std::cout << '}';
   }
   std::cout << ']';
+  adult.energy = fishsim::reserve_capacity(adult);
+  fin_twitch_report(a, fishsim::body_mass(adult), physiology);
   return group;
 }
 void readiness_report(const fishsim::BrainInterface &a, const field::Substrate &t, bool developed) {
@@ -1308,8 +1344,8 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
     sense_report(t, g.interface, groups, *sense, probe_tank ? &probe_tank->field : nullptr);
   std::cout << '}';
 }
-void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan = nullptr,
-            const AddressFit &fit = {}) {
+void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan,
+            const AddressFit &fit, bool check_incubation) {
   const auto &t = *g.blueprint;
   std::cout << std::setprecision(REPORT_DIGITS) << '{';
   std::cout << "\"viable\":" << (g.viable() ? "true" : "false")
@@ -1335,17 +1371,19 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
   }
   const auto &a = *g.interface;
   readiness_report(a, t, true);
-  const auto incubation = incubation_probe(g);
-  std::cout << ",\"eggIncubation\":";
-  if (incubation)
-    std::cout << incubation->steps;
-  else
-    std::cout << "null";
-  std::cout << ",\"eggMinimum\":";
-  if (incubation)
-    std::cout << incubation->energy;
-  else
-    std::cout << "null";
+  if (check_incubation) {
+    const auto incubation = incubation_probe(g);
+    std::cout << ",\"eggIncubation\":";
+    if (incubation)
+      std::cout << incubation->steps;
+    else
+      std::cout << "null";
+    std::cout << ",\"eggMinimum\":";
+    if (incubation)
+      std::cout << incubation->energy;
+    else
+      std::cout << "null";
+  }
   fishsim::Body adult;
   adult.organ_mass = a.organ_mass;
   adult.tissue = fishsim::tissue_capacity(adult);
@@ -1638,7 +1676,9 @@ int main(int argc, char **argv) {
     std::vector<Group> groups;
     std::optional<Plan> compiledPlan;
     AddressFit addressFit;
-    if (operation == "build" && argc == 3) {
+    const bool check_incubation =
+        operation == "build" && argc == 4 && std::string(argv[3]) == "--incubation";
+    if (operation == "build" && (argc == 3 || check_incubation)) {
       std::string name;
       auto plan = read_plan(std::cin, name);
       auto progress = [](const char *phase, const AddressFit &fit) {
@@ -1779,7 +1819,7 @@ int main(int argc, char **argv) {
     }
     if (operation != "inspect")
       g.save(argv[operation == "edit" ? 3 : 2]);
-    report(g, groups, compiledPlan ? &*compiledPlan : nullptr, addressFit);
+    report(g, groups, compiledPlan ? &*compiledPlan : nullptr, addressFit, check_incubation);
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
     return 1;
