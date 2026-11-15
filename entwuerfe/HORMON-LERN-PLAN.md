@@ -34,9 +34,18 @@ Grundlagen:
 - **Inspektor Drüse:** besteht schon (`live/gland.js`). Er bekommt dieselbe Spiegelkurve aus der Engine statt der eigenen Rechnung, falls er eine eigene hat (zu prüfen).
 - **Rezeptor einstellen:** an der Zelle, die antwortet (in deren Inspektor), mit Griffen an der Antwortkurve: Halbwert waagrecht, Empfindlichkeit senkrecht, Steilheit an der Flanke. Das Rad bleibt, wo es die Wahl des Stoffs zeigt.
 
-## Lernwerkzeug
+## Lernwerkzeug (aus `LERNEN-ENGINE.md`, Fable; erster Gedanke, Fable entscheidet als Bauender)
 
-Folgt aus `LERNEN-ENGINE.md` (Fable).
+- **Kopien weg:** `retainedLearning` und `learningFactors` (`model/learning.js`) rechnen `decay8` und `learning_rate` nach. Stattdessen ruft das Atelier Engine-Funktionen ohne Gehirn auf: Spur über n Schritte, Änderung eines Kontakts für gegebene Abweichungen, Vergessen über n Schritte (Astra, Frage 2 in `LERNEN-ENGINE.md`).
+- **Probe ins Fischpanel:** Reiz, stiller Eingang und Lehrsignal kommen von außen an die Zelle. Sie werden als Probe am Fisch gestellt: Sender wählen, Lehrer wählen, Zeitpunkte. Der Inspektor zeigt nur die Wirkung, also wie sich das Gewicht des Kontakts über die Zeit ändert. Das Werkzeug „Reizen“ gibt es schon; ob die Probe dorthin gehört, entscheidet Fable.
+- **Die Überraschung zeigen:** Ein Lehrsignal, das die Eingänge schon ankündigen, lehrt nichts. Im Bild: zwei Durchgänge derselben Probe, der zweite mit Ankündigung, und die Gewichtsänderung, die schrumpft. Das ist der Kern und fehlt heute.
+- **Fünf Zeilen zum Aufklappen weg:** Lernfaktor, Verdrängung, Eigenanteil und Festigung werden Griffe am Gewichtsverlauf, dort, wo sie wirken. Ein Satz im leeren Inspektor wird eine Zeichnung oder entfällt.
+
+## Schnittstelle zwischen beiden Werkzeugen
+
+Sechs der neun Hormonwirkungen stellen das Lernen: Lernen, Verdrängung, Eigenanteil, Lehren, Festigung, Rhythmus.
+- **Hormonwerkzeug:** zeigt, **dass** und **wo** ein Stoff auf eine Lernzelle wirkt (Leuchten am Knoten, Zeile im Stoff-Inspektor) und stellt den Rezeptor.
+- **Lernwerkzeug:** zeigt, **was** diese Wirkung am Lernen ändert. Es liest den Spiegel aus dem Lebensband und den Rezeptor aus dem Bericht und hat keinen eigenen Rezeptorgriff. So wird kein Wert an zwei Orten eingestellt.
 
 ## Reihenfolge
 
