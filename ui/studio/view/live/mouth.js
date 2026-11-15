@@ -17,9 +17,9 @@
 // (mouthCourse.gillWaterReference: the gills' water at a wide open mouth and a full command;
 // creditReference: what the throat takes over the opener's whole twitch at a full command; a
 // beat whose opener is not cut short by the snap comes close to it, one that is stays below).
-// STOPGAP: the four kinds of food and the force on each (anatomy.mouthForces). They belong to a
-// probe of food before the mouth in the fish panel; until that exists they stay here.
-import {t, tList} from '../../../strings.js';
+// The food before the mouth and what the mouth's force does to each kind is the fish panel's
+// (probes.js, foodSvg).
+import {t} from '../../../strings.js';
 import {MOTOR_KIND} from '../../../schema.js';
 import {findOrgan} from '../../model/document.js';
 import {organFunction} from '../../model/organs.js';
@@ -46,18 +46,10 @@ const BEAT = Object.freeze({
   round : 4200,
   rest : 900
 });
-const FOODS = Object.freeze({
-  height : 62,
-  y : 20,
-  x : 40,
-  gap : 73,
-  colours : [ '#ee9f9a', '#8fd18a', '#e6b47c', '#77d2bd' ]
-});
-
 liveKind('mouth', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-mouth';
-  const beat = addPicture(root), foods = addPicture(root);
+  const beat = addPicture(root);
   // What is tried: how many steps after the opener the closer begins. Not part of the fish.
   const own = {delay : 4};
   let clock = 0, film = null;
@@ -164,34 +156,12 @@ liveKind('mouth', (studio, organId) => {
          },
          'mouthcloser', 'knob');
   }
-  // Before the mouth the four kinds of food, each bitten as deep as the force on it.
-  function drawFoods() {
-    const F = FOODS, {live} = picture(foods, F.height),
-          forces = studio.state.anatomy?.mouthForces ?? [];
-    tList('studio.live.mouth.foods').forEach((name, j) => {
-      const x = F.x + F.gap * j, y = F.y, deep = Math.sqrt(clamp(forces[j] ?? 0));
-      el('rect', {x : x - 15, y : y - 15, width : 30, height : 30, rx : 7, fill : F.colours[j]},
-         live);
-      // The area of the mark follows force. Both dimensions grow together so weak bites remain
-      // visible, while a missing muscle still leaves the food whole.
-      if (deep > 0)
-        el('path', {
-          d : `M${x - 15 * deep} ${y - 15} Q${x} ${y - 15 + 60 * deep} ${x + 15 * deep} ${
-              y - 15} Z`,
-          class : 'aid-live-mouth-bite'
-        },
-           live);
-      txt(live, x, y + 29, name,
-          {'text-anchor' : 'middle', class : 'aid-live-small', style : `fill:${F.colours[j]}`});
-    });
-  }
   function show() {
     if (!findOrgan(studio.state.document, organId)?.centers.length)
       return;
     studio.setMouthCommand(organId, own.delay,
                            studio.state.document.organs.some(o => o.type === 'gills'));
     drawBeat();
-    drawFoods();
   }
   return {
     root,

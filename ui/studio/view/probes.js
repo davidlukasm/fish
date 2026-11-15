@@ -3,7 +3,7 @@ import {profileNames} from './scents.js';
 import {ATTACK_GAPE, PROBE_LIMITS, STONE, groundColour, isCommand} from '../model/probe.js';
 import {cssColour} from '../model/pigment.js';
 import {BODY_MIDDLE, BODY_RADIUS, sideSign} from '../model/layout.js';
-import {bodyDirection, fishFront, skinPoints, steadyAt, zoomOf} from './frame.js';
+import {bodyDirection, fishFront, skinPoints, SNOUT_TIP, steadyAt, zoomOf} from './frame.js';
 import {outlineSizes} from './body.js';
 import {organLocation} from './places.js';
 import {arrowPath} from './lateral.js';
@@ -12,7 +12,7 @@ import {ecologyIconSvg} from '../../feeding_view.js';
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
 import {BARBEL, ODOR_KIND, SEABED, SENSORY_PROBE} from '../../schema.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
-import {formatNumber, namedText, percent, t} from '../../strings.js';
+import {formatNumber, namedText, percent, t, tList} from '../../strings.js';
 import {centerTitle} from './names.js';
 
 const PROBE_SCENE = Object.freeze({
@@ -450,10 +450,40 @@ function groundGrip(config) {
          '" rx="' + strip / 2 + '" fill="url(#aid-ground-strip)"/>' +
          probeGrip(organ, probe, null, zoom, 0);
 }
+// Food before the mouth, while a muscle of the mouth is chosen: the four kinds the engine tells
+// apart (anatomy.mouthForces: flesh, plants and shells, morsels, algae to scrape), each bitten as
+// deep as the mouth's force on it. Nothing is set at the food; it is not kept in view, so the
+// fish stays large.
+const FOOD = Object.freeze({
+  far : 64,
+  spread : 23,
+  half : 9,
+  round : 4,
+  colours : [ '#ee9f9a', '#8fd18a', '#e6b47c', '#77d2bd' ]
+});
+function foodSvg(state) {
+  const probe = state.senseProbe, organ = probe ? findOrgan(state.document, probe.organ) : null,
+        forces = state.anatomy?.mouthForces;
+  if (probe?.kind !== 'mouth' || !organ || !isChosen(state.selected, organ) || !forces)
+    return '';
+  const F = FOOD, h = F.half, names = tList('studio.live.mouth.foods');
+  return '<g class="aid-sense-probe" pointer-events="none">' +
+         F.colours.map((colour, j) => {
+           const turn = F.spread * (j - (F.colours.length - 1) / 2), deep = Math.sqrt(clamp(forces[j] ?? 0));
+           // The bite is taken from the side that faces the mouth; its area follows the force.
+           const bite = deep > 0 ? '<path class="aid-live-mouth-bite" d="M' + h + ' ' + fixed(-h * deep) +
+                                       ' Q' + fixed(h - 3.6 * h * deep) + ' 0 ' + h + ' ' + fixed(h * deep) + 'Z"/>'
+                                 : '';
+           return '<g transform="rotate(' + fixed(-turn) + ' ' + fixed(SNOUT_TIP.x) + ' ' + fixed(SNOUT_TIP.y) +
+                  ') translate(' + fixed(SNOUT_TIP.x - F.far) + ' ' + fixed(SNOUT_TIP.y) + ')"><title>' +
+                  escapeText(names[j] ?? '') + '</title><rect x="' + -h + '" y="' + -h + '" width="' + 2 * h +
+                  '" height="' + 2 * h + '" rx="' + F.round + '" fill="' + colour + '"/>' + bite + '</g>';
+         }).join('') + '</g>';
+}
 export function senseProbeSvg(state) {
   const config = visibleProbe(state);
   if (!config)
-    return '';
+    return foodSvg(state);
   const {probe, organ, faintest, zoom} = config, flow = probeFlow(probe);
   if (probe.kind === 'ground')
     return '<g class="aid-sense-probe">' + groundGrip(config) + '</g>';
