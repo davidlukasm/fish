@@ -62,6 +62,9 @@ export function lifeBar(state) {
           .join('') +
       '<path class="aid-life-now" data-life-now d="M' + fixed(lifeX(context.maturity)) + ' ' +
       (top - 4) + ' V' + (top + B.band + 4) + '"/>' +
+      '<text class="aid-life-word" data-life-now-word x="' +
+      fixed(lifeX(context.maturity) + B.knob + 4) + '" y="' + (top - 1) + '">' +
+      escapeText(stageWord('now')) + '</text>' +
       knob('maturity', lifeX(context.maturity), top - 4, B.left, B.right);
   const state_ =
       levels
@@ -93,10 +96,11 @@ export function syncLifeBar(root, state) {
           level = key === 'maturity' ? context.maturity : bloodLevel(context, Number(key)),
           x = fixed(left + (right - left) * level);
     handle.setAttribute('cx', x);
-    if (key === 'maturity')
+    if (key === 'maturity') {
       bar.querySelector('[data-life-now]')
           ?.setAttribute('d', 'M' + x + ' ' + (top - 4) + ' V' + (top + B.band + 4));
-    else
+      bar.querySelector('[data-life-now-word]')?.setAttribute('x', fixed(Number(x) + B.knob + 4));
+    } else
       bar.querySelector('[data-life-amount="' + key + '"]')
           ?.setAttribute('d', 'M' + left + ' ' + B.line + ' H' + x);
   }
