@@ -35,10 +35,12 @@ Antwort an David: fast nur über Inspektoren. Zum Fischpanel stand oben nur Punk
 
 **Befund im Code (`dd89af3e`):** Die Vorschau-Reife (`previewContext`, `controller.js:100`, `development.js:93ff`) wird nur von Inspektoren gelesen: `life_cycle.js:76`, `learning.js:72/127/162`, `substances.js:102/630`, `live/blood.js:271`, `preview.js:8`, `trials.js:227`. Das Fischpanel zeichnet den Fisch unabhängig davon.
 
-**Ort:** Der Werkzeugkasten ist die Leiste links im Fischpanel (Platzieren, Verschalten, Hormone, Lernen, Reizen, Entfernen, Ausschnitt). „Ein eigenes Werkzeug im Werkzeugkasten“ (David) heißt also: ein Werkzeug „Leben“ in dieser Leiste. Gewählt, wird das **Fischpanel selbst** zur Lebensansicht; die Lebenslinie mit „jetzt“ sitzt im Fischpanel, nicht über den Inspektoren.
+**Ort:** Der Werkzeugkasten ist die Leiste links im Fischpanel (Platzieren, Verschalten, Hormone, Lernen, Reizen, Entfernen, Ausschnitt). „Ein eigenes Werkzeug im Werkzeugkasten“ (David) heißt also: ein Werkzeug „Leben“ in dieser Leiste. Die Lebenslinie mit „jetzt“ sitzt im Fischpanel, nicht über den Inspektoren.
+
+**Davids Vorgabe 15.11. 02:18 (bindend):** „Das Fischpanel selbst muss dabei jedenfalls immer den Fisch mit den platzierten Organen und Knoten anzeigen.“ Das Werkzeug ersetzt das Fischbild also nie und blendet keine Organe oder Knoten aus. Die Phase wird **am** Fisch gezeigt (z. B. ob ein Knoten in dieser Phase schon lebt und wie aktiv er ist), nicht statt des Fischs. Mein Satz von 02:15 „wird das Fischpanel selbst zur Lebensansicht“ ist damit zurückgenommen.
 
 **Was das Fischpanel je Phase zeigen müsste (zu prüfen im Code, bevor gezeichnet wird):**
-- Ei: Fisch in der Schale; nur Zellen, die schon gebildet sind (Bildungsrezeptor); Netzhautwellen über dem Auge (`substrate.cc:704–728`, laufen, solange die Erregbarkeit der Zellen reicht; enden nur, wenn das Organ sie über Reife/Hormon senkt, LEITLINIE 0); Muskeln zucken (Schlupfimpuls, `embryo.cc:38–41`); das Auge meldet keinen Kontrast (`cppn_brain.cc:407–411`); Proben, die im Ei nicht gelten (Futter, Sehprobe), sind nicht da.
+- Ei: Fisch mit allen Organen und Knoten wie immer, die in dieser Phase noch nicht gebildeten Knoten als solche gekennzeichnet (nicht ausgeblendet); die Schale höchstens als Umriss; Netzhautwellen über dem Auge (`substrate.cc:704–728`, laufen, solange die Erregbarkeit der Zellen reicht; enden nur, wenn das Organ sie über Reife/Hormon senkt, LEITLINIE 0); Muskeln zucken (Schlupfimpuls, `embryo.cc:38–41`); das Auge meldet keinen Kontrast (`cppn_brain.cc:407–411`); Proben, die im Ei nicht gelten (Futter, Sehprobe), sind nicht da.
 - Schlupf: Gesehenes blendet über die Zellzeit ein (`birth_exposure`, `physiology.hh:437–441`).
 - Jung → erwachsen: Körper wächst (`body_scale`), Maulöffnung und Beute mit; Farbe nach den dann lebenden Pigmentzellen; Eier/Samen kommen dazu.
 - Inspektoren folgen derselben Phase und zeigen nicht, was in ihr nicht gilt.
