@@ -18,7 +18,7 @@
 |---|---|---|---|
 | `planned_substrate` + `body_interface` | Plan-Zellen je Gruppe, eine Zelle je Platz (`atelier_compiler.hh:293`), Schnittstelle des Körpers | kein CPPN; baut aber einen Zellbestand. **Astra: wie teuer?** | jeder Lauf |
 | `anatomy_report` | Körpermaße, Budgets, Organe | zu prüfen | jeder Lauf |
-| `light_example` + Licht-/Sinnesstreuung (mein `ae733770`/`dfed885f`) | zieht Merkmale je Platz und **vervielfältigt Zellen** (`cell_copies`) | Zellbestand wie bei der Entwicklung. **Kandidat zum Ersetzen** durch das Ziehen allein (`draw_traits` je Kopie, ohne Zellbestand) | jeder volle Lauf nach Änderung |
+| `light_example` + Licht-/Sinnesstreuung (mein `ae733770`/`dfed885f`) | zieht Merkmale je Platz und **vervielfältigt Zellen** (`cell_copies`) | eigens fürs Atelier (`werkzeug/atelier_compiler.hh`), kein CPPN, kein Gehirn, kein Schritt; **eher erlaubt**. Bleibt, wenn es schnell genug ist (Astras Zeiten); Umbau auf `draw_traits` allein hieße, die Schwellenrechnung von `body_interface` nachzubauen | jeder volle Lauf nach Änderung |
 | `sight_report` mit `Ecosystem probe_tank` | baut ein **ganzes Ökosystem**, um Licht an der Probe zu werfen | Welt, auch wenn keine Schritte laufen. **Kandidat** | wenn Sehprobe |
 | `sense_report` mit `probe_tank->field` | Feld des Ökosystems für Duft und Strömung | Welt. **Kandidat** | wenn Sinnesprobe |
 | `fin_course_report` | Körper läuft **128 Schritte** durch `anatomical_action` und `move_body` | **Simulation** | Seitenflossen-Inspektor |
@@ -33,7 +33,7 @@
 
 1. **Seitenflossen und Maul:** Statt einer Bahn aus Schritten eine geschlossene Form aus den Engine-Funktionen. Für die Flosse sind das Zuwachs je Zucken (`stroke_turn` · Drehmoment / Masse), Grenze 54° je Schritt und Abnahme 38 % je Schritt; daraus ergibt sich die Gesamtdrehung als Formel. Für das Maul ist es dieselbe Zuckungsform (`stroke_shape`) ohne Körper. Die Engine bekommt dafür eine kleine Funktion, die beides direkt rechnet. Das ist dann die „fürs Atelier optimierte Berechnung“.
 2. **Sicht und Sinne:** Licht und Duft an der Probe aus den Formeln selbst (`hue_light`, Feld der einen Quelle), ohne `Ecosystem`.
-3. **Streuung:** Je Kopie nur `draw_traits` aufrufen und die Schwelle daraus lesen, ohne `cell_copies`/`light_example`.
+3. **Streuung:** `light_example` bleibt, solange es schnell ist (eigens fürs Atelier, ohne Lauf).
 4. **Brüten:** `incubation_probe` aus dem Atelier nehmen. Wenn das Bild „Schlupfreife“ braucht, dann als Formel aus Dottervorrat und Bedarf.
 5. **Prozess je Anfrage:** Ein Dienst, der einmal startet und Anfragen nacheinander beantwortet, spart den Start bei jedem Zug. Das ist nur dann nötig, wenn Astras Zeiten zeigen, dass der Start zählt.
 
