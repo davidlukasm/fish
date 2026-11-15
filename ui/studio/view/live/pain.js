@@ -17,12 +17,13 @@
 import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {contactHalfAngle} from '../../../tuning.js';
-import {drawnThresholds, findOrgan} from '../../model/document.js';
+import {findOrgan} from '../../model/document.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, reportBubble, txt} from './kit.js';
 import {
   between,
   BOUNDED,
   closingWound,
+  drawnKey,
   keysOf,
   LEVELS,
   runOf,
@@ -97,10 +98,9 @@ liveKind('pain', (studio, organId) => {
     const probe = wound(), part = share(cell, probe);
     // The cells' thresholds are those the engine drew. Its run comes in after a change has
     // settled; until then the last run's stand, and before the first the plan's one threshold.
-    const plan = keysOf([ {id : '', centers : [ cell ]} ], BOUNDED)[0],
-          fresh = drawnThresholds(studio.state, cell.id);
-    drawn = fresh ?? drawn;
-    const key = {...plan, drawn : drawn ?? [ plan.gate ], stale : !fresh};
+    const key = drawnKey(studio.state, keysOf([ {id : '', centers : [ cell ]} ])[0], drawn);
+    if (!key.stale)
+      drawn = key.drawn;
     const depth = closingWound(probe?.strength ?? 0, BITE_STEP, SKIN_RESPONSE.heal_rate),
           met = depth.map(v => clamp(v * part)), sent = runOf(key, met, true).sent,
           silent = silentStep(key, met), last = Math.min(1, ...BOUNDED.gates(key)),

@@ -15,7 +15,7 @@ import {
   planOfUnit,
   unitOfPlan
 } from '../../../tuning.js';
-import {updateCellDistribution, updateCenter} from '../../model/document.js';
+import {drawnThresholds, updateCellDistribution, updateCenter} from '../../model/document.js';
 import {TUNING} from '../../../schema.js';
 import {chip, clamp, drag, el, fishIcon, path, picture, txt} from './kit.js';
 
@@ -63,6 +63,8 @@ export const BOUNDED = Object.freeze({
 // it is used to raises the threshold by as much (body_plan.cc, excess_response).
 const FAINTEST = TUNING.threshold_min,
       REACH = Math.log(TUNING.threshold_range) / -Math.log(FAINTEST);
+// A key's cells' thresholds as places: STOPGAP as in cellGates, where the picture gives none the
+// engine drew.
 const places = k => Array.from(
     {length : CELLS}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5), 0, REACH));
 export const INTENSITY = Object.freeze({
@@ -70,7 +72,8 @@ export const INTENSITY = Object.freeze({
   val : v => v > 0 ? Math.exp(Math.log(FAINTEST) * (1 - clamp(v))) : 0,
   gate : cell => REACH * unitOfPlan(cell.threshold),
   spread : cell => 2 * cell.distribution.spread_physiology * REACH,
-  gates : k => places(k).map(v => Math.exp(Math.log(FAINTEST) * (1 - v))),
+  span : [ 0, REACH ],
+  gates : k => k.drawn ?? places(k).map(v => Math.exp(Math.log(FAINTEST) * (1 - v))),
   answer : (s, gate, used) => {
     const excess = s - gate - used;
     return excess > 0 ? excess / (excess + gate + used) : 0;
@@ -169,6 +172,17 @@ export const keysOf = (types, scale = BOUNDED) => types.map(type => {
     used : adaptationSteps(cell.tau)
   };
 });
+// A key with the thresholds the engine drew for its cells (document.js, drawnThresholds). The
+// engine's run comes in after a change has settled; until then the `last` run's thresholds,
+// `stale`, and before the first run the plan's one threshold.
+export const drawnKey = (state, k, last, scale = BOUNDED) => {
+  const fresh = drawnThresholds(state, k.id);
+  return {
+    ...k,
+    drawn : fresh ?? last ?? scale.gates({...k, spread : 0}).slice(0, 1),
+    stale : !fresh
+  };
+};
 export const setGate = (doc, k, gate, scale = BOUNDED) =>
     updateCenter(doc, k.id, {threshold : scale.threshold(gate)});
 export const setSpread = (doc, k, spread, scale = BOUNDED) =>

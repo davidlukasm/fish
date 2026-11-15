@@ -20,10 +20,12 @@ import {findOrgan, groupReport} from '../../model/document.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, reportBubble, txt} from './kit.js';
 import {
   between,
+  drawnKey,
   INTENSITY,
   keysOf,
   runOf,
   setGate,
+  setSpread,
   setUsed,
   silentStep,
   steady,
@@ -46,6 +48,7 @@ const BAND = Object.freeze({
   lines : 7,
   hair : 36,
   lean : 72,
+  beyond : 13,
   every : 150,
   loud : 34,
   gap : 6,
@@ -57,7 +60,7 @@ liveKind('lateral', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-lateral aid-live-sense-flow';
   const band = addPicture(root);
-  let step = 0, bubble = null;
+  let step = 0, bubble = null, drawn = null;
   const current = () => studio.state.senseProbe?.kind === 'flow' ? studio.state.senseProbe : null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
@@ -80,7 +83,11 @@ liveKind('lateral', (studio, organId) => {
   // The current over the steps as the cells meet it, what they send, and when they have got
   // used to it and fall silent.
   function courseOf(cell) {
-    const probe = current(), key = keysOf([ {id : '', centers : [ cell ]} ], INTENSITY)[0];
+    const probe = current(),
+          key = drawnKey(studio.state, keysOf([ {id : '', centers : [ cell ]} ], INTENSITY)[0],
+                         drawn, INTENSITY);
+    if (!key.stale)
+      drawn = key.drawn;
     const met = steady((probe?.strength ?? 0) * share(cell, probe));
     return {
       key,
@@ -133,9 +140,46 @@ liveKind('lateral', (studio, organId) => {
       class : 'aid-live-track-line'
     },
        live);
+    // Each cell has its own lean, drawn by the engine within the plan's threshold and its spread
+    // either way, within the thresholds a cell can have: that fan is the plan's, the hairs in it
+    // the engine's, pale while they are the last run's. The grip beyond the fan's far edge sets
+    // how far the cells may spread.
+    const reach = c.key.spread / 2, [ none, most ] = INTENSITY.span,
+          near = Math.max(B.least, none, c.key.gate - reach),
+          far = Math.min(most, c.key.gate + reach);
+    if (reach > 0)
+      el('path', {
+        d : path([
+              [ B.L, B.skin ],
+              ...Array.from({length : 9}, (_, n) => tip(B.L, near + (far - near) * n / 8))
+            ]) + ' Z',
+        class : 'aid-live-keyband k0'
+      },
+         live);
+    for (const gate of INTENSITY.gates(c.key))
+      hair(B.L, INTENSITY.pos(gate),
+           {class : 'aid-live-keyline k0 cell' + (c.key.stale ? ' stale' : '')});
     hair(B.L, c.key.gate, {class : 'aid-live-keyline k0'});
-    const [gx, gy] = tip(B.L, c.key.gate);
-    txt(live, gx + 8, gy - 5, word('reports'), {class : 'aid-live-small'});
+    const [gx, gy] = tip(B.L, c.key.gate), [ fx, fy ] = tip(B.L, far),
+               out = (B.hair + B.beyond) / B.hair, sx = B.L + (fx - B.L) * out,
+               sy = B.skin + (fy - B.skin) * out;
+    drag(svg,
+         el('rect', {
+           x : sx - 5,
+           y : sy - 4,
+           width : 10,
+           height : 8,
+           rx : 2.5,
+           class : 'aid-live-keygrip k0 on'
+         },
+            live),
+         p => draft(setSpread(
+             studio.state.document, c.key,
+             2 * Math.max(0, clamp(degrees(Math.atan2(p.x - B.L, B.skin - p.y)) / B.lean) -
+                                 c.key.gate),
+             INTENSITY)),
+         'lateralspread', 'grip', settle);
+    txt(live, sx + 9, sy + 3, word('reports'), {class : 'aid-live-small'});
     drag(svg,
          el('rect', {
            x : gx - 5,
