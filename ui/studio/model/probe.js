@@ -84,7 +84,7 @@ export function groundColour(probe) {
 }
 // The commands an inspector tries on its organ, not things in the water: they go to the engine as
 // they are (design.js, tryCommand) and the fish panel draws no probe for them.
-export const isCommand = probe => probe?.kind === 'fins' || probe?.kind === 'mouth';
+export const isCommand = probe => probe?.kind === 'mouth';
 const commandScene = ({organ, key, ...scene}) => scene;
 export const senseScene = probe => isCommand(probe) ? commandScene(probe)
                                    : probe && probe.kind !== 'ground' ? {
