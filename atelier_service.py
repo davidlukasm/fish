@@ -284,6 +284,25 @@ def sense_line(sense):
     return "1 " + str(SENSE_SCENES[sense["kind"]]) + " " + " ".join(number(v) for v in values) + "\n"
 
 
+def learning_context_line(blood, learning):
+    values = []
+    if blood is not None:
+        if not isinstance(blood, dict):
+            raise Refusal("studio.errors.invalidProbe")
+        hormones = blood.get("hormones")
+        if not isinstance(hormones, list):
+            raise Refusal("studio.errors.invalidProbe")
+        values.extend(blood.get(key) for key in ("maturity", "reserve", "fatigue", "cellMaturity"))
+        values.extend(hormones)
+    if learning is not None:
+        if not isinstance(learning, dict) or type(learning.get("group")) is not int:
+            raise Refusal("studio.errors.invalidProbe")
+        values.extend(learning.get(key) for key in ("group", "delay", "pre", "post", "teaching",
+                                                    "prediction"))
+    flags = [int(blood is not None), int(learning is not None)]
+    return " ".join(number(value) for value in [*flags, *values]) + "\n"
+
+
 def run(data, data_dir=None, progress=None, cancel=None, *, check_incubation=False):
     if not isinstance(data, dict):
         raise Refusal("studio.errors.invalidRequest")
@@ -305,7 +324,9 @@ def run(data, data_dir=None, progress=None, cancel=None, *, check_incubation=Fal
         if not isinstance(spread, bool):
             raise Refusal("studio.errors.invalidRequest")
         body = (str(int(spread)) + "\n" + sight_line(data.get("sight")) +
-                sense_line(data.get("sense")) + encode_plan(data.get("plan")))
+                sense_line(data.get("sense")) +
+                learning_context_line(data.get("blood"), data.get("learning")) +
+                encode_plan(data.get("plan")))
         try:
             completed = subprocess.run([str(tool), "design"], cwd=ROOT, input=body, text=True,
                                        capture_output=True, timeout=QUICK_SECONDS)

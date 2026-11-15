@@ -178,8 +178,8 @@ struct NetworkTopology {
       tau[i] = time_constant_steps(c.parameters);
       const auto lt = learning_time_steps(c.parameters);
       learning[i] = float(lt);
-      fast[i] = float(std::exp(-2 / tau[i]));
-      retention[i] = float(std::exp(-1 / lt));
+      fast[i] = plasticity::fast_keep(tau[i]);
+      retention[i] = plasticity::trace_keep(lt);
       sign[i] = c.role == Role::Sensor ? 1 : classes[i].sign;
       nerve[i] = c.role == Role::Nerve;
       modulator[i] = teaching_source(c);
@@ -344,17 +344,6 @@ bool Substrate::finish_development(std::size_t &budget) {
 }
 namespace {
 constexpr float PRUNE = plasticity::prune_share * SYNAPSE_UNIT;
-float learning_rate(const Neuron &n, float hormone) {
-  return MIN_LEARNING_RATE + (MAX_LEARNING_GAIN - MIN_LEARNING_RATE) *
-                                 std::clamp(n.parameters.plasticity, 0.f, 1.f) *
-                                 (.5f * (1 + hormone));
-}
-F8 decay8(F8 use, F8 time, F8 consolidated) {
-  const F8 d = (splat8(float(std::log(2.) / plasticity::baseline_steps)) +
-                (1 - use) / (plasticity::unused_decay_span * time)) *
-               (1 - consolidated);
-  return 1 - d + d * d * (.5f - d / 6);
-}
 }
 Network::Network(std::shared_ptr<const Substrate> s, bool developing)
     : tissue(std::move(s)), developing_(developing) {
@@ -853,7 +842,8 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
     float evidence = std::abs(dpost);
     for (int k = 0; k < LANES; ++k)
       evidence = std::max(evidence, old_trace[k]);
-    const float target_gain = learning_rate(c, hormone_effect_[Learning][i]);
+    const float target_gain =
+        plasticity::learning_rate(c.parameters.plasticity, hormone_effect_[Learning][i]);
     for (std::size_t j = 0; j < storage; j += LANES) {
       const auto k = r.offset + j;
       const I8 ix = load_index8(index_.data() + k);
@@ -910,7 +900,8 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
             gain[l] = mode[l] = comp[l] = surprise_value[l] = consolidating[l] = 0;
             continue;
           }
-          gain[l] = learning_rate(tissue->neurons[src], hormone_effect_[Learning][src]);
+          gain[l] = plasticity::learning_rate(tissue->neurons[src].parameters.plasticity,
+                                               hormone_effect_[Learning][src]);
           mode[l] = topology->classes[src].mode;
           comp[l] = .5f * (1 + hormone_effect_[Competition][src]);
           surprise_value[l] = cell_surprise_[src];
@@ -918,11 +909,12 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
         }
       }
       F8 positive = mode > splat8(0) ? mode : F8{}, negative = mode < splat8(0) ? -mode : F8{};
+      const F8 teaching = plasticity::teaching_share(surprise_value, e, splat8(denominator));
       F8 delta =
           ordinary * gain *
           (positive * comp * y * (xc - old * y) -
            plasticity::cancellation * negative * y * xc * gather8(topology->nerve.data(), ix) +
-           surprise_value * e / denominator);
+           teaching);
       // The competing share of the change: an active cell pushes out its silent inputs.
       F8 competition = -(ordinary * gain * positive * comp * y * y * old);
       const F8 limit = ordinary * c.electrical_limit + (1 - ordinary) * c.teaching_limit;
@@ -936,8 +928,9 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
             ordinary * gain * sign * post *
             (positive * comp * (pre - abs8(old) * evoked) -
              plasticity::cancellation * negative * pre * gather8(topology->nerve.data(), ix));
-        const F8 teaching = ordinary * gain * surprise_value * e / denominator;
-        delta = (1 - level) * delta + level * (sustained + teaching);
+        const F8 taught = plasticity::teaching_share(ordinary * gain * surprise_value, e,
+                                                    splat8(denominator));
+        delta = (1 - level) * delta + level * (sustained + taught);
         competition = (1 - level) * competition -
                       level * ordinary * gain * sign * post * positive * comp * abs8(old) * evoked;
       }
@@ -969,7 +962,8 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
                          0, 1);
         store8(consolidation_.data() + k, lasting);
       }
-      const F8 decayed = plasticity_enabled ? updated * decay8(u, time, lasting) : old;
+      const F8 decayed =
+          plasticity_enabled ? updated * plasticity::contact_retention(u, time, lasting) : old;
       learning_summary_.decay += sum8(abs8(updated - decayed));
       store8(weight_.data() + k, decayed);
     }
