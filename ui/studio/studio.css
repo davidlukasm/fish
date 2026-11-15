@@ -798,6 +798,8 @@
 .aid-plan-edge:hover{stroke-opacity:1;stroke:var(--aid-hover)}
 .aid-plan-edge.empty{stroke-opacity:.35}
 .aid-plan-grip{fill:var(--aid-handle-core);stroke:var(--aid-handle);stroke-width:2;cursor:ns-resize}
+.aid-receptor-grip{fill:var(--aid-handle-core);stroke:var(--aid-handle);stroke-width:2;cursor:ns-resize}
+.aid-receptor-grip.curve-half{cursor:ew-resize}
 .aid-plan-grip.teaching_limit{stroke:var(--aid-teach)}
 .aid-plan-grip:hover{stroke:var(--aid-light)}
 .aid-plan-mark{cursor:pointer;color:var(--aid-brain)}

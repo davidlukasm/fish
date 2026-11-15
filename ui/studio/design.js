@@ -223,7 +223,9 @@ export const designMethods = {
                 return JSON.stringify([outlineSizes(this.state),
                                        spineDraft && [report?.spinesRest, report?.spinesRaised,
                                                       report?.spineGroups, report?.attackProbe],
-                                       draft.key === 'field' && report?.lateral]);
+                                       draft.key === 'field' && report?.lateral,
+                                       draft.key === 'receptor' &&
+                                           report?.groups?.map(g => g.responses)]);
               };
               const previous = shape();
               this.state.outlinePreview = anatomy;
@@ -231,6 +233,9 @@ export const designMethods = {
                 this.refreshScene();
                 if (colourDraft)
                   this.refreshLive();
+                // A receptor's curve is the engine's: the inspector follows each answer.
+                if (draft.key === 'receptor')
+                  this.refreshDragged();
               }
             }
           } else if (this.state.document === document)
