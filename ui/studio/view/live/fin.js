@@ -161,10 +161,13 @@ liveKind('fin', (studio, organId) => {
       const k = clamp(step / S.every, 0, Math.max(0, course.length - 1)), a = course[Math.floor(k)],
             b = course[Math.ceil(k)] ?? a;
       if (a) {
+        // The engine keeps the heading within half a turn either way: between two rows the fish
+        // turns the shorter way.
         const f = k - Math.floor(k),
-              [ x, y ] = at([ a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f ]);
+              [ x, y ] = at([ a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f ]),
+              turned = Math.atan2(Math.sin(b[2] - a[2]), Math.cos(b[2] - a[2]));
         fish.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${
-                                           (-degrees(a[2] + (b[2] - a[2]) * f)).toFixed(1)})`);
+                                           (-degrees(a[2] + turned * f)).toFixed(1)})`);
       }
       now.setAttribute('d', `M${X(step).toFixed(1)} ${S.rows[0] - S.high - 4} V${
                                 S.rows[muscles[1] ? 1 : 0] + S.high + 4}`);
