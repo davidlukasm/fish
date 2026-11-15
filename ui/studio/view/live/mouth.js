@@ -12,13 +12,17 @@
 // as the plan's muscles twitch). Nothing of it is reckoned here.
 // The jaw's length, the teeth, the muscles' strength and fibres are the fish panel's
 // (anatomy_handles.js); its mouth moves with this beat (design.js, showMouthStep).
-// The input: when the closer begins, before or after the opener.
-// ASSUMED for the picture: the water through the gills and the credit are each drawn against
-// their own largest value in the beat.
+// The input: when the closer begins, before or after the opener; there only if the fish has
+// both. The water through the gills and the credit are drawn against the plan's own measures
+// (mouthCourse.gillWaterReference: the gills' water at a wide open mouth and a full command;
+// creditReference: what the throat would take if the stream ran full for the opener's whole
+// twitch, more than any beat reaches).
 // STOPGAP: the four kinds of food and the force on each (anatomy.mouthForces). They belong to a
 // probe of food before the mouth in the fish panel; until that exists they stay here.
 import {t, tList} from '../../../strings.js';
+import {MOTOR_KIND} from '../../../schema.js';
 import {findOrgan} from '../../model/document.js';
+import {organFunction} from '../../model/organs.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 
 const word = key => t('studio.live.mouth.' + key);
@@ -110,12 +114,12 @@ liveKind('mouth', (studio, organId) => {
            live);
     }
     // Behind the mouth: the water the gills draw through, and what the throat can swallow.
-    const band = (index, base, name, act) => {
-      const most = Math.max(...shown.map(s => s.sample[index]), 0);
+    const band = (index, most, base, name, act) => {
       el('path', {d : `M${B.L} ${base} H${B.R}`, class : 'aid-live-axis'}, live);
-      if (most > 0)
+      // Without a measure (no opener, no gills) there is nothing to draw.
+      if (most > 0 && shown.length)
         el('path', {
-          d : path(shown.map(s => [s.x, base - B.band * s.sample[index] / most])) +
+          d : path(shown.map(s => [s.x, base - B.band * clamp(s.sample[index] / most)])) +
                   ` L${shown.at(-1).x.toFixed(1)} ${base} L${shown[0].x.toFixed(1)} ${base} Z`,
           class : 'aid-live-mouth-water',
           opacity : index === 2 ? .45 : .8
@@ -128,28 +132,9 @@ liveKind('mouth', (studio, organId) => {
     };
     const organs = studio.state.document.organs, gut = organs.find(o => o.type === 'gut');
     if (organs.some(o => o.type === 'gills'))
-      band(2, B.gills, word('gills'));
-    band(5, B.throat, word('gut'), gut && (() => studio.select('organ', gut.id, null, false)));
-    // The input: when the closer begins. The opener begins at the tick.
-    el('path', {d : `M${X(-B.delay)} ${B.closer} H${X(B.delay)}`, class : 'aid-live-track-line'},
-       live);
-    el('path', {d : `M${X(0)} ${B.closer - 5} v10`, class : 'aid-live-axis'}, live);
-    const gx = X(own.delay);
-    drag(svg,
-         el('rect', {
-           x : gx - 5,
-           y : B.closer - 5,
-           width : 10,
-           height : 10,
-           rx : 2.5,
-           class : 'aid-live-keygrip k0 on'
-         },
-            live),
-         (p, from) => {
-           own.delay = clamp(stepAt(p.x - (from.x - gx)), -B.delay, B.delay);
-           show();
-         },
-         'mouthcloser', 'knob');
+      band(2, course?.gillWaterReference, B.gills, word('gills'));
+    band(5, course?.creditReference, B.throat, word('gut'),
+         gut && (() => studio.select('organ', gut.id, null, false)));
     const now = el('path', {class : 'aid-live-now'}, live);
     film = share => {
       const i = Math.min(samples.length - 1, Math.floor(share * samples.length));
@@ -160,8 +145,24 @@ liveKind('mouth', (studio, organId) => {
       // The fish panel's mouth moves with the same step.
       studio.showMouthStep?.(organId, samples[i]);
     };
-    // Redrawn while the grip is pulled, the beat stays at the step it was showing.
+    // Redrawn while the knob is pulled, the beat stays at the step it was showing.
     film(Math.min(1, clock / B.round));
+    // The input: when the closer begins. The opener begins at the tick. A mouth without both
+    // muscles has nothing to set here.
+    const has = code =>
+        organs.some(o => o.type === 'muscle' && organFunction(o, studio.state.sites) === code);
+    if (!has(MOTOR_KIND.suction) || !has(MOTOR_KIND.aggression))
+      return;
+    el('path', {d : `M${X(-B.delay)} ${B.closer} H${X(B.delay)}`, class : 'aid-live-track-line'},
+       live);
+    el('path', {d : `M${X(0)} ${B.closer - 5} v10`, class : 'aid-live-axis'}, live);
+    const gx = X(own.delay);
+    drag(svg, el('circle', {cx : gx, cy : B.closer, r : 5.5, class : 'aid-live-posture'}, live),
+         (p, from) => {
+           own.delay = clamp(stepAt(p.x - (from.x - gx)), -B.delay, B.delay);
+           show();
+         },
+         'mouthcloser', 'knob');
   }
   // Before the mouth the four kinds of food, each bitten as deep as the force on it.
   function drawFoods() {
