@@ -29,13 +29,7 @@ import {BODY_FRAME} from './model/layout.js';
 import {dataAttribute, fixed} from './view/markup.js';
 import {driveContext, wireMarks, wirePatch} from './view/panels.js';
 import {PANEL_WIDTH, panelStyle} from './view/shell.js';
-import {
-  GROWTH,
-  BIRTH,
-  receptorCurvePatch,
-  receptorGripPatch,
-  wheelWidthPatch
-} from './view/substances.js';
+import {GROWTH, BIRTH, receptorGripPatch, wheelWidthPatch} from './view/substances.js';
 import {learnMemoryPatch} from './view/learning.js';
 import {nerveTissuePatch} from './view/nerve_cell.js';
 import {variationPatch} from './view/cell_tissue.js';
@@ -179,7 +173,9 @@ export const GRIPS = Object.freeze([
       const target = g.dataset.receptorCurve, cut = target.lastIndexOf(':');
       const center = findCenter(studio.state.document, target.slice(0, cut))?.center;
       const which = target.slice(cut + 1);
-      const receptor = which === BIRTH ? center?.growth : center?.receptors?.[Number(which)];
+      const receptor = target === GROWTH ? studio.state.document.growth
+                       : which === BIRTH ? center?.growth
+                                         : center?.receptors?.[Number(which)];
       return {
         target,
         handle : h.dataset.curveHandle,
@@ -493,8 +489,6 @@ export const handleMethods = {
     } else if (drag.from)
       patch = receptorGripPatch(this.state, centerId, effect, drag.handle, drag.from,
                                 {x : fx * drag.size.width, y : fy * drag.size.height});
-    else
-      patch = receptorCurvePatch(this.state, receptor, effect, drag.handle, fx, fy);
     if (!patch)
       return;
     this.draftDesign(growth             ? updateGrowth(doc, patch)
