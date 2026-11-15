@@ -9,7 +9,9 @@ import {clamp} from '../../units.js';
 import {lifeCycle} from './life_cycle.js';
 import {cellVariation} from './cell_tissue.js';
 
-export const DEFAULT_PREVIEW_CONTEXT = DEFAULT_BLOOD_CONTEXT;
+// What the Atelier's pictures are drawn at until the life tool sets it otherwise: the grown
+// fish, fed and rested, with no messenger in its blood.
+export const DEFAULT_PREVIEW_CONTEXT = Object.freeze({...DEFAULT_BLOOD_CONTEXT, maturity : 1});
 export const previewContextOf = state => state.previewContext ?? DEFAULT_PREVIEW_CONTEXT;
 // A substance has a level to set once it is named or a cell answers it.
 export function previewSubstances(doc, wheel) {
