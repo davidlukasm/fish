@@ -18,6 +18,9 @@ void HormoneParameters::validate() const {
   finite_range(binding_rate, 0, 1);
   finite_range(work_cost, 0, PLAUSIBLE_AMOUNT);
 }
+double HormoneState::approach(double level, double target, double tau, double steps) {
+  return target + (level - target) * std::exp(-steps / tau);
+}
 void HormoneState::set_levels(field::Hormones values) {
   for (double v : values)
     finite_range(v, 0, 1);
@@ -50,10 +53,10 @@ void HormoneState::advance(const field::Hormones &p, const field::Hormones &b, d
     binding_[k] = paid * b[k];
     const double target = parameters.height * secretion_[k],
                  tau = levels_[k] < target ? rise_steps[k] : residence_steps[k],
-                 approached = target + (levels_[k] - target) * std::exp(-1 / tau),
+                 approached = approach(levels_[k], target, tau, 1),
                  next = std::clamp(approached * std::exp(-parameters.binding_rate * binding_[k]),
                                    0., 1.),
-                 ordinary = levels_[k] * std::exp(-1 / residence_steps[k]);
+                 ordinary = approach(levels_[k], 0, residence_steps[k], 1);
     integrated_[k] = next - ordinary;
     levels_[k] = next;
   }
