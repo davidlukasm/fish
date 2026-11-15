@@ -10,6 +10,7 @@ export const PROBE_KIND = Object.freeze({
   touch : 'touch',
   pain : 'wound',
   lateral : 'flow',
+  balance : 'balance',
   gut : 'gut'
 });
 export const STONE = -1;
@@ -23,6 +24,7 @@ const START = Object.freeze({
   touch : {bearing : 90, distance : 0, strength : .25},
   wound : {bearing : 90, distance : 0, strength : SKIN_RESPONSE.bite_wound},
   flow : {bearing : 60, distance : 0, strength : .02},
+  balance : {bearing : 90, distance : 0, strength : 0},
   gut : {bearing : 0, distance : 0, strength : .5, nutrient : .2}
 });
 export function skinProbeBearing(document, anatomy, cellId) {
@@ -41,7 +43,7 @@ export function probeFor(organ, probe, anatomy, document) {
   const bearing = skin ? skinProbeBearing(document, anatomy, organ.centers[0]?.id) : null;
   if (probe?.organ === organ.id)
     return bearing === null || bearing === probe.bearing ? probe : {...probe, bearing};
-  const facing = prior ? prior.side === side ? 1 : -1 : side;
+  const facing = kind === 'balance' ? 1 : prior ? prior.side === side ? 1 : -1 : side;
   const scene = prior ?? START[kind], tuning = organ.centers[0];
   const tip = !prior && kind === 'taste' && anatomy?.bodyRadius > 0
                   ? anatomy.barbelPlaces?.[sideIndex(side)]

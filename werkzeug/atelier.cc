@@ -108,7 +108,7 @@ struct SenseScene {
   double flow_bearing = 0, flow_strength = 0;
 };
 namespace sense_scene {
-constexpr int smell = 1, touch = 2, flow = 3, wound = 4, gut = 5, taste = 6;
+constexpr int smell = 1, touch = 2, flow = 3, wound = 4, gut = 5, taste = 6, balance = 7;
 }
 constexpr double SENSE_SCENE_REACH = 40, SENSE_SCENE_STRENGTH = 20;
 SenseScene read_sense_scene(std::istream &in) {
@@ -117,7 +117,7 @@ SenseScene read_sense_scene(std::istream &in) {
   ensure(
       bool(in >> scene.kind >> scene.bearing >> scene.distance >> scene.strength >> scene.scent >>
            scene.nutrient) &&
-          scene.kind >= sense_scene::smell && scene.kind <= sense_scene::taste &&
+          scene.kind >= sense_scene::smell && scene.kind <= sense_scene::balance &&
           between(scene.bearing, -half_turn, half_turn) &&
           between(scene.distance, 0, SENSE_SCENE_REACH) &&
           between(scene.strength, 0, scene.kind == sense_scene::gut ? 1 : SENSE_SCENE_STRENGTH) &&
@@ -151,6 +151,16 @@ void sense_report(const field::Substrate &t,
     for (std::size_t i = 0; i < answers.size(); ++i) {
       const auto &r = interface->sensory[i];
       if (r.dominant_sense() == field::Intake || r.dominant_sense() == field::InnerPressure)
+        answers[i] = fishsim::receptor_response(
+            r, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
+    }
+  } else if (scene.kind == sense_scene::balance) {
+    // The probe gives the direction of world-down in the fish's frame.
+    body.angle = fishsim::PI / 2 - bearing;
+    const fishsim::SensoryFrame frame;
+    for (std::size_t i = 0; i < answers.size(); ++i) {
+      const auto &r = interface->sensory[i];
+      if (r.dominant_sense() == field::Flow && r.inner)
         answers[i] = fishsim::receptor_response(
             r, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
     }
@@ -232,13 +242,15 @@ void sense_report(const field::Substrate &t,
     for (std::size_t i = 0; i < answers.size() && i < buffer.size(); ++i)
       answers[i] = buffer[i];
   }
-  const auto stirred = [&](int sense) {
+  const auto stirred = [&](const fishsim::BrainInterface::Receptor &r) {
+    const int sense = r.dominant_sense();
     return scene.kind == sense_scene::gut ? sense == field::Intake || sense == field::InnerPressure
-           : scene.kind == sense_scene::smell ? sense == field::Odor
-           : scene.kind == sense_scene::taste ? sense == field::Taste
-           : scene.kind == sense_scene::flow  ? sense == field::Flow
-           : scene.kind == sense_scene::touch ? sense == field::Touch
-                                              : sense == field::Damage;
+           : scene.kind == sense_scene::smell   ? sense == field::Odor
+           : scene.kind == sense_scene::taste   ? sense == field::Taste
+           : scene.kind == sense_scene::flow    ? sense == field::Flow && !r.inner
+           : scene.kind == sense_scene::balance ? sense == field::Flow && r.inner
+           : scene.kind == sense_scene::touch   ? sense == field::Touch
+                                                : sense == field::Damage;
   };
   std::cout << ",\"senseProbe\":[";
   for (std::size_t i = 0; i < groups.size(); ++i) {
@@ -246,7 +258,7 @@ void sense_report(const field::Substrate &t,
     int count = 0;
     for (std::size_t k = 0; k < answers.size(); ++k) {
       const auto &r = interface->sensory[k];
-      if (!stirred(r.dominant_sense()) || !groups[i].contains(t.neurons[r.neuron].location))
+      if (!stirred(r) || !groups[i].contains(t.neurons[r.neuron].location))
         continue;
       sum += answers[k] / std::max(1e-9f, r.senses[r.dominant_sense()]);
       ++count;
@@ -1031,7 +1043,8 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
     light_spread_report(sample, *fishsim::body_interface(sample), groups, true);
   }
   std::optional<fishsim::Ecosystem> probe_tank;
-  if (sight || (sense && sense->kind != sense_scene::gut && sense->kind != sense_scene::flow))
+  if (sight || (sense && sense->kind != sense_scene::gut && sense->kind != sense_scene::flow &&
+                sense->kind != sense_scene::balance))
     probe_tank.emplace(SIGHT_TANK_SEED);
   if (sight)
     sight_report(t, g.interface, groups, *sight, *probe_tank);

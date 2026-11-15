@@ -279,7 +279,8 @@ export const designMethods = {
   refreshProbeControls() {
     this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
     this.redrawBlocks('gutProbeControls', findOrgan, organ => gutProbeControls(this.state, organ));
-    if ([ 'smell', 'taste', 'touch', 'wound', 'flow' ].includes(this.state.senseProbe?.kind))
+    if ([ 'smell', 'taste', 'touch', 'wound', 'flow', 'balance' ].includes(
+            this.state.senseProbe?.kind))
       mountLive(this.root, this);
   },
   drawSight() {

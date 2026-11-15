@@ -19,6 +19,7 @@ const PROBE_SCENE = Object.freeze({
   // the labels do not overlap.
   ringGap : 28,
   gap : 14,
+  gravity : 68,
   far : 150,
   reach : 300,
   streams : 3,
@@ -71,6 +72,8 @@ function handleRadius(probe, faintest) {
   const P = PROBE_SCENE, angle = radians(probe.bearing), skin = skinDistance(angle);
   if (probe.kind === 'taste')
     return probe.distance * BODY_RADIUS;
+  if (probe.kind === 'balance')
+    return skin + P.gravity;
   return probe.kind === 'smell' ? skin + beyondSkin(probe.distance)
                                 : skin + (probe.kind === 'flow' ? P.far : P.gap) +
                                       P.reach * strengthShare(probe.strength, probe.kind, faintest);
@@ -82,6 +85,8 @@ export const probeFlow = probe =>
 export function probePatch(kind, position, faintest) {
   const dx = position.x - BODY_MIDDLE.x, dy = position.y - BODY_MIDDLE.y;
   const angle = Math.atan2(dy, -dx), r = Math.hypot(dx, dy), bearing = degrees(angle);
+  if (kind === 'balance')
+    return {bearing};
   if (kind === 'taste')
     return {bearing, distance : clamp(r / BODY_RADIUS, 0, PROBE_LIMITS.most.taste)};
   const beyond = r - skinDistance(angle);
@@ -128,6 +133,10 @@ function stimulusSvg(probe, faintest, zoom) {
   }
   if (probe.kind === 'flow' || probe.kind === 'taste')
     return '';
+  if (probe.kind === 'balance')
+    return '<path class="aid-probe-arrow balance" d="' + arrowPath(onto, at) + '"/>' +
+           '<text class="aid-probe-distance"' + steadyAt(at, zoom) + ' y="' + (P.handle + 13) +
+           '" text-anchor="middle">' + escapeText(t('studio.live.balance.down')) + '</text>';
   return '<path class="aid-probe-arrow ' + probe.kind + '" d="' + arrowPath(at, onto) + '"/>';
 }
 function flowArrows(angle, at, P) {
