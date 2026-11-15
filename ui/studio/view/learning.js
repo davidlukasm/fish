@@ -30,6 +30,8 @@ import {EPISODE_LAYOUT, episodeSvg} from './episode.js';
 import {centerMarker} from './scene.js';
 import {contactPlan} from './contact_plan.js';
 import {learningFactors} from '../model/learning.js';
+import {livePlace} from './live/kit.js';
+import './live/learn.js';
 
 // The learning gain keeps one digit more because it is small.
 const RATE_DIGITS = VALUE_DIGITS + 1;
@@ -340,8 +342,8 @@ export function learningInspector(state) {
   let html = '<header class="aid-inspector-head"><span>' + label('sections.brain') + '</span>' +
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve')
-    return html + learnersOverview(state) +
-           '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
+    return html + learnersOverview(state) + '<div class="aid-empty-centre">' +
+           label('inspector.selectLearning') + '</div>';
   html += nodeChoice(state, chosen);
   const teachers = sendersOf(state, chosen);
   const taught = boundSubstance(state, chosen, HORMONE_EFFECT.teaching);
@@ -349,10 +351,9 @@ export function learningInspector(state) {
     ...(teachers.modulators.length ? [ tone('brain') ] : []),
     ...(taught ? [ substanceColor(taught.index) ] : [])
   ];
-  return html + heading(centerTitle(chosen)) +
-         learningPicture(state, chosen, teachers, colours, learningValues(state, chosen)) +
-         teacherList(state, chosen, teachers.modulators) + traceGraphic(state, chosen) +
-         modeChoices(chosen) + '<div class="aid-learn-effects">' +
+  return html + heading(centerTitle(chosen)) + livePlace('learn', chosen) +
+         teacherList(state, chosen, teachers.modulators) + modeChoices(chosen) +
+         '<div class="aid-learn-effects">' +
          LEARNING_EFFECTS.map(effect => substancePart(state, chosen, effect)).join('') + '</div>' +
          cellDevelopment(state, chosen) + contactPlan(state, [ chosen ]);
 }

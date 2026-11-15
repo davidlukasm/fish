@@ -1723,6 +1723,18 @@
       "pressure": "Druck",
       "reports": "meldet ab"
     },
+    "learn": {
+      "cue": "Reiz",
+      "trace": "Spur",
+      "teach": "Lehrer",
+      "contact": "Kontakt",
+      "first": "Durchgang 1",
+      "second": "Durchgang 2",
+      "expected": "erwartet",
+      "quiet": "stiller Eingang",
+      "steps": "Schritte",
+      "placeholder": "Platzhalter · Kurven noch nicht aus der Engine"
+    },
     "pain": {
       "used": "gewöhnt",
       "felt": "Schwelle",
