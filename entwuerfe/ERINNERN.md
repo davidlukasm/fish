@@ -45,3 +45,5 @@ Zentral, nicht Beiwerk: gegenseitig ansehen, Code prüfen, Rückmeldung geben, u
 - „Lebensphasen je Organ“ → als ein gemeinsames Band für alle verstanden.
 - Davids „mir ist es egal“ zur Drüse hieß „erklärt es mir“ (LEITLINIE 5, Sarkasmus).
 - „Schlupf“: Der Gestalter wartet auf keinen Engine-Lauf, um zu erfahren, wann sein Fisch schlüpft (14.11. 18:02).
+
+- 15.11. 03:58: Aus Pixelwerten (kleiner Fisch ändert sich) auf „folgt dem Griff“ geschlossen; es war die Uhr. Erst den Weg im Code lesen (`design.js requestDesign`), dann Ursache nennen. Gegenprobe ohne Eingriff machen.
