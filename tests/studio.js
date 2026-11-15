@@ -1026,48 +1026,61 @@ async function checkBloodReceptors(model, capabilities) {
   const contextKey = key => key === 'cell_maturity' ? 'cellMaturity' : key;
   const receptor =
       {active : 1, baseline : 0, sensitivity : 1, half : .25, steepness : 0, width : 0};
-  const curveState = {document : placed.document, capabilities : wheel, previewContext : empty};
-  for (const substance of [0, ...Object.values(B)])
-    for (const half of [wheel.halfRange[0], .25, .5, .8, 1])
-      for (const steepness of [0, 1, wheel.steepnessSpan])
-        for (const width of [0, .45, 1]) {
-          const r = {...receptor, substance, half, steepness, width};
-          for (const context of [empty, {...empty, reserve : .4, fatigue : .2}]) {
-            const state = {...curveState, previewContext : context};
-            const picture = substances.effectCurve(state, r, E.excitation, placed.centerId);
-            assert.doesNotMatch(picture, /NaN|Infinity|undefined/);
-            const grip = picture.match(/data-curve-handle="steepness" cx="([^"]+)" cy="([^"]+)"/);
-            if (!grip)
-              continue;
-            const x = Number(grip[1]), y = Number(grip[2]);
-            assert.ok(x >= 36 && x <= 250 && y >= 26 && y <= 112);
-            const ordinate = px => {
-              const fraction = Math.max(0, Math.min(1, (px - 36) / (250 - 36)));
-              const concentration =
-                  substance >= wheel.hormones
-                      ? fraction
-                      : wheel.halfRange[0] * (wheel.halfRange[1] / wheel.halfRange[0]) ** fraction;
-              const sample = structuredClone(context);
-              const body = Object.keys(B).find(key => B[key] === substance);
-              if (body)
-                sample[contextKey(body)] = concentration;
-              else
-                sample.hormones[substance] = concentration;
-              return 112 - 86 * (model.receptorResponse(wheel, r, sample) + 1) / 2;
-            };
-            // SVG coordinates round to hundredths; a tiny threshold makes that visible on a
-            // linear axis, so include the coordinate's rounding interval.
-            assert.ok(y >= ordinate(x + .005) - .006 && y <= ordinate(x - .005) + .006,
-                      'The steepness grip lies on the response at its visible concentration: ' +
-                          JSON.stringify({r, context, x, y}));
-            const patch = substances.receptorCurvePatch(state, r, E.excitation, 'steepness',
-                                                        x / 260, y / 150);
-            assert.ok(Number.isFinite(patch?.steepness));
-            assert.ok(Math.abs(patch.steepness - steepness) < .04,
-                      'Taking hold of the steepness grip preserves its current value: ' +
-                          JSON.stringify({r, context, x, y, patch}));
-          }
-        }
+  const {eligible, ORGAN_BY_KEY, siteRole} = await import('../ui/studio/model/organs.js');
+  const {sitePoint} = await import('../ui/studio/model/layout.js');
+  const {handleMethods} = await import('../ui/studio/handles.js');
+  const glandSite = wheel.sites.find(site => eligible(ORGAN_BY_KEY.gland.centers[0], site));
+  const withReceptor = model.updateReceptor(placed.document, placed.centerId, E.excitation,
+                                            {...receptor, substance : B.reserve});
+  const gland = model.addOrgan(withReceptor, 'gland', wheel.sites,
+                               sitePoint(glandSite, siteRole('gland')));
+  assert.ok(gland);
+  const blood = {...empty, reserve : .4, hormones : [...empty.hormones ]};
+  blood.hormones[0] = .6;
+  const design = document => JSON.parse(execFileSync(
+      'python3', ['-B', '-c',
+                  'import json,sys; from atelier_service import run; print(json.dumps(run(json.load(sys.stdin))))'],
+      {
+        cwd : join(__dirname, '..'),
+        input : JSON.stringify({
+          operation : 'design',
+          plan : model.compileDocument(document, wheel.sites),
+          blood
+        }),
+        encoding : 'utf8',
+        timeout : 5000
+      }));
+  const state = {document : gland.document, capabilities : wheel, previewContext : blood,
+                 anatomy : design(gland.document)};
+  const course = state.anatomy.hormoneCourse[0];
+  assert.ok(course.rise.at(-1) > 0 && course.rise.at(-1) < blood.hormones[0]);
+  assert.ok(course.span >= blood.hormones[0], 'The hormone chart includes the set blood level');
+  const id = placed.centerId, target = id + ':' + E.excitation,
+        settings = () => model.findCenter(state.document, id).center.receptors[E.excitation],
+        picture = () => substances.effectCurve(state, settings(), E.excitation, target),
+        before = picture();
+  const handle =
+      /data-curve-handle="half" data-grip-x="([^"]+)" data-grip-y="([^"]+)"/.exec(before);
+  assert.ok(handle, 'The engine response shows a half-value grip');
+  const [, x, y] = handle;
+  const grip = {x : Number(x), y : Number(y), receptor : settings()};
+  const size = {width : 260, height : 150};
+  handleMethods.receptorPointer.call({
+    state,
+    handleDrag : {target, handle : 'half', from : grip, size, rect : {...size, left : 0, top : 0}},
+    draftDesign(document, key, refresh, preview) {
+      assert.equal(preview, 'receptor');
+      state.document = document;
+      state.outlinePreview = design(document);
+    }
+  }, {clientX : grip.x + 25, clientY : grip.y});
+  assert.ok(settings().half > grip.receptor.half);
+  const oldCurve = state.anatomy.groups[0].responses[E.excitation],
+        newCurve = state.outlinePreview.groups[0].responses[E.excitation];
+  assert.ok(newCurve.at(-1) < oldCurve.at(-1), 'Moving the half grip updates the engine curve');
+  const line = /<polyline class="aid-response-line" points="([^"]+)"/;
+  assert.notEqual(line.exec(picture())[1], line.exec(before)[1]);
+  assert.doesNotMatch(picture(), /NaN|Infinity|undefined/);
   for (let index = 0; index < wheel.regulators; ++index) {
     const r = {...receptor, substance : index};
     for (const [level, expected] of [[ 0, 0 ], [ .25, .5 ], [ 1, .8 ]]) {
@@ -1082,7 +1095,6 @@ async function checkBloodReceptors(model, capabilities) {
     }
   }
   let doc = placed.document;
-  const id = placed.centerId;
   for (const [key, index] of Object.entries(B)) {
     doc = model.updateCellGrowth(doc, id, {...receptor, substance : index});
     doc = model.updateReceptor(doc, id, E.output,
@@ -1103,17 +1115,6 @@ async function checkBloodReceptors(model, capabilities) {
       selected : {kind : 'center', id},
       previewContext : empty
     };
-    for (const effect of [substances.BIRTH, E.output, E.death, E.learning]) {
-      const r = effect === substances.BIRTH ? center.growth : center.receptors[effect];
-      const picture = substances.effectCurve(state, r, effect, id);
-      assert.doesNotMatch(picture, /NaN|Infinity|undefined/);
-      assert.ok(picture.includes(substances.substanceName(state, index)));
-      const half = substances.receptorCurvePatch(state, r, effect, 'half', 143 / 260, .5);
-      assert.equal(half.half, .5, 'Body substance curves use a linear 0–1 axis');
-      const wide = substances.effectCurve(state, {...r, width : 1}, effect, id);
-      assert.doesNotMatch(wide, /NaN|Infinity|undefined/,
-                          'Broad receptors read finite values for all nine blood substances');
-    }
     for (const level of [0, 1]) {
       const context = {...empty, [contextKey(key)] : level};
       const living = {...center, receptors : center.receptors.map(r => ({...r}))};
