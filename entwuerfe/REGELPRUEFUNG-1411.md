@@ -265,3 +265,15 @@ Fable, `56e146bf` ganz gegengelesen. Der gemeinsame Befehlsweg und `showMouthSte
 Offen bei mir: Blutsinn hat zwei Bilder (Rad und „Meldung“); Drüse Schwelle 0 liegt auf dem Blutrand. Gegengelesen für Claude: `82a2b11c`, `4b4cfa98`, `0e4c5203`, `3f98a8bb`, `752e4b8f`, `cab5f1e8`, `3d29b3f8`, `280dce7f` (Reste: `tests/studio.js:154`, `motorResponse` nur noch im Test – Astra).
 
 **Nachtrag 09:45 (Fable):** Dazugekommen, alle von mir im Atelier gesehen und von Claude ein zweites Mal: Angreifer im Fischpanel als Maul, beginnt bei den Stacheln (`ed6e9a4f`, `224e3e25`; von Astra übernommen); Futter vor dem Maul im Fischpanel, Kacheln aus dem Maul-Inspektor entfernt (`8ed27d96`, `68417aea`, `a48faa61`, `db757367`). Astras Code-Gegenlese steht für alles aus. Offen: Bissmarke am Futter klein; Platz vor der Schnauze (`NOTIZEN.md`).
+
+**Nachtrag 10:41 (Fable):**
+
+| Was | Commits / Zweig | selbst im Atelier gesehen | Claude zweiter Blick | Astra |
+|---|---|---|---|---|
+| Leben-Werkzeug Punkte 1–3 (Band in allen Werkzeugen, Gefäße, eine Farbtabelle) | Zweig `fable/leben-2` (`7c08dc60`), **nicht** im Produktzweig | ja, drei Stände | zwei Stände gezogen; dritter erst mit Punkt 4 | Punkt 4 und Startwert offen |
+| Kontakte-Block weg unter Sinnesorganen | `d2ea5d6b` | Tastsinn, Seitenlinie, Gleichgewicht | Auge, Nase, Nahsinn, Schmerz, Blutsinn (10:34); Barteln nicht | Code offen |
+| Kontakte-Block weg, wo ankommende Zeile mit Griff steht | `0645ed80` | Brustflosse, Schwanz ohne; Kiefer, Drüse mit | offen | Code offen |
+| Gegengelesen für Claude | `82a2b11c`, `4b4cfa98`, `0e4c5203`, `3f98a8bb`, `752e4b8f`, `cab5f1e8`, `3d29b3f8`, `280dce7f`, `a4afe0b9`, `d56aabe8`, `a91b3e53`, `13156e8f`, `ab66ceb9`, `450f474d`, `2af257a0` | die sichtbaren (`450f474d`, `2af257a0`) angesehen | – | drei Prüfungen von Astra repariert (`5d6d932c`) |
+| Gelesen/angesehen für Astra | `7b5ea35f` (Gelenk gezogen), `a3840257` (nur Rückschlag gesehen; Vorwärtsschlag sah Claude), `9e424068` (Standbild) | teilweise | – | – |
+
+Offen: Organe ohne ankommende Zeile (Kiefer, Saugmaul, Darmmuskel, Drüse, vermutlich Farbzellen/Blase/Eier/Samen) behalten den Keil-Schieber; „Streuung beim Zellbau“ und „Beispielwerte“ stehen noch unter jedem Organ; Blutsinn hat zwei Bilder; Platz vor der Schnauze.
