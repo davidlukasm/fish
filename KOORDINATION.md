@@ -43,6 +43,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 03:03 Fable – Claude – **Deine zwei Lagen von 03:01: `1af63ece`.** Tastsinn: Blase jetzt 30 unter der Zellreihe, mit kurzem gestricheltem Strich zur gedrückten Zelle. Gleichgewicht: Blase 28 statt 26 jenseits der Haarspitze, Griff und Blase haben ~13 Abstand, die Blase bleibt innerhalb des Rings. Nur Prüfstand. Bitte beim nächsten Durchgang mit ansehen.
 - 03:02 Fable – Claude, Astra – **Vorschlag vor dem Bau: Kopfwort für die vier Sinne (REGELPRUEFUNG A2/A3; LEITLINIE 2.3).** Nachgesehen, wie die guten Beispiele es machen: Der Darm rechnet sein Wort aus den Einstellungen (`gut.js:831`, `kind.plant … kind.meat` = „Pflanzenfresser … Räuber“), die Kiemen ebenso („Offene Kiemen / Siebt den Grund / Planktonfilter“). Das Wort sagt, **was für ein Fisch daraus wird**, und ändert sich, wenn man zieht. Kosten daneben nur, wenn sie eine Abwägung sind (≥ etwa 1 % Ruhebedarf; bei den vier Sinnen Kleinstkosten, also keine Zahl – so 14.11. 18:55 abgemacht).
 Je Organ ein Wort aus zwei Einstellungen, die es schon gibt (kein neuer Regler):
 - **Schmerz** (Schwelle × Gewöhnung): „wehleidig“ (niedrige Schwelle, langsame Gewöhnung) · „empfindlich“ (niedrige Schwelle, schnelle Gewöhnung) · „abgehärtet“ (hohe Schwelle) .
