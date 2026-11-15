@@ -19,8 +19,9 @@ import {degrees, radians} from '../../../units.js';
 import {findOrgan, groupReport} from '../../model/document.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, reportBubble, txt} from './kit.js';
 import {
+  bandOf,
   between,
-  drawnKey,
+  lastDrawn,
   INTENSITY,
   keysOf,
   runOf,
@@ -61,7 +62,8 @@ liveKind('lateral', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-lateral aid-live-sense-flow';
   const band = addPicture(root);
-  let step = 0, bubble = null, drawn = null;
+  let step = 0, bubble = null;
+  const drawnOf = lastDrawn();
   const current = () => studio.state.senseProbe?.kind === 'flow' ? studio.state.senseProbe : null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
@@ -85,10 +87,8 @@ liveKind('lateral', (studio, organId) => {
   // used to it and fall silent.
   function courseOf(cell) {
     const probe = current(),
-          key = drawnKey(studio.state, keysOf([ {id : '', centers : [ cell ]} ], INTENSITY)[0],
-                         drawn, INTENSITY);
-    if (!key.stale)
-      drawn = key.drawn;
+          key = drawnOf(studio.state, keysOf([ {id : '', centers : [ cell ]} ], INTENSITY)[0],
+                        INTENSITY);
     const met = steady((probe?.strength ?? 0) * share(cell, probe));
     return {
       key,
@@ -136,20 +136,19 @@ liveKind('lateral', (studio, organId) => {
     // its own cell begins to report, pale while it is the last run's; a hair past its mark reports.
     // The thicker arc is where the plan lets a mark lie: its threshold and its spread either way,
     // within the thresholds a cell can have.
-    const [none, most] = INTENSITY.span, reach = c.key.spread / 2,
-                 near = Math.max(B.least, none, c.key.gate - reach),
-                 far = Math.min(most, c.key.gate + reach),
-                 leanOf = (p, x) =>
-                     clamp(degrees(Math.atan2(p.x - x, B.skin - p.y)) / B.lean, B.least, most),
-                 arc = (x, from, to) =>
-                     path(Array.from({length : 9}, (_, n) => tip(x, from + (to - from) * n / 8))),
-                 gates = INTENSITY.gates(c.key),
-                 stand = n => B.L + B.first +
-                              n * Math.min(B.apart, (B.R - B.L - B.first - B.hair) /
-                                                        Math.max(1, gates.length - 1));
+    const most = INTENSITY.span[1], [ low, far ] = bandOf(c.key, INTENSITY),
+          near = Math.max(B.least, low),
+          leanOf = (p, x) =>
+              clamp(degrees(Math.atan2(p.x - x, B.skin - p.y)) / B.lean, B.least, most),
+          arc = (x, from, to) =>
+              path(Array.from({length : 9}, (_, n) => tip(x, from + (to - from) * n / 8))),
+          gates = INTENSITY.gates(c.key),
+          stand = n =>
+              B.L + B.first +
+              n * Math.min(B.apart, (B.R - B.L - B.first - B.hair) / Math.max(1, gates.length - 1));
     gates.forEach((gate, n) => {
       const x = stand(n), at = radians(B.lean * INTENSITY.pos(gate));
-      if (reach > 0)
+      if (far > near)
         el('path', {d : arc(x, near, far), class : 'aid-live-keyarc k0'}, live);
       el('path', {
         d : `M${x + (B.hair - B.tick) * Math.sin(at)} ${

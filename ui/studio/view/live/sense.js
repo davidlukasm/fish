@@ -51,6 +51,7 @@ export const BOUNDED = Object.freeze({
   val : v => clamp(v),
   gate : cell => activationLevel(unitOfPlan(cell.threshold)),
   spread : cell => 2 * cell.distribution.spread_physiology * LEVEL_SPAN,
+  span : LEVELS,
   gates : cellGates,
   answer,
   threshold : v => planOfUnit(activationQuality(clamp(v, LEVELS[0], LEVELS[1]))),
@@ -172,17 +173,28 @@ export const keysOf = (types, scale = BOUNDED) => types.map(type => {
     used : adaptationSteps(cell.tau)
   };
 });
-// A key with the thresholds the engine drew for its cells (document.js, drawnThresholds). The
-// engine's run comes in after a change has settled; until then the `last` run's thresholds,
-// `stale`, and before the first run the plan's one threshold.
-export const drawnKey = (state, k, last, scale = BOUNDED) => {
-  const fresh = drawnThresholds(state, k.id);
-  return {
-    ...k,
-    drawn : fresh ?? last ?? scale.gates({...k, spread : 0}).slice(0, 1),
-    stale : !fresh
+// Keys with the thresholds the engine drew for their cells (document.js, drawnThresholds), for
+// one inspector: drawnOf(state, key, scale). The engine's run comes in after a change has
+// settled; until then a key keeps the last run's thresholds, `stale`, and before the first run
+// it has the plan's one threshold.
+export const lastDrawn = () => {
+  const last = new Map();
+  return (state, k, scale = BOUNDED) => {
+    const fresh = drawnThresholds(state, k.id);
+    if (fresh)
+      last.set(k.id, fresh);
+    return {
+      ...k,
+      drawn : last.get(k.id) ?? scale.gates({...k, spread : 0}).slice(0, 1),
+      stale : !fresh
+    };
   };
 };
+// Where the plan lets a key's cells' thresholds lie, as places in the diagram: its threshold and
+// half its spread either way, within the thresholds a cell can have (distribution.hh,
+// draw_traits).
+export const bandOf = (k, scale = BOUNDED) => [Math.max(scale.span[0], k.gate - k.spread / 2),
+                                               Math.min(scale.span[1], k.gate + k.spread / 2)];
 export const setGate = (doc, k, gate, scale = BOUNDED) =>
     updateCenter(doc, k.id, {threshold : scale.threshold(gate)});
 export const setSpread = (doc, k, spread, scale = BOUNDED) =>
@@ -363,16 +375,24 @@ export function senseCourse(svg, {
     keys.forEach((k, i) => {
       const on = i === own.chosen, gates = scale.gates(k).map(scale.pos), low = Math.min(...gates),
             felt = runs[i].used.map((u, st) => scale.pos(Math.max(0, met[i][st] - u)));
-      // The key's band: from its lowest to its highest cell's threshold.
-      const top = IY(Math.max(...gates)), bottom = IY(low),
-            shapes = [ el('rect', {
-              x : L,
-              y : Math.min(top, IY(k.gate) - 1.5),
-              width : R - L,
-              height : Math.max(bottom - top, 3),
-              class : 'aid-live-keyband k' + i + (on ? ' on' : '')
-            },
-                          live) ];
+      // The key's band: where the plan lets its cells' thresholds lie. In it a line for each
+      // cell's threshold as the engine drew it, pale while they are the last run's.
+      const [under, over] = bandOf(k, scale), top = IY(over), bottom = IY(under),
+                    shapes = [ el('rect', {
+                      x : L,
+                      y : Math.min(top, IY(k.gate) - 1.5),
+                      width : R - L,
+                      height : Math.max(bottom - top, 3),
+                      class : 'aid-live-keyband k' + i + (on ? ' on' : '')
+                    },
+                                  live) ];
+      if (k.drawn)
+        for (const gate of gates)
+          el('path', {
+            d : `M${L} ${IY(gate)} H${R}`,
+            class : 'aid-live-keyline cell k' + i + (k.stale ? ' stale' : '')
+          },
+             live);
       if (on)
         shapes.push(el('path', {
           d : `${path(felt.map((f, st) => [X(st), IY(Math.max(f, low))]))} L${R} ${IY(low)} L${L} ${
@@ -436,7 +456,7 @@ export function senseCourse(svg, {
     // The grips, above everything they could be hidden by: every key and its spread, the input's
     // two knobs (when it is fully there and how strong, and when it stops).
     keys.forEach((k, i) => {
-      const on = i === own.chosen, gates = scale.gates(k).map(scale.pos);
+      const on = i === own.chosen;
       drag(svg,
            el('rect', {
              x : LX - 9,
@@ -452,13 +472,17 @@ export function senseCourse(svg, {
              draft(setGate(doc(), k, vOf(p.y), scale));
            },
            name + 'key' + i, 'grip', settle);
-      const sx = R - 8 - 13 * i, top = IY(Math.max(...gates)), bottom = IY(Math.min(...gates));
-      el('path', {d : `M${sx} ${top} V${Math.max(bottom, top + 4)}`, class : 'aid-live-spread'},
-         live);
-      drag(svg, el('circle', {cx : sx, cy : top, r : 4.5}, live), p => {
-        own.chosen = i;
-        draft(setSpread(doc(), k, clamp(2 * (vOf(p.y) - k.gate), 0, .8), scale));
-      }, name + 'spread' + i, 'grip', settle);
+      // How far the cells' thresholds may spread: the grip on the band's upper edge.
+      const sx = R - 8 - 13 * i, top = IY(bandOf(k, scale)[1]);
+      drag(svg,
+           el('rect',
+              {x : sx - 5, y : top - 4, width : 10, height : 8, rx : 2.5, class : keyGrip(i, on)},
+              live),
+           p => {
+             own.chosen = i;
+             draft(setSpread(doc(), k, clamp(2 * (vOf(p.y) - k.gate), 0, .8), scale));
+           },
+           name + 'spread' + i, 'grip', settle);
     });
     if (most > 1) {
       chip(live, LX - 9, I1 + 10, '−', () => fewer(keys[own.chosen]), keys.length > 1, 6);
