@@ -75,6 +75,13 @@ export const PORT_LIMIT_DRAG = 60;
 // A working cell takes its limit here, at the lines that reach it, or at an empty one while
 // nothing does; a nerve cell keeps it beside its teaching limit in its contact plan.
 export const limitAtPorts = (state, organ, center) => center?.role === 'motor';
+// An incoming line as thick as the cells' limit, with the grip at its receiving end if asked.
+const limitStyle = limit =>
+    ' style="border-top-width:' + (PORT_LINE.least + PORT_LINE.span * limit).toFixed(1) + 'px"';
+const limitGrip = (center, limit) =>
+    '<span class="aid-port-grip" data-port-limit="' + escapeText(center.id) +
+    '" data-port-value="' + limit + '" title="' +
+    escapeText(joinParts([ label('contacts.electrical_limit'), percent(limit) ])) + '"></span>';
 export function portsSection(state, organ, center = null) {
   const limit = limitAtPorts(state, organ, center) ? center.electrical_limit : null;
   let gripped = limit === null;
@@ -104,24 +111,14 @@ export function portsSection(state, organ, center = null) {
             const grip = thick && !gripped;
             gripped ||= grip;
             const line =
-                '<span class="aid-port-line"' +
-                (thick ? ' style="border-top-width:' +
-                             (PORT_LINE.least + PORT_LINE.span * limit).toFixed(1) + 'px"'
-                       : '') +
-                '>' +
+                '<span class="aid-port-line"' + (thick ? limitStyle(limit) : '') + '>' +
                 (other && !joined
                      ? '<button class="aid-slot-add" data-port-organ="' + escapeText(organ.id) +
                            '" data-port-other="' + escapeText(other.id) + '" data-port-key="' +
                            escapeText(slot.key) + '" data-port-dir="' + dir + '" title="' +
                            label('wiring.connect') + '">+</button>'
                      : '') +
-                (grip ? '<span class="aid-port-grip" data-port-limit="' + escapeText(center.id) +
-                            '" data-port-value="' + limit + '" title="' +
-                            escapeText(
-                                joinParts([ label('contacts.electrical_limit'), percent(limit) ])) +
-                            '"></span>'
-                      : '') +
-                '</span>';
+                (grip ? limitGrip(center, limit) : '') + '</span>';
             return '<li class="' + fill + '">' +
                    (dir === 'out' ? own + line + far : far + line + own) + '<small>' +
                    escapeText(name.replace(/\u00ad/g, '')) + ' · ' +
@@ -130,15 +127,11 @@ export function portsSection(state, organ, center = null) {
           .join('');
   // Nothing reaches the working cell and no organ offers to: one line without a sender says so
   // and carries the grip.
-  const unfed =
-      gripped ? ''
-              : '<li class="unfed"><span class="aid-port-absent aid-port-none"></span>' +
-                    '<span class="aid-port-line" style="border-top-width:' +
-                    (PORT_LINE.least + PORT_LINE.span * limit).toFixed(1) +
-                    'px"><span class="aid-port-grip" data-port-limit="' + escapeText(center.id) +
-                    '" data-port-value="' + limit + '" title="' +
-                    escapeText(joinParts([ label('contacts.electrical_limit'), percent(limit) ])) +
-                    '"></span></span>' + icon(organ.type, ICON.part) + '</li>';
+  const unfed = gripped ? ''
+                        : '<li class="unfed"><span class="aid-port-absent aid-port-none"></span>' +
+                              '<span class="aid-port-line"' + limitStyle(limit) + '>' +
+                              limitGrip(center, limit) + '</span>' + icon(organ.type, ICON.part) +
+                              '</li>';
   return rows || unfed ? '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +
                              '"><ul class="aid-ports">' + rows + unfed + '</ul></section>'
                        : '';
