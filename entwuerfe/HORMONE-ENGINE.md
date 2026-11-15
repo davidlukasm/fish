@@ -96,3 +96,13 @@ Dazu der **Wachstumsrezeptor** (`GROWTH_RECEPTOR`). Er wirkt in der Entwicklung 
   - Tod am Lebenszyklus
 
   Der Hormoninspektor soll zeigen, **wo** ein Stoff wirkt (Kette Drüse → Blut → Rezeptor → Wirkung am Organ) und nicht neun Kurven nebeneinander. Das gehört in den gemeinsamen Plan.
+
+## 7. Kopien im Atelier heute (nach David 14:54 auf die Liste)
+
+Gelesen, nicht gemessen:
+- `ui/studio/model/document.js:262` baut die Affinitätsglocke nach (`hormone_affinity`). `:272` `receptorAffinity` und `:301` `receptorResponse` bauen die Rezeptorantwort nach (`blood_stimulus` + `HormoneReceptor::response`).
+- `ui/studio/view/substances.js:81` `bound()` ist eine Kopie von `HormoneReceptor::bound`.
+- `bloodCurves`, `effectCurve` und die Rezeptorkurven rechnen ihre Kurven mit diesen Kopien. Beim Ziehen eines Rezeptorgriffs kommt die neue Kurve also aus dem JavaScript, nicht aus der Engine.
+- `hormoneTime` liest Anstiegs- und Verweilzeit dagegen aus dem Bericht (`anatomy.hormoneTimes`). Das ist richtig so.
+
+**Folge für den Plan:** Die Engine liefert je Rezeptor die Antwortkurve als Werte (wie heute `senses[i].response` für Sinneszellen), aus derselben Funktion `HormoneReceptor::response`. Das Atelier zeichnet nur. Beim Ziehen ist es dieselbe Frage wie bei allen Griffen: Entwurfslauf statt eigener Rechnung, wenn der Lauf schnell genug ist (siehe `ATELIER-OHNE-SIMULATION.md`).
