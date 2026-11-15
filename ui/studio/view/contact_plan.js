@@ -39,9 +39,9 @@ const PLAN = Object.freeze({
   seat : 2.2,
   seats : 24,
   handle : 6,
-  // The limit's grip: its size, how far from the cell it sits, how far apart the empty lines run
-  // and how far up a full limit lies.
-  grip : {width : 8, height : 11, back : 5, apart : 14, drag : 60}
+  // The limit's grip: its size, how far from the cell it sits, how far apart the grips sit, how far
+  // up a full limit lies and how long an empty line is: short, so it never seems to leave a sender.
+  grip : {width : 8, height : 11, back : 5, apart : 14, drag : 60, stub : 44}
 });
 const point = p => fixed(p.x) + ' ' + fixed(p.y);
 function limits(source, target) {
@@ -262,14 +262,13 @@ function capacity(neural, cell, at, radius, arriving) {
     const empty =
         arrives ? ''
                 : '<path class="aid-plan-edge empty' + (key === 'teaching_limit' ? ' teach' : '') +
-                      '" d="M' + (P.columns[0] + P.mark) + ' ' + fixed(y) + ' H' + fixed(x) +
+                      '" d="M' + fixed(x - G.stub) + ' ' + fixed(y) + ' H' + fixed(x) +
                       '" stroke-width="' + fixed(P.line.least + P.line.span * value) + '"/>';
     return empty + '<rect class="aid-plan-grip ' + key + '" data-capacity-handle="' + key +
            '" data-limit-y="' + fixed(y) + '" data-limit-value="' + value + '" x="' +
            fixed(x - G.width / 2) + '" y="' + fixed(y - G.height / 2) + '" width="' + G.width +
            '" height="' + G.height + '" rx="2"><title>' +
-           escapeText(namedText(label('cellPicture.' + key), formatNumber(value, VALUE_DIGITS))) +
-           '</title></rect>';
+           escapeText(namedText(word(key), formatNumber(value, VALUE_DIGITS))) + '</title></rect>';
   };
   return '<g class="aid-plan-cell">' +
          (sensor
