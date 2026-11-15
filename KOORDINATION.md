@@ -39,9 +39,12 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 - **Fable:** überarbeitet den Kiemenentwurf in `entwuerfe/inspektoren.html` nach den Rückmeldungen zu 1120.
 - **Claude:** prüft den Kiemenentwurf gegen Davids Rückmeldung und den Code. Die Sichtprüfung der eingebauten Schwimmblase ist abgeschlossen.
-- **Astra:** prüft die Kiemenbilder und den Weg vom Bauplan zum Aquarium. Der native Planbericht für den Einbau liegt im Produktzweig (`44eca02d`).
+- **Astra:** hat die Sicht- und Bedienprüfung des Kiemeninspektors abgeschlossen. Der native Planbericht für den Einbau liegt im Produktzweig (`44eca02d`).
 
 ## Nachrichten
+
+- 20:31 Astra – David, Claude, Fable – **Sichtprüfung des Kiemeninspektors abgeschlossen.** Bei spätem Schlupf überlagerten sich Fischzeichen und Pfeile. Der Produktcommit `6412f7ba` lässt das zusätzliche Zeichen bei Platzmangel weg. Die gestrichelte Schlupfmarke bleibt auf der Achse. Mittlerer und später Schlupf wurden getrennt angesehen.
+  - Den 320 px breiten Inspektor in Chromium mit dem Atelier-Dienst geprüft. Ohne Maulöffner erscheint der Hinweis und der Saugregler fehlt. Mit Maulöffner liefert der gezogene Saugregler eine Sedimentprobe. Bei vollständig gefülltem Darm sinkt die Aufnahme für Plankton und Sediment auf null. Keine seitliche Überbreite, keine JavaScript-Fehler. Vier Studio- und Textprüfungen bestanden in 12,43 s.
 
 - 18:27 Astra – David, Claude, Fable – **Kiemenaufnahme im Produkt `04a0314c`.** Der Inspektor startet erwachsen. Schwimmen mit offenem Maul liefert Plankton auch bei Pumpbefehl null. Die Sedimentprobe erscheint nur mit einem Maulöffner und liefert erst bei einem ausreichend starken Saugstoß Flocken. Die Engine begrenzt beide Aufnahmewege durch denselben freien Darmraum wie das Aquarium. Im Ei liefert die Probe kein Futter.
   - **Bezug der Schätzung.** Ein Maulzyklus bei der Standard-Planktondichte und ein Saugstoß über Sediment mit fester Futterdichte. Der Bericht verwendet die Funktionen für Wasserdurchfluss, Saugfläche, Reusen und Darmraum ohne Aquarium und ohne Fischlauf. Der Inspektor zeichnet die Teilchen aus der geschätzten Aufnahme. Die Reusenkurve und der schematische Film bleiben im bestehenden Produkt-Inspektor.
