@@ -5,6 +5,9 @@ namespace fishsim {
 inline constexpr int SAMPLE_CORNERS = 4;
 inline constexpr double MAX_DIFFUSION_SHARE = .2;
 inline constexpr int ODOR_PREVIEW_STEPS = 12;
+std::array<int, 2> waterborne_grid_shape(double width, double height);
+double estimate_open_water_odor(Point offset, Point current, Point cell, double source_energy,
+                                int channel, const EnvironmentParameters &);
 struct WaterborneSample {
   std::array<std::size_t, SAMPLE_CORNERS> index{};
   std::array<double, SAMPLE_CORNERS> weight{};

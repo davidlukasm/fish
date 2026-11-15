@@ -11,7 +11,6 @@ namespace fishsim {
 namespace {
 constexpr std::size_t ODOR_TILE_CELLS = 1024;
 constexpr int FLOW_HALO = 2;
-constexpr double PLANKTON_CELL_MIN = 24, PLANKTON_CELLS = 12000;
 constexpr int SOURCE_TRIALS = 48;
 constexpr double SURFACE_TOLERANCE = .1;
 constexpr std::uint64_t CRAB_FIRST_MOVE = 300, CRAB_FIRST_MOVE_SPREAD = 400;
@@ -687,10 +686,7 @@ double Field::feed_crabs(double x, double y, double energy, double radius) {
   return eaten;
 }
 void Field::sync_food_web() {
-  const double cell =
-      std::max(PLANKTON_CELL_MIN, std::sqrt(geometry_.width * geometry_.height / PLANKTON_CELLS));
-  const int nx = int(std::ceil(geometry_.width / cell)),
-            ny = int(std::ceil(geometry_.height / cell));
+  const auto [nx, ny] = waterborne_grid_shape(geometry_.width, geometry_.height);
   auto &p = food_web_.plankton;
   if (p.columns == nx && p.rows == ny && p.width == geometry_.width &&
       p.height == geometry_.height && food_web_.geometry == environment_signature &&

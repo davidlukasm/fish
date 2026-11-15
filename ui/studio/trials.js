@@ -240,6 +240,8 @@ export const trialMethods = {
       return;
     this.clearStimulus();
     this.state.previewContext = next;
+    // The engine's estimates (a cell's answers to the blood, its learning) are made at it.
+    this.requestDesign();
     // The inspector and the life tool's bar show these values; the fish does not depend on them.
     this.previewFrame ??= requestAnimationFrame(() => {
       this.previewFrame = null;

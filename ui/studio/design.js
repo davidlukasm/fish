@@ -39,6 +39,7 @@ import {dataAttribute} from './view/markup.js';
 import {organSettingsBlock} from './view/panels.js';
 import {mountLive} from './view/live/kit.js';
 import {label} from './view/kit.js';
+import {previewContextOf} from './view/development.js';
 import {hormoneTime} from './view/substances.js';
 import {requestBody} from './requests.js';
 import {BODY_MAP, PROBE_LAYER} from './view/scene.js';
@@ -207,7 +208,9 @@ export const designMethods = {
       sight : sightScene(probe),
       sense : this.senseScene()
     };
-    this.api(requestBody('design', {plan, ...scene}))
+    // The blood every estimate of the engine is made at is the life tool's (atelier_service.py,
+    // learning_context_line).
+    this.api(requestBody('design', {plan, ...scene, blood : previewContextOf(this.state)}))
         // An answer for the design shown is shown even when a test stimulus has moved on since:
         // the eyes and senses follow a dragged one step by step instead of waiting for it to
         // rest.
