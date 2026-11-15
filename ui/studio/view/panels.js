@@ -42,7 +42,7 @@ import {
   SWITCH_SYMBOL,
   VALUE_DIGITS
 } from './kit.js';
-import {pairingChoice, regionSettings, slotsSection} from './circuit.js';
+import {outletsSection, pairingChoice, regionSettings, slotsSection} from './circuit.js';
 import {strandInspector} from './nerve_inspector.js';
 import {chemistry, hormoneInspector} from './substances.js';
 import {learningInspector} from './learning.js';
@@ -250,7 +250,8 @@ function organInspector(state, organ) {
              heading(organTitle(organ, state.sites)) + '</header>' +
              moduleChips(state, organ.type === 'brain' ? center?.id : organ.id) +
              sideSwitch(organ) + centerTabs(state, organ);
-  html += organSettingsBlock(state, organ) + (isRegion(organ) ? '' : slotsSection(state, organ)) +
+  html += organSettingsBlock(state, organ) +
+          (isRegion(organ) ? '' : slotsSection(state, organ) + outletsSection(state, organ)) +
           chemistry(state, organ, center) +
           (isRegion(organ) && state.selected?.kind !== 'center'
                ? ''

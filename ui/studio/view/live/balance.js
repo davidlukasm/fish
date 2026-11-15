@@ -6,16 +6,17 @@
 // so a posture holds its report for as long as it lasts: no time axis.
 // The posture is the stimulus and the picture's own round knob; the fish panel has no probe for
 // it. The report rights the fish only through the motor region's "feel" input (organs.js, motor
-// slots; motor_region.js, flee to turn and escape), so that connection is part of the picture.
+// slots; motor_region.js, flee to turn and escape); that connection is made and shown in the
+// inspector's list of ports (circuit.js, outletsSection).
 import {t} from '../../../strings.js';
-import {addWire, findOrgan, updateCenter} from '../../model/document.js';
-import {chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {findOrgan, updateCenter} from '../../model/document.js';
+import {clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {answer, BOUNDED, IRRITANT} from './sense.js';
 import {fishLeft} from './skin.js';
 
 const word = (key, values) => t('studio.live.balance.' + key, values);
 const TILT = Object.freeze({
-  height : 246,
+  height : 218,
   cx : 150,
   cy : 108,
   hair : 30,
@@ -24,8 +25,7 @@ const TILT = Object.freeze({
   knob : 100,
   least : .03,
   most : .95,
-  fish : 1.25,
-  link : 232
+  fish : 1.25
 });
 const radians = d => d * Math.PI / 180, degrees = r => r * 180 / Math.PI;
 const turnTo = a => ((a + 540) % 360) - 180;
@@ -47,19 +47,6 @@ liveKind('balance', (studio, organId) => {
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
-  const change = doc => doc && studio.changeDocument(doc, studio.state.selected);
-  // The wire that carries the report to the motor region's "feel" input, from either side.
-  function motorLink(doc, own, twin) {
-    const mine =
-        new Set([ own, twin ].filter(Boolean).flatMap(o => [o.id, ...o.centers.map(c => c.id)]));
-    const wire = doc.wires.find(w => w.toPort === 'feel' && mine.has(w.from) &&
-                                     findOrgan(doc, w.to)?.type === 'motor');
-    const motors = doc.organs.filter(o => o.type === 'motor');
-    return {
-      wired : !!wire,
-      motor : wire ? findOrgan(doc, wire.to) : motors.find(o => o.side === own.side) ?? motors[0]
-    };
-  }
   // Round the fish a rose of postures: for every way the snout can point, a petal as long as the
   // cells report there; this organ's cells outside the ring, its twin's (their hair mirrored, with
   // their own direction and threshold) inside it, if the fish has the twin. The round knob turns
@@ -102,12 +89,10 @@ liveKind('balance', (studio, organId) => {
     fishLeft(body, cx, cy, TILT.fish);
     // At each hair's tip the stimulus as the bolt it is in every sense (how far gravity bends the
     // hair), and round the tip the glow of what the cells report of it.
-    let loudest = 0;
     for (const s of [...sides].reverse()) {
       const [x, y] = at(tried.tilt + s.side * s.hair, TILT.hair), pull = down(tried.tilt, s),
                 now = report(tried.tilt, s),
                 [ px, py ] = at(tried.tilt + s.side * s.hair, TILT.hair + 14);
-      loudest = Math.max(loudest, now);
       if (now > 0)
         el('circle', {
           cx : x,
@@ -155,33 +140,6 @@ liveKind('balance', (studio, organId) => {
       tried.tilt = angleOf(p);
       show();
     }, 'balancetilt', 'knob');
-    // Where the report goes: the glow, as strong as the louder side, and the motor region. Wired
-    // to it, its name leads there; not wired, the button wires it; a fish without a motor region
-    // shows the name pale, since nothing can right it.
-    const doc = studio.state.document, link = motorLink(doc, own, twin), y = TILT.link;
-    if (loudest > 0)
-      el('circle', {
-        cx : cx - 50,
-        cy : y - 3,
-        r : 3 + 4 * loudest,
-        class : 'aid-live-glow k0',
-        opacity : link.wired ? .25 + .5 * loudest : .2
-      },
-         live);
-    if (link.wired) {
-      el('path', {d : `M${cx - 36} ${y - 3} h22 m-5 -4 l5 4 l-5 4`, class : 'aid-live-arrow'},
-         live);
-      txt(live, cx - 6, y, t('studio.organs.motor'), {
-        class : 'aid-live-small aid-live-chip'
-      }).addEventListener('click', () => studio.select('organ', link.motor.id, null, false));
-      return;
-    }
-    if (link.motor)
-      chip(live, cx - 25, y - 3, '+',
-           () => change(addWire(doc, own.id, link.motor.id, null, studio.state.sites, {
-                          toPort : 'feel'
-                        })?.document));
-    txt(live, cx - 6, y, t('studio.organs.motor'), {class : 'aid-live-small', opacity : .45});
   }
   function show() {
     const own = organ();

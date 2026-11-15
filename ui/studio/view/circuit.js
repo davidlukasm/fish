@@ -5,7 +5,7 @@ import {HORMONE_EFFECT} from '../../schema.js';
 import {chiasmWire, isLearner, regulatorySubstances, substanceBound} from '../model/document.js';
 import {substanceName} from './substances.js';
 import {escapeText, glyph} from './markup.js';
-import {planned, regionPlan, regionSlots} from '../model/regions.js';
+import {organOutlets, planned, regionPlan, regionSlots} from '../model/regions.js';
 import {joinParts, t} from '../../strings.js';
 import {ICON, icon, iconSwitch, label, slotFill, slotShape} from './kit.js';
 import {organTitle, slotTitle} from './names.js';
@@ -61,6 +61,31 @@ export function slotsSection(state, organ) {
           .join('');
   return '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +
          '"><ul class="aid-region-slots">' + slots + '</ul></section>';
+}
+// The same list from the other end: the ports of other organs this organ can plug into, each
+// with the organ that owns it; a free one is joined by its button.
+export function outletsSection(state, organ) {
+  const outlets = organOutlets(state.document, organ)
+                      .map(({target, slot, joined}) => {
+                        const fill = joined ? 'filled' : 'free';
+                        return '<li class="' + fill + '"><span class="aid-slot-symbol ' + fill +
+                               ' in">' + glyph(slotShape(slot), ICON.slot, {line : true}) +
+                               '</span><small>' + escapeText(slotTitle(slot)) +
+                               '</small><button data-select-organ="' + escapeText(target.id) +
+                               '" title="' + escapeText(organTitle(target, state.sites)) + '">' +
+                               icon(target.type, ICON.list) + '</button>' +
+                               (joined ? ''
+                                       : '<button class="aid-slot-add" data-outlet-source="' +
+                                             escapeText(organ.id) + '" data-outlet-target="' +
+                                             escapeText(target.id) + '" data-outlet-key="' +
+                                             escapeText(slot.key) + '" title="' +
+                                             label('wiring.connect') + '">+</button>') +
+                               '</li>';
+                      })
+                      .join('');
+  return outlets ? '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +
+                       '"><ul class="aid-region-slots">' + outlets + '</ul></section>'
+                 : '';
 }
 function regionTeacher(state, organ) {
   const learners = organ.centers.filter(isLearner);

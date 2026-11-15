@@ -390,3 +390,18 @@ export function regionSlots(doc, organ) {
     return {...slot, filled};
   });
 }
+// Where an organ can plug in: the input ports of other organs made for its kind, each with
+// whether this organ, or its twin of the other side, already sits on it. Of a paired target the
+// one on the organ's own side: a wire to it reaches both.
+export function organOutlets(doc, source) {
+  const twin = findOrgan(doc, source.pair), mine = new Set([ source.id, twin?.id ]);
+  return doc.organs
+      .filter(target => !mine.has(target.id) &&
+                        (!target.pair || target.side === (source.side || target.side)))
+      .flatMap(
+          target =>
+              regionSlots(doc, target)
+                  .filter(slot => slot.dir === 'in' && slot.fits.includes(source.type) &&
+                                  slotCenters(target, slot.key, 'in').length)
+                  .map(slot => ({target, slot, joined : slot.filled.some(o => mine.has(o.id))})));
+}

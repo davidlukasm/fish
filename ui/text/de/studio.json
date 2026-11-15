@@ -1091,6 +1091,7 @@
     "modulate": "Lehrer: sein Signal ist das Lehrsignal der Zellen, die er erreicht, er treibt sie nicht an. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, lehrt er ihn."
   },
   "wiring": {
+    "connect": "Hier anschließen",
     "pairings": "Seiten",
     "shape": "Verlauf",
     "bundle": "Zu Bündel zusammenfassen",
