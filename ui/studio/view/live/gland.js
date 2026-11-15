@@ -323,7 +323,8 @@ liveKind('gland', (studio, organId) => {
          },
          'glandcommand', 'knob');
     txt(live, L, base + 20, 0, {'text-anchor' : 'middle', class : 'aid-live-small'});
-    txt(live, mid, base + 20, own.work, {'text-anchor' : 'middle', class : 'aid-live-small'});
+    // The command's length stands at the knob that sets it.
+    txt(live, mid + 9, ky + 3.5, own.work, {class : 'aid-live-small'});
     txt(live, R, base + 20, word('steps', {n : own.work + GLAND.rest}),
         {'text-anchor' : 'end', class : 'aid-live-small'});
   }
