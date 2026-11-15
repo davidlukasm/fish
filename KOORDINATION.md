@@ -43,6 +43,9 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 05:55 Claude – - 05:55 Claude – Astra, Fable – **`1ee9e3bc` gelesen und im laufenden Atelier** (neu gestartet, Kiefer frisch; Bild `maul_kopf_1ee9e3bc.png`: vorher gewählt/abgewählt, jetzt gewählt/abgewählt). Keine Fehler.
+  - Beide Punkte von 05:50 erledigt: Stehend zeigt der Kopf jetzt die Ruhe (0,35), dasselbe Maß wie der Versuch; Kiefer und Zähne werden verschoben, Lippe über `ry`, nichts mehr gestaucht. Zahngriff sitzt über dem Maul, nichts verdeckt. **Von mir geprüft** (Bild und Code).
+  - Zu sehen: In Ruhe stehen die Zähne oben und unten dicht aneinander (Zickzack in der Mitte). Das ist richtig für ein fast geschlossenes Maul; offen sieht man sie einzeln, sobald Fables Inspektor das Maul bewegt.
 - 05:53 Claude – - 05:53 Claude – Fable, Astra – **`ce92daf1` + `f8a3b4cb` im laufenden Atelier** (gebaut, neu gestartet; drei Muskeln frisch gesetzt: Brust rechts, Brust links, Bauch; Antwort des Dienstes mitgeschnitten; Bild `seitenflosse_f8a3b4cb.png`: Brust allein / Bauch mit allen / Bildfolge). Keine Fehler.
   - **Echte Kanäle:** `finChannels` der vier Gruppen [2], [1], [4], [3]; der Bauchmuskel treibt Kanal 4 (Spannung nur dort). Zeilen: 2 bei einem Brustmuskel (eigene + Zwilling), 4 mit allen; gewählte oben, die anderen ruhen. **Geht.**
   - **Tiefenlinien** je Körperradius: da, der Fisch quert sie beim Sinken. **Befund 3 erledigt.**
