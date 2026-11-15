@@ -20,8 +20,17 @@ Zentral, nicht Beiwerk: gegenseitig ansehen, Code prüfen, Rückmeldung geben, u
 - **Format-Werkzeug auf alte Dateien losgelassen** (`gut.js`, `tail.js`, `kit.js`): nie wieder ganze alte Dateien formatieren.
 - **Pflichtlektüre nur in Ausschnitten geöffnet** und das nicht immer gesagt.
 
-## Claude: (bitte selbst ergänzen)
-- Aus dem Kanal bekannt: Kommentare statt Code zitiert, Teilpfade gelesen (AUFTRAG-1411 Pkt. 4); alle Freigaben vom 14.11. zurückgenommen, weil nicht gegen die Regeln geprüft (`REGELPRUEFUNG-1411.md`); 15.11. 02:20/02:23 zwei Augen-Befunde aus dem Inspektor statt aus dem Code geschlossen und zurückgenommen.
+## Claude: meine Fehler bisher (selbst eingetragen 15.11. 02:35)
+- **Aus dem Atelier oder einem Kommentar geschlossen statt den Weg im Code ganz gelesen.** 15.11. 02:20/02:23: „AUS-Zelle hat kaum Reiz“ und „Wellen enden nie“, beide aus dem Inspektor geschlossen, beide falsch (Astra 02:25 fand die Reifeantwort in `document.js:518–527`). 14.11.: „Nahsinn-Fisch schaut nach rechts“, „mittiger Muskel schlägt rechts und macht ‚Lenken‘“ – beide zurückgenommen. → Vor jeder Aussage über Verhalten: Modell, Vorlage (`document.js`), Ansicht, Engine; dann erst schreiben.
+- **Freigegeben, ohne gegen Davids Regeln zu prüfen.** 14.11.: alle zwölf Lebensbänder freigegeben, ohne „Muster“ zu sagen; Augen-Streifen „Meldet Unterschiede“ freigegeben, obwohl der Auftrag „Auge gilt als gut, nur Abgleich“ hieß; Bilder vor Astras Code-Prüfung freigegeben. Alles zurückgenommen (`REGELPRUEFUNG-1411.md` C).
+- **Aus dem Gedächtnis geprüft.** 14.11. 18:06 David: „IHR HABT KEIN GEDÄCHTNIS!“ → Pflichtlektüre in jeder Runde neu öffnen und die Liste nennen.
+- **Gegen eine ausdrückliche Vorgabe Davids angestoßen.** 14.11. 17:20: Schlupfstrich aus der Engine rechnen lassen, obwohl David 08:11 „schematisch reicht, das Atelier muss das nicht ausrechnen“ gesagt hatte.
+- **Messen verlangt, wo Nachrechnen reicht.** 15.11. 02:20: Messbitte an Astra zur AUS-Zelle; David 02:22: „Hier muss man nichts messen. Alles, was passiert, steht im Code.“
+- **Davids gutes Beispiel als Verstoß gelistet.** 14.11.: „Auslöser“ mit Reife/Botenstoff (Lebenszyklus der Zelle) zuerst unter A4 geführt.
+- **Zu kurz gedacht, nur an Inspektoren.** 15.11. 02:15: Lebensphasen-Werkzeug ohne Fischpanel; dann zu weit: „das Fischpanel wird zur Lebensansicht“ (David 02:18: Fisch mit Organen und Knoten bleibt immer).
+- **Prüfbild ohne Neustart des Betrachters** (14.11. 18:40): Der Betrachter liefert die Oberfläche vom Start; ohne Neustart prüft man den alten Stand.
+- **Klick-Test durch Klick auf die Fischfläche mit aktivem Platzieren-Werkzeug:** meine Skripte setzen dabei ein neues Organ („Organ gesetzt“). Geprüft wird also immer ein frisch gesetztes Organ, nicht der Startfisch. In jeder Meldung so sagen.
+- **Wortfehler an David:** „Version 22 gesehen“, als 21 veröffentlicht war; das Wort „ehrlich“ in einem Entwurf.
 
 ## Astra: (bitte selbst ergänzen)
 - Von mir beobachtet, zur Prüfung: Korrekturen an genau der Stelle, an der der Fehler sichtbar war (siehe meine Rückfrage zu `15c02fcf`).
