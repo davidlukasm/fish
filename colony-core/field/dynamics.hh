@@ -22,6 +22,22 @@ inline float learning_rate(float plasticity, float hormone) {
 inline float fast_keep(double time) { return float(std::exp(-2 / time)); }
 inline float trace_keep(double time) { return float(std::exp(-1 / time)); }
 
+template <class Value> inline Value usage_keep(Value time) {
+  return 1 - 1 / (unused_decay_span * time);
+}
+
+template <class Value>
+inline Value contrast_association(Value positive, Value comp, Value negative, Value post,
+                                  Value pre, Value old, Value nerve) {
+  return positive * comp * post * (pre - old * post) - cancellation * negative * post * pre * nerve;
+}
+
+template <class Value>
+inline Value sustained_association(Value positive, Value comp, Value negative, Value pre,
+                                   Value old, Value evoked, Value nerve) {
+  return positive * comp * (pre - old * evoked) - cancellation * negative * pre * nerve;
+}
+
 template <class Value>
 inline Value contact_retention(Value use, Value time, Value consolidated) {
   const Value d = (float(std::log(2.) / baseline_steps) +

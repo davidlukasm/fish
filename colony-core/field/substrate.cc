@@ -868,7 +868,7 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
       if (!effector)
         use = ordinary * use +
               (1 - ordinary) * clamp8(abs8(gather8(signal_.data(), ix)) * evidence, 0, 1);
-      const F8 uret = 1 - 1 / (plasticity::unused_decay_span * time);
+      const F8 uret = plasticity::usage_keep(time);
       const F8 u = clamp8(uret * load8(usage_.data() + k) + (1 - uret) * use, 0, 1);
       if (plasticity_enabled) {
         store8(trace_.data() + k, e);
@@ -912,8 +912,8 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
       const F8 teaching = plasticity::teaching_share(surprise_value, e, splat8(denominator));
       F8 delta =
           ordinary * gain *
-          (positive * comp * y * (xc - old * y) -
-           plasticity::cancellation * negative * y * xc * gather8(topology->nerve.data(), ix) +
+          (plasticity::contrast_association(positive, comp, negative, splat8(y), xc, old,
+                                            gather8(topology->nerve.data(), ix)) +
            teaching);
       // The competing share of the change: an active cell pushes out its silent inputs.
       F8 competition = -(ordinary * gain * positive * comp * y * y * old);
@@ -926,8 +926,8 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
         const float post = std::max(0.f, own);
         const F8 sustained =
             ordinary * gain * sign * post *
-            (positive * comp * (pre - abs8(old) * evoked) -
-             plasticity::cancellation * negative * pre * gather8(topology->nerve.data(), ix));
+            plasticity::sustained_association(positive, comp, negative, pre, abs8(old),
+                                               splat8(evoked), gather8(topology->nerve.data(), ix));
         const F8 taught = plasticity::teaching_share(ordinary * gain * surprise_value, e,
                                                     splat8(denominator));
         delta = (1 - level) * delta + level * (sustained + taught);
