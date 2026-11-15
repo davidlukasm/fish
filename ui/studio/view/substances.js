@@ -296,8 +296,6 @@ export function wheelWidthPatch(wheel, profile, fx, fy) {
   const [low, high] = wheel.sigmaRange;
   return clamp((distance / WHEEL.radius - low) / (high - low));
 }
-const substanceDefined = (state, index) =>
-    index >= HORMONES.levels || state.document.substances.some(sub => sub.index === index);
 export function substanceMark(state, index) {
   return index === BLOOD_SUBSTANCE.maturity        ? label('inspector.maturityMark')
          : index === BLOOD_SUBSTANCE.reserve       ? label('inspector.reserveMark')
