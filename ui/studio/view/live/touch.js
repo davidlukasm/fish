@@ -14,7 +14,7 @@ import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
-import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, clamp, drag, el, liveKind, path, picture, txt, reportBubble} from './kit.js';
 import {BOUNDED} from './sense.js';
 import {placeOf, sectorOf, turnTo, wedge} from './skin.js';
 
@@ -27,7 +27,8 @@ const CUT = Object.freeze({
   R : 286,
   skin : 52,
   deep : 110,
-  cells : 196,
+  cells : 190,
+  bubble : 11,
   thing : 11,
   dent : 20,
   least : .06
@@ -46,8 +47,8 @@ liveKind('touch', (studio, organId) => {
   // fish, anatomy_handles.js). The fish panel's thing presses the skin in as deep as its
   // pressure. The steps under the skin are how deep a place must be pressed before the cells
   // report it (threshold / the place's weight; where the hardest blow is not enough, no step);
-  // their grip sets the threshold. The cell under the thing glows as strongly as the engine
-  // reports the probe.
+  // their grip sets the threshold. Under the cell the thing presses, what the engine reports of
+  // the probe, in the fish panel's bubble.
   function drawCut(cell) {
     const {svg, under, live} = picture(cut, CUT.height),
                        {L, R, skin, deep, cells, thing, dent} = CUT, place = placeOf(studio, cell),
@@ -96,15 +97,8 @@ liveKind('touch', (studio, organId) => {
         opacity : .45 + .55 * v / most
       },
          live);
-      if (k === hit && heard > 0)
-        el('circle', {
-          cx : x,
-          cy : y,
-          r : 11 + 7 * clamp(heard),
-          class : 'aid-live-glow k0',
-          opacity : .25 + .5 * clamp(heard)
-        },
-           live);
+      if (k === hit && Number.isFinite(heard))
+        reportBubble(live, CUT.bubble)(x, y + CUT.bubble + 12, heard);
     });
     if (probe) {
       const top = skin + pressure * deep - thing + 1;

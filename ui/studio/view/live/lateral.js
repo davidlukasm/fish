@@ -14,10 +14,10 @@
 // the steps is reckoned with the engine's rule for an unbounded stimulus and for getting used
 // (sense.js, INTENSITY and runOf).
 // Not in the picture: sediment; the fish's own speed and turning apart from the water's.
-import {percent, t} from '../../../strings.js';
+import {t} from '../../../strings.js';
 import {degrees, radians} from '../../../units.js';
 import {findOrgan, groupReport} from '../../model/document.js';
-import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, clamp, drag, el, liveKind, path, picture, reportBubble, txt} from './kit.js';
 import {
   between,
   INTENSITY,
@@ -178,16 +178,8 @@ liveKind('lateral', (studio, organId) => {
     txt(live, B.L, B.height - 4, word('steps'), {class : 'aid-live-small'});
     // The report now, as the fish panel shows it: a bubble that moves along the steps, above the
     // water.
-    const g = el('g', {class : 'aid-probe-answer', 'pointer-events' : 'none'}, live);
-    el('circle', {r : B.bubble}, g);
-    const text = txt(g, 0, 4, '', {'text-anchor' : 'middle'});
-    bubble = at => {
-      const now = clamp(between(c.sent, at));
-      g.setAttribute('transform',
-                     `translate(${X(at).toFixed(1)} ${B.skin - B.water - B.bubble - 4})`);
-      g.style.setProperty('--lit', now.toFixed(2));
-      text.textContent = percent(now);
-    };
+    const place = reportBubble(live, B.bubble);
+    bubble = at => place(X(at), B.skin - B.water - B.bubble - 4, between(c.sent, at));
   }
   function show() {
     const cell = organ()?.centers[0];

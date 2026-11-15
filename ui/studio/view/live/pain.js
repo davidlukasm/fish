@@ -15,10 +15,10 @@
 // Not in the picture: harm without a place (hunger, illness, age), which lies evenly on all
 // sectors; that a hungry fish does not heal.
 import {SKIN_RESPONSE} from '../../../schema.js';
-import {percent, t} from '../../../strings.js';
+import {t} from '../../../strings.js';
 import {contactHalfAngle} from '../../../tuning.js';
 import {findOrgan} from '../../model/document.js';
-import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, clamp, drag, el, liveKind, path, picture, reportBubble, txt} from './kit.js';
 import {
   between,
   BOUNDED,
@@ -180,15 +180,8 @@ liveKind('pain', (studio, organId) => {
       txt(live, X(st), S.height - 4, String(st), {'text-anchor' : 'end', class : 'aid-live-small'});
     txt(live, S.L, S.height - 4, word('steps'), {class : 'aid-live-small'});
     // The report now, as the fish panel shows it: a bubble that moves along the steps.
-    const g = el('g', {class : 'aid-probe-answer', 'pointer-events' : 'none'}, live);
-    el('circle', {r : S.bubble}, g);
-    const text = txt(g, 0, 4, '', {'text-anchor' : 'middle'});
-    bubble = at => {
-      const now = clamp(between(c.sent, at));
-      g.setAttribute('transform', `translate(${X(at).toFixed(1)} ${top - S.loud - S.bubble - 4})`);
-      g.style.setProperty('--lit', now.toFixed(2));
-      text.textContent = percent(now);
-    };
+    const place = reportBubble(live, S.bubble);
+    bubble = at => place(X(at), top - S.loud - S.bubble - 4, between(c.sent, at));
   }
   function show() {
     const cell = organ()?.centers[0];

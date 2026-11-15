@@ -6,6 +6,7 @@
 // while a grip is dragged and as one undo step when it is let go (handles.js, draftDesign,
 // settleGraphic).
 import {escapeText} from '../markup.js';
+import {percent} from '../../../strings.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 export const clamp = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
@@ -155,4 +156,17 @@ export function addPicture(root) {
   const svg = el('svg', {class : 'aid-live-picture'});
   root.appendChild(svg);
   return svg;
+}
+// What cells report, with the sign the fish panel has for it (probes.js, answerSvg): a bubble with
+// the share in it, the brighter the more they report. Returns how to place and fill it.
+export function reportBubble(parent, r = 12) {
+  const g = el('g', {class : 'aid-probe-answer', 'pointer-events' : 'none'}, parent);
+  el('circle', {r}, g);
+  const words = txt(g, 0, 4, '', {'text-anchor' : 'middle'});
+  return (x, y, share) => {
+    const now = clamp(share);
+    g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
+    g.style.setProperty('--lit', now.toFixed(2));
+    words.textContent = percent(now);
+  };
 }

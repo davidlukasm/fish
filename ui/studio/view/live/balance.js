@@ -15,7 +15,7 @@ import {t} from '../../../strings.js';
 import {degrees, radians} from '../../../units.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
 import {sideOf} from '../../model/layout.js';
-import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, clamp, drag, el, liveKind, path, picture, txt, reportBubble} from './kit.js';
 import {answer, BOUNDED, IRRITANT} from './sense.js';
 import {fishLeft, turnTo} from './skin.js';
 
@@ -29,7 +29,9 @@ const TILT = Object.freeze({
   petal : 20,
   least : .03,
   most : .95,
-  fish : 1.25
+  fish : 1.25,
+  aside : 22,
+  bubble : 10
 });
 // A hair's direction from the snout, in degrees: 0 to the snout, 90 to the flank, 180 to the tail.
 const hairOf = q1 => 90 * (1 + (q1 ?? 0)), qualityOf = hair => clamp(hair / 90 - 1, -1, 1);
@@ -95,21 +97,15 @@ liveKind('balance', (studio, organId) => {
     el('path', {d : `M${t0x} ${t0y} L${t1x} ${t1y}`, class : 'aid-live-arrow'}, live);
     const body = el('g', {transform : `rotate(${- tried.tilt} ${cx} ${cy})`}, live);
     fishLeft(body, cx, cy, TILT.fish);
-    // At each hair's tip the stimulus as the bolt it is in every sense (how far gravity bends the
-    // hair), and round the tip the glow of what the cells report of it.
+    // Beside each hair the stimulus as the bolt it is in every sense (how far gravity bends the
+    // hair), and beyond its tip what the engine reports for its cells, in the fish panel's bubble.
+    const reports = [];
     for (const s of [...sides].reverse()) {
       const [x, y] = at(tried.tilt + s.side * s.hair, TILT.hair), pull = down(tried.tilt, s),
-                now = clamp(heard(s.cell) ?? 0),
-                [ px, py ] = at(tried.tilt + s.side * s.hair, TILT.hair + 14);
-      if (now > 0)
-        el('circle', {
-          cx : x,
-          cy : y,
-          r : 6 + 6 * now,
-          class : 'aid-live-glow k' + s.k,
-          opacity : .25 + .5 * now
-        },
-           live);
+                now = heard(s.cell), [ bx, by ] = at(tried.tilt + s.side * s.hair, TILT.hair + 26),
+                [ px, py ] = at(tried.tilt + s.side * s.hair + TILT.aside, TILT.hair * .62);
+      if (Number.isFinite(now))
+        reports.push([ bx, by, now ]);
       el('path', {d : `M${cx} ${cy} L${x} ${y}`, class : 'aid-live-hair k' + s.k}, live);
       if (pull > 0)
         el('path', {
@@ -120,6 +116,8 @@ liveKind('balance', (studio, organId) => {
            live);
     }
     el('circle', {cx, cy, r : 5.5, class : 'aid-live-soma k0 on'}, live);
+    for (const [x, y, share] of reports)
+      reportBubble(live, TILT.bubble)(x, y, share);
     const angleOf = p => degrees(Math.atan2(p.y - cy, cx - p.x)), mine = sides[0],
           [ hx, hy ] = at(tried.tilt + face * mine.hair, TILT.hair);
     drag(svg,
