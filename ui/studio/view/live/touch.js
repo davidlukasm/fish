@@ -12,7 +12,7 @@
 // Not in the picture: sediment; several touches at once.
 import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
-import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
+import {contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {BOUNDED} from './sense.js';
@@ -42,11 +42,12 @@ liveKind('touch', (studio, organId) => {
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
   // The skin round the body laid out flat, the cells' own place in the middle; under it the
-  // touch cells, each as big as the group weighs its place; the grip at the field's edge sets its
-  // width. The fish panel's thing presses the skin in as deep as its pressure. The line under the
-  // skin is how deep a place must be pressed before the cells report it (threshold / the place's
-  // weight; where the hardest blow is not enough, no line); its grip sets the threshold. The cell
-  // under the thing glows as strongly as the engine reports the probe.
+  // touch cells, each as big as the group weighs its place (the field's width is set at the
+  // fish, anatomy_handles.js). The fish panel's thing presses the skin in as deep as its
+  // pressure. The steps under the skin are how deep a place must be pressed before the cells
+  // report it (threshold / the place's weight; where the hardest blow is not enough, no step);
+  // their grip sets the threshold. The cell under the thing glows as strongly as the engine
+  // reports the probe.
   function drawCut(cell) {
     const {svg, under, live} = picture(cut, CUT.height),
                        {L, R, skin, deep, cells, thing, dent} = CUT, place = placeOf(studio, cell),
@@ -54,9 +55,7 @@ liveKind('touch', (studio, organId) => {
                        most = Math.max(...weights), count = weights.length;
     const active = studio.state.senseProbe,
           probe = active?.kind === 'touch' && active.organ === organId ? active : null,
-          X = a => L + (R - L) * (a + 180) / 360,
-          aOf = x => clamp((x - L) / (R - L) * 360 - 180, -179, 179),
-          tx = probe ? X(turnTo(probe.bearing - place)) : 0;
+          X = a => L + (R - L) * (a + 180) / 360, tx = probe ? X(turnTo(probe.bearing - place)) : 0;
     pressure = probe ? pressureOf(probe.strength) : 0;
     const dip = x => probe ? pressure * deep * Math.exp(-(((x - tx) / dent) ** 2)) : 0,
           line = Array.from({length : 69}, (_, n) => {
@@ -107,12 +106,6 @@ liveKind('touch', (studio, organId) => {
         },
            live);
     });
-    drag(svg,
-         el('circle',
-            {cx : X(Math.min(contactHalfAngle(cell.field ?? 0), 179)), cy : cells, r : 5.5}, live),
-         p => draft(updateCenter(studio.state.document, cell.id,
-                                 {field : contactFieldOf(Math.abs(aOf(p.x)))})),
-         'touchfield', 'grip', settle);
     if (probe) {
       const top = skin + pressure * deep - thing + 1;
       el('circle', {cx : tx, cy : top, r : thing, class : 'aid-live-thing'}, live);
