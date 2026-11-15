@@ -123,6 +123,13 @@ Geöffnet dafür: Abschnitte E und F dieser Seite, `ERINNERN.md`, `NOTIZEN.md`, 
 
 Aus der Reihe genommen: Eier/Samen (Bauchschnitt zeigt, was das Fischpanel nicht kann; keine Kritik Davids am Bild). Vereinbart, nicht gebaut: Seitenflosse (Fisch von oben zieht durch ein Feld; Knopfreihe trägt heute Schlagrichtung und Gegenspieler; Bahn muss aus der Engine kommen). Nicht begonnen: Maul (Kiemen/Reusen, Maul–Darm, alter Muskelblock).
 
+**Nachtrag 06:10 (Fable):**
+
+| Änderung | Commits | Atelier | Code | Bleibt offen |
+|---|---|---|---|---|
+| Seitenflosse: Minifisch von der Seite zieht die Bahn aus der Engine (Astra `5fcf70ca`, `ced0a78e`, `d400c222`, `ce92daf1`); Befehle je Flosse als Zeile, über/unter der Linie Rück-/Vorschlag; alle Paare; Flossen am Minifisch; Tiefenlinien; alte Schlagwahl und Muskelblock weg | `13e8922b`, `bf6cad57`, `f8a3b4cb`, `6b428908` | ja bis `f8a3b4cb` (echte Bahn, vier Zeilen, echte Kanäle); `6b428908` laut Astra in `1cbb3620` dokumentiert | Astra | Minifisch ist ein fester Umriss, Flossen sehr klein (Behelf) → Umriss des Fischpanels; Schlag umdrehen zeigt die neue Bahn erst nach dem Loslassen; Muskelart-Reihe steht noch; Engine: ein Zucken dreht den Fisch über 360° (Systemfrage an David, Astra hat die Ursache eingegrenzt) |
+| Maul: ein Schlag aus der Engine (Astra `d400c222`), Kieferlinien, Strom, Schnappen, Kiemen- und Schluckband, ein Griff „Schließer beginnt“, Maul im Fischpanel bewegt sich mit (Astra `caa0557a`, `1ee9e3bc`); Kopf mit doppelten Griffen und Muskelblock weg | `56e146bf` und der Folge-Commit | steht aus (Fischpanel-Kopf in Ruhe von Claude geprüft) | Astra | Futterkacheln als Behelf bis zur Futterprobe; Bänder ohne festen Maßstab (Astra liefert Bezugsgrößen); Ermüdung; Muskelart-Reihe |
+
 **Nicht angefasst seit 14.11. (Abschnitte E/F gelten weiter):** Blutsinn, Abwehr, Pigment, Seitenflosse, Maul/Kiefer, Drüse, Nahsinn, Nase/Barteln (rotes X), Darm-Lebensbild mit Ei, Schwimmblase-Lebensbild; für alle: Fischpanel bedienen und neben den Inspektor legen (David 02:17) ist nur bei Gleichgewicht, Tastsinn, Schmerz, Seitenlinie geschehen. Offen für alle: Kopfwort und Kosten (A2/A3; Vorschlag für die vier Sinne im Kanal 03:02), „Beispielwerte“/„Streuung“ (A4), eigenes Lebensbild je Organ (A1/A5; hängt am Lebensphasen-Werkzeug im Fischpanel).
 
 ### Astra, 04:33 · Farbzellen und Code-Gegenlese
