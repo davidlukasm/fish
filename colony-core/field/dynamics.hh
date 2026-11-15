@@ -15,6 +15,26 @@ inline constexpr float unused_decay_span = 4;
 // A contact at least this far consolidated is kept even when small: a learned weak or inhibiting
 // contact may be the lesson itself.
 inline constexpr float kept_consolidation = .5f;
+inline float learning_rate(float plasticity, float hormone) {
+  return MIN_LEARNING_RATE + (MAX_LEARNING_GAIN - MIN_LEARNING_RATE) *
+                                 std::clamp(plasticity, 0.f, 1.f) * (.5f * (1 + hormone));
+}
+inline float fast_keep(double time) { return float(std::exp(-2 / time)); }
+inline float trace_keep(double time) { return float(std::exp(-1 / time)); }
+
+template <class Value>
+inline Value contact_retention(Value use, Value time, Value consolidated) {
+  const Value d = (float(std::log(2.) / baseline_steps) +
+                   (1 - use) / (unused_decay_span * time)) *
+                  (1 - consolidated);
+  return 1 - d + d * d * (.5f - d / 6);
+}
+
+template <class Value>
+inline Value teaching_share(Value surprise, Value trace, Value denominator) {
+  return surprise * trace / denominator;
+}
+
 template <class Value>
 inline Value trace_update(Value retention, Value previous, Value fast, Value pre, Value post) {
   return retention * previous + (1 - fast) * pre * post;
