@@ -764,7 +764,9 @@ export const SEABED = Object.freeze({
   "bare_depth" : 0.01,
   "floor_normal" : 0.5,
   "sediment_color" : [ 0.55, 0.48, 0.3 ],
-  "algae_capacity_unit" : 16
+  "algae_capacity_unit" : 16,
+  "bare_surface_color" : [ 0.0, 0.0, 1.0 ],
+  "algae_color" : [ 0.25, 0.65, 0.2 ]
 });
 export const FAUNA = Object.freeze({
   "crab_family_size" : [ 0.82, 1.15, 0.9, 1.0 ],

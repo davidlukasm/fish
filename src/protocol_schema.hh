@@ -1643,6 +1643,8 @@ inline constexpr double bare_depth = 0.01;
 inline constexpr double floor_normal = 0.5;
 inline constexpr std::array<double, 3> sediment_color{0.55, 0.48, 0.3};
 inline constexpr int algae_capacity_unit = 16;
+inline constexpr std::array<double, 3> bare_surface_color{0.0, 0.0, 1.0};
+inline constexpr std::array<double, 3> algae_color{0.25, 0.65, 0.2};
 }
 namespace fauna {
 inline constexpr std::array<double, 4> crab_family_size{0.82, 1.15, 0.9, 1.0};

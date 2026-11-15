@@ -74,7 +74,8 @@ liveKind('pigment', (studio, organId) => {
   const own = {chosen : 0, command : 1, stop : 450, ground : .35, pull : null};
   let step = 0, clock = null;
   const organ = () => findOrgan(studio.state.document, organId);
-  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
+  const draft = (doc, preview = null) =>
+      doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive', preview);
   const settle = () => {
     own.pull = null;
     if (studio.drafted)
@@ -88,7 +89,8 @@ liveKind('pigment', (studio, organId) => {
   // sets the chosen type's time. The fish above has the colour of the clock's step.
   function drawScene(cell) {
     const {svg, under, live} = picture(scene, SCENE.height), {L, R, top, base} = SCENE.course,
-                       f = SCENE.fish, range = studio.state.anatomy?.colour?.range,
+                       f = SCENE.fish,
+                       range = (studio.state.outlinePreview ?? studio.state.anatomy)?.colour?.range,
                        time = timeConstantSteps(cell.tau), X = st => L + (R - L) * st / STEPS,
                        Y = v => base - (base - top) * clamp(v),
                        colourAt = spread =>
@@ -236,14 +238,15 @@ liveKind('pigment', (studio, organId) => {
              draft(updateCenter(studio.state.document, cell.id, {
                q1 : hueQuality(hueOf(p.x)),
                copies : Math.round(clamp((p.y - top) / deep * most, 1, most))
-             }));
+             }), 'colour');
            },
            'pigmenttype' + i, 'grip', settle);
       if (!chosen)
         return;
       drag(svg, el('circle', {cx : clamp(x + w, L, R), cy : top, r : 4.5}, live),
            p => draft(updateCenter(studio.state.document, cell.id,
-                                   {qwidth : tuningWidth(Math.abs(turnTo(hueOf(p.x) - hue)))})),
+                                   {qwidth : tuningWidth(Math.abs(turnTo(hueOf(p.x) - hue)))}),
+                      'colour'),
            'pigmentwidth', 'grip', settle);
       if (cells.length > 1)
         chip(live, x, base + 14, '×', () => remove(i), true, 6);

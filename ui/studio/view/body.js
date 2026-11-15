@@ -771,7 +771,7 @@ const BODY_SHADE = Object.freeze({reach : 150, flank : .08, back : .12});
 export function bodySvg(state) {
   // A chosen pigment organ shows the fish in its colour, as a chosen skin sense shows its skin.
   const fill = fishBodyColour(
-      state.document, state.anatomy,
+      state.document, state.outlinePreview ?? state.anatomy,
       state.document.organs.some(organ => organ.type === 'pigment' && organChosen(state, organ)));
   const drawnEyes = new Set(), sizes = outlineSizes(state);
   let organs = '', gut = '', felt = '', ducts = '';

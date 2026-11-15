@@ -34,9 +34,8 @@ constexpr double MAX_SHADE = 64, SIDE_LIGHT = .25;
 constexpr double DISTURBANCE_STRENGTH = .65, MIN_DISTURBANCE = .001;
 constexpr double SURFACE_PROBE = .15, BURIED_SURFACE = .05, SURFACE_COLOR_REACH = 20,
                  SURFACE_COLOR_DISTANCE = 9;
-constexpr Color SEDIMENT_COLOR{seabed::sediment_color[0], seabed::sediment_color[1],
-                               seabed::sediment_color[2]},
-    BARE_SURFACE_COLOR{0, 0, 1};
+constexpr Color SEDIMENT_COLOR = seabed::sediment_color,
+                BARE_SURFACE_COLOR = seabed::bare_surface_color;
 constexpr double ROOT_SEARCH = 40, FULL_SOIL_DEPTH = 10;
 constexpr int COMPETITION_REACH = 2;
 constexpr std::array<double, plant_form::count> FORM_COMPETITION{.35, .65, .35};

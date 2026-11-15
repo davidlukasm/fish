@@ -1,7 +1,7 @@
 #pragma once
 #include "simulation_types.hh"
 namespace fishsim {
-inline constexpr Color ALGAE_COLOR{.25, .65, .20};
+inline constexpr Color ALGAE_COLOR = seabed::algae_color;
 inline constexpr double ALGAE_BUOYANCY = .2, PLANT_BUOYANCY = -.25;
 inline constexpr Color FEED_COLOR{1, .2, .1};
 // Flocks of faeces are fine matter that sinks slowly.

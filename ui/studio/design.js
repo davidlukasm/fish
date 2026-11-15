@@ -164,7 +164,7 @@ export const designMethods = {
     }
   },
   requestDesign() {
-    const draft = this.drafted && this.heldHandle('anatomy');
+    const draft = this.drafted && this.draftPreview;
     if (this.designRunning || (this.drafted && !draft)) {
       this.designPending = true;
       return;
@@ -174,7 +174,7 @@ export const designMethods = {
     this.designRunning = true;
     this.designPending = false;
     const request = ++this.designRequest, fishRequest = this.newFishRequest;
-    const spineDraft = draft?.spec?.key.startsWith('spine-');
+    const spineDraft = draft?.key.startsWith('spine-'), colourDraft = draft?.key === 'colour';
     const scene = draft ? {sense : spineDraft ? this.senseScene() : null} : {
       lightSpread : this.state.lightSpread?.document !== document,
       sight : sightScene(probe),
@@ -187,19 +187,24 @@ export const designMethods = {
         .then(anatomy => {
           if (draft) {
             // Follow the drag with the last completed outline, even as the pointer moves on.
-            if (this.drafted && this.heldHandle('anatomy') === draft &&
+            if (this.drafted && this.draftPreview === draft &&
                 this.state.document !== this.draftStart && this.newFishRequest === fishRequest) {
               const shape = () => {
                 const report = this.state.outlinePreview ?? this.state.anatomy;
+                if (colourDraft)
+                  return JSON.stringify(report?.colour);
                 return JSON.stringify([outlineSizes(this.state),
                                        spineDraft && [report?.spinesRest, report?.spinesRaised,
                                                       report?.spineGroups, report?.attackProbe],
-                                       draft.spec.key === 'field' && report?.lateral]);
+                                       draft.key === 'field' && report?.lateral]);
               };
               const previous = shape();
               this.state.outlinePreview = anatomy;
-              if (shape() !== previous)
+              if (shape() !== previous) {
                 this.refreshScene();
+                if (colourDraft)
+                  this.refreshLive();
+              }
             }
           } else if (this.state.document === document)
             this.showAnatomy(anatomy, request);

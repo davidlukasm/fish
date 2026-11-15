@@ -400,13 +400,8 @@ export class OrganStudio {
   // A grip on the fish: the fish, with the grip, and the organ's live pictures follow it while it
   // is dragged.
   refreshFishAndLive() {
-    const changed = this.state.document !== this.draftStart;
-    if (!changed)
-      this.state.outlinePreview = null;
     this.refreshScene();
     this.refreshLive();
-    if (changed && !this.designRunning)
-      this.requestDesign();
   }
   refreshInspector(reset = false) {
     const element = this.root.querySelector('.aid-inspector-scroll');
@@ -521,8 +516,7 @@ export class OrganStudio {
     const doc = validateDocument(source.pop()), chosen = this.state.selected;
     this.state.document = doc;
     this.historyBatch = null;
-    this.drafted = null;
-    this.draftStart = null;
+    this.drafted = this.draftStart = this.draftPreview = null;
     this.state.canUndo = this.undoHistory.length > 0;
     this.state.canRedo = this.redoHistory.length > 0;
     // Stepping back a setting keeps its inspector open while the chosen part still exists.
@@ -572,14 +566,14 @@ export class OrganStudio {
       this.saveDraft();
     }
   }
-  changeDocument(doc, selected = null, updateInspector = true, batch = null, finish = false) {
+  changeDocument(doc, selected = null, updateInspector = true, batch = null, finish = false,
+                 keepOutline = false) {
     if (!doc)
       return false;
     const next = validateDocument(settleRegions(doc, this.state.sites));
     // A click that sets what is already set adds no undo step and keeps the developed fish.
     const unchanged =
         doc !== this.state.document && JSON.stringify(next) === JSON.stringify(this.state.document);
-    const keepOutline = finish && batch?.startsWith('anatomy:');
     if (!unchanged)
       this.recordHistory(batch);
     if (finish)

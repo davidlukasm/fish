@@ -1746,7 +1746,17 @@
         0.48,
         0.3
       ],
-      "algae_capacity_unit": 16
+      "algae_capacity_unit": 16,
+      "bare_surface_color": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "algae_color": [
+        0.25,
+        0.65,
+        0.20
+      ]
     },
     "fauna": {
       "crab_family_size": [

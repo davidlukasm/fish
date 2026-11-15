@@ -288,7 +288,7 @@ export const handleMethods = {
     const p = cameraCoordinates(event, this.bodyMap(), this.state.camera);
     const doc = anatomyPatch(this.state, spec, p[spec.axis] - origin[spec.axis]);
     if (doc)
-      this.draftDesign(doc, 'anatomy:' + spec.id + ':' + spec.key, 'refreshFishAndLive');
+      this.draftDesign(doc, 'anatomy:' + spec.id + ':' + spec.key, 'refreshFishAndLive', spec.key);
   },
   regionPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
@@ -665,20 +665,26 @@ export const handleMethods = {
   },
   // While an inspector handle is dragged only the inspector, or the part named by `redraw`,
   // follows, once a frame; the library and the full design report catch up when it is let go.
-  draftDesign(doc, batch, redraw = 'refreshDragged') {
+  draftDesign(doc, batch, redraw = 'refreshDragged', preview = null) {
     if (!doc)
       return;
     if (!this.drafted) {
       if (JSON.stringify(doc) === JSON.stringify(this.state.document))
         return;
       this.draftStart = this.state.document;
+      this.draftPreview = preview && {key : preview};
     }
     this.drafted = batch;
     this.state.document = doc;
     if (!this.draftFrame)
       this.draftFrame = requestAnimationFrame(() => {
         this.draftFrame = null;
+        const changed = this.state.document !== this.draftStart;
+        if (this.draftPreview && !changed)
+          this.state.outlinePreview = null;
         this[redraw]();
+        if (this.draftPreview && changed && !this.designRunning)
+          this.requestDesign();
       });
   },
   settleGraphic() {
@@ -690,17 +696,17 @@ export const handleMethods = {
       return this.refreshInspector();
     // The drag becomes one undo step from where it began; one that ends there is no step, and the
     // design run it held back runs now.
-    const dragged = this.state.document, start = this.draftStart;
-    this.drafted = this.draftStart = null;
+    const dragged = this.state.document, start = this.draftStart, preview = this.draftPreview;
+    this.drafted = this.draftStart = this.draftPreview = null;
     this.historyBatch = null;
     if (dragged === start) {
-      if (this.heldHandle('anatomy'))
+      if (preview)
         this.state.outlinePreview = null;
       this.refreshScene();
       this.refreshInspector();
     } else {
       this.state.document = start;
-      this.changeDocument(dragged, this.state.selected, true, batch, true);
+      this.changeDocument(dragged, this.state.selected, true, batch, true, !!preview);
     }
     if (this.state.document === start && this.designPending)
       this.requestDesign();
