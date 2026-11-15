@@ -1277,7 +1277,6 @@
 .aid-live-keygrip{fill:var(--key);stroke:var(--aid-ink);stroke-width:1}
 .aid-live-keygrip.on{stroke:var(--aid-handle);stroke-width:2.5}
 .aid-live-tire{stroke:var(--key)}
-.aid-live-sense-full{color:#e6b47c}
 .aid-live-sense-ache{color:#ef8f8f}
 .aid-live-sense-fill{fill:currentColor}
 .aid-live-sense-input{fill:currentColor;fill-opacity:.35;stroke:currentColor;stroke-width:1.6}
@@ -1390,7 +1389,6 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-thing{fill:currentColor}
 .aid-live-track-line{fill:none;stroke:#6f9aa0;stroke-width:1;stroke-dasharray:1.5 3;stroke-linecap:round}
 .aid-live-wound{fill:#0c2b33;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
-.aid-live-bite{fill:var(--aid-chip);stroke:currentColor;stroke-width:1.6;stroke-dasharray:3 2.5;vector-effect:non-scaling-stroke}
 .aid-live-sore{fill:#ef8f8f;opacity:.3}
 .aid-live-ringline{fill:none;stroke:var(--aid-chip);stroke-width:3}
 .aid-live-hair{fill:none;stroke:var(--key);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
@@ -1398,15 +1396,12 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-glow{fill:var(--key);stroke:none}
 .aid-live-picture text.aid-live-inflesh{paint-order:stroke;stroke:#1f4852;stroke-width:5px;stroke-linejoin:round}
 .aid-live-spine{fill:none;stroke:#f4efd8;stroke-width:1.8;stroke-linecap:round}
-.aid-live-jaw{fill:none;stroke:currentColor;stroke-width:3.5;stroke-linecap:round;opacity:.9}
 .aid-live-gape{fill:none;stroke:#e9e2c6;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .aid-live-gape.fits{stroke:#ef8f8f}
-.aid-live-reservedrop{fill:#f1e3a4}
 .aid-live-notch{fill:var(--aid-chip);stroke:var(--key);stroke-width:1;opacity:.92}
 .aid-live-notch.on{stroke-width:2}
 .aid-live-fin-effect{fill:none;stroke:#f4efd8;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .aid-live-fin-blade{fill:var(--key);stroke:var(--aid-limit);stroke-width:1.2}
-.aid-live-fin-twitch{fill:none;stroke:var(--key);stroke-width:1.8;stroke-linecap:round}
 .aid-live-fin-stream{fill:none;stroke:#9cc8f0;stroke-width:1.6;stroke-linecap:round;opacity:.8}
 .aid-live-knob.aid-live-fin-streamknob{fill:#9cc8f0}
 .aid-live-fin-ground{fill:#b9a678;opacity:.85}
