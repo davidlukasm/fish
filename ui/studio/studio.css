@@ -1398,7 +1398,7 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-gape.fits{stroke:#ef8f8f}
 .aid-live-notch{fill:var(--aid-chip);stroke:var(--key);stroke-width:1;opacity:.92}
 .aid-live-notch.on{stroke-width:2}
-.aid-live-mouth-line{fill:none;stroke:#f4efd8;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.aid-live-mouth-line{fill:none;stroke:#f4efd8;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .aid-live-mouth-water{fill:#9cc8f0;opacity:.7}
 .aid-live-mouth-tooth{fill:#f4efd8}
 .aid-live-mouth-bite{fill:var(--aid-ground)}
