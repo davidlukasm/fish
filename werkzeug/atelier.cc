@@ -252,6 +252,40 @@ void fin_course_report(const Genome &g, const std::vector<FinPhase> &phases) {
     sample();
   std::cout << ']';
 }
+void fin_twitch_report(const fishsim::BrainInterface &layout, double mass,
+                       const fishsim::PhysiologyParameters &physiology) {
+  namespace fs = fishsim;
+  std::cout << ",\"finTwitch\":[";
+  for (int pair = 0; pair < fs::SIDE_FINS; ++pair)
+    for (int side = 0; side < 2; ++side) {
+      if (pair || side)
+        std::cout << ',';
+      std::cout << '[';
+      for (const bool front : {false, true}) {
+        if (front)
+          std::cout << ',';
+        const auto &strokes = front ? fs::FRONT_STROKES : fs::BACK_STROKES;
+        const int stroke = strokes[pair][side];
+        const double drive = layout.stroke_capacity[stroke];
+        if (drive <= 0 || drive < physiology.stroke_threshold) {
+          std::cout << "null";
+          continue;
+        }
+        const auto &timing = layout.stroke_timing[stroke];
+        const double torque = (bool(side) != front ? -1 : 1) * drive * layout.fin_turn[stroke];
+        const auto angle = fs::isolated_twitch_turn(torque, timing, mass, physiology);
+        std::cout << "{\"duration\":" << timing.steps
+                  << ",\"during\":" << fs::degrees(angle.during) << ",\"settled\":";
+        if (angle.settled)
+          std::cout << fs::degrees(*angle.settled);
+        else
+          std::cout << "null";
+        std::cout << '}';
+      }
+      std::cout << ']';
+    }
+  std::cout << ']';
+}
 void mouth_course_report(const Genome &g, const SenseScene &scene) {
   namespace fs = fishsim;
   const auto &layout = *g.interface;
@@ -1256,6 +1290,8 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
     std::cout << '}';
   }
   std::cout << ']';
+  adult.energy = fishsim::reserve_capacity(adult);
+  fin_twitch_report(a, fishsim::body_mass(adult), physiology);
   return group;
 }
 void readiness_report(const fishsim::BrainInterface &a, const field::Substrate &t, bool developed) {

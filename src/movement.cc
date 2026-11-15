@@ -18,6 +18,13 @@ double ground_grip(double immersion) {
   return 4 * i * (1 - i);
 }
 namespace {
+double angular_kick(double torque, double weakness, double inertia,
+                    const PhysiologyParameters &p) {
+  return radians(torque * p.stroke_turn) * weakness / inertia;
+}
+double across_retention(const PhysiologyParameters &p, double drag, double spines) {
+  return std::max(0., 1 - p.drag_across * drag * spines);
+}
 double foliage_brake(const Field &field, double x, double y, double radius) {
   const double s = field.foliage_contact(x, y, radius).stiffness;
   return 1 + field.env().foliage_drag * s / (1 + s);
@@ -26,6 +33,39 @@ Point sheltered_water(const Field &field, double x, double y, double brake) {
   const auto water = field.water().velocity(x, y);
   return {water.x / brake, water.y / brake};
 }
+}
+TwitchTurn isolated_twitch_turn(double torque, const StrokeTiming &timing, double mass,
+                               const PhysiologyParameters &p) {
+  const bool scaled = p.scaled_by_size();
+  const double inertia = scaled ? mass : 1.;
+  const double retention = across_retention(p, scaled ? 1 / std::sqrt(mass) : 1., 1.);
+  const double signed_kick = angular_kick(torque, 1., inertia, p);
+  const double kick = std::min(std::abs(signed_kick), MAX_TURN);
+  const double duration = timing.steps;
+  if (kick == 0 || retention == 0) {
+    const double turn = std::copysign(duration * kick, signed_kick);
+    return {turn, turn};
+  }
+  if (retention >= 1) {
+    const double rising = std::min(duration, std::floor(MAX_TURN / kick));
+    const double turn = kick * rising * (rising + 1) / 2 + (duration - rising) * MAX_TURN;
+    return {std::copysign(turn, signed_kick), std::nullopt};
+  }
+
+  // Estimate the twitch by its mean drive. The angular response to that pulse rises
+  // geometrically until the turn limit and coasts geometrically after the pulse.
+  const double drop = 1 - retention, log_retention = std::log1p(-drop);
+  const double cruise = kick / drop;
+  const double rising = cruise > MAX_TURN
+                            ? std::min(duration,
+                                       std::floor(std::log1p(-MAX_TURN / cruise) / log_retention))
+                            : duration;
+  const double ramp = -std::expm1(log_retention * rising);
+  const double during = cruise * (rising - retention * ramp / drop) +
+                        (duration - rising) * MAX_TURN;
+  const double at_release = rising < duration ? MAX_TURN : cruise * ramp;
+  const double settled = during + at_release * retention / drop;
+  return {std::copysign(during, signed_kick), std::copysign(settled, signed_kick)};
 }
 void limit_swimming(Body &b, const Field &field, const PhysiologyParameters &physiology) {
   auto water = sheltered_water(field, b.x, b.y, foliage_brake(field, b.x, b.y, body_radius(b)));
@@ -81,7 +121,7 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
     b.motor_.torque = b.motor_.drive_left - b.motor_.drive_right;
     b.motor_.angular_velocity =
         std::clamp(b.motor_.angular_velocity +
-                       radians(b.motor_.torque * physiology.stroke_turn) * weakness / inertia,
+                       angular_kick(b.motor_.torque, weakness, inertia, physiology),
                    -MAX_TURN, MAX_TURN);
     const auto grip = swimming_grip(b.motor_.relative_speed);
     // Waves lose push in open water, which only the tail makes; a fin's push on the ground is not
@@ -97,7 +137,7 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
   }
   b.motor_.swimming_pending = false;
   b.sediment_coverage = immersion;
-  const double across_drag = physiology.drag_across * drag * spines;
+  const double retention = across_retention(physiology, drag, spines);
   if (resistance.across > 1) {
     // The snout swings across the heading; the rising part of its path is braked like rising.
     const double c = std::cos(b.angle), s = std::sin(b.angle);
@@ -105,7 +145,7 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
         std::hypot(s / resistance.across, c / resistance.vertical(b.motor_.angular_velocity * c));
   }
   b.motor_.turn = std::clamp(b.motor_.angular_velocity, -MAX_TURN, MAX_TURN);
-  b.motor_.angular_velocity *= std::max(0., 1 - across_drag);
+  b.motor_.angular_velocity *= retention;
   b.angle = std::remainder(b.angle + b.motor_.turn, 2 * PI);
   b.motor_.water_vx = water.x;
   b.motor_.water_vy = water.y;
@@ -117,7 +157,7 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
       std::pow(mouth_aperture(b) / std::max(.001, radius), 2) / raker_passage(b);
   along *= std::max(0., 1 - physiology.drag_along * (1 + std::abs(along)) * drag *
                                 (spines + mouth_drag));
-  across *= std::max(0., 1 - across_drag);
+  across *= retention;
   const double cloud = world ? turbidity_resistance(world->turbidity(b.x, b.y)) : 1;
   ux = (along + b.motor_.thrust) * hx - (across + side_thrust) * hy;
   uy = (along + b.motor_.thrust) * hy + (across + side_thrust) * hx;
