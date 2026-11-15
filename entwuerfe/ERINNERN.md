@@ -57,3 +57,4 @@ Zentral, nicht Beiwerk: gegenseitig ansehen, Code prüfen, Rückmeldung geben, u
 - „Schlupf“: Der Gestalter wartet auf keinen Engine-Lauf, um zu erfahren, wann sein Fisch schlüpft (14.11. 18:02).
 - Fable 08:58 (15.11.): Mangel an der Nase („Aas“ unlesbar) aus dem verkleinerten Sammelbild behauptet; vergrößert war das Wort lesbar. Vor einem Befund den Ausschnitt in voller Größe ansehen.
 - Fable 09:41 (15.11.): „Pflanze wird nicht gemahlen“ behauptet, nachdem ich nur `feeding.cc` durchsucht hatte; `bite_plant` liegt in `tank_energy.cc`. Eine Aussage „kommt in der Engine nicht vor“ nur nach Suche über ganz `src` und `colony-core`.
+- Fable 10:45 (15.11.): Für einen Wert zwei Bedingungen an zwei Orten geschrieben (Block weg in `panels.js`, Griff da in `circuit.js`), ohne sie nebeneinanderzulegen. Wer eine Bedingung „wo steht X“ schreibt, sucht zuerst die Gegenbedingung „wo steht X sonst“ und macht eine daraus.
