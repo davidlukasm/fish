@@ -260,8 +260,10 @@ void mouth_course_report(const Genome &g, const SenseScene &scene) {
   const int opens = std::max(0, -scene.bite_delay), closes = opens + scene.bite_delay;
   const int opener_steps = layout.stroke_timing[fs::StrokeSuction].whole(),
             closer_steps = layout.stroke_timing[fs::StrokeBite].whole(),
-            gill_steps = layout.stroke_timing[fs::StrokeGill].whole(),
-            last = std::max(opens + std::max(opener_steps, gill_steps), closes + closer_steps);
+            gill_steps = layout.stroke_timing[fs::StrokeGill].whole();
+  const int pumping_until = opens + std::max(opener_steps, gill_steps),
+            last_command = std::max(pumping_until, closes + closer_steps),
+            rest_steps = int(std::ceil(1 / fs::MOUTH_DRIFT));
   std::vector<int> port(g.blueprint->neurons.size(), -1);
   for (const auto &effector : layout.effectors)
     port[effector.neuron] = effector.port;
@@ -277,10 +279,19 @@ void mouth_course_report(const Genome &g, const SenseScene &scene) {
       return 0.f;
     }
   });
+  body.mouth.opening = body.gill_signal = 1;
+  const double gill_reference = fs::gill_water(body);
+  body.mouth.opening = fs::MOUTH_REST;
+  body.gill_signal = 0;
+  const double credit_reference = fs::swallow_area(body) * fs::raker_passage(body) *
+                                  layout.stroke_timing[fs::StrokeSuction].steps *
+                                  fs::MOUTH_TRANSPORT_RATE;
   std::cout << ",\"mouthCourse\":{\"firstStep\":" << -opens
             << ",\"rakerRetention\":" << fs::raker_retention(body.raker_density)
+            << ",\"gillWaterReference\":" << gill_reference
+            << ",\"creditReference\":" << credit_reference
             << ",\"samples\":[";
-  for (int step = 0; step <= last; ++step) {
+  for (int step = 0; step <= last_command + rest_steps; ++step) {
     body.age = step;
     fs::anatomical_action(body, layout, physiology);
     const auto &mouth = body.mouth;
