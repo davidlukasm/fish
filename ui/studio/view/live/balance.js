@@ -10,7 +10,7 @@
 // is reckoned here with the engine's rule for a bounded answer (sense.js, answer). The report
 // rights the fish only through the motor region's "feel" input (organs.js, motor slots;
 // motor_region.js, flee to turn and escape); that connection is made and shown in the
-// inspector's list of ports (circuit.js, outletsSection).
+// inspector's list of ports (circuit.js, portsSection).
 import {t} from '../../../strings.js';
 import {degrees, radians} from '../../../units.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';

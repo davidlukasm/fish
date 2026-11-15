@@ -7,11 +7,7 @@ import {cellDevelopment, previewControls} from './development.js';
 import {visionInspector} from './vision.js';
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
-import {
-  isRegion,
-  ORGAN_BY_KEY,
-  organFunction
-} from '../model/organs.js';
+import {isRegion, ORGAN_BY_KEY, organFunction} from '../model/organs.js';
 import {
   chosenCenter,
   contactBundle,
@@ -38,7 +34,7 @@ import {
   SWITCH_SYMBOL,
   VALUE_DIGITS
 } from './kit.js';
-import {outletsSection, pairingChoice, regionSettings, slotsSection} from './circuit.js';
+import {limitAtPorts, pairingChoice, portsSection, regionSettings, slotsSection} from './circuit.js';
 import {strandInspector} from './nerve_inspector.js';
 import {chemistry, hormoneInspector} from './substances.js';
 import {learningInspector} from './learning.js';
@@ -210,14 +206,21 @@ function organInspector(state, organ) {
              heading(organTitle(organ, state.sites)) + '</header>' +
              moduleChips(state, organ.type === 'brain' ? center?.id : organ.id) +
              sideSwitch(organ) + centerTabs(state, organ);
-  html += organSettingsBlock(state, organ) +
-          (isRegion(organ) ? '' : slotsSection(state, organ) + outletsSection(state, organ)) +
-          chemistry(state, organ, center) +
-          (isRegion(organ) && state.selected?.kind !== 'center'
-               ? ''
-               : cellDevelopment(state, center, LIVE_LIFE.has(organ.type))) +
-          contactPlan(state, isRegion(organ) && state.selected?.kind !== 'center' ? organ.centers
-                                                                                  : [ center ]);
+  html +=
+      organSettingsBlock(state, organ) +
+      (isRegion(organ) ? '' : slotsSection(state, organ) + portsSection(state, organ, center)) +
+      chemistry(state, organ, center) +
+      (isRegion(organ) && state.selected?.kind !== 'center'
+           ? ''
+           : cellDevelopment(state, center, LIVE_LIFE.has(organ.type))) +
+      // A sense cell takes no contacts and has nothing to set about them; a working cell's one
+      // limit is set at its incoming lines, where the organ has them (circuit.js, portsSection).
+      // Where the organ leads and what leads to it, its ports above and the fish panel's lines
+      // show.
+      (center?.role === 'sensor' || limitAtPorts(state, organ, center)
+           ? ''
+           : contactPlan(state, isRegion(organ) && state.selected?.kind !== 'center' ? organ.centers
+                                                                                     : [ center ]));
   if (isRegion(organ))
     html += iconSwitch('inner', organ.openContacts, label('compiler.openRegion'),
                        'data-compiler-open="' + escapeText(organ.id) + '"');

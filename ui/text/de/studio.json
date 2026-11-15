@@ -297,12 +297,6 @@
       "misst die Körperform"
     ],
     "barbelsTaste": "Die Barteln wachsen mit ihren Zellen. Ihre Spitzen schmecken nur, was sie berühren – keine Duftwolke –, und tasten Stein, Boden, Körper und Schlamm. Die Abstimmung wählt, welche Sorten sie schmecken.",
-    "barbelFeel": {
-      "label": "Bartelspitze",
-      "taste": "Schmeckt",
-      "both": "Schmeckt und tastet",
-      "touch": "Tastet"
-    },
     "addProfile": "Duftprofil",
     "removeProfile": "Duftprofil entfernen",
     "meanLimit": "Mittlere genetische Höchststärke",
@@ -892,14 +886,12 @@
       "headOther": "Kopf runter",
       "flankOther": "linke Seite unten",
       "tailOther": "Kopf hoch"
-    },
-    "sensitivityHandle": "Ziehen: ein längeres Härchen spürt schon eine kleinere Neigung"
+    }
   },
   "lateral": {
     "title": "Strömung",
     "handle": "Ziehen: ob die Zellen das Wasser nahe bei sich spüren oder rund um den Körper",
     "lobe": "woher die Zellen Strömung spüren",
-    "sensitivityHandle": "Ziehen: wie schwache Strömung die Zellen schon melden",
     "cells": "Seitenlinienzellen",
     "report": "Meldung",
     "faint": "kaum Strömung",
@@ -907,7 +899,6 @@
     "steady": "gleichmäßige Strömung",
     "later": "{n} Schritte später",
     "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
-    "fadeHandle": "Ziehen: wie schnell sich die Zellen an gleichmäßige Strömung gewöhnen",
     "field": "Wasser aus ±{degrees}°"
   },
   "systems": {
@@ -1410,22 +1401,6 @@
     "breed": "Züchten",
     "atelier": "Im Atelier"
   },
-  "brainParts": {
-    "0": "Riechen",
-    "1": "Sehen",
-    "2": "Bewertung",
-    "3": "Handlung",
-    "4": "Takt"
-  },
-  "regionNames": {
-    "olfaction": "Riechen",
-    "tectum": "Sehkarte",
-    "value": "Bewertung",
-    "state": "Zustand",
-    "choice": "Handlungswahl",
-    "motor": "Motorik",
-    "spine": "Taktgeber"
-  },
   "nervePicture": {
     "cells": "{n} {n:Zelle|Zellen}",
     "separatePaths": "getrennte Wege",
@@ -1502,50 +1477,6 @@
     "halfUp": "halb oben nach {n} {n:Schritt|Schritten}",
     "peak": "{n} {n:Zelle|Zellen}: bis {p}"
   },
-  "gutSense": {
-    "fullness": "Füllzellen",
-    "food": "Futterzellen",
-    "ache": "Schmerzzellen",
-    "report": "Meldung",
-    "empty": "leer",
-    "full": "voll",
-    "fullnessHalf": "melden ab {p} Füllung",
-    "fullnessHandle": "Ziehen: ab welcher Füllung die Zellen melden",
-    "calm": "kein Bauchweh",
-    "sore": "starkes",
-    "acheHalf": "melden ab {p} des stärksten Bauchwehs",
-    "acheHandle": "Ziehen: ab wie viel Bauchweh die Zellen melden",
-    "aches": "hat gleichbleibend Bauchweh",
-    "acheFadeHandle": "Ziehen: wie schnell sich die Zellen an anhaltendes Bauchweh gewöhnen",
-    "little": "kaum Nährstoffe",
-    "much": "viel mehr als nötig",
-    "rest": "Grundbedarf",
-    "foodHalf": "melden ab {p} des Bedarfs",
-    "foodHandle": "Ziehen: wie wenig Nährstoffe die Zellen schon melden",
-    "eats": "frisst gleichmäßig",
-    "later": "{n} Schritte später",
-    "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
-    "fadeHandle": "Ziehen: wie schnell sich die Zellen an gleichbleibendes Futter gewöhnen"
-  },
-  "bloodSense": {
-    "title": "Pegel im Blut",
-    "report": "Meldung",
-    "none": "kein Stoff",
-    "full": "so viel wie möglich",
-    "half": "melden ab {p} Stoff im Blut",
-    "handle": "Ziehen: ab welchem Pegel die Zellen melden"
-  },
-  "noseSense": {
-    "title": "Riechzellen",
-    "report": "Meldung",
-    "faint": "kaum Duft",
-    "strong": "starker Duft",
-    "handle": "Ziehen: wie schwachen Duft die Zellen schon melden",
-    "stays": "bleibt im gleichen Duft",
-    "later": "{n} Schritte später",
-    "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
-    "fadeHandle": "Ziehen: wie schnell sich die Zellen an gleichbleibenden Duft gewöhnen"
-  },
   "barbels": {
     "title": "Barteln",
     "length": "{n} {n:Zelle|Zellen} · Barteln {p} der Fischlänge",
@@ -1569,8 +1500,7 @@
       "to": "schwere Wunde",
       "handle": "Ziehen: wie kleine Wunden die Zellen schon melden",
       "stays": "Wunde bleibt",
-      "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
-      "fadeHandle": "Ziehen: wie schnell alte Wunden in den Hintergrund treten"
+      "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran"
     }
   },
   "strand": {

@@ -19,7 +19,8 @@
 // ASSUMED for the picture: a fin swings from its rest by a fixed angle at full tension, backward
 // on a muscle's back stroke and forward on its front stroke. The fish keeps its size so that its
 // fins stay readable: on a short way it is in the way's measure, on a long way larger than it;
-// the lines of depth, a body radius apart, give the measure then.
+// the lines of depth, a body radius apart, give the measure then. The fin that has a command row
+// is drawn larger around its root so its two stroke directions can be seen in this small panel.
 // Not in the picture: the tail beating along; the ground.
 import {FIN, FIN_STROKE} from '../../../schema.js';
 import {degrees} from '../../../units.js';
@@ -66,6 +67,7 @@ const SWIM = Object.freeze({
 });
 // How far a fin swings from its rest under full tension (degrees).
 const SWING = 40;
+const BLADE_SCALE = 1.8;
 const CHANNELS = Object.freeze([ FIN.left, FIN.right, FIN.pelvic_left, FIN.pelvic_right ]);
 const SIDES = Object.freeze([ 'left', 'right' ]);
 const pairOf = channel => channel === FIN.pelvic_left || channel === FIN.pelvic_right ? 1 : 0;
@@ -179,26 +181,31 @@ liveKind('fin', (studio, organId) => {
                 `scale(${small.toFixed(4)}) translate(${- BODY_MIDDLE.x} ${- BODY_MIDDLE.y})`
           },
                      fish),
-          sizes = outlineSizes(studio.state), line = (1.2 / small).toFixed(1);
+          sizes = outlineSizes(studio.state), line = 1.2 / small;
     const blades = sideFins(sizes).map(fin => {
       const channel = fin.pelvic     ? (fin.side < 0 ? FIN.pelvic_left : FIN.pelvic_right)
                       : fin.side < 0 ? FIN.left
                                      : FIN.right,
-            k = rows.findIndex(row => row.channel === channel);
+            k = rows.findIndex(row => row.channel === channel), {x, y} = fin.root,
+            scale = k < 0 ? 1 : BLADE_SCALE,
+            magnify = k < 0 ? '' : ` translate(${x} ${y}) scale(${scale}) translate(${-x} ${-y})`;
       return {
         channel,
         root : fin.root,
+        magnify,
         // The signed tension from the engine points towards the tail on the back stroke.
         turn : k < 0 ? 0 : -fin.side,
         blade : el('path', {
           d : fin.d,
           class : k < 0 ? 'aid-live-head' : 'aid-live-petal k' + k,
-          style : 'stroke-width:' + line
+          transform : magnify.trim(),
+          style : 'stroke-width:' + (line / scale).toFixed(1)
         },
                    drawn)
       };
     });
-    el('path', {d : fishPath(sizes), class : 'aid-live-head', style : 'stroke-width:' + line},
+    el('path',
+       {d : fishPath(sizes), class : 'aid-live-head', style : 'stroke-width:' + line.toFixed(1)},
        drawn);
     // The beats: a row for each fin.
     const X = step => S.L + (S.R - S.L) * step / S.steps,
@@ -252,11 +259,11 @@ liveKind('fin', (studio, organId) => {
         fish.setAttribute(
             'transform',
             `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(-degrees(heading)).toFixed(1)})`);
-        for (const {channel, root, turn, blade} of blades) {
+        for (const {channel, root, turn, blade, magnify} of blades) {
           const pull =
               (a[4]?.[channel] ?? 0) + ((b[4]?.[channel] ?? 0) - (a[4]?.[channel] ?? 0)) * f;
-          blade.setAttribute('transform', `rotate(${(turn * SWING * clamp(pull, -1, 1)).toFixed(1)} ${
-                                              root.x.toFixed(1)} ${root.y.toFixed(1)})`);
+          const rotation = (turn * SWING * clamp(pull, -1, 1)).toFixed(1);
+          blade.setAttribute('transform', `rotate(${rotation} ${root.x} ${root.y})${magnify}`);
         }
       }
       now.setAttribute('d', `M${X(step).toFixed(1)} ${S.row - S.high - 4} V${last + S.high + 4}`);

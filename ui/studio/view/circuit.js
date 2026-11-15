@@ -5,8 +5,8 @@ import {HORMONE_EFFECT} from '../../schema.js';
 import {chiasmWire, isLearner, regulatorySubstances, substanceBound} from '../model/document.js';
 import {substanceName} from './substances.js';
 import {escapeText, glyph} from './markup.js';
-import {organOutlets, planned, regionPlan, regionSlots} from '../model/regions.js';
-import {joinParts, t} from '../../strings.js';
+import {organPorts, planned, regionPlan, regionSlots} from '../model/regions.js';
+import {joinParts, percent, t} from '../../strings.js';
 import {ICON, icon, iconSwitch, label, slotFill, slotShape} from './kit.js';
 import {organTitle, slotTitle} from './names.js';
 import {regionPicture} from './region_controls.js';
@@ -62,37 +62,66 @@ export function slotsSection(state, organ) {
   return '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +
          '"><ul class="aid-region-slots">' + slots + '</ul></section>';
 }
-// The same from the other end: where this organ can plug in. Each as this organ's symbol, a
-// line and the symbol of the organ it leads to: joined, a full line; free, a dashed one with the
-// button that joins it; the fish lacking that organ, pale and without a button. The symbol of the
-// other organ leads to its inspector.
-export function outletsSection(state, organ) {
-  const outlets =
-      organOutlets(state.document, organ)
-          .map(({target, kind, slot, joined}) => {
-            const fill = joined ? 'filled' : target ? 'free' : 'absent';
-            const name = target ? organTitle(target, state.sites) : label('organs.' + kind);
-            return '<li class="' + fill + '">' + icon(organ.type, ICON.part) +
-                   '<span class="aid-outlet-line">' +
-                   (target && !joined
-                        ? '<button class="aid-slot-add" data-outlet-source="' +
-                              escapeText(organ.id) + '" data-outlet-target="' +
-                              escapeText(target.id) + '" data-outlet-key="' + escapeText(slot.key) +
-                              '" title="' + label('wiring.connect') + '">+</button>'
-                        : '') +
-                   '</span>' +
-                   (target
-                        ? '<button data-select-organ="' + escapeText(target.id) + '" title="' +
-                              escapeText(name) + '">' + icon(target.type, ICON.part) + '</button>'
-                        : '<span class="aid-outlet-absent" title="' + escapeText(name) + '">' +
-                              icon(kind, ICON.part) + '</span>') +
-                   '<small>' + escapeText(name.replace(/\u00ad/g, '')) + ' · ' +
-                   escapeText(slotTitle(slot)) + '</small></li>';
+// The same from the other end: where this organ meets other organs' ports. Each row reads from
+// left to right in the direction the signal runs: this organ's symbol, a line and the organ it
+// feeds; or the organ that feeds it, a line and this organ's symbol. Joined, a full line; free,
+// a dashed one with the button that joins it; the fish lacking that organ, pale and without a
+// button. The symbol of the other organ leads to its inspector.
+// How strong a contact into this organ's cells may grow is the receiving cells' own (one limit
+// for every contact they take, colony-core substrate.cc): every incoming line is as thick as
+// that limit, and one grip at the receiving end of the first sets it for all of them.
+const PORT_LINE = Object.freeze({least : 1, span : 5});
+export const PORT_LIMIT_DRAG = 60;
+// A working cell takes its limit here when contacts reach it through a port; a nerve cell keeps it
+// beside its teaching limit in its contact plan.
+export const limitAtPorts = (state, organ, center) =>
+    center?.role === 'motor' &&
+    organPorts(state.document, organ, state.sites).some(port => port.dir === 'in');
+export function portsSection(state, organ, center = null) {
+  const limit = limitAtPorts(state, organ, center) ? center.electrical_limit : null;
+  let gripped = limit === null;
+  const rows =
+      organPorts(state.document, organ, state.sites)
+          .map(({dir, other, kind, slot, slots, joined}) => {
+            const fill = joined ? 'filled' : other ? 'free' : 'absent';
+            const name = other ? organTitle(other, state.sites) : label('organs.' + kind);
+            const own = icon(organ.type, ICON.part);
+            const far = other ? '<button data-select-organ="' + escapeText(other.id) + '" title="' +
+                                    escapeText(name) + '">' + icon(other.type, ICON.part) +
+                                    '</button>'
+                              : '<span class="aid-port-absent" title="' + escapeText(name) + '">' +
+                                    icon(kind, ICON.part) + '</span>';
+            const thick = dir === 'in' && limit !== null;
+            const grip = thick && !gripped;
+            gripped ||= grip;
+            const line =
+                '<span class="aid-port-line"' +
+                (thick ? ' style="border-top-width:' +
+                             (PORT_LINE.least + PORT_LINE.span * limit).toFixed(1) + 'px"'
+                       : '') +
+                '>' +
+                (other && !joined
+                     ? '<button class="aid-slot-add" data-port-organ="' + escapeText(organ.id) +
+                           '" data-port-other="' + escapeText(other.id) + '" data-port-key="' +
+                           escapeText(slot.key) + '" data-port-dir="' + dir + '" title="' +
+                           label('wiring.connect') + '">+</button>'
+                     : '') +
+                (grip ? '<span class="aid-port-grip" data-port-limit="' + escapeText(center.id) +
+                            '" data-port-value="' + limit + '" title="' +
+                            escapeText(
+                                joinParts([ label('contacts.electrical_limit'), percent(limit) ])) +
+                            '"></span>'
+                      : '') +
+                '</span>';
+            return '<li class="' + fill + '">' +
+                   (dir === 'out' ? own + line + far : far + line + own) + '<small>' +
+                   escapeText(name.replace(/\u00ad/g, '')) + ' · ' +
+                   escapeText((slots ?? [ slot ]).map(slotTitle).join(', ')) + '</small></li>';
           })
           .join('');
-  return outlets ? '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +
-                       '"><ul class="aid-outlets">' + outlets + '</ul></section>'
-                 : '';
+  return rows ? '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +
+                    '"><ul class="aid-ports">' + rows + '</ul></section>'
+              : '';
 }
 function regionTeacher(state, organ) {
   const learners = organ.centers.filter(isLearner);

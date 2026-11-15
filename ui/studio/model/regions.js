@@ -5,6 +5,7 @@ import {
   ORGAN_BY_KEY,
   ORGANS,
   nerve,
+  organFunction,
   organSlots,
   slotCenters
 } from './organs.js';
@@ -25,6 +26,7 @@ import {
   expandedWires,
   findCenter,
   findOrgan,
+  finStroke,
   mirroredSite,
   organOf,
   settleAssemblies,
@@ -392,38 +394,55 @@ export function regionSlots(doc, organ) {
     return {...slot, filled};
   });
 }
-// Where an organ can plug in: the input ports of other organs made for its kind. First the
+// Where an organ meets the ports of other organs made for its kind, in both directions: `out`
+// where it feeds another organ's input, `in` where another organ's output feeds it. First the
 // ports it really sits on, on whichever side the wire leads; then, for a port not yet taken,
-// the free one on the organ's own side (of a paired target a wire reaches both sides).
-export function organOutlets(doc, source) {
-  const twin = findOrgan(doc, source.pair);
-  const ports =
-      doc.organs.filter(target => target.id !== source.id && target.id !== twin?.id)
-          .flatMap(
-              target =>
-                  regionSlots(doc, target)
-                      .filter(slot => slot.dir === 'in' && slot.fits.includes(source.type) &&
-                                      slotCenters(target, slot.key, 'in').length)
-                      .map(
-                          slot => (
-                              {target, slot, joined : slot.filled.some(o => o.id === source.id)})));
-  // A paired target and its twin are one place to plug in.
-  const place = ({target, slot}) =>
-      slot.key + ':' + (target.pair ? [ target.id, target.pair ].sort()[0] : target.id);
-  const taken = new Set(ports.filter(port => port.joined).map(place));
-  // A kind of organ the fish does not have, with a port made for this organ: shown as missing,
-  // so that the organ's use is seen before the fish can make it.
+// the free one on the organ's own side (of a paired organ a wire reaches both sides).
+// Whether a port made for one kind of muscle work is meant for this organ (region_catalog.js).
+const serves = (slot, organ, sites) =>
+    !slot.works || (organFunction(organ, sites) === slot.works.kind &&
+                    (slot.works.stroke === undefined || finStroke(organ) === slot.works.stroke));
+export function organPorts(doc, organ, sites) {
+  const twin = findOrgan(doc, organ.pair);
   const present = new Set(doc.organs.map(o => o.type));
-  const missing =
-      ORGANS.filter(kind => kind.slots && !present.has(kind.key))
-          .flatMap(kind => kindSlots(kind.key)
-                               .filter(slot => slot.dir === 'in' && slot.fits.includes(source.type))
-                               .map(slot => ({kind : kind.key, slot, joined : false})));
-  return [
-    ...ports.filter(
-        port => port.joined ||
-                (!taken.has(place(port)) &&
-                 (!port.target.pair || port.target.side === (source.side || port.target.side)))),
-    ...missing
-  ];
+  // The other organ's slot faces the other way: this organ's outputs plug into its inputs.
+  const facing = dir => dir === 'out' ? 'in' : 'out';
+  const place = ({other, slot}) =>
+      slot.key + ':' + (other.pair ? [ other.id, other.pair ].sort()[0] : other.id);
+  return [ 'in', 'out' ].flatMap(dir => {
+    const side = facing(dir);
+    const ports =
+        doc.organs.filter(other => other.id !== organ.id && other.id !== twin?.id)
+            .flatMap(other =>
+                         regionSlots(doc, other)
+                             .filter(slot => slot.dir === side && slot.fits.includes(organ.type) &&
+                                             slotCenters(other, slot.key, side).length)
+                             .map(slot => ({
+                                    dir,
+                                    other,
+                                    slot,
+                                    joined : slot.filled.some(o => o.id === organ.id)
+                                  })));
+    // A paired organ and its twin are one place to plug in.
+    const taken = new Set(ports.filter(port => port.joined).map(place));
+    // A kind of organ the fish does not have, with ports made for this organ: shown once as
+    // missing, with all its ports, so that the organ's use is seen before the fish can make it.
+    const missing = ORGANS.filter(kind => kind.slots && !present.has(kind.key))
+                        .map(kind => ({
+                               dir,
+                               kind : kind.key,
+                               slots : kindSlots(kind.key).filter(
+                                   slot => slot.dir === side && slot.fits.includes(organ.type) &&
+                                           serves(slot, organ, sites)),
+                               joined : false
+                             }))
+                        .filter(row => row.slots.length);
+    return [
+      ...ports.filter(
+          port => port.joined ||
+                  (!taken.has(place(port)) && serves(port.slot, organ, sites) &&
+                   (!port.other.pair || port.other.side === (organ.side || port.other.side)))),
+      ...missing
+    ];
+  });
 }
