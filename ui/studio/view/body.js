@@ -527,6 +527,17 @@ function feltCells(state, organ) {
                .map(cell =>
                         ({cell, at : nodeLocation(state.document, state.sites, c, organ.type)})));
 }
+// Where a skin sense's felt stretch of skin ends towards the tail, on the organ's own side: the
+// place of the grip for its field's width.
+export function feltEnd(state, organ) {
+  const cells = feltCells(state, organ), side = sideOf(organ) || 1, zones = state.anatomy?.zones;
+  const felt = point => cells.some(
+      ({cell : [ aim, width ]}) =>
+          1 - Math.abs(wrapAngle(skinDirection(point, zones) - aim)) / width > FELT.least);
+  return skinPoints(FELT.step)
+      .filter(point => (point.y - BODY_FRAME.middle) * side >= 0 && felt(point))
+      .reduce((far, point) => !far || point.x > far.x ? point : far, null);
+}
 function feltSkin(state, cells) {
   const points = skinPoints(FELT.step);
   return points.slice(1)

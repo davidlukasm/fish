@@ -19,11 +19,15 @@ import {BODY_FRAME, sideOf} from '../model/layout.js';
 import {organLocation, gutShape} from './places.js';
 import {gutTurns} from '../../fish_organs.js';
 import {muscleShape} from './muscles.js';
+import {feltEnd} from './body.js';
 import {steadyAt, zoomOf, SNOUT_TIP, HEAD} from './frame.js';
 import {fixed, escapeText} from './markup.js';
 import {label} from './kit.js';
 import {clamp} from '../../units.js';
 
+const SKIN_SENSES = Object.freeze([ 'touch', 'pain', 'lateral' ]);
+// How far the grip is dragged along the fish from the narrowest field to the widest.
+const FIELD_SPAN = 320;
 export function anatomyHandles(state, id = state.selected?.id) {
   const organ = findOrgan(state.document, id) ?? findCenter(state.document, id)?.organ;
   if (!organ)
@@ -37,6 +41,13 @@ export function anatomyHandles(state, id = state.selected?.id) {
   }
   if (organ.type === 'gills')
     add('gills', at, gillRakers(organ), 'y', 65);
+  // A skin sense's field is as wide as the stretch of skin the fish shows for it; the grip sits
+  // at that stretch's end.
+  if (SKIN_SENSES.includes(organ.type)) {
+    const end = feltEnd(state, organ);
+    if (end)
+      add('field', end, organ.centers[0]?.field ?? 0, 'x', FIELD_SPAN);
+  }
   if (organ.type !== 'muscle')
     return specs;
   const code = organFunction(organ, state.sites), shape = muscleShape(organ, state.sites),
@@ -70,6 +81,8 @@ export function anatomyPatch(state, spec, delta) {
     return setGutLength(doc, value);
   if (spec.key === 'gills')
     return setGillRakers(doc, organ.id, value);
+  if (spec.key === 'field')
+    return updateCenter(doc, organ.centers[0].id, {field : value});
   if (spec.key === 'angle')
     return setFinAngle(doc, organ.id, value, state.sites);
   if (spec.key === 'fibre')
