@@ -24,6 +24,7 @@ import {
   BOUNDED,
   closingWound,
   keysOf,
+  LEVELS,
   runOf,
   setGate,
   setSpread,
@@ -136,14 +137,16 @@ liveKind('pain', (studio, organId) => {
     txt(live, S.L - 8, by + 3, word('bite'), {'text-anchor' : 'end', class : 'aid-live-small'});
     // How small a wound the cells still feel here: below this depth they send nothing. Each cell
     // has its own depth, drawn by the engine within the plan's threshold and its spread either
-    // way (distribution.hh, draw_traits): that band is the plan's, the lines in it the engine's,
+    // way, within the thresholds a cell can have (distribution.hh, draw_traits; the way from the
+    // plan's value to a threshold is straight, tuning.js, so the band is as wide either way):
+    // that band is the plan's, the lines in it the engine's,
     // pale while they are the last run's. The grip on the plan's threshold sets it, the grip on
     // the band's edge how far the cells may spread.
     const feels = c.part > 0 ? c.key.gate / c.part : S.deepest, gy = D(feels),
           reach = c.key.spread / 2,
-          edge = c.part > 0 ? D(Math.min(BOUNDED.pos(1), c.key.gate + reach) / c.part) : gy;
+          edge = c.part > 0 ? D(Math.min(LEVELS[1], c.key.gate + reach) / c.part) : gy;
     if (c.part > 0) {
-      const top = D(Math.max(0, c.key.gate - reach) / c.part);
+      const top = D(Math.max(LEVELS[0], c.key.gate - reach) / c.part);
       if (reach > 0)
         el('rect', {
           x : S.L,
