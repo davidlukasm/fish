@@ -15,12 +15,14 @@ export function fishColours(doc, anatomy) {
     return null;
   return colour;
 }
-export function fishBodyColour(doc, anatomy) {
-  const colours = fishColours(doc, anatomy);
-  // At rest the pigment is gathered: the first colour of the range.
-  return cssColour(colours
-                       ? UNPIGMENTED.map((value, c) => value + (colours.range[0][c] - value) * TINT)
-                       : UNPIGMENTED);
+// The fish's body in the fish panel. At rest the pigment is gathered: the first colour of the
+// range. It only tints the body, so that the organs on it stay readable; `full` shows the colour
+// itself.
+export function fishBodyColour(doc, anatomy, full = false) {
+  const colours = fishColours(doc, anatomy), share = full ? 1 : TINT;
+  return cssColour(
+      colours ? UNPIGMENTED.map((value, c) => value + (colours.range[0][c] - value) * share)
+              : UNPIGMENTED);
 }
 const PIGMENT_STARTS = Object.freeze([ [ 240, .45 ], [ 180, .65 ], [ 60, .6 ], [ 0, 1 ] ]);
 const NEAR = .05;
