@@ -65,8 +65,7 @@ liveKind('pigment', (studio, organId) => {
   const scene = addPicture(root);
   heading(word('cells'));
   const band = addPicture(root);
-  // What is tried: how far the brain has the pigment spread and at which step it lets go; what
-  // lies behind the fish (0 deep water - 1 sand). Not part of the fish.
+  // What is tried: how far the brain has the pigment spread and at which step it lets go.
   const own = {chosen : 0, command : 1, stop : 450, pull : null};
   let step = 0, clock = null;
   const organ = () => findOrgan(studio.state.document, organId);

@@ -876,10 +876,10 @@ void cppn_action(Body &b, const Genome &g, const PhysiologyParameters &physiolog
   b.refresh_organs(g);
   anatomical_action(b, b.active_interface(g), physiology, protected_life);
 }
-void Body::activate_brain(const Genome &g) {
+void Body::activate_brain(const Genome &g, bool developing) {
   if (!g.blueprint)
     throw std::invalid_argument("brain plan missing");
-  brain_.emplace(g.blueprint, true);
+  brain_.emplace(g.blueprint, developing);
 }
 void Body::reset_brain() {
   if (brain_)

@@ -222,7 +222,31 @@ def sight_line(sight):
 
 
 SENSE_SCENES = {"smell": 1, "touch": 2, "flow": 3, "wound": 4, "gut": 5, "taste": 6,
-                "balance": 7, "attack": 8}
+                "balance": 7, "attack": 8, "fins": 9}
+
+
+def fin_scene_values(sense):
+    phases = sense.get("phases", [sense])
+    if not isinstance(phases, list) or not phases:
+        raise Refusal("studio.errors.invalidProbe")
+    values = [len(phases)]
+    for phase in phases:
+        if not isinstance(phase, dict):
+            raise Refusal("studio.errors.invalidProbe")
+        pair, steps = phase.get("pair", 0), phase.get("steps", 256)
+        if type(pair) is not int or type(steps) is not int:
+            raise Refusal("studio.errors.invalidProbe")
+        tail = phase.get("tail", 0)
+        values.extend([steps, pair, int(tail) if isinstance(tail, bool) else tail])
+        for side in ("left", "right"):
+            drive = phase.get(side, {})
+            if not isinstance(drive, dict):
+                raise Refusal("studio.errors.invalidProbe")
+            stroke = drive.get("stroke", 0)
+            if type(stroke) is not int:
+                raise Refusal("studio.errors.invalidProbe")
+            values.extend([stroke, drive.get("strength", 0)])
+    return values
 
 
 def sense_line(sense):
@@ -233,7 +257,10 @@ def sense_line(sense):
         return "0\n"
     if not isinstance(sense, dict) or sense.get("kind") not in SENSE_SCENES:
         raise Refusal("studio.errors.invalidProbe")
-    values = [sense.get(key, 0) for key in ("bearing", "distance", "strength", "scent", "nutrient")]
+    if sense["kind"] == "fins":
+        values = fin_scene_values(sense)
+    else:
+        values = [sense.get(key, 0) for key in ("bearing", "distance", "strength", "scent", "nutrient")]
     if sense["kind"] == "smell":
         values.extend(sense.get(key, 0) for key in ("flowBearing", "flowStrength"))
     return "1 " + str(SENSE_SCENES[sense["kind"]]) + " " + " ".join(number(v) for v in values) + "\n"

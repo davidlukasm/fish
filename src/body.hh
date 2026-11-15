@@ -139,7 +139,7 @@ public:
   double neural_upkeep() const;
   double local_defense(double bearing) const;
   void orient_to(double radians);
-  void activate_brain(const Genome &);
+  void activate_brain(const Genome &, bool developing = true);
   void reset_brain();
   void evaluate_brain(const std::vector<float> &);
   void mute_neuron(std::size_t);
