@@ -529,16 +529,16 @@
 .aid-tectum-bands text{fill:#dfe6f5;font:600 13px system-ui;paint-order:stroke;stroke:var(--aid-ground);stroke-width:3}
 .aid-hint.aid-warning{color:#e9b08f}
 .aid-slot-add{padding:2px 8px;border-radius:7px;border:1px dashed #6f9aa0;background:transparent;color:#cfe3dc;font-size:12px}
-.aid-outlets{list-style:none;margin:0;padding:4px 0;display:grid;gap:10px}
-.aid-outlets li{display:flex;gap:8px;align-items:center;color:#cfe3dc}
-.aid-outlets li>button:not(.aid-slot-add),.aid-outlet-absent{display:inline-flex;padding:5px;border-radius:9px;border:1.4px solid #9edaca;background:#24525a;color:#cfe3dc}
-.aid-outlets li>small{font-size:12.5px;line-height:1.25;color:var(--aid-control-text)}
-.aid-outlet-line{flex:none;display:flex;align-items:center;justify-content:center;width:64px;height:0;border-top:2px solid #9edaca}
-.aid-outlets li.free .aid-outlet-line,.aid-outlets li.absent .aid-outlet-line{border-top:2px dashed #6f9aa0}
-.aid-outlets li.free>button:not(.aid-slot-add){border-style:dashed;border-color:#6f9aa0;background:#10303a}
-.aid-outlets li.absent{opacity:.45}
-.aid-outlet-absent{border-style:dashed;border-color:#6f9aa0;background:transparent}
-.aid-outlet-line .aid-slot-add{background:var(--aid-panel,#12303a);border-style:solid}
+.aid-ports{list-style:none;margin:0;padding:4px 0;display:grid;gap:10px}
+.aid-ports li{display:flex;gap:8px;align-items:center;color:#cfe3dc}
+.aid-ports li>button:not(.aid-slot-add),.aid-port-absent{display:inline-flex;padding:5px;border-radius:9px;border:1.4px solid #9edaca;background:#24525a;color:#cfe3dc}
+.aid-ports li>small{font-size:12.5px;line-height:1.25;color:var(--aid-control-text)}
+.aid-port-line{flex:none;display:flex;align-items:center;justify-content:center;width:64px;height:0;border-top:2px solid #9edaca}
+.aid-ports li.free .aid-port-line,.aid-ports li.absent .aid-port-line{border-top:2px dashed #6f9aa0}
+.aid-ports li.free>button:not(.aid-slot-add){border-style:dashed;border-color:#6f9aa0;background:#10303a}
+.aid-ports li.absent{opacity:.45}
+.aid-port-absent{border-style:dashed;border-color:#6f9aa0;background:transparent}
+.aid-port-line .aid-slot-add{background:var(--aid-panel,#12303a);border-style:solid}
 .aid-region-slots li.missing .aid-slot-add{border-color:#e9a27f;color:#f0c1a6}
 .aid-reach{pointer-events:none}
 .aid-reach .aid-reach-edge{fill:none;stroke:var(--aid-brain);stroke-width:1;stroke-dasharray:4 4;opacity:.6;vector-effect:non-scaling-stroke}

@@ -402,15 +402,15 @@ export const FISH_CLICKS = Object.freeze([
                                                        studio.state.sites))
   ],
   [ '[data-slot-region]', startSlotWire ],
-  // An organ's own list of ports it can plug into: the start is known, so the wire is made at
-  // once and the organ stays chosen.
+  // An organ's own list of ports: both ends are known, so the wire is made at once and the organ
+  // stays chosen. It runs from this organ into the other's input, or from the other's output in.
   [
-    '[data-outlet-source]',
+    '[data-port-organ]',
     (studio, e) => {
-      const made = connectSelections(
-          studio.state.document, {kind : 'organ', id : e.dataset.outletSource},
-          {kind : 'slot', id : e.dataset.outletTarget, slot : e.dataset.outletKey},
-          studio.state.sites);
+      const own = {kind : 'organ', id : e.dataset.portOrgan},
+            port = {kind : 'slot', id : e.dataset.portOther, slot : e.dataset.portKey};
+      const [from, to] = e.dataset.portDir === 'out' ? [ own, port ] : [ port, own ];
+      const made = connectSelections(studio.state.document, from, to, studio.state.sites);
       if (made)
         keep(studio, made.document);
       studio.notice(label(made ? 'status.wired' : 'status.wireCovered'));

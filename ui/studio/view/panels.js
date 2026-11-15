@@ -34,7 +34,7 @@ import {
   SWITCH_SYMBOL,
   VALUE_DIGITS
 } from './kit.js';
-import {outletsSection, pairingChoice, regionSettings, slotsSection} from './circuit.js';
+import {pairingChoice, portsSection, regionSettings, slotsSection} from './circuit.js';
 import {strandInspector} from './nerve_inspector.js';
 import {chemistry, hormoneInspector} from './substances.js';
 import {learningInspector} from './learning.js';
@@ -208,13 +208,13 @@ function organInspector(state, organ) {
              sideSwitch(organ) + centerTabs(state, organ);
   html +=
       organSettingsBlock(state, organ) +
-      (isRegion(organ) ? '' : slotsSection(state, organ) + outletsSection(state, organ)) +
+      (isRegion(organ) ? '' : slotsSection(state, organ) + portsSection(state, organ)) +
       chemistry(state, organ, center) +
       (isRegion(organ) && state.selected?.kind !== 'center'
            ? ''
            : cellDevelopment(state, center, LIVE_LIFE.has(organ.type))) +
       // A sense cell takes no contacts and has nothing to set about them; where it leads, its
-      // outlets above and the fish panel's lines show.
+      // ports above and the fish panel's lines show.
       (center?.role === 'sensor'
            ? ''
            : contactPlan(state, isRegion(organ) && state.selected?.kind !== 'center' ? organ.centers
