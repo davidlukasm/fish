@@ -29,7 +29,13 @@ import {BODY_FRAME} from './model/layout.js';
 import {dataAttribute, fixed} from './view/markup.js';
 import {driveContext, wireMarks, wirePatch} from './view/panels.js';
 import {PANEL_WIDTH, panelStyle} from './view/shell.js';
-import {GROWTH, BIRTH, receptorCurvePatch, wheelWidthPatch} from './view/substances.js';
+import {
+  GROWTH,
+  BIRTH,
+  receptorCurvePatch,
+  receptorGripPatch,
+  wheelWidthPatch
+} from './view/substances.js';
 import {learnMemoryPatch} from './view/learning.js';
 import {nerveTissuePatch} from './view/nerve_cell.js';
 import {variationPatch} from './view/cell_tissue.js';
@@ -168,7 +174,23 @@ export const GRIPS = Object.freeze([
     graphic : '[data-receptor-curve]',
     handle : '[data-curve-handle]',
     held : 'receptor',
-    start : (studio, g, h) => ({target : g.dataset.receptorCurve, handle : h.dataset.curveHandle})
+    // An engine curve's grip moves the values by how far it is dragged from where it was taken.
+    start : (studio, g, h) => {
+      const target = g.dataset.receptorCurve, cut = target.lastIndexOf(':');
+      const receptor = findCenter(studio.state.document, target.slice(0, cut))
+                           ?.center.receptors?.[Number(target.slice(cut + 1))];
+      return {
+        target,
+        handle : h.dataset.curveHandle,
+        size : {width : g.viewBox.baseVal.width, height : g.viewBox.baseVal.height},
+        from : 'gripX' in h.dataset && receptor ? {
+          x : Number(h.dataset.gripX),
+          y : Number(h.dataset.gripY),
+          receptor : {...receptor}
+        }
+                                                : null
+      };
+    }
   },
   {
     graphic : 'svg',
@@ -467,14 +489,17 @@ export const handleMethods = {
     if (drag.handle === 'width') {
       const [x, y] = wheelPlace(this.state.capabilities, receptor.substance);
       patch = {width : wheelWidthPatch(this.state.capabilities, {x, y}, fx, fy)};
-    } else
+    } else if (drag.from)
+      patch = receptorGripPatch(this.state, centerId, effect, drag.handle, drag.from,
+                                {x : fx * drag.size.width, y : fy * drag.size.height});
+    else
       patch = receptorCurvePatch(this.state, receptor, effect, drag.handle, fx, fy);
     if (!patch)
       return;
     this.draftDesign(growth             ? updateGrowth(doc, patch)
                      : effect === BIRTH ? updateCellGrowth(doc, centerId, patch)
                                         : updateReceptor(doc, centerId, effect, patch),
-                     'receptor:' + drag.target);
+                     'receptor:' + drag.target, 'refreshDragged', drag.from ? 'receptor' : null);
   },
   // Up makes the incoming lines thicker: the cells' contacts may grow stronger.
   portLimitPointer(event) {
@@ -591,11 +616,10 @@ export const handleMethods = {
     const patch = probePatch(drag.control, position, faintest, probe);
     const smellFlow = drag.control === 'flow' && probe.kind === 'smell';
     const manual = probe.manual || drag.control !== 'attack-gape';
-    this.state.senseProbe =
-        smellFlow ? {...probe, flow : patch} : {...probe, ...patch, manual};
-    this.keepInView(probeHandle(
-        smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, faintest, drag.control,
-        this.state));
+    this.state.senseProbe = smellFlow ? {...probe, flow : patch} : {...probe, ...patch, manual};
+    this.keepInView(
+        probeHandle(smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, faintest,
+                    drag.control, this.state));
     this.refreshProbes();
     if (probe.kind !== 'ground')
       this.requestDesign();

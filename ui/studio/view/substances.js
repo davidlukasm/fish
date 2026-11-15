@@ -255,7 +255,148 @@ function curveLabels({axis, scale, atFraction, x, y}, effect) {
              .join('') +
          text(axis, x(.5), CURVE.bottom + CURVE_KEY.along, 'middle');
 }
+// A receptor's answer as the engine computes it (anatomy.groups[].responses): over its substance
+// from none to the span the hormone pictures share, the rest of the blood as the life band sets
+// it, with the point where the life band's blood puts it (anatomy.groups[].effects). The square
+// grips move the plan's values by how far they are dragged (receptorGripPatch); the curve that
+// follows is the engine's again.
+const RECEPTOR = Object.freeze({
+  width : 260,
+  height : 150,
+  left : 36,
+  right : 250,
+  top : 26,
+  bottom : 112,
+  grip : 9,
+  flat : .02,
+  leastBound : .1,
+  clamped : .999,
+  steepDrag : 60
+});
+function engineAnswer(state, centerId, effect) {
+  const doc = state.document, found = findCenter(doc, centerId);
+  const report = state.outlinePreview ?? state.anatomy;
+  const group = found ? report?.groups?.[centerIndex(doc, centerId)] : null;
+  const receptor = found?.center.receptors?.[effect];
+  const span =
+      receptor && receptor.substance < HORMONES.levels ? levelSpan(state, receptor.substance) : 1;
+  const scale =
+      effect === HORMONE_EFFECT.death ? GROWTH_SCALE : EFFECT_SCALE[effect] ?? SHARE_SCALE;
+  const R = RECEPTOR;
+  return {
+    receptor,
+    curve : group?.responses?.[effect] ?? null,
+    now : group?.effects?.[effect],
+    span,
+    scale,
+    x : level => R.left + (R.right - R.left) * clamp(level / span),
+    y : response => R.bottom - (R.bottom - R.top) * (scale.value(response) - scale.low) /
+                                   (scale.high - scale.low)
+  };
+}
+// Where along the curve it has gone `share` of the way from its start to its end.
+function crossing(curve, share) {
+  const start = curve[0], end = curve[curve.length - 1], aim = start + (end - start) * share;
+  for (let i = 1; i < curve.length; ++i) {
+    const a = curve[i - 1], b = curve[i];
+    if ((a - aim) * (b - aim) <= 0 && a !== b)
+      return (i - 1 + (aim - a) / (b - a)) / (curve.length - 1);
+  }
+  return null;
+}
+function engineGrips(state, answer, effect) {
+  const {curve, span, x, y} = answer, R = RECEPTOR;
+  const first = curve[0], last = curve[curve.length - 1], turns = Math.abs(last - first) > R.flat;
+  const along = f => [x(f * span), y(curve[Math.round(f * (curve.length - 1))])];
+  const half = turns ? crossing(curve, .5) : null, steep = turns ? crossing(curve, .25) : null;
+  return [
+    [ 'baseline', [ x(0), y(first) ] ], [ 'sensitivity', [ x(span), y(last) ] ],
+    ...(half === null ? [] : [ [ 'half', [ x(half * span), y((first + last) / 2) ] ] ]),
+    ...(steep === null || !((state.capabilities?.steepnessSpan ?? 0) > 0)
+            ? []
+            : [ [ 'steepness', [ x(steep * span), y(first + (last - first) / 4) ] ] ])
+  ].map(([ key, [ gx, gy ] ]) => '<rect class="aid-receptor-grip curve-' + key +
+                                 '" data-curve-handle="' + key + '" data-grip-x="' + fixed(gx) +
+                                 '" data-grip-y="' + fixed(gy) + '" x="' + fixed(gx - R.grip / 2) +
+                                 '" y="' + fixed(gy - R.grip / 2) + '" width="' + R.grip +
+                                 '" height="' + R.grip + '" rx="2"><title>' +
+                                 escapeText(label('inspector.curve.' + key)) + '</title></rect>');
+}
+// A grip moved from (x0, y0) to (x, y) in the picture's units: the receptor values it sets.
+export function receptorGripPatch(state, centerId, effect, handle, start, to) {
+  const answer = engineAnswer(state, centerId, effect), receptor = answer.receptor, R = RECEPTOR;
+  if (!receptor)
+    return null;
+  const {scale} = answer;
+  const shift = (start.y - to.y) / (R.bottom - R.top) * (scale.high - scale.low);
+  const delta = scale.response(scale.low + shift) - scale.response(scale.low);
+  const span = state.capabilities?.sensitivitySpan ?? 1;
+  if (handle === 'baseline')
+    return {baseline : clamp(start.receptor.baseline + delta, -1)};
+  // The end of the curve moves by the sensitivity times how much is bound there; that share is
+  // read off the engine's curve where it was taken, so the grip stays under the pointer.
+  if (handle === 'sensitivity') {
+    const end = answer.curve?.at(-1), r = start.receptor;
+    // At the clamp (±1) the curve hides how much is bound; then the grip moves one to one.
+    const bound = r.sensitivity && Number.isFinite(end) && Math.abs(end) < R.clamped
+                      ? Math.max(R.leastBound, Math.min(1, (end - r.baseline) / r.sensitivity))
+                      : 1;
+    return {sensitivity : Math.max(-span, Math.min(span, r.sensitivity + delta / bound))};
+  }
+  if (handle === 'half') {
+    const [low, high] = state.capabilities?.halfRange ?? [ 0, Infinity ];
+    const from = Math.max(1, start.x - R.left), now = Math.max(1, to.x - R.left);
+    return {half : Math.max(low, Math.min(high, start.receptor.half * now / from))};
+  }
+  if (handle === 'steepness')
+    return {
+      steepness : Math.max(0, Math.min(state.capabilities?.steepnessSpan ?? 0,
+                                       start.receptor.steepness + (start.y - to.y) / R.steepDrag))
+    };
+  return null;
+}
 export function effectCurve(state, receptor, effect, target = null) {
+  if (effect === GROWTH || effect === BIRTH)
+    return growthCurve(state, receptor, effect, target);
+  const centerId = target ? target.slice(0, target.lastIndexOf(':')) : null;
+  const answer = centerId ? engineAnswer(state, centerId, effect) : null, R = RECEPTOR;
+  const words = tList('studio.axes.effects');
+  const text = (value, x, y, anchor = 'start') => '<text class="aid-curve-label" x="' + fixed(x) +
+                                                  '" y="' + fixed(y) + '" text-anchor="' + anchor +
+                                                  '">' + escapeText(value) + '</text>';
+  const scale = answer?.scale ?? EFFECT_SCALE[effect] ?? SHARE_SCALE;
+  const y = answer?.y ?? (() => R.bottom);
+  const levels = [ scale.low, ...(scale.low < 0 && scale.high > 0 ? [ 0 ] : []), scale.high ];
+  let body =
+      '<path class="aid-chart-axis" d="M' + R.left + ' ' + R.top + ' V' + R.bottom + ' H' +
+      R.right + '"/>' + text(words[effect], R.left, 12) +
+      levels.map(v => text(curveNumber(v), R.left - 4, y(scale.response(v)) + 4, 'end')).join('');
+  if (scale.low < 0 && scale.high > 0)
+    body +=
+        '<path class="aid-chart-zero" d="M' + R.left + ' ' + fixed(y(0)) + ' H' + R.right + '"/>';
+  if (answer?.curve) {
+    const {curve, span, x, now} = answer;
+    body +=
+        text('0', R.left, R.bottom + 16) + text(percent(span), R.right, R.bottom + 16, 'end') +
+        text(substanceName(state, receptor.substance), (R.left + R.right) / 2, R.bottom + 30,
+             'middle') +
+        '<polyline class="aid-response-line" points="' +
+        curve.map((r, i) => fixed(x(span * i / (curve.length - 1))) + ',' + fixed(y(r))).join(' ') +
+        '"/>' +
+        (Number.isFinite(now)
+             ? '<circle class="aid-hormone-point" cx="' +
+                   fixed(x(bloodLevel(previewContextOf(state), receptor.substance))) + '" cy="' +
+                   fixed(y(now)) + '" r="3.5"/>'
+             : '') +
+        (target ? engineGrips(state, answer, effect).join('') : '');
+  }
+  return '<svg viewBox="0 0 ' + R.width + ' ' + R.height + '" class="aid-response-chart"' +
+         (target ? ' data-receptor-curve="' + escapeText(target) + '"' : '') + '>' + body +
+         '</svg>';
+}
+// Behelf: the growth and birth receptors' answer the engine does not report yet, so this one
+// still reckons it here (receptorCurve).
+function growthCurve(state, receptor, effect, target = null) {
   const curve = receptorCurve(state, receptor, effect);
   const {bounded, axis, scale, response, atFraction, x, y} = curve;
   const points = Array
@@ -447,13 +588,16 @@ export function receptorBody(state, center, effect) {
   // A receptor that does not answer has nothing else to set until it is switched on.
   if (!receptor.active)
     return toggle;
-  return toggle + '<div class="aid-receptor-picture"><div class="aid-wheel-close">' +
+  // The answer first, because it is what the receptor does; then which substances it reads and
+  // what the answer does to the cell.
+  return toggle + effectCurve(state, receptor, effect, target) +
+         '<div class="aid-receptor-picture"><div class="aid-wheel-close">' +
          receptorWheel(state, receptor, target) + '</div>' +
          effectScene(effect, substanceColor(receptor.substance), receptorEnds(receptor),
                      {capabilities : state.capabilities, center}) +
          variationGraphic(receptor.spread_receptors, target, 'spread_receptors',
                           receptorVariationExamples(receptor, state.capabilities)) +
-         '</div>' + effectCurve(state, receptor, effect, target);
+         '</div>';
 }
 // How fast the substance rises and how long it stays in the blood, as a clock whose tooltip gives
 // both in steps.
@@ -691,9 +835,11 @@ function hormoneDetails(state, focus) {
   if (effect === BIRTH)
     return html + choose + effectCurve(state, focus.growth, BIRTH, focus.id + ':' + BIRTH) +
            cellDevelopment(state, focus);
-  return html + choose + cellDevelopment(state, focus) +
-         '<div class="aid-receptor-editor" title="' + label('inspector.cellEffects') + '">' +
-         receptorEditor(state, focus, effects, effect) + '</div>';
+  // When the cell comes into being, works and dies is the life tool's (its band); here only what
+  // the substances do.
+  return html + choose + '<div class="aid-receptor-editor" title="' +
+         label('inspector.cellEffects') + '">' + receptorEditor(state, focus, effects, effect) +
+         '</div>';
 }
 
 export function hormoneInspector(state, currentAnatomy) {
