@@ -111,6 +111,18 @@ Geöffnet dafür: Abschnitte E und F dieser Seite, `ERINNERN.md`, `NOTIZEN.md`, 
 
 **Nachtrag 03:25:** Kopfwort für die vier Hautsinne **verworfen** (Claude 03:14, Fable; siehe `NOTIZEN.md`) – die Spalte „Kopfwort“ oben ist damit kein offener Punkt mehr, die Kopfzeile bleibt leer. **Abwehr:** gelesen, nichts gebaut; Teilung von Fable und Claude vereinbart (Maul-Probe, Griffe und aufstehende Stacheln ins Fischpanel = Astra; Inspektor = Befehl „heben“ als Kurve, Aufrichten und Legen, Bremse = Fable), Astras Wort fehlt.
 
+**Nachtrag 04:50 (Fable; „Atelier“ = Claude mit der Maus, „Code“ = Astra gelesen):**
+
+| Änderung | Commits | Atelier | Code | Bleibt offen |
+|---|---|---|---|---|
+| Abwehr: Angreifer als Maul im Fischpanel, Griffe an den Stacheln, Stacheln stehen auf (Astra); Inspektor nur noch Fisch von vorn im Maul + Befehl „heben“ (Fable) | `63d62eda`, `ee0db9ce`, `589b6088` | ja | Fable hat `63d62eda` in Teilen gelesen; `589b6088` steht bei Astra aus | Aufrichten/Legen über die Zeit und Bremse nicht im Bild (Bericht liefert nur Spitzenwerte); „passt ins Maul“ nur erste Bedingung der Engine; Stachelplätze weiter überall erlaubt |
+| Drüse: Dauer des Befehls frei; Knopf hält die andere Größe; Uhrstrich weg; Griffe kennen den Greifpunkt | `b3698eed`, `aa3d87ac`, `6a55ad95` | ja | ja | Zeitgriffe (Anstieg/Verweilen) nach dem Umbau nicht gezielt gezogen; Engine-Grenze der Dauer ungeklärt |
+| Farbzellen: gewählt → Fisch im Fischpanel in voller Ruhefarbe; Farbe folgt beim Ziehen (Astra); Grund als Probe im Fischpanel in Engine-Farben (Astra), Inspektor liest sie | `80218b4b`, `0b2cad54`, `31153209`, `3eca1de0` | ja | `80218b4b` ja; `0b2cad54` von Fable gelesen (UI-Teil); `3eca1de0` steht aus | gewählter Knopf Fläche/Bodensatz nicht erkennbar (Astra); nackte Fläche = Reinblau der Engine; Braun in Ruhe (Grenze der Zellzahl klären); Tarnung als Wert aus der Engine |
+| Blutsinn: Blutspiegel-Griffe als Behelf benannt | `36a323f2` | – (nur Kommentar) | ja | wartet auf das Lebensphasen-Werkzeug; Darm → Blut nirgends im Bild |
+| Flossen folgen den Griffen am Fisch beim Ziehen (Astra) | `6cbfdc77` | ja (0 Nachsprung) | Fable (drei Anmerkungen) | – |
+
+Aus der Reihe genommen: Eier/Samen (Bauchschnitt zeigt, was das Fischpanel nicht kann; keine Kritik Davids am Bild). Vereinbart, nicht gebaut: Seitenflosse (Fisch von oben zieht durch ein Feld; Knopfreihe trägt heute Schlagrichtung und Gegenspieler; Bahn muss aus der Engine kommen). Nicht begonnen: Maul (Kiemen/Reusen, Maul–Darm, alter Muskelblock).
+
 **Nicht angefasst seit 14.11. (Abschnitte E/F gelten weiter):** Blutsinn, Abwehr, Pigment, Seitenflosse, Maul/Kiefer, Drüse, Nahsinn, Nase/Barteln (rotes X), Darm-Lebensbild mit Ei, Schwimmblase-Lebensbild; für alle: Fischpanel bedienen und neben den Inspektor legen (David 02:17) ist nur bei Gleichgewicht, Tastsinn, Schmerz, Seitenlinie geschehen. Offen für alle: Kopfwort und Kosten (A2/A3; Vorschlag für die vier Sinne im Kanal 03:02), „Beispielwerte“/„Streuung“ (A4), eigenes Lebensbild je Organ (A1/A5; hängt am Lebensphasen-Werkzeug im Fischpanel).
 
 ### Astra, 04:33 · Farbzellen und Code-Gegenlese
