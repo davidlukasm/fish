@@ -288,8 +288,7 @@ export const handleMethods = {
     const p = cameraCoordinates(event, this.bodyMap(), this.state.camera);
     const doc = anatomyPatch(this.state, spec, p[spec.axis] - origin[spec.axis]);
     if (doc)
-      this.draftDesign(doc, 'anatomy:' + spec.id + ':' + spec.key,
-                       spec.scene ? 'refreshFishAndLive' : undefined);
+      this.draftDesign(doc, 'anatomy:' + spec.id + ':' + spec.key, 'refreshFishAndLive');
   },
   regionPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;

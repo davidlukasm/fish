@@ -396,8 +396,8 @@ export class OrganStudio {
   }
   // The live inspectors follow a dragged grip of their own without the inspector being set anew.
   refreshLive() { mountLive(this.root, this); }
-  // A grip on the fish whose setting the fish itself shows: the fish and the organ's live
-  // pictures both follow it while it is dragged.
+  // A grip on the fish: the fish, with the grip, and the organ's live pictures follow it while it
+  // is dragged.
   refreshFishAndLive() {
     this.refreshScene();
     this.refreshLive();
