@@ -175,9 +175,8 @@ void fin_course_report(const Genome &g, const std::vector<FinPhase> &phases) {
   body.undulation = layout.undulation;
   body.activate_brain(g, false);
   body.refresh_organs(g);
-  fs::PhysiologyParameters physiology;
-  // A neutral, empty tank isolates actuation without dropping the tank's movement rules.
-  physiology.sinking = 0;
+  const fs::PhysiologyParameters physiology;
+  // Start far enough from the bed to watch the entire course in free water.
   const double radius = fs::body_radius(body),
                origin = radius + (FIN_COURSE_STEPS + 1) * fs::swimming_limit(body, physiology);
   fs::Field tank(SIGHT_TANK_SEED, 0);

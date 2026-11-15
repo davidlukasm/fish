@@ -822,7 +822,7 @@ export function moveCenterToSide(doc, centerId, side, sites) {
   return target ? moveCenter(doc, centerId, target.id, sites) : null;
 }
 export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity,
-                          pointerOrigin = null) {
+                          pointerOrigin = null, requestedFunction = null) {
   const original = findOrgan(doc, organId);
   if (!original || original.type === 'brain' || !original.centers.length)
     return null;
@@ -843,8 +843,11 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
     y : anchor.y + position.y - pointerOrigin.y
   }
                                : position;
-  const first = closestSite(organ.centers[0], sites, used, target, organ.pair ? organ.side : null,
-                            organ.type);
+  const side = organ.pair ? organ.side : requestedFunction !== null ? currentSites[0].side : null;
+  const first = requestedFunction === null
+                    ? closestSite(organ.centers[0], sites, used, target, side, organ.type)
+                    : closestSiteDoing(organ.centers[0], requestedFunction, sites, used, target,
+                                       side, organ.type);
   if (!first || pointDistance(first, target, role) > snapDistance)
     return null;
   const fixed = sitePoint(first, role);
@@ -876,7 +879,7 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
     other.linked = false;
     const moved = moveOrgan(draft, other.id, sites,
                             {x : from.x + fixed.x - anchor.x, y : from.y - fixed.y + anchor.y},
-                            snapDistance, from);
+                            snapDistance, from, requestedFunction);
     if (!moved)
       return null;
     findOrgan(moved, other.id).linked = true;

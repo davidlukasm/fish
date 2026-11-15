@@ -15,7 +15,6 @@ import {
   bundleWires,
   unbundleWires,
   bindReceptor,
-  closestSiteDoing,
   connectSelections,
   findAssembly,
   findCenter,
@@ -41,7 +40,6 @@ import {
   updateCenter,
   updateGrowth,
   updateWire,
-  usedSites,
   visibleSubstances
 } from './model/document.js';
 import {
@@ -277,9 +275,9 @@ function moveMuscle(studio, element) {
   const doc = studio.state.document, sites = studio.state.sites;
   const found = findCenter(doc, element.dataset.centerId);
   const here = findSite(sites, found?.center.site);
-  const target = here && closestSiteDoing(found.center, Number(element.dataset.muscleFunction),
-                                          sites, usedSites(doc), sitePoint(here), here.side);
-  keepIfRoom(studio, target && moveOrgan(doc, found.organ.id, sites, sitePoint(target)));
+  const code = Number(element.dataset.muscleFunction);
+  keepIfRoom(studio, here && moveOrgan(doc, found.organ.id, sites, sitePoint(here, 'muscle'),
+                                       Infinity, null, code));
 }
 function addType(studio, element) {
   const doc = studio.state.document, organ = findOrgan(doc, element.dataset.addType);
