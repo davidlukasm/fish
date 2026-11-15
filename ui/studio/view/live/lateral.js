@@ -169,7 +169,7 @@ liveKind('lateral', (studio, organId) => {
       txt(live, X(st), B.height - 4, String(st), {'text-anchor' : 'end', class : 'aid-live-small'});
     txt(live, B.L, B.height - 4, word('steps'), {class : 'aid-live-small'});
     // The report now, as the fish panel shows it: a bubble that moves along the steps.
-    const g = el('g', {class : 'aid-probe-answer'}, live);
+    const g = el('g', {class : 'aid-probe-answer', 'pointer-events' : 'none'}, live);
     el('circle', {r : B.bubble}, g);
     const text = txt(g, 0, 4, '', {'text-anchor' : 'middle'});
     bubble = at => {
