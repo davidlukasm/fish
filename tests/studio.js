@@ -372,6 +372,47 @@ async function checkProbeSettling(model, capabilities, root) {
       }
 }
 
+async function checkGillFood(model, sites, root) {
+  const {eligible, functionFor, ORGAN_BY_KEY, siteRole} =
+      await import('../ui/studio/model/organs.js');
+  const {sitePoint} = await import('../ui/studio/model/layout.js');
+  const {MOTOR_KIND} = await import('../ui/schema.js');
+  const at = (type, site) => sitePoint(site, siteRole(type));
+  const gillSite = sites.find(s => eligible(ORGAN_BY_KEY.gills.centers[0], s));
+  const base = model.addOrgan(model.newDocument('Kiemen'), 'gills', sites, at('gills', gillSite));
+  const document = model.setGillRakers(base.document, base.organId, .65);
+  const muscle = ORGAN_BY_KEY.muscle.centers[0],
+        openerSite = sites.find(s => eligible(muscle, s) &&
+                                      functionFor(muscle, s) === MOTOR_KIND.suction);
+  const opened = model.addOrgan(document, 'muscle', sites, at('muscle', openerSite)).document;
+  const plan = model.compileDocument(opened, sites);
+  const sense =
+      {kind : 'gills', feeding : true, opening : 1, pump : 0, speed : 1, suction : 1, fullness : 0};
+  const request = (plan, probe = sense) => ({operation : 'design', plan, sense : probe});
+  const responses = JSON.parse(execFileSync(
+      'python3',
+      ['-B', '-c',
+       'import json,sys; from atelier_service import run; print(json.dumps([run(d)["gillFood"] for d in json.load(sys.stdin)]))'],
+      {
+        cwd : root,
+        input : JSON.stringify([
+          request(model.compileDocument(document, sites)), request(plan),
+          request(plan, {...sense, fullness : .999}),
+          request(plan, {...sense, feeding : false})
+        ]),
+        encoding : 'utf8',
+        timeout : 5000
+      }));
+  const [withoutOpener, empty, almostFull, egg] = responses;
+  assert.ok(withoutOpener.plankton[1] > 0, 'Swimming drives water through unpowered gills');
+  assert.deepEqual(withoutOpener.sediment, [ 0, 0 ], 'Sediment needs a mouth opener');
+  assert.ok(empty.sediment[1] > 0, 'A suction stroke can deliver benthic food');
+  assert.ok(almostFull.plankton[1] > 0 && almostFull.plankton[1] < empty.plankton[1],
+            'Free gut space already caps the intake before the gut is full');
+  assert.equal(almostFull.sediment[1], 0, 'The plankton can use all remaining room first');
+  assert.deepEqual([...egg.plankton, ...egg.sediment], [ 0, 0, 0, 0 ]);
+}
+
 async function checkLightSnapshots(model, sites) {
   const {designMethods} = await import('../ui/studio/design.js');
   const requests = [], replies = [];
@@ -3231,6 +3272,7 @@ async function checkHormoneSystems(model, capabilities) {
   await checkDraggedInspector(model, sitesResult, root);
   await checkAsyncActions(model, sitesResult);
   await checkProbeSettling(model, sitesResult, root);
+  await checkGillFood(model, sitesResult.sites, root);
   if (process.argv.includes('--probe-settling')) {
     console.log('Atelier: native Nahsinn-Vorschauen und wiederholte Anatomieantworten: OK');
     return;

@@ -104,16 +104,21 @@ SightScene read_sight(std::istream &in) {
          "invalid sight scene");
   return scene;
 }
+struct GillScene {
+  bool feeding = false;
+  double opening = 0, pump = 0, speed = 0, suction = 0, fullness = 0;
+};
 struct SenseScene {
   int kind = 0, scent = 0;
   double bearing = 0, distance = 0, strength = 0, nutrient = 0;
   double flow_bearing = 0, flow_strength = 0;
   int bite_delay = 0;
   bool pump_gills = false;
+  GillScene gills;
 };
 namespace sense_scene {
 constexpr int smell = 1, touch = 2, flow = 3, wound = 4, gut = 5, taste = 6, balance = 7;
-constexpr int attack = 8, mouth = 10;
+constexpr int attack = 8, mouth = 10, gills = 11;
 }
 constexpr double SENSE_SCENE_REACH = 40, SENSE_SCENE_STRENGTH = 20;
 SenseScene read_sense_scene(std::istream &in) {
@@ -123,6 +128,15 @@ SenseScene read_sense_scene(std::istream &in) {
     ensure(bool(in >> scene.bite_delay >> scene.pump_gills) &&
                between(scene.bite_delay, -fishsim::MAX_STROKE_STEPS, fishsim::MAX_STROKE_STEPS),
            "invalid mouth course");
+    return scene;
+  }
+  if (scene.kind == sense_scene::gills) {
+    auto &g = scene.gills;
+    ensure(bool(in >> g.feeding >> g.opening >> g.pump >> g.speed >> g.suction >> g.fullness) &&
+               between(g.opening, 0, 1) && between(g.pump, 0, 1) &&
+               between(g.speed, 0, fishsim::MAX_SPEED) && between(g.suction, 0, 1) &&
+               between(g.fullness, 0, 1),
+           "invalid gill scene");
     return scene;
   }
   const double half_turn = fishsim::degrees(fishsim::PI);
@@ -633,10 +647,45 @@ void bladder_estimate_report(const fishsim::BrainInterface &a, const field::Subs
   }
   std::cout << "]}";
 }
+void gill_food_report(fishsim::Body body, const fishsim::BrainInterface &plan,
+                      const GillScene &scene, const fishsim::PhysiologyParameters &physiology) {
+  namespace fs = fishsim;
+  body.mouth.opening = scene.opening;
+  body.gill_signal = scene.pump;
+  body.suction_strength = plan.capacities[fs::organ_port::suction];
+  body.raker_density = plan.raker_density;
+  body.gut_fill = scene.fullness * fs::gut_capacity(body);
+  const bool opener = body.suction_strength > 0 &&
+                      scene.suction * plan.stroke_capacity[fs::StrokeSuction] >=
+                          physiology.stroke_threshold;
+  const double water = fs::gill_water_at(body, scene.speed);
+  // One mouth cycle in water at the reference plankton density and, for the sand probe,
+  // one unobstructed stroke over sediment with one unit of food energy per unit of area.
+  const double plankton = scene.feeding
+                              ? water * fs::MOUTH_CYCLE_STEPS *
+                                    fs::EnvironmentParameters{}.plankton_max_density
+                              : 0,
+               sediment = scene.feeding && opener && scene.opening > 0
+                              ? fs::swallow_area_at(body, scene.speed) * fs::raker_passage(body) *
+                                    scene.suction * plan.stroke_timing[fs::StrokeSuction].steps *
+                                    fs::MOUTH_TRANSPORT_RATE
+                              : 0;
+  const auto plankton_food = fs::fodder(fs::food_kind::plankton, physiology);
+  const auto sediment_food = fs::fodder(fs::food_kind::benthic, physiology);
+  const double kept_plankton =
+      std::min(plankton * fs::raker_retention(body), fs::gut_room(body, plankton_food));
+  body.gut_fill += kept_plankton * plankton_food.fill;
+  const double kept_sediment =
+      std::min(sediment * fs::raker_sifting(body.raker_density), fs::gut_room(body, sediment_food));
+  std::cout << ",\"gillFood\":{\"water\":" << water
+            << ",\"plankton\":[" << plankton << ',' << kept_plankton << ']'
+            << ",\"sediment\":[" << sediment << ',' << kept_sediment << "]}";
+}
 std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &groups, bool developed,
                                 const SenseScene *attack = nullptr,
                                 const LearningContext *learning = nullptr,
-                                const Receptor *body_growth = nullptr) {
+                                const Receptor *body_growth = nullptr,
+                                const GillScene *gills = nullptr) {
   const auto &t = *g.blueprint;
   const auto &a = *g.interface;
   std::cout << ",\"hormoneTimes\":[";
@@ -1155,7 +1204,13 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
             << ",\"gills\":{\"restShare\":" << gill_upkeep / rest
             << ",\"pumpArea\":" << fishsim::gill_area(adult)
             << ",\"mouthAperture\":" << fishsim::maximum_mouth_aperture(adult) << ",\"forceScale\":"
-            << adult.force_scale / (fishsim::body_scale(adult) * fishsim::MUSCLE_CELL_FORCE) << '}';
+            << adult.force_scale / (fishsim::body_scale(adult) * fishsim::MUSCLE_CELL_FORCE)
+            << ",\"hasOpener\":"
+            << (a.stroke_capacity[fishsim::StrokeSuction] >= physiology.stroke_threshold ? "true"
+                                                                                        : "false")
+            << '}';
+  if (gills)
+    gill_food_report(adult, a, *gills, physiology);
   std::cout << ",\"gonads\":{\"eggs\":{\"fillDrive\":" << a.egg_parts[0]
             << ",\"releaseDrive\":" << a.egg_parts[1]
             << "},\"sperm\":{\"fillDrive\":" << a.sperm_parts[0]
@@ -1338,7 +1393,8 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
   readiness_report(*g.interface, t, false);
   const auto *attack = sense && sense->kind == sense_scene::attack ? &*sense : nullptr;
   const auto *mouth = sense && sense->kind == sense_scene::mouth ? &*sense : nullptr;
-  anatomy_report(g, groups, false, attack, &learning, &plan.growth);
+  const auto *gills = sense && sense->kind == sense_scene::gills ? &sense->gills : nullptr;
+  anatomy_report(g, groups, false, attack, &learning, &plan.growth, gills);
   if (light_spread) {
     const auto sample = light_example(plan);
     const auto binding = fishsim::body_interface(sample);
@@ -1351,7 +1407,7 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
   }
   if (mouth)
     mouth_course_report(g, *mouth);
-  else if (sense && !attack)
+  else if (sense && !attack && !gills)
     sense_report(t, g.interface, groups, *sense);
   std::cout << '}';
 }

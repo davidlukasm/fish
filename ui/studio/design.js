@@ -213,8 +213,9 @@ export const designMethods = {
     this.designPending = false;
     const request = ++this.designRequest, fishRequest = this.newFishRequest;
     const spineDraft = draft?.key.startsWith('spine-'), colourDraft = draft?.key === 'colour',
-          learningDraft = draft?.key === 'learning', bladderDraft = draft?.key === 'bladder';
-    const scene = draft ? {sense : spineDraft ? this.senseScene() : null} : {
+          learningDraft = draft?.key === 'learning', bladderDraft = draft?.key === 'bladder',
+          gillDraft = draft?.key === 'gills';
+    const scene = draft ? {sense : spineDraft || gillDraft ? this.senseScene() : null} : {
       lightSpread : this.state.lightSpread?.document !== document,
       sight : sightScene(probe),
       sense : this.senseScene()
@@ -242,7 +243,8 @@ export const designMethods = {
         // the eyes and senses follow a dragged one step by step instead of waiting for it to
         // rest.
         .then(report => {
-          const anatomy = {...report, learnProbe : learning ? learnProbe : null};
+          const anatomy = {...report, learnProbe : learning ? learnProbe : null,
+                           gillProbeKey : scene.sense?.kind === 'gills' ? sense?.key : null};
           if (draft) {
             // Follow the drag with the last completed outline, even as the pointer moves on.
             if (this.drafted && this.draftPreview === draft &&
@@ -261,13 +263,15 @@ export const designMethods = {
                                          report?.learnProbe,
                                          report?.groups?.[learning?.group]?.learning
                                        ],
-                                       bladderDraft && report?.bladderEstimate]);
+                                       bladderDraft && report?.bladderEstimate,
+                                       gillDraft && [report?.gills, report?.gillFood,
+                                                     report?.gillProbeKey]]);
               };
               const previous = shape();
               this.state.outlinePreview = anatomy;
               if (shape() !== previous) {
                 this.refreshScene();
-                if (colourDraft || learningDraft || bladderDraft)
+                if (colourDraft || learningDraft || bladderDraft || gillDraft)
                   this.refreshLive();
                 // A receptor's curve is the engine's: the inspector follows each answer.
                 if (draft.key === 'receptor')
@@ -303,6 +307,9 @@ export const designMethods = {
                            groupsOf(this.state.anatomy, 'learning') !== groupsOf(anatomy, 'learning');
     const bladderChange = JSON.stringify(this.state.anatomy?.bladderEstimate) !==
                           JSON.stringify(anatomy.bladderEstimate);
+    const gillChange = this.state.anatomy?.gillProbeKey !== anatomy.gillProbeKey ||
+                       JSON.stringify(this.state.anatomy?.gillFood) !==
+                           JSON.stringify(anatomy.gillFood);
     this.shownDesign = this.state.document;
     if (anatomy.lightSpread)
       this.state.lightSpread = {document : this.state.document, report : anatomy.lightSpread};
@@ -322,7 +329,7 @@ export const designMethods = {
         if ((answerChange && this.state.tool === 'hormone') ||
             ((answerChange || learningChange) && this.state.tool === 'learn'))
           this.refreshInspector();
-        else if (bladderChange)
+        else if (bladderChange || gillChange)
           this.refreshLive();
         this.refreshVision();
         this.drawSight();

@@ -11,8 +11,8 @@
 // plan at the reference body (state.anatomy.gills). The area shown is the report's while it
 // belongs to the plan in view; while a grip is dragged, and for the curve over the muscle's
 // size, it follows the cells' strength on the engine's force curve.
-// A schema: the specks stand for food, not for water. Flocks come with suction strokes into the
-// ground, which the jaw's opener makes; here they are given by the knob at the sand.
+// The plan's gillFood estimate sets the food admitted from one sample. The particles illustrate
+// the same shares without animating the aquarium or drawing water particles.
 import {fastShare, fibreCourse, fibreForce, fibreHex} from '../../../fibre.js';
 import {rakerPassage, rakerRetention, rakerSifting} from '../../../fish_organs.js';
 import {ATELIER_LIMITS, BEHAVIOR_SCALE, BODY_UNIT, MOUTH_CYCLE} from '../../../schema.js';
@@ -122,12 +122,12 @@ liveKind('gills', (studio, organId) => {
     speed : BEHAVIOR_SCALE.cruising_speed,
     suck : 0,
     gut : .3,
-    maturity : .8
+    maturity : 1
   };
   const film = {lids : [], eyes : [], skin : null, room : null, specks : null, list : [], beat : 0};
-  let state = studio.state, m = null;
+  let state = studio.state, m = null, food = null, current = null;
   const organ = () => findOrgan(studio.state.document, organId);
-  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
+  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive', 'gills');
   const settle = () => studio.drafted && studio.settleGraphic();
   const change = doc => doc && studio.changeDocument(doc, studio.state.selected);
   const again = () => show(studio.state);
@@ -136,7 +136,8 @@ liveKind('gills', (studio, organId) => {
   // may differ in fullness and fibres: their strength adds, what they have in common is the
   // strength's mean. u, the engine's unit of the pump's strength: copies / 16 x fibre force.
   function derive(gills) {
-    const cells = gills.centers, phase = lifePhase(cells[0]), report = state.anatomy?.gills,
+    const cells = gills.centers, phase = lifePhase(cells[0]),
+          report = (state.outlinePreview ?? state.anatomy)?.gills,
           mouth = report?.mouthAperture ?? 0, whole = 4 * mouth * mouth,
           unit = c => c.copies / FULL * fibreForce(fastShare(c.tau)),
           u = cells.reduce((sum, c) => sum + unit(c), 0),
@@ -146,7 +147,8 @@ liveKind('gills', (studio, organId) => {
     // The engine's force curve on its own scale; the plan as compiled has its exact area.
     const areaOf = strength =>
         scale > 0 ? whole * Math.min(1, 2 * strength / (strength + scale)) : 0;
-    const exact = studio.shownDesign === state.document && Number.isFinite(report?.pumpArea);
+    const exact = (state.outlinePreview || studio.shownDesign === state.document) &&
+                  Number.isFinite(report?.pumpArea);
     // What the fibres have left after beating long, each cell's by its strength.
     const left =
         u > 0
@@ -177,7 +179,8 @@ liveKind('gills', (studio, organId) => {
       rest : report?.restShare,
       most,
       mostWater : Math.max(1e-9, strongest + 2 * mouth * GILL.fastest),
-      canGrow : roomFor(gills)
+      canGrow : roomFor(gills),
+      canSuck : report?.hasOpener
     };
   }
   // Whether one more pair finds its places: asked once for each document, for the button.
@@ -200,24 +203,39 @@ liveKind('gills', (studio, organId) => {
                : 0;
   const met = (open = input.open) =>
       2 * m.mouth * input.speed * Math.max(0, open - MOUTH_CYCLE.rest) / (1 - MOUTH_CYCLE.rest);
-  // What a mouthful brings at this moment, of each kind: how much comes, what share of it stays.
+  function requestFood() {
+    studio.tryCommand(organId, {
+      kind : 'gills',
+      feeding : input.maturity >= HATCH,
+      opening : input.open,
+      pump : works(input.maturity) ? input.pump * m.left / 2 : 0,
+      speed : input.speed,
+      suction : input.suck,
+      fullness : input.gut
+    });
+    const report = state.outlinePreview ?? state.anatomy;
+    if (report?.gillProbeKey === state.senseProbe?.key && report?.gillFood)
+      food = report.gillFood;
+  }
   function stream() {
-    const out = input.maturity >= HATCH, fed = out && input.gut < 1,
-          through = (pumped() + met()) * rakerPassage(m.density),
-          ground = out && input.open > 0 ? input.suck : 0;
+    const out = input.maturity >= HATCH, empty = [ 0, 0 ],
+          plankton = out ? food?.plankton ?? empty : empty,
+          sediment = out && m.canSuck && input.suck > 0 ? food?.sediment ?? empty : empty,
+          through = food?.water ?? 0, ground = clamp(sediment[0]),
+          share = ([ offered, kept ]) => offered > 0 && input.gut < 1 ? clamp(kept / offered) : 0;
     return {
       through,
       kinds : [
         {
           food : 'plankton',
-          rate : out ? SPECKS.plankton * through : 0,
-          keeps : fed ? rakerRetention(m.density) : 0,
+          rate : plankton[0] > 0 ? SPECKS.plankton * through : 0,
+          keeps : share(plankton),
           size : 2.2
         },
         {
           food : 'flock',
           rate : SPECKS.flock * ground,
-          keeps : fed ? rakerSifting(m.density) : 0,
+          keeps : share(sediment),
           size : 3
         },
         {grain : true, rate : SPECKS.sand * ground, keeps : 0}
@@ -251,12 +269,11 @@ liveKind('gills', (studio, organId) => {
   }
   function drawHead() {
     const {svg, under, live} = picture(head, HEAD.height, buildHead),
-                       {mid, tip, gape, cheek, half, lid, arch, gut, height} = HEAD, n = teeth(),
-                       now = stream();
+                       {mid, tip, gape, cheek, half, lid, arch, gut, height} = HEAD, n = teeth();
     if (Number.isFinite(m.rest))
       txt(live, 4, 10, word('rest', {p : percent(m.rest, 1)}), {class : 'aid-live-small'});
     // Sand before the mouth, as far as the fish sucks at the ground.
-    if (input.suck > 0) {
+    if (m.canSuck && input.suck > 0) {
       const edge = (tip + 2) * Math.min(1, input.suck * 4);
       el('path', {
         d : `M0 16 H${edge} Q${edge + 5} ${height / 3} ${edge} ${height / 2} T${edge} ${
@@ -323,7 +340,7 @@ liveKind('gills', (studio, organId) => {
     el('rect',
        {x : g0, y : top, width : g1 - g0, height : base - top, rx : 7, class : 'aid-live-stomach'},
        live);
-    now.kinds.slice(0, 2).forEach((kindOf, i) => {
+    current.kinds.slice(0, 2).forEach((kindOf, i) => {
       const arrives = clamp(
           kindOf.rate * kindOf.keeps /
           (i ? SPECKS.flock : SPECKS.plankton * m.mostWater * rakerPassage(1) * rakerRetention(1)));
@@ -419,20 +436,24 @@ liveKind('gills', (studio, organId) => {
         },
         'pump', 'knob');
     txt(live, cheek + lid, mid + half + 36, word('command'), {class : 'aid-live-small'});
-    drag(svg,
-         el('circle', {
-           cx : 8 + (tip - 14) * input.suck,
-           cy : height - 14,
-           r : 5.5,
-           class : 'aid-live-sandknob'
-         },
-            live),
-         p => {
-           input.suck = clamp((p.x - 8) / (tip - 14));
-           again();
-         },
-         'suck', 'knob');
-    txt(live, tip + 2, height - 10, word('suck'), {class : 'aid-live-small'});
+    if (m.canSuck) {
+      drag(svg,
+           el('circle', {
+             cx : 8 + (tip - 14) * input.suck,
+             cy : height - 14,
+             r : 5.5,
+             class : 'aid-live-sandknob'
+           },
+              live),
+           p => {
+             input.suck = clamp((p.x - 8) / (tip - 14));
+             again();
+           },
+           'suck', 'knob');
+    }
+    if (m.canSuck !== undefined)
+      txt(live, tip + 2, height - 10, word(m.canSuck ? 'suck' : 'noOpener'),
+          {class : 'aid-live-small'});
   }
   // What stays in the fish over the rakers' density: of the plankton in the water before the
   // mouth (less water passes dense rakers, more of its plankton stays), and of the flocks in
@@ -678,6 +699,8 @@ liveKind('gills', (studio, organId) => {
     if (!gills?.centers.length)
       return;
     m = derive(gills);
+    requestFood();
+    current = stream();
     kind.textContent = word(m.density < .25   ? 'kindOpen'
                             : m.density < .72 ? 'kindSift'
                                               : 'kindFilter');
@@ -725,8 +748,7 @@ liveKind('gills', (studio, organId) => {
                  mid - arch[1][1]} L${arch[0][0]} ${mid - arch[0][1] + 1} V${
                  mid + arch[0][1] - 1} L${arch[1][0]} ${mid + arch[1][1]} Q${tip + 40} ${
                  mid + half - 12} ${tip + 1} ${mid + open - 1} Z`);
-    const now = stream();
-    for (const kindOf of now.kinds) {
+    for (const kindOf of current.kinds) {
       if (Math.random() >= kindOf.rate * dt / 1000)
         continue;
       const side = Math.random() < .5 ? -1 : 1, kept = Math.random() < kindOf.keeps,
@@ -747,7 +769,7 @@ liveKind('gills', (studio, organId) => {
                    film.specks);
       film.list.push({way, at : 0, kept, dot});
     }
-    const pace = (.9 + .25 * Math.sqrt(now.through)) * dt / 1000;
+    const pace = (.9 + .25 * Math.sqrt(current.through)) * dt / 1000;
     film.list = film.list.filter(speck => {
       speck.at += pace * (speck.kept && speck.at >= 2 && speck.at < 3 ? .5 : 1);
       if (speck.at >= 5) {

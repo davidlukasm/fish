@@ -1616,6 +1616,7 @@
       "open": "Maulöffnung",
       "command": "Pumpbefehl",
       "suck": "Saugen im Sand",
+      "noOpener": "Maulöffner fehlt",
       "open0": "offen",
       "dense": "dicht",
       "stays": "bleibt",

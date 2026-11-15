@@ -222,7 +222,7 @@ def sight_line(sight):
 
 
 SENSE_SCENES = {"smell": 1, "touch": 2, "flow": 3, "wound": 4, "gut": 5, "taste": 6,
-                "balance": 7, "attack": 8, "mouth": 10}
+                "balance": 7, "attack": 8, "mouth": 10, "gills": 11}
 
 
 def sense_line(sense):
@@ -238,6 +238,11 @@ def sense_line(sense):
         if type(delay) is not int or type(gills) is not bool:
             raise Refusal("studio.errors.invalidProbe")
         values = [delay, int(gills)]
+    elif sense["kind"] == "gills":
+        if type(sense.get("feeding")) is not bool:
+            raise Refusal("studio.errors.invalidProbe")
+        values = [int(sense["feeding"])]
+        values.extend(sense.get(key) for key in ("opening", "pump", "speed", "suction", "fullness"))
     else:
         values = [sense.get(key, 0) for key in ("bearing", "distance", "strength", "scent", "nutrient")]
     if sense["kind"] == "smell":

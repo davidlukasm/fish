@@ -326,11 +326,14 @@ inline double bite_share(const Body &b, double radius) {
 inline double mouth_reach(const Body &b) {
   return std::min(MOUTH_REACH_MAX, std::max(MOUTH_REACH_MIN, mouth_aperture(b)));
 }
-inline double swallow_area(const Body &b) {
-  const double speed = std::clamp(b.motor().relative_speed / MAX_SPEED, 0., 1.);
+inline double swallow_area_at(const Body &b, double relative_speed) {
+  const double speed = std::clamp(relative_speed / MAX_SPEED, 0., 1.);
   return SWALLOW_AREA * maximum_mouth_aperture(b) * maximum_mouth_aperture(b) *
          suction_share(b.suction_strength * body_scale(b), b.force_scale) /
          (1 + SWALLOW_SPEED_LOSS * speed * speed);
+}
+inline double swallow_area(const Body &b) {
+  return swallow_area_at(b, b.motor().relative_speed);
 }
 // Gill rakers, from none (0) to dense (1), make three kinds of fish. All water a mouth sucks
 // in, pumps or meets leaves through the gills. Without rakers all of it passes, and with it
@@ -407,12 +410,15 @@ inline double digestibility(const Body &b, const Fodder &f, const PhysiologyPara
 }
 // Water the gill covers pump through the open mouth, and the water a mouth opened wider than at
 // rest meets while the fish swims (ram filtering).
-inline double gill_water(const Body &b) {
+inline double gill_water_at(const Body &b, double relative_speed) {
   const double widest = maximum_mouth_aperture(b),
                pumped = gill_area(b) * 2 * b.gill_signal * b.mouth.opening,
                held = std::max(0., b.mouth.opening - MOUTH_REST) / (1 - MOUTH_REST),
-               ram = 2 * widest * held * std::max(0., b.motor().relative_speed);
+               ram = 2 * widest * held * std::max(0., relative_speed);
   return (pumped + ram) * raker_passage(b);
+}
+inline double gill_water(const Body &b) {
+  return gill_water_at(b, b.motor().relative_speed);
 }
 inline bool fits_mouth(const Body &b, double radius) {
   return radius <= mouth_aperture(b) + tolerance::negligible;
