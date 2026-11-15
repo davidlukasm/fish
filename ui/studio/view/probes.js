@@ -25,8 +25,9 @@ const PROBE_SCENE = Object.freeze({
   attack : 88,
   far : 150,
   reach : 300,
-  // A bite's depth needs no arrow half a fish long: the fish stays large in the panel.
-  wound : 100,
+  // Pressure and a bite's depth act on the skin and need no arrow half a fish long: the fish
+  // stays large in the panel.
+  skin : 100,
   streams : 3,
   across : 46,
   water : {
@@ -95,7 +96,7 @@ const strengthShare = (strength, kind, faintest) =>
                     Math.log(PROBE_LIMITS.most[kind] / faintest));
 const shareStrength = (share, kind, faintest) =>
     faintest * (PROBE_LIMITS.most[kind] / faintest) ** clamp(share);
-const reachOf = kind => kind === 'wound' ? PROBE_SCENE.wound : PROBE_SCENE.reach;
+const reachOf = kind => kind === 'wound' || kind === 'touch' ? PROBE_SCENE.skin : PROBE_SCENE.reach;
 function handleRadius(probe, faintest) {
   const P = PROBE_SCENE, angle = radians(probe.bearing), skin = skinDistance(angle);
   if (probe.kind === 'taste')
