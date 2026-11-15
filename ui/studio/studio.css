@@ -738,17 +738,6 @@
 .aid-effect-mark{fill:none;stroke:#9fb9b4;stroke-width:1.2}
 .aid-effect-mark.with{stroke:none}
 .aid-dose-zero{stroke:var(--aid-soft-text);stroke-width:1;vector-effect:non-scaling-stroke}
-.aid-preview-bars{display:block;width:100%;height:auto;margin:6px 0;border-radius:8px;background:var(--aid-graphic);touch-action:none}
-.aid-preview-bars text{fill:var(--aid-label-text);font-size:11px}
-.aid-preview-pad rect{fill:#10303a;stroke:var(--aid-panel-edge)}
-.aid-preview-pad svg{color:var(--aid-label-text)}
-.aid-preview-bars .aid-preview-sign{font-size:15px}
-.aid-preview-levels{display:grid;gap:4px;margin:8px 0}
-.aid-preview-level-row{display:grid;grid-template-columns:minmax(0,1fr) 100px;align-items:center;gap:8px;min-height:32px}
-.aid-preview-level-row>span{min-width:0;overflow-wrap:anywhere;color:var(--aid-label-text)}
-.aid-preview-level{display:block;touch-action:none}
-.aid-preview-vessel{fill:var(--aid-ground);stroke:var(--substance);stroke-opacity:.6}
-.aid-preview-amount{fill:var(--substance);fill-opacity:.6;pointer-events:none}
 .aid-gut-bars{display:block;width:100%;height:auto;margin:6px 0;border-radius:8px;background:var(--aid-graphic);touch-action:none}
 .aid-gut-bars text{fill:var(--aid-label-text);font-size:11px}
 .aid-gut-tube{fill:none;stroke:var(--aid-gut);stroke-width:2}
@@ -771,8 +760,6 @@
 @keyframes aid-acts-die{0%,40%{fill:var(--hormone);opacity:1}100%{fill:#5b6b6a;opacity:.25}}
 @media (prefers-reduced-motion:reduce){.aid-hormone-receiver .aid-hormone-core,.aid-hormone-receiver .aid-hormone-aura{animation:none}}
 
-.aid-preview-context{border-top:1px solid var(--aid-panel-edge);margin-top:12px;padding-top:10px}
-.aid-preview-context summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
 .aid-contact-limit{font-size:10px;color:var(--aid-label-text);display:flex;align-items:center;gap:5px}
 .aid-contact-limit select{max-width:65px;background:var(--aid-control);color:var(--aid-control-text);border:1px solid var(--aid-control-edge);border-radius:5px}
 .aid-effect-chips{display:flex;flex-wrap:wrap;gap:4px}

@@ -1,6 +1,6 @@
 import {variationGraphic} from './cell_tissue.js';
 import {receptorVariationExamples} from '../model/variation.js';
-import {previewControls, previewContextOf, cellDevelopment} from './development.js';
+import {previewContextOf, cellDevelopment} from './development.js';
 import {BLOOD_SUBSTANCE, HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {clamp} from '../../units.js';
@@ -700,6 +700,6 @@ export function hormoneInspector(state, currentAnatomy) {
   const focus = chosenCenter(state.document, state.selected, state.visionProfile);
   const back = '<button class="aid-secondary" data-hormone-overview>' + label('hormoneCard.title') +
                '</button>';
-  return focus && state.capabilities ? back + previewControls(state) + hormoneDetails(state, focus)
+  return focus && state.capabilities ? back + hormoneDetails(state, focus)
                                      : substanceInspector(state, currentAnatomy);
 }

@@ -24,7 +24,7 @@ import {effectCurve, substanceName} from './substances.js';
 import {centerTitle, organTitle, tone} from './names.js';
 import {isTeachingSource, isPacemaker, isRegion, modeLean, nerveClass} from '../model/organs.js';
 import {EFFECT_ICON} from './icons.js';
-import {cellDevelopment, previewControls, previewContextOf} from './development.js';
+import {cellDevelopment, previewContextOf} from './development.js';
 import {effectScene} from './effects.js';
 import {EPISODE_LAYOUT, episodeSvg} from './episode.js';
 import {centerMarker} from './scene.js';
@@ -340,7 +340,7 @@ export function learningInspector(state) {
   let html = '<header class="aid-inspector-head"><span>' + label('sections.brain') + '</span>' +
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve')
-    return html + previewControls(state) + learnersOverview(state) +
+    return html + learnersOverview(state) +
            '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
   html += nodeChoice(state, chosen);
   const teachers = sendersOf(state, chosen);
@@ -349,7 +349,7 @@ export function learningInspector(state) {
     ...(teachers.modulators.length ? [ tone('brain') ] : []),
     ...(taught ? [ substanceColor(taught.index) ] : [])
   ];
-  return html + heading(centerTitle(chosen)) + previewControls(state) +
+  return html + heading(centerTitle(chosen)) +
          learningPicture(state, chosen, teachers, colours, learningValues(state, chosen)) +
          teacherList(state, chosen, teachers.modulators) + traceGraphic(state, chosen) +
          modeChoices(chosen) + '<div class="aid-learn-effects">' +

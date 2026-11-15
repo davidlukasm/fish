@@ -1231,8 +1231,6 @@
     "electrical_limit": "Elektrische Höchststärke",
     "teaching_limit": "Lehrende Höchststärke",
     "width": "Stoffbreite",
-    "preview": "Beispielwerte",
-    "previewConditions": "Die Kennlinien und Organansichten verwenden diese Beispielwerte für eine angenommene Situation im späteren Fisch.",
     "birth": "Aufbaufaktor",
     "output": "Ausgabefaktor",
     "death": "Tod ausgelöst",
@@ -1262,7 +1260,6 @@
     "birthDefault": "Bei ausgeschaltetem Rezeptor verwendet die Zelle die Standardantwort 1.",
     "range": "Kontaktreichweite in Körperlängen",
     "crossing": "Seitenführung −1 … +1",
-    "exampleInput": "Beispieleingang der Organneuronen",
     "inputAxis": "Eingang",
     "currentResponse": "Antwort bei den Beispielwerten",
     "potentialCells": "Potenzielle Zellen",
@@ -1304,9 +1301,7 @@
     "units": {
       "percent": "Anteil der maximal möglichen Stärke",
       "response": "Antwort vor Begrenzung auf −1 … +1"
-    },
-    "inputAt": "Eingang {n}",
-    "maturityAt": "Reife {p}"
+    }
   },
   "symbols": {
     "add": "+"
