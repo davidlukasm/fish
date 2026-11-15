@@ -29,7 +29,19 @@ import {
 } from '../../model/document.js';
 import {nodeLimit} from '../../model/organs.js';
 import {label} from '../kit.js';
-import {chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
+import {
+  addPicture,
+  chip,
+  clamp,
+  drag,
+  el,
+  fishIcon,
+  hatchOf,
+  liveKind,
+  path,
+  picture,
+  txt
+} from './kit.js';
 
 const word = (key, values) => t('studio.live.gills.' + key, values);
 const FULL = ATELIER_LIMITS.max_copies;
@@ -95,19 +107,14 @@ liveKind('gills', (studio, organId) => {
     root.appendChild(h);
     return h;
   };
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
   const kind = heading('');
-  const head = svgOf();
+  const head = addPicture(root);
   heading(word('rakers'));
-  const rakers = svgOf();
+  const rakers = addPicture(root);
   heading(word('water'));
-  const water = svgOf();
+  const water = addPicture(root);
   heading(word('life'));
-  const life = svgOf();
+  const life = addPicture(root);
   // What is tried on the gills: not part of the fish.
   const input = {
     open : .8,

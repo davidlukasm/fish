@@ -27,7 +27,7 @@ import {
   updateCenter
 } from '../../model/document.js';
 import {label} from '../kit.js';
-import {chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {keyGrip, STEPS} from './sense.js';
 import {fishSide} from './skin.js';
 
@@ -66,14 +66,9 @@ liveKind('pigment', (studio, organId) => {
     h.textContent = words;
     root.appendChild(h);
   };
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
-  const scene = svgOf();
+  const scene = addPicture(root);
   heading(word('cells'));
-  const band = svgOf();
+  const band = addPicture(root);
   // What is tried: how far the brain has the pigment spread and at which step it lets go; what
   // lies behind the fish (0 deep water - 1 sand). Not part of the fish.
   const own = {chosen : 0, command : 1, stop : 450, ground : .35, pull : null};

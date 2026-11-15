@@ -14,7 +14,7 @@
 import {unitOfPlan} from '../../../tuning.js';
 import {findOrgan, updateField} from '../../model/document.js';
 import {organCells} from '../vision.js';
-import {clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {answer, BOUNDED, IRRITANT} from './sense.js';
 import {fishAbove} from './skin.js';
 
@@ -37,12 +37,7 @@ const radians = d => d * Math.PI / 180;
 liveKind('near', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-near';
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
-  const rings = svgOf();
+  const rings = addPicture(root);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
   function drawRings(organ, profile, reach) {

@@ -29,7 +29,19 @@ import {
 } from '../../model/document.js';
 import {nodeLimit} from '../../model/organs.js';
 import {label} from '../kit.js';
-import {chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
+import {
+  addPicture,
+  chip,
+  clamp,
+  drag,
+  el,
+  fishIcon,
+  hatchOf,
+  liveKind,
+  path,
+  picture,
+  txt
+} from './kit.js';
 import {pressurePicture} from './pressure.js';
 
 const word = (key, values) => t('studio.live.sperm.' + key, values);
@@ -79,18 +91,13 @@ liveKind('sperm', (studio, organId) => {
     root.appendChild(h);
     return h;
   };
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
   const kind = heading('');
-  const scene = svgOf();
+  const scene = addPicture(root);
   heading(word('trial'));
-  const trial = svgOf();
-  const senseTitle = heading(word('sense')), sense = svgOf();
+  const trial = addPicture(root);
+  const senseTitle = heading(word('sense')), sense = addPicture(root);
   heading(word('life'));
-  const life = svgOf();
+  const life = addPicture(root);
   // What is tried on the organ: not part of the fish.
   const input = {fill : .8, lay : 300, egg : .45, maturity : 1};
   const film =

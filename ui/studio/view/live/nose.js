@@ -20,7 +20,7 @@ import {
   updateCenter
 } from '../../model/document.js';
 import {label} from '../kit.js';
-import {el, hatchOf, liveKind} from './kit.js';
+import {addPicture, el, hatchOf, liveKind} from './kit.js';
 import {sampleColour, scentMap} from './scentmap.js';
 import {INTENSITY, keysOf, senseCourse, steady, STEPS, typeLife} from './sense.js';
 
@@ -36,16 +36,11 @@ liveKind('nose', (studio, organId) => {
     root.appendChild(h);
     return h;
   };
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
-  const map = svgOf();
+  const map = addPicture(root);
   heading(word('cells'));
-  const smell = svgOf();
+  const smell = addPicture(root);
   heading(word('life'));
-  const life = svgOf();
+  const life = addPicture(root);
   const own = {chosen : 0, probe : null};
   let concentrations = [], total = 0;
   let step = 0;

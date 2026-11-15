@@ -26,7 +26,7 @@ import {
 } from '../../model/document.js';
 import {kindLimit} from '../../model/organs.js';
 import {label} from '../kit.js';
-import {chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
 import {answer, between, cellGates, CELLS, cubic, IRRITANT, LEVEL_SPAN, LEVELS, NERVE, runOf, SENSE_BOX, silentStep, stimulusOf, USED, usedFor} from './sense.js';
 
 const word = (key, values) => t('studio.live.gut.' + key, values);
@@ -196,22 +196,17 @@ liveKind('gut', (studio) => {
     root.appendChild(h);
     return h;
   };
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
-  const kind = heading(''), fish = svgOf();
+  const kind = heading(''), fish = addPicture(root);
   heading(word('yield'));
-  const yields = svgOf(), bars = svgOf();
+  const yields = addPicture(root), bars = addPicture(root);
   heading(word('full'));
-  const pictures = {full : svgOf()};
+  const pictures = {full : addPicture(root)};
   heading(word('aching'));
-  pictures.ache = svgOf();
+  pictures.ache = addPicture(root);
   heading(word('reward'));
-  const rewards = svgOf();
+  const rewards = addPicture(root);
   heading(word('life'));
-  const life = svgOf();
+  const life = addPicture(root);
   // What is tried on each sense and which of its keys is chosen: not part of the fish.
   const tried = {
     full : {chosen : 0, input : {rise : 120, height : .8, stop : 520}},

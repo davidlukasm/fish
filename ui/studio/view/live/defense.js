@@ -16,7 +16,7 @@
 import {ATELIER_LIMITS} from '../../../schema.js';
 import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, setNodeCopies, updateCenter} from '../../model/document.js';
-import {clamp, drag, el, liveKind, picture} from './kit.js';
+import {addPicture, clamp, drag, el, liveKind, picture} from './kit.js';
 import {fishAbove} from './skin.js';
 
 const SPINE = Object.freeze({
@@ -37,12 +37,7 @@ const turnTo = a => ((a + 540) % 360) - 180;
 liveKind('defense', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-defense aid-live-sense-ache';
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
-  const spines = svgOf();
+  const spines = addPicture(root);
   // What is tried on the spines: how far the brain has them raised, and the mouth (where it bites
   // from, in degrees from the snout; how wide it opens, in body radii). Not part of the fish.
   const own = {up : .4, mouth : {bearing : -60, gape : 1.2}, pull : null};

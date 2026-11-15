@@ -23,7 +23,7 @@ import {
   updateCenter
 } from '../../model/document.js';
 import {label} from '../kit.js';
-import {clamp, drag, el, hatchOf, liveKind, picture, txt} from './kit.js';
+import {addPicture, clamp, drag, el, hatchOf, liveKind, picture, txt} from './kit.js';
 import {sideIndex} from '../../model/layout.js';
 import {STONE} from '../../model/probe.js';
 import {sampleColour, scentMap} from './scentmap.js';
@@ -57,18 +57,13 @@ liveKind('barbels', (studio, organId) => {
     root.appendChild(h);
     return h;
   };
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
-  const head = svgOf();
+  const head = addPicture(root);
   heading(word('taste'));
-  const map = svgOf();
+  const map = addPicture(root);
   heading(word('report'));
-  const rows = svgOf();
+  const rows = addPicture(root);
   heading(word('life'));
-  const life = svgOf();
+  const life = addPicture(root);
   // What is tried on the barbels and which of their types is chosen: not part of the fish.
   const own = {chosen : 0, probe : null};
   const organ = () => findOrgan(studio.state.document, organId);

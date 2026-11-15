@@ -15,7 +15,7 @@ import {mouthShare} from '../../../fish_forms.js';
 import {tList} from '../../../strings.js';
 import {findOrgan, muscleTrait, setMuscleTrait, setNodeCopies} from '../../model/document.js';
 import {organFunction} from '../../model/organs.js';
-import {clamp, drag, el, liveKind, picture, txt} from './kit.js';
+import {addPicture, clamp, drag, el, liveKind, picture, txt} from './kit.js';
 
 const MOUTH = Object.freeze({
   height : 226,
@@ -35,12 +35,7 @@ const degrees = r => r * 180 / Math.PI;
 liveKind('mouth', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-mouth';
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
-  const head = svgOf();
+  const head = addPicture(root);
   let film = null, phase = 0;
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();

@@ -26,7 +26,7 @@ import {
 import {previewContextOf} from '../development.js';
 import {label} from '../kit.js';
 import {substanceName} from '../substances.js';
-import {chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {answer, BOUNDED, IRRITANT, keyGrip, setGate} from './sense.js';
 
 const word = (key, values) => t('studio.live.blood.' + key, values);
@@ -69,14 +69,9 @@ liveKind('blood', (studio, organId) => {
     root.appendChild(h);
     return h;
   };
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
-  const ring = svgOf();
+  const ring = addPicture(root);
   heading(word('report'));
-  const rows = svgOf();
+  const rows = addPicture(root);
   const own = {chosen : 0};
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');

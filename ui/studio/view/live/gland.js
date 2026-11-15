@@ -32,7 +32,7 @@ import {
 } from '../../model/document.js';
 import {label} from '../kit.js';
 import {substanceName} from '../substances.js';
-import {chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {keyGrip} from './sense.js';
 
 const word = (key, values) => t('studio.live.gland.' + key, values);
@@ -72,12 +72,7 @@ const STEPS = [
 liveKind('gland', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-gland';
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
-  const blood = svgOf();
+  const blood = addPicture(root);
   // What is tried: the brain's command, from binding (-1) to pouring (1). Not part of the fish.
   const own = {chosen : 0, command : 1};
   let now = null, phase = 0;

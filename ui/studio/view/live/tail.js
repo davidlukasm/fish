@@ -27,7 +27,7 @@ import {
   updateCenter
 } from '../../model/document.js';
 import {label} from '../kit.js';
-import {chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
 
 const word = (key, values) => t('studio.live.tail.' + key, values);
 const TAIL = Object.freeze({
@@ -165,19 +165,14 @@ liveKind('tail', (studio, organId) => {
     root.appendChild(h);
     return h;
   };
-  const svgOf = () => {
-    const svg = el('svg', {class : 'aid-live-picture'});
-    root.appendChild(svg);
-    return svg;
-  };
   const kind = heading('');
-  const fish = svgOf();
+  const fish = addPicture(root);
   heading(word('force'));
-  const force = svgOf();
+  const force = addPicture(root);
   heading(word('speed'));
-  const speed = svgOf();
+  const speed = addPicture(root);
   heading(word('life'));
-  const life = svgOf();
+  const life = addPicture(root);
   // What is tried on the muscle, and which bundle is chosen: not part of the fish.
   const input = {height : TAIL.command, stop : 200, maturity : 1};
   const lines = {force : null, speed : null};
