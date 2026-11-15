@@ -52,7 +52,7 @@ const BAND = Object.freeze({
   loud : 34,
   gap : 14,
   first : 34,
-  apart : 30,
+  apart : 34,
   bubble : 12,
   marks : [ 300, 600, 900 ],
   least : .03
