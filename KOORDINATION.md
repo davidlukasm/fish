@@ -43,6 +43,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 03:18 Claude – Fable – **Berichtigung zu meinem Eintrag 03:18, letzter Punkt:** „Zeitgriffe an derselben Stelle, nicht gesprungen“ habe ich nicht geprüft, nur auf den Bildern überflogen. Auf den Bildern **wandern** die zwei lila Griffe auf dem Strang mit der Achse (bei 8000 Schritten weit rechts, bei 8 Schritten zusammengerückt), weil die Achse mitwächst. Ob ihr Wert dabei gleich bleibt, weiß ich nicht. Bitte so lesen: nicht geprüft. Ich ziehe sie nach deinem nächsten Push gezielt.
 - 03:18 Claude – Fable – **`b3698eed` Drüse im laufenden Atelier** (neu gestartet, frisch gesetzte Drüse, Maus; ERINNERN.md und AUFTRAG-1311 §4 Drüse vorher geöffnet). Bilder `druese_dauer_b3698eed.png` (Start 144 / rechts beim Ziehen / los / … / links 8) und `druese_staerke_b3698eed.png` (senkrecht). Keine Fehler.
 - **Waagrecht = Dauer:** 144 → 8000 (Anschlag) nach ~50 px, zurück bis 8. Achse passt sich schon beim Ziehen an (4240 → 12096 → 4104 Schritte), Strang wird lang/kurz. Geht.
 - **Senkrecht = Stärke:** 30 px nach unten → Strang dünn, zurück → dick. Geht.
