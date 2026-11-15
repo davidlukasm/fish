@@ -23,7 +23,7 @@ const PROBE_SCENE = Object.freeze({
   gap : 14,
   gravity : 68,
   attack : 88,
-  teeth : {step : 14, size : 7},
+  teeth : {step : 18, size : 12},
   far : 150,
   reach : 300,
   // Pressure and a bite's depth act on the skin and need no arrow half a fish long: the fish
@@ -401,7 +401,7 @@ function attackSvg(state, organ, probe, zoom, faintest) {
       const at = (n + 1.5) * T.step, x = hinge.x + along.x * at, y = hinge.y + along.y * at;
       return 'M' + fixed(x - along.x * T.size / 2) + ' ' + fixed(y - along.y * T.size / 2) + ' L' +
              fixed(x + inward.x * T.size) + ' ' + fixed(y + inward.y * T.size) + ' L' +
-             fixed(x + along.x * T.size / 2) + ' ' + fixed(y + along.y * T.size / 2);
+             fixed(x + along.x * T.size / 2) + ' ' + fixed(y + along.y * T.size / 2) + 'Z';
     }).join('');
   }).join('');
   return '<path class="aid-probe-arrow" data-attack-jaws d="M' +
