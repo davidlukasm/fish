@@ -6,7 +6,9 @@
 //   the level heads for height x what is poured: up in the cells' time, down in the residence
 //   time; binding takes exp(-binding rate x what is bound) of what is there on top, every step.
 // The command tried lasts the left part of the picture, in steps as they are; after it the
-// strands run on a squeezed scale, as far as the longest residence needs.
+// strands run on a squeezed scale, as far as the longest residence needs. How long the command
+// lasts is the knob's place along the picture, from a few steps to thousands: a gland pours for
+// as long as its input drives it.
 // ASSUMED for the picture: a gland inside the wheel is shown at the rim, where its direction
 // points, and dragging it puts it on the rim; a binding gland starts at the level its own cells
 // would hold.
@@ -43,8 +45,11 @@ const GLAND = Object.freeze({
   top : 44,
   rows : 126,
   fill : .86,
-  split : .42,
-  work : 3 * LONGEST_TIME_CONSTANT,
+  // The command's length: a few steps to thousands, on a scale of ratios; where it ends lies
+  // between these shares of the picture's width.
+  work : [ 8, 8000 ],
+  tried : 3 * LONGEST_TIME_CONSTANT,
+  split : [ .16, .58 ],
   rest : 4 * LONGEST_ADAPTATION,
   samples : 70,
   knob : [ 10, 26 ],
@@ -53,28 +58,38 @@ const GLAND = Object.freeze({
   round : 9000
 });
 const TURN = 2 * Math.PI;
-// Where a step stands: the command's steps as they are, the rest squeezed.
-const mid = () => GLAND.L + (GLAND.R - GLAND.L) * GLAND.split;
-const X = step => step <= GLAND.work ? GLAND.L + (mid() - GLAND.L) * step / GLAND.work
-                                     : mid() + (GLAND.R - mid()) * Math.log1p(step - GLAND.work) /
-                                                   Math.log1p(GLAND.rest);
-const stepAt = x =>
-    x <= mid()
-        ? GLAND.work * clamp((x - GLAND.L) / (mid() - GLAND.L))
-        : GLAND.work + Math.expm1(clamp((x - mid()) / (GLAND.R - mid())) * Math.log1p(GLAND.rest));
-const STEPS = [
-  ...Array.from({length : GLAND.samples + 1}, (_, i) => Math.round(GLAND.work * i / GLAND.samples)),
-  ...Array.from({length : GLAND.samples},
-                (_, i) => Math.round(GLAND.work +
-                                     Math.expm1(Math.log1p(GLAND.rest) * (i + 1) / GLAND.samples)))
-];
+// Where a step stands for a command of `work` steps: the command's steps as they are, up to
+// `mid`; the rest squeezed. And the steps the strands are drawn at.
+function scaleOf(work) {
+  const {L, R, rest, samples, split} = GLAND, [ least, most ] = GLAND.work,
+                              share = Math.log(work / least) / Math.log(most / least),
+                              mid = L + (R - L) * (split[0] + (split[1] - split[0]) * share);
+  return {
+    mid,
+    X : step => step <= work ? L + (mid - L) * step / work
+                             : mid + (R - mid) * Math.log1p(step - work) / Math.log1p(rest),
+    stepAt : x => x <= mid ? work * clamp((x - L) / (mid - L))
+                           : work + Math.expm1(clamp((x - mid) / (R - mid)) * Math.log1p(rest)),
+    STEPS : [
+      ...Array.from({length : samples + 1}, (_, i) => Math.round(work * i / samples)),
+      ...Array.from({length : samples},
+                    (_, i) => Math.round(work + Math.expm1(Math.log1p(rest) * (i + 1) / samples)))
+    ]
+  };
+}
+// The command's length where its knob stands along the picture.
+function workAt(x) {
+  const {L, R, split} = GLAND, [ least, most ] = GLAND.work;
+  return Math.round(least * (most / least) **
+                    clamp(((x - L) / (R - L) - split[0]) / (split[1] - split[0])));
+}
 
 liveKind('gland', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-gland';
   const blood = addPicture(root);
   // What is tried: the brain's command, from binding (-1) to pouring (1). Not part of the fish.
-  const own = {chosen : 0, command : 1};
+  const own = {chosen : 0, command : 1, work : GLAND.tried};
   let now = null, phase = 0;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
@@ -107,8 +122,8 @@ liveKind('gland', (studio, organId) => {
   function course(cell, share, bound = true) {
     const caps = wheel(), held = caps.hormoneHeight * strength(cell) * share,
           rise = timeConstantSteps(cell.tau), stay = residenceSteps(cell.field),
-          amount = Math.abs(own.command) * strength(cell) * share, last = GLAND.work + GLAND.rest,
-          at = new Map();
+          amount = Math.abs(own.command) * strength(cell) * share, last = own.work + GLAND.rest,
+          {STEPS} = scaleOf(own.work), at = new Map();
     let level = own.command < 0 ? held : 0, next = 0;
     for (let step = 0; step <= last; step++) {
       if (step === STEPS[next]) {
@@ -116,7 +131,7 @@ liveKind('gland', (studio, organId) => {
         while (STEPS[next] === step)
           next++;
       }
-      const on = step < GLAND.work, target = on && own.command > 0 ? held * own.command : 0,
+      const on = step < own.work, target = on && own.command > 0 ? held * own.command : 0,
             tau = level < target ? rise : stay;
       level = target + (level - target) * Math.exp(-1 / tau);
       if (on && own.command < 0 && bound)
@@ -127,9 +142,9 @@ liveKind('gland', (studio, organId) => {
   }
   function drawBlood(cells, cell) {
     const {svg, live} = picture(blood, GLAND.height), {L, R, top} = GLAND, n = wheel().hormones,
-                row = GLAND.rows / n, thick = row * GLAND.fill, base = top + GLAND.rows,
-                Y = k => top + row * k + row / 2, shares = sharesOf(cell),
-                main = shares.indexOf(Math.max(...shares)),
+                {mid, X, stepAt, STEPS} = scaleOf(own.work), row = GLAND.rows / n,
+                thick = row * GLAND.fill, base = top + GLAND.rows, Y = k => top + row * k + row / 2,
+                shares = sharesOf(cell), main = shares.indexOf(Math.max(...shares)),
                 // A strand is full where the gland's main hormone stands with all the cells a node
                 // can have, so that a weak gland shows too.
         most = wheel().hormoneHeight * shares[main];
@@ -169,7 +184,7 @@ liveKind('gland', (studio, organId) => {
       }
     });
     // Where the command ends and the scale changes; the blood's edges are the command's nought.
-    el('path', {d : `M${mid()} ${top - 2} V${base + 2}`, class : 'aid-live-hatch'}, live);
+    el('path', {d : `M${mid} ${top - 2} V${base + 2}`, class : 'aid-live-hatch'}, live);
     for (const y of [top - 2, base + 2])
       el('path', {d : `M${L} ${y} H${R}`, class : 'aid-live-rim'}, live);
     // The glands before the strands they pour into: as long as their width, as thick as their
@@ -253,28 +268,29 @@ liveKind('gland', (studio, organId) => {
              p => draft(updateCenter(studio.state.document, cell.id, move(stepAt(p.x)))), name,
              'grip', settle);
     if (own.command > 0)
-      timeGrip(Math.min(rise, GLAND.work), 'glandrise',
+      timeGrip(Math.min(rise, own.work), 'glandrise',
                step => ({tau : timeConstantOf(Math.max(step, timeConstantSteps(0)))}));
-    timeGrip(GLAND.work + stay, 'glandstay',
-             step => ({field : residenceOf(Math.max(step - GLAND.work, residenceSteps(0)))}));
+    timeGrip(own.work + stay, 'glandstay',
+             step => ({field : residenceOf(Math.max(step - own.work, residenceSteps(0)))}));
     // The command: above the blood it pours, below it binds; the further from the blood, the
-    // stronger.
+    // stronger; the further along the picture its knob, the longer it lasts.
     const far = GLAND.knob[0] + (GLAND.knob[1] - GLAND.knob[0]) * Math.abs(own.command),
           ky = own.command >= 0 ? top - far : base + far;
     el('path', {
-      d : `M${L} ${ky} H${mid()} V${own.command >= 0 ? top - 2 : base + 2}`,
+      d : `M${L} ${ky} H${mid} V${own.command >= 0 ? top - 2 : base + 2}`,
       class : 'aid-live-hatch'
     },
        live);
-    drag(svg, el('circle', {cx : mid(), cy : ky, r : 5.5, class : 'aid-live-posture'}, live), p => {
+    drag(svg, el('circle', {cx : mid, cy : ky, r : 5.5, class : 'aid-live-posture'}, live), p => {
       const up = p.y < (top + base) / 2, off = up ? top - p.y : p.y - base;
       own.command = (up ? 1 : -1) *
                     clamp((off - GLAND.knob[0]) / (GLAND.knob[1] - GLAND.knob[0]), GLAND.least, 1);
+      own.work = workAt(p.x);
       show();
     }, 'glandcommand', 'knob');
     txt(live, L, base + 14, 0, {'text-anchor' : 'middle', class : 'aid-live-small'});
-    txt(live, mid(), base + 14, GLAND.work, {'text-anchor' : 'middle', class : 'aid-live-small'});
-    txt(live, R, base + 14, word('steps', {n : GLAND.work + GLAND.rest}),
+    txt(live, mid, base + 14, own.work, {'text-anchor' : 'middle', class : 'aid-live-small'});
+    txt(live, R, base + 14, word('steps', {n : own.work + GLAND.rest}),
         {'text-anchor' : 'end', class : 'aid-live-small'});
     now = el('path', {class : 'aid-live-now'}, live);
     move();
