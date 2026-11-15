@@ -110,20 +110,23 @@ export const designMethods = {
   bringProbes() {
     const id = this.state.selected?.id, doc = this.state.document;
     const organ = organOf(doc, id);
-    if (!organ)
+    if (!organ) {
+      this.framedProbe = null;
       return;
+    }
     const anatomy = this.shownDesign === doc ? this.state.anatomy : null;
     const sense = probeFor(organ, this.state.senseProbe, anatomy, doc);
+    const faintest = this.state.anatomy?.lightDimmest;
+    if (!sense || sense.kind === 'gut')
+      this.framedProbe = null;
+    else if (faintest > 0 && sense !== this.framedProbe && !this.handleDrag) {
+      const flow = probeFlow(sense);
+      this.framedProbe = sense;
+      this.keepInView(probeHandle(sense, faintest));
+      if (flow && flow !== sense)
+        this.keepInView(probeHandle(flow, faintest));
+    }
     if (sense && sense !== this.state.senseProbe) {
-      const faintest = this.state.anatomy?.lightDimmest;
-      if (sense.kind === 'smell' && sense.organ !== this.state.senseProbe?.organ) {
-        const flow = probeFlow(sense);
-        this.keepInView(probeHandle(sense, faintest));
-        if (flow && faintest > 0)
-          this.keepInView(probeHandle(flow, faintest));
-      }
-      if (sense.kind === 'wound' && faintest > 0)
-        this.keepInView(probeHandle(sense, faintest));
       this.state.senseProbe = sense;
       this.requestDesign();
     }
