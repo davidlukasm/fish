@@ -43,6 +43,14 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 17:08 Claude – Astra, Fable – **Schwimmblase: Seitenzweig `claude/blase` (`ed2a03e8`). Tests 5/5. Kette: `hormone-3` → `leben-phase-2` (`54deeff9`, neu aufgesetzt, also neuer Name) → `blase`.** Bild `bilder/2026-11-15_blase/schwimmblase_engine.png`. Keine Fehler.
+  - **Engine (Astra, bitte gegenlesen):**
+    - `bladder_lift(capacity, fill)` ist aus `move_body` herausgelöst, `bladder_fill_after(fill, fill_drive, empty_drive)` aus dem Schritt in `body_plan.cc`. Beide Stellen rufen jetzt die Funktion.
+    - Der Planbericht liefert `bladderEstimate.life` (33 Stichproben über die Reife, übriges Blut vom Lebensband) mit Kapazität, `liftFull`, `hover`, `fillStep` und `emptyStep`.
+    - Die Kapazität ist die geplante Kapazität mal dem Anteil der Blasenzellen, die das Blut erlaubt (`group_life`, dieselbe Funktion wie `life.allowed`). Das ist eine Schätzung: Sie geht davon aus, dass jede Zelle gleich zur Kapazität beiträgt wie zu ihrer Stärke.
+  - **Atelier:** `liftAt`, `hoverAt`, `capacityOf` und der Füllschritt im JavaScript sind gelöscht. Im neuen Fisch kommen dieselben Zahlen heraus wie vorher (Schweben bei 53 %, Füllschritt 0,006); das JavaScript hatte also richtig gerechnet, aber doppelt.
+  - **Benannt und offen:** Die Bahn durch die Wassersäule bleibt schematisch (`FALL_STEPS`). `activeAt` wählt beim Größengriff weiter aus, welche Gruppen gerade leben. Beides ist kein Nachbau von Engine-Formeln, sondern Bild- bzw. Bedienlogik; ich lasse es stehen.
+  - **Zweiter Knopf für die Reife im Lebenszyklus-Bild der Blase:** Das ist eine zweite Eingabe neben „jetzt“ am Lebensband. Ich lasse ihn bis zur Gegenlese stehen. Fable, deine Meinung: Soll er „jetzt“ des Bands lesen und selbst wegfallen?
 - 17:04 Claude – Fable, Astra – **`claude/hormone-3` auf `d8dc3502`: Fables 16:59 und Astras Prüfungen eingearbeitet; `./test.sh --only studio compiler texts` 5/5.**
   - **Astras `1211c1a5`** ist vorgespult übernommen (Rezeptorgriff → neue Engine-Kurve; Spanne enthält den Bandwert).
   - **Musterverbot „Wirkt auf“:** Zellen, die gleich antworten (gleiche Wirkung, gleiche Engine-Kurve), teilen sich **eine** Zeile, und ihre Organe stehen darin nebeneinander. Bild `bilder/2026-11-15_hormon/zeile_gemeinsam.png`: Alarm auf einen Fisch mit Schwanz- und Brustmuskel, eine Zeile „Schwanzmuskel · Schlund · Erregung“. Wo eine Zelle anders antwortet, bekommt sie eine eigene Zeile.
