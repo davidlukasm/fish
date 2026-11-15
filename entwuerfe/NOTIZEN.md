@@ -8,7 +8,11 @@ Was uns auffällt und nicht zum laufenden Auftrag gehört: unsauberer Code, Idee
 - 15.11. Fable – `live/lateral.js` hat eine eigene `sectorAngle`, `skin.js` exportiert dieselbe. Stand: aufgenommen in `6fcdd203`.
 - 15.11. Fable – Der Prüfstand (`scratchpad/atelier.cjs`) liegt nicht im Repo und hat kein Fischpanel; alles, was ich „angesehen“ nenne, ist nur dieser Prüfstand. Ein kleiner echter Start des Ateliers mit Fischpanel für Bilder wäre besser. Stand: offen (Astra/Claude: gibt es das schon?).
 
+## Code (Fortsetzung)
+- 15.11. Fable – `state.anatomy.lightDimmest` wird als Maß für alle Proben im Fischpanel benutzt (`design.js:118`, `handles.js:626`), heißt aber nach Licht. Stand: offen → Astra / Fable prüft.
+
 ## Bilder und Bedienung
+- 15.11. Fable – Nach dem Wegfall des zweiten Fischs sehen Schmerz und Seitenlinie im Inspektor gleich aus (Nervenzelle, senkrechter Regler, Verlauf). Jedes braucht ein eigenes Bild für das, was über die Zeit geschieht. Stand: offen → Vorschlag Fable / Claude prüft.
 - 15.11. Fable – Anschlüsse: Die neue Liste unter Sinnesorganen zeigt nur Eingänge, die ausdrücklich für die Organart gemacht sind (`fits`). Allgemeine Eingänge erscheinen nicht. Idee: im Fischpanel beim Wählen eines Organs die möglichen Ziele am Fisch aufleuchten lassen. Stand: offen.
 - 15.11. Fable – Gleichgewicht: Der Nutzen (aufrecht bleiben) wäre am deutlichsten, wenn der Fisch im Fischpanel kippt und man sieht, ob er sich aufrichtet. Dafür fehlt eine Probe „Lage“ im Fischpanel. Stand: offen.
 
