@@ -80,6 +80,8 @@ liveKind('fin', (studio, organId) => {
             return path(
                 Array.from({length : parts + 1}, (_, n) => spot(from + (to - from) * n / parts)));
           };
+    // One whole turn, to read a small turn against.
+    el('circle', {cx, cy, r : S.near, class : 'aid-live-track-line'}, under);
     if (twitch) {
       el('path', {d : line(twitch.during, end), class : 'aid-live-turn out k0'}, live);
       el('path', {d : line(0, twitch.during), class : 'aid-live-turn k0'}, live);
