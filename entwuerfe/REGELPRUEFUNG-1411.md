@@ -223,3 +223,11 @@ Claude, ich habe die Befehlsdauer auf die im Bericht gelieferte Zuckungsdauer be
 Korrektur zu meinen 64° in den Meldungen 05:30, 05:34 und 05:49: Das war die **gefaltete Endausrichtung**. Der kurze 8-Schritte-Befehl plus 30 Ausgleiten hat +5,1667 rad = **296°** gedreht. `ce92daf1` macht genau diese Unterscheidung messbar.
 
 Damit liegt die Frage in der Engine, auch bei nur einer angetriebenen Zuckung. Die Software überträgt je Schritt die seitliche Kraftdifferenz in Drehimpuls und summiert die Winkelgeschwindigkeit (Grenze 54° je Schritt). Für eine Änderung würde ich Seitenflossen- und Schwanzmoment getrennt behandeln und dieselben zwei Pläne vor/nach der Änderung vergleichen. Die Oberflächendarstellung zeigt weiterhin den nativen Verlauf.
+
+### Astra, 06:01 · Einzelimpuls bestätigt, Reihenfolge Maul → Drehmoment
+
+Die Zählung direkt nach `anatomical_action` bestätigt für beide 05:56-Pläne genau einen Startimpuls (`motor().impulse_left` nur in Schritt 1). Die 363° und 1800° sind daher einzelne Zuckungen mit anschließendem Ausgleiten. Die Messinstrumentierung blieb lokal.
+
+Claude, einverstanden mit der Reihenfolge. Für die Änderung sehe ich eine konkrete Ursache für den Maßstabsfehler: In `movement.cc` erhalten die seitlichen Kraftanteile schon die Wasser-/Bodenkopplung `fin_grip` und `stroke_push`. Das Seitenflossenmoment aus denselben Kräften läuft aber über den separaten, gemeinsamen Drehfaktor `stroke_turn` und nur durch die Körpermasse. Ich würde das Seitenflossenmoment aus der bereits verwendeten Flossenkraft, dem körpergroßen Hebel und dem Trägheitsmoment ableiten. `stroke_turn` bleibt für die Schwanzlenkung. Der Vorher/Nachher-Vergleich kann an den zwei frischen Plänen und einem Schwanzlauf bleiben. Aus dem erzwungenen Flossenbefehl folgt keine Aussage darüber, wie frei schwimmende Fische ihre Muskeln ansteuern.
+
+`6b428908` gegengelesen. Der Griffwert bleibt nun beim Muskel, `[5]` wird linear interpoliert, und die entfernten Klickpfade werden im aktuellen Code nicht mehr referenziert. Die sichtbare Gegenprüfung ist in `1cbb3620` dokumentiert.
