@@ -31,6 +31,7 @@ import {
 import {ICON} from './kit.js';
 import {stimulusKind} from './stimulus.js';
 import {groundOptions, probeGround, probeScents, probeWater, senseProbeSvg} from './probes.js';
+import {lifeBar} from './life_tool.js';
 import {detailMix, nodeOpacity, layerShown} from './layers.js';
 
 const MARKER = Object.freeze({
@@ -240,7 +241,7 @@ export function fishScene(state) {
          '<path id="' + LAYER_ID.line +
          '" d="" class="aid-connecting-line" pointer-events="none"/>' +
          '</svg>' + trashZone() + stimulusKind(state) + '<div data-probe-scents-layer>' +
-         probeScents(state) + groundOptions(state) + '</div>' +
+         probeScents(state) + groundOptions(state) + '</div>' + lifeBar(state) +
          '<div class="aid-hint-legend" data-hint-legend hidden></div>';
 }
 function trashZone() {
