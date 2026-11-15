@@ -632,7 +632,8 @@ export const handleMethods = {
     this.state.senseProbe =
         smellFlow ? {...probe, flow : patch} : {...probe, ...patch, manual : true};
     this.keepInView(probeHandle(
-        smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, faintest, drag.control));
+        smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, faintest, drag.control,
+        this.state));
     this.refreshProbes();
     this.requestDesign();
   },

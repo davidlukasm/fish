@@ -130,7 +130,8 @@ function tailShape(sizes) {
     bottom,
     edge : ' L' + xy(drawn[0][0]) + cubics(drawn) + ' L' + xy(bottom),
     rays,
-    contour
+    contour,
+    hull : drawn.flat()
   };
 }
 const SKIN_LINE = Object.freeze({steps : 24});
@@ -142,7 +143,8 @@ const cubicAt = (points, u) => {
   const w = cubicWeights(u);
   return [ 0, 1 ].map(i => points.reduce((sum, p, k) => sum + w[k] * p[i], 0));
 };
-const SKIN_POINTS = [...SKIN.sides[0], ...SKIN.head, ...SKIN.sides[1] ].flatMap(
+const SKIN_CURVES = [...SKIN.sides[0], ...SKIN.head, ...SKIN.sides[1] ];
+const SKIN_POINTS = SKIN_CURVES.flatMap(
     (segment, k) => Array.from({length : SKIN_LINE.steps + (k ? 0 : 1)},
                                (_, i) => cubicAt(segment, (i + (k ? 1 : 0)) / SKIN_LINE.steps)));
 const SKIN_WIDTH = SKIN_POINTS.filter(([, y ]) => y >= BODY_FRAME.middle)
@@ -153,6 +155,13 @@ export function tailFin(sizes = finSizes()) {
   return {d : shape.contour, rays : shape.rays, root : {x : root[0], y : BODY_FRAME.middle}};
 }
 export const bodyDirection = angle => ({x : -Math.cos(angle), y : Math.sin(angle)});
+// A plane beyond these control points cannot cut the body or a fin.
+export function fishFront(direction, sizes = finSizes()) {
+  const bounds = [...SKIN_CURVES.flat(), ...tailShape(sizes).hull,
+                  ...sideFins(sizes).flatMap(fin => fin.hull) ];
+  return Math.max(...bounds.map(([ x, y ]) =>
+      (x - BODY_MIDDLE.x) * direction.x + (y - BODY_MIDDLE.y) * direction.y));
+}
 export const fieldPoint = (field, angle, r) => {
   const d = bodyDirection(angle);
   return {x : field.cx + d.x * r, y : field.cy + d.y * r};
@@ -240,7 +249,8 @@ function finShape(side, size, F, offset = 0) {
   return {
     d : 'M' + xy(front) + ' Q' + xy(lead) + ' ' + xy(tip) + ' Q' + xy(trail) + ' ' + xy(back) +
             ' Z',
-    rays
+    rays,
+    hull : [ front, lead, tip, trail, back ]
   };
 }
 export const zoomOf = state => state.camera?.zoom ?? 1;

@@ -1284,11 +1284,6 @@
       "attack": "Angreifer",
       "attack-gape": "Maulweite"
     },
-    "attack": {
-      "guard": "Abgewehrt bei ausreichender Reserve",
-      "fits": "Passt ins Maul",
-      "blocked": "Maul zu klein"
-    },
     "strength": "Darmfüllung · Anteil",
     "nutrient": "Nährstoffzufluss · Signalstärke"
   },

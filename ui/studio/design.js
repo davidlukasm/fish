@@ -123,9 +123,9 @@ export const designMethods = {
     else if (faintest > 0 && sense !== this.framedProbe && !this.handleDrag) {
       const flow = probeFlow(sense);
       this.framedProbe = sense;
-      this.keepInView(probeHandle(sense, faintest));
+      this.keepInView(probeHandle(sense, faintest, sense.kind, this.state));
       if (sense.kind === 'attack')
-        this.keepInView(probeHandle(sense, faintest, 'attack-gape'));
+        this.keepInView(probeHandle(sense, faintest, 'attack-gape', this.state));
       if (flow && flow !== sense)
         this.keepInView(probeHandle(flow, faintest));
     }
