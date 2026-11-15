@@ -2,7 +2,7 @@
 // the round map of all scents (tuning.js, scent_latitudes and scent_longitudes), the bigger the
 // more the organ's cells take of them; each type of cells as the patch in which it takes at least
 // half of a scent, with a grip at its place and one on the patch's edge for its width; and the
-// scent or stone chosen in the fish panel as a cross.
+// scent or stone of the fish panel's probe marked at its name.
 import {scentColors, scentNames} from '../../../brain_model.js';
 import {degrees, radians} from '../../../units.js';
 import {TUNING} from '../../../schema.js';
@@ -94,11 +94,13 @@ export function scentMap(svg, {
       el('circle', {cx, cy, r : R - 2, class : look, 'pointer-events' : 'none'}, live);
   });
   // The scents, named; a ball's size is what the cells take of it. A scent near the picture's
-  // edge has its name on the inner side.
+  // edge has its name on the inner side. The scent of the fish panel's probe has its name
+  // marked: the course below is of that scent.
+  const probe = own.probe;
   all.forEach((s, k) => {
-    const [x, y] = pointOf(vector(s)),
-              right = x < MAP.margin || (x >= cx && x <= 2 * cx - MAP.margin),
-              colour = scentColors?.[k] ?? '';
+    const chosen = !probe.stone && probe.scent === k, [ x, y ] = pointOf(vector(s)),
+          right = x < MAP.margin || (x >= cx && x <= 2 * cx - MAP.margin),
+          colour = scentColors?.[k] ?? '';
     el('circle', {
       cx : x,
       cy : y,
@@ -111,15 +113,13 @@ export function scentMap(svg, {
     txt(live, x + (right ? 14 : -14), y + 4, scentNames?.[k] ?? '', {
       'text-anchor' : right ? 'start' : 'end',
       style : 'fill:' + colour,
-      class : 'aid-live-scent-name',
-      opacity : .55 + .45 * most_taken[k],
+      class : 'aid-live-scent-name' + (chosen ? ' on' : ''),
+      opacity : chosen ? 1 : .55 + .45 * most_taken[k],
       'pointer-events' : 'none'
     });
   });
-  el('path', {d : `M8 ${MAP.height - 13} l7 7 m0 -7 l-7 7`, class : 'aid-live-sample small'}, live);
-  txt(live, 20, MAP.height - 6, words.sample, {class : 'aid-live-small'});
-  // A stone has no place among the scents: it lies beside the map, and the sample can lie on it.
-  const probe = own.probe;
+  // A stone has no place among the scents: it lies beside the map, marked like a scent's name
+  // when the fish panel's probe is the stone.
   if (stone) {
     el('path', {
       d : `M${STONE[0] - 9} ${STONE[1] + 4} l3 -9 l8 -3 l7 5 l-2 8 l-10 3 Z`,
@@ -129,11 +129,6 @@ export function scentMap(svg, {
     txt(live, STONE[0], STONE[1] + 22, words.stone,
         {'text-anchor' : 'middle', class : 'aid-live-small'});
   }
-  // The sample: a cross under the grips, its arms long enough to show round one that lies on it.
-  const [sx, sy] = probe.stone ? STONE : pointOf(vector(probe)), cross = el('g', {}, live);
-  el('circle', {cx : sx, cy : sy, r : 11, fill : 'transparent'}, cross);
-  el('path', {d : `M${sx - 8} ${sy - 8} l16 16 m0 -16 l-16 16`, class : 'aid-live-sample'}, cross);
-  cross.setAttribute('pointer-events', 'none');
   // The types' grips: at their place; the chosen one's width on its patch's edge, and its (×).
   cells.forEach((cell, i) => {
     const on = i === own.chosen, [ x, y ] = pointOf(vector(cell));

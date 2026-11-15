@@ -262,7 +262,7 @@ liveKind('barbels', (studio, organId) => {
       own,
       cells,
       stone : true,
-      words : {sample : word('sample'), stone : word('stone')},
+      words : {stone : word('stone')},
       most : MOST,
       place : (i, tuning) => updateCenter(studio.state.document, cells[i].id, tuning),
       width : (i, qwidth) => updateCenter(studio.state.document, cells[i].id, {qwidth}),

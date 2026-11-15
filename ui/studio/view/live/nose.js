@@ -102,7 +102,6 @@ liveKind('nose', (studio, organId) => {
       own,
       cells,
       stone : false,
-      words : {sample : word('sample')},
       most : MOST,
       place : (i, tuning) => updateCenter(studio.state.document, cells[i].id, tuning),
       width : (i, qwidth) => updateCenter(studio.state.document, cells[i].id, {qwidth}),
