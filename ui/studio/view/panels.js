@@ -35,6 +35,7 @@ import {
   VALUE_DIGITS
 } from './kit.js';
 import {pairingChoice, portsSection, regionSettings, slotsSection} from './circuit.js';
+import {organPorts} from '../model/regions.js';
 import {strandInspector} from './nerve_inspector.js';
 import {chemistry, hormoneInspector} from './substances.js';
 import {learningInspector} from './learning.js';
@@ -213,9 +214,13 @@ function organInspector(state, organ) {
       (isRegion(organ) && state.selected?.kind !== 'center'
            ? ''
            : cellDevelopment(state, center, LIVE_LIFE.has(organ.type))) +
-      // A sense cell takes no contacts and has nothing to set about them; where it leads, its
-      // ports above and the fish panel's lines show.
-      (center?.role === 'sensor'
+      // A sense cell takes no contacts and has nothing to set about them; a working cell's one
+      // limit is set at its incoming lines, where the organ has them (circuit.js, portsSection).
+      // Where the organ leads and what leads to it, its ports above and the fish panel's lines
+      // show.
+      (center?.role === 'sensor' ||
+               (center?.role === 'motor' &&
+                organPorts(state.document, organ, state.sites).some(port => port.dir === 'in'))
            ? ''
            : contactPlan(state, isRegion(organ) && state.selected?.kind !== 'center' ? organ.centers
                                                                                      : [ center ]));
