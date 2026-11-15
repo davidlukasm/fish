@@ -2,6 +2,7 @@
 #include "parallel.hh"
 #include "waterborne.hh"
 #include "physiology.hh"
+#include "body_plan.hh"
 #include <numeric>
 #include <map>
 #include <queue>
@@ -76,7 +77,7 @@ Field::TipContact Field::tip_contact(double x, double y, double reach, std::uint
   bool touched = false;
   x = wrap_x(x);
   const auto touches = [&](double ox, double oy, double radius) {
-    return std::hypot(delta_x(ox - x), oy - y) - radius <= reach;
+    return barbel_reaches({delta_x(ox - x), oy - y}, radius, reach);
   };
   feeding_.grid.nearby(x, y, reach + feeding_.indexed_food_radius, [&](std::uint32_t j) {
     const auto &q = feeding_.pieces[j];

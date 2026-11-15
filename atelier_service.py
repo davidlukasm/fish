@@ -299,6 +299,7 @@ def learning_context_line(blood, learning):
             raise Refusal("studio.errors.invalidProbe")
         values.extend(learning.get(key) for key in ("group", "delay", "pre", "post", "teaching",
                                                     "prediction"))
+        values.append(learning.get("interval", 0))
     flags = [int(blood is not None), int(learning is not None)]
     return " ".join(number(value) for value in [*flags, *values]) + "\n"
 

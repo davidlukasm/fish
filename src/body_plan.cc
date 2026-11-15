@@ -1042,6 +1042,15 @@ static Point lateral_offset(int k, double radius, double angle) {
   const double c = std::cos(angle), s = std::sin(angle);
   return {p.x * c - p.y * s, p.x * s + p.y * c};
 }
+double barbel_stimulus(const BrainInterface::Receptor &r, const Field::TipContact &contact,
+                       double exposure) {
+  double taste = 0;
+  for (int k = 0; k < odor_kind::count; ++k)
+    taste += contact.taste[k] * r.scents[k];
+  // The receptive width, which a taste cell does not need, sets how much it feels instead.
+  return exposure * ((1 - r.spatial_width) * std::min(1., taste) +
+                     r.spatial_width * contact.felt);
+}
 static SensoryFrame internal_sensory_frame(const Body &b, double gonad) {
   SensoryFrame f;
   f.gonad = gonad;

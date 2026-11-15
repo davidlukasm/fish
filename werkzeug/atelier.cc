@@ -347,6 +347,16 @@ void sense_report(const field::Substrate &t,
   const double bearing = fishsim::radians(scene.bearing), radius = fishsim::body_radius(body);
   const fishsim::PhysiologyParameters physiology{};
   std::vector<float> answers(interface->sensory.size(), 0);
+  const auto stirred = [&](const fishsim::BrainInterface::Receptor &r) {
+    const int sense = r.dominant_sense();
+    return scene.kind == sense_scene::gut ? sense == field::Intake || sense == field::InnerPressure
+           : scene.kind == sense_scene::smell   ? sense == field::Odor
+           : scene.kind == sense_scene::taste   ? sense == field::Taste
+           : scene.kind == sense_scene::flow    ? sense == field::Flow && !r.inner
+           : scene.kind == sense_scene::balance ? sense == field::Flow && r.inner
+           : scene.kind == sense_scene::touch   ? sense == field::Touch
+                                                : sense == field::Damage;
+  };
   if (scene.kind == sense_scene::gut) {
     fishsim::SensoryFrame frame;
     frame.satiety = scene.strength;
@@ -380,81 +390,79 @@ void sense_report(const field::Substrate &t,
         answers[i] = fishsim::receptor_response(
             r, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
     }
-  } else {
-    if (scene.kind == sense_scene::smell) {
-      fishsim::SensoryProbe probe;
-      probe.kind = fishsim::probe_kind::smell;
-      probe.remaining = 1;
-      probe.x = body.x + scene.distance * radius * std::cos(bearing);
-      probe.y = body.y + scene.distance * radius * std::sin(bearing);
-      probe.scents.fill(0);
-      probe.scents[scene.scent] = 1;
-      body.set_probe(probe);
-      body.set_inspection(true, false, -1);
-    } else if (scene.kind == sense_scene::taste) {
-      const double x = body.x + scene.distance * radius * std::cos(bearing),
-                   y = body.y + scene.distance * radius * std::sin(bearing);
-      constexpr double object_radius = fishsim::sensory_probe::radius;
-      std::vector<fishsim::VisibleBody> objects;
-      if (scene.scent < 0)
-        world->insert_obstacle({x, y, object_radius});
-      else {
-        fishsim::VisibleBody object{x, y, 0, 0};
-        object.kind = fishsim::food_kind::feed;
-        object.radius = object_radius;
-        object.odor_channel = scene.scent;
-        objects.push_back(object);
-      }
-      world->index(objects);
-      std::cout << ",\"barbelProbe\":[";
-      for (int side = 0; side < 2; ++side) {
-        if (interface->anatomy[fishsim::anatomy_column::barbel_left + side] <= 0) {
-          std::cout << (side ? ",null" : "null");
-          continue;
-        }
-        const auto tip = fishsim::barbel_tip(body, *interface, side);
-        const auto contact =
-            world->tip_contact(tip.x, tip.y, fishsim::barbel::reach, body.identity);
-        std::cout << (side ? "," : "") << "{\"felt\":" << contact.felt << ",\"taste\":[";
-        for (int k = 0; k < fishsim::odor_kind::count; ++k)
-          std::cout << (k ? "," : "") << contact.taste[k];
-        std::cout << "]}";
-      }
-      std::cout << ']';
-    } else if (scene.kind == sense_scene::touch)
+  } else if (scene.kind == sense_scene::touch || scene.kind == sense_scene::wound) {
+    if (scene.kind == sense_scene::touch)
       fishsim::record_touch(body, std::cos(bearing), std::sin(bearing), scene.strength);
     else
       fishsim::harm_body(body, scene.strength, fishsim::death_reason::injury, bearing);
+    const auto frame = fishsim::prepare_sensory_frame(body);
+    for (auto i : interface->active_sensory) {
+      const auto &r = interface->sensory[i];
+      if (stirred(r))
+        answers[i] = std::clamp(fishsim::anatomical_sensor(body, r, frame, 0, nullptr, physiology),
+                                0.f, 1.f);
+    }
+  } else if (scene.kind == sense_scene::taste) {
+    const double x = body.x + scene.distance * radius * std::cos(bearing),
+                 y = body.y + scene.distance * radius * std::sin(bearing);
+    std::array<fishsim::Field::TipContact, fishsim::BrainInterface::SIDES> tips{};
+    std::cout << ",\"barbelProbe\":[";
+    for (std::size_t side = 0; side < tips.size(); ++side) {
+      const auto tip = fishsim::barbel_tip(body, *interface, int(side));
+      auto &contact = tips[side];
+      if (fishsim::barbel_reaches({x - tip.x, y - tip.y}, fishsim::sensory_probe::radius,
+                                  fishsim::barbel::reach)) {
+        contact.felt = 1;
+        if (scene.scent >= 0)
+          contact.taste[scene.scent] = 1;
+      }
+      std::cout << (side ? "," : "");
+      if (interface->anatomy[fishsim::anatomy_column::barbel_left + side] <= 0) {
+        std::cout << "null";
+        continue;
+      }
+      std::cout << "{\"felt\":" << contact.felt << ",\"taste\":[";
+      for (std::size_t k = 0; k < contact.taste.size(); ++k)
+        std::cout << (k ? "," : "") << contact.taste[k];
+      std::cout << "]}";
+    }
+    std::cout << ']';
+    for (auto i : interface->active_sensory) {
+      const auto &r = interface->sensory[i];
+      if (stirred(r)) {
+        const auto exposure = fishsim::birth_exposure(body, r.time_steps);
+        const auto input = fishsim::barbel_stimulus(r, tips[r.lateral >= 0], exposure);
+        answers[i] = std::clamp(fishsim::receptor_response(r, input), 0.f, 1.f);
+      }
+    }
+  } else {
+    fishsim::SensoryProbe probe;
+    probe.kind = fishsim::probe_kind::smell;
+    probe.remaining = 1;
+    probe.x = body.x + scene.distance * radius * std::cos(bearing);
+    probe.y = body.y + scene.distance * radius * std::sin(bearing);
+    probe.scents.fill(0);
+    probe.scents[scene.scent] = 1;
+    body.set_probe(probe);
+    body.set_inspection(true, false, -1);
     fishsim::Genome g;
     g.interface = interface;
     fishsim::sense_generated(body, g, *world, nullptr, false, physiology);
-    if (scene.kind == sense_scene::smell) {
-      std::cout << ",\"noseProbe\":[";
-      bool first = true;
-      for (const auto &sample : body.perception().nose_samples) {
-        namespace C = fishsim::nose_sample_column;
-        std::cout << (first ? "[" : ",[");
-        for (int c = 0; c < fishsim::odor_kind::count; ++c)
-          std::cout << (c ? "," : "") << sample[C::odor + c] * (1 - sample[C::contact]);
-        std::cout << ']';
-        first = false;
-      }
+    std::cout << ",\"noseProbe\":[";
+    bool first = true;
+    for (const auto &sample : body.perception().nose_samples) {
+      namespace C = fishsim::nose_sample_column;
+      std::cout << (first ? "[" : ",[");
+      for (int c = 0; c < fishsim::odor_kind::count; ++c)
+        std::cout << (c ? "," : "") << sample[C::odor + c] * (1 - sample[C::contact]);
       std::cout << ']';
+      first = false;
     }
+    std::cout << ']';
     const auto &buffer = body.perception().sensor_buffer;
     for (std::size_t i = 0; i < answers.size() && i < buffer.size(); ++i)
       answers[i] = buffer[i];
   }
-  const auto stirred = [&](const fishsim::BrainInterface::Receptor &r) {
-    const int sense = r.dominant_sense();
-    return scene.kind == sense_scene::gut ? sense == field::Intake || sense == field::InnerPressure
-           : scene.kind == sense_scene::smell   ? sense == field::Odor
-           : scene.kind == sense_scene::taste   ? sense == field::Taste
-           : scene.kind == sense_scene::flow    ? sense == field::Flow && !r.inner
-           : scene.kind == sense_scene::balance ? sense == field::Flow && r.inner
-           : scene.kind == sense_scene::touch   ? sense == field::Touch
-                                                : sense == field::Damage;
-  };
   std::cout << ",\"senseProbe\":[";
   for (std::size_t i = 0; i < groups.size(); ++i) {
     double sum = 0;
@@ -1336,8 +1344,7 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
     sense_spread_report(t, *g.interface, sample, *binding, groups);
   }
   std::optional<fishsim::Ecosystem> probe_tank;
-  if (sight || (sense && !attack && !fins && !mouth && sense->kind != sense_scene::gut &&
-                sense->kind != sense_scene::flow && sense->kind != sense_scene::balance))
+  if (sight || (sense && sense->kind == sense_scene::smell))
     probe_tank.emplace(SIGHT_TANK_SEED);
   if (sight)
     sight_report(t, g.interface, groups, *sight, *probe_tank);

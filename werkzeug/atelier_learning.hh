@@ -7,7 +7,7 @@ namespace atelier {
 struct LearningContext {
   struct Probe {
     int group = -1;
-    double delay = 0;
+    double delay = 0, interval = 0;
     float pre = 1, post = 1, teaching = 1, prediction = 0;
   };
   field::Hormones levels{};
@@ -34,8 +34,10 @@ LearningContext read_learning_context(std::istream &request) {
   if (learning) {
     auto &probe = context.probe.emplace();
     ensure(bool(in >> probe.group >> probe.delay >> probe.pre >> probe.post >> probe.teaching >>
-                probe.prediction) &&
+                probe.prediction >> probe.interval) &&
                probe.group >= 0 && std::isfinite(probe.delay) && probe.delay >= 0 &&
+               std::isfinite(probe.interval) &&
+               (probe.interval == 0 || (probe.interval >= 1 && probe.delay < probe.interval)) &&
                between(probe.pre, -1, 1) && between(probe.post, -1, 1) &&
                between(probe.teaching, -1, 1) && reading(probe.prediction),
            "invalid learning probe");
@@ -61,6 +63,28 @@ field::HormoneReceptor planned_receptor(const Receptor &plan, int effect) {
         float(std::cos(angle)), float(std::sin(angle)), plan.width);
   }
   return receptor;
+}
+double kept_between(const LearningContext::Probe &probe, float initial_trace, float trace_keep,
+                    float time, float level) {
+  namespace P = field::plasticity;
+  const double usage_keep = P::usage_keep(time), r = trace_keep;
+  const double coactivity =
+      level * std::max(0.f, probe.pre) * std::max(0.f, probe.post);
+  const double trace_use = (1 - level) * std::abs(initial_trace);
+  const auto series = [](double keep, double steps) {
+    return -std::expm1(std::log(keep) * steps) / (1 - keep);
+  };
+  const auto usage_through = [&](double steps) {
+    // The use follows the decaying trace. Summing their geometric convolution avoids stepping
+    // the contact. The sustained share is used only at the cue.
+    const double used = series(usage_keep, steps),
+                 traced = (usage_keep * used - r * series(r, steps)) / (usage_keep - r);
+    return (1 - usage_keep) * (trace_use * traced + coactivity * used);
+  };
+  // The second cue supplies the same early contribution that falls before the first teacher.
+  const double mean_use = usage_through(probe.interval + probe.delay) / probe.interval;
+  return std::pow(P::contact_retention(float(std::clamp(mean_use, 0., 1.)), time, 0.f),
+                  probe.interval);
 }
 void learning_group_report(const Group &group, const field::Neuron *cell,
                            const LearningContext &context, int index) {
@@ -95,11 +119,12 @@ void learning_group_report(const Group &group, const field::Neuron *cell,
   const auto forget = [steps](float use) {
     return 1 - P::contact_retention(use, float(steps), 0.f);
   };
+  const float mode = field::cell_class(*cell).mode,
+              level = std::clamp(2 * cell->parameters.quality2, 0.f, 1.f);
   std::cout << "{\"rate\":" << rate << ",\"traceKeep\":" << keep
             << ",\"traceSteps\":" << steps << ",\"traceFast\":" << fast
             << ",\"forgetUsed\":" << forget(1.f) << ",\"forgetUnused\":" << forget(0.f)
-            << ",\"mode\":" << field::cell_class(*cell).mode
-            << ",\"level\":" << std::clamp(2 * cell->parameters.quality2, 0.f, 1.f)
+            << ",\"mode\":" << mode << ",\"level\":" << level
             << ",\"limits\":{\"electrical\":" << cell->electrical_limit
             << ",\"teaching\":" << cell->teaching_limit << '}';
   if (context.probe && context.probe->group == index) {
@@ -115,6 +140,28 @@ void learning_group_report(const Group &group, const field::Neuron *cell,
               << ",\"step1\":" << rate * P::teaching_share(surprise, at_teaching, denominator)
               << ",\"step2\":"
               << rate * P::teaching_share(surprise - expected, at_teaching, denominator);
+    // The drawn contacts start at half their limit, are excitatory and have no prior history.
+    const float limit = cell->electrical_limit, start = limit * .5f,
+                positive = std::max(0.f, mode), negative = std::max(0.f, -mode),
+                comp = .5f * (1 + effects[field::Competition]),
+                evoked = std::max(0.f, probe.post);
+    const auto association = [&](float pre) {
+      const float contrast = P::contrast_association(positive, comp, negative, probe.post, pre,
+                                                     start, 1.f);
+      const float sustained = evoked * P::sustained_association(
+                                           positive, comp, negative, std::max(0.f, pre), start,
+                                           evoked, 1.f);
+      return std::clamp(start + rate * ((1 - level) * contrast + level * sustained), 0.f, limit) -
+             start;
+    };
+    std::cout << ",\"coactiveChange\":" << association(probe.pre)
+              << ",\"quietChange\":" << association(0);
+    if (probe.interval > 0) {
+      const double kept = kept_between(probe, initial, keep, float(steps), level),
+                   quiet_kept = std::pow(P::contact_retention(0.f, float(steps), 0.f),
+                                          probe.interval);
+      std::cout << ",\"keptBetween\":" << kept << ",\"quietKeptBetween\":" << quiet_kept;
+    }
   }
   std::cout << '}';
 }
