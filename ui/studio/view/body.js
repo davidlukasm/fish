@@ -41,7 +41,7 @@ import {
   tailFin,
   zoomOf
 } from './frame.js';
-import {ANATOMY, BODY_UNIT, FIN_STROKE} from '../../schema.js';
+import {ANATOMY, BODY_UNIT, FIN_STROKE, MOUTH_CYCLE} from '../../schema.js';
 import {gutTurns, jawReach, lipWidth, toothForm} from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {t} from '../../strings.js';
@@ -677,25 +677,28 @@ function cheeksSvg({at, rx, ry, suction}) {
                        headTitle('studio.head.mouth') + '</ellipse>'
                  : '';
 }
-function jawsSvg({at, ry, reach, bite}) {
+function jawsSvg({at, ry, reach, bite}, opening) {
   const H = HEAD;
   return [ -1, 1 ]
       .map(
           side =>
               '<path class="aid-head-jawbone" data-part="jaw" data-head-control="jaw" data-side="' +
-              side + '" d="M' + fixed(at.x) + ' ' + fixed(at.y + side * ry) + ' Q' +
-              fixed(at.x + reach / 2) + ' ' + fixed(at.y + side * (ry + H.jaw_spread * H.jaw_bow)) +
-              ' ' + fixed(at.x + reach) + ' ' + fixed(at.y + side * (ry + H.jaw_spread)) +
+              side + '" data-mouth-row="' + fixed(side * ry) + '" d="M' +
+              fixed(at.x) + ' ' + fixed(at.y + side * opening * ry) + ' Q' +
+              fixed(at.x + reach / 2) + ' ' +
+              fixed(at.y + side * (opening * ry + H.jaw_spread * H.jaw_bow)) + ' ' +
+              fixed(at.x + reach) + ' ' + fixed(at.y + side * (opening * ry + H.jaw_spread)) +
               '" style="stroke-width:' + fixed(H.jaw_width[0] + H.jaw_width[1] * bite) + '">' +
               headTitle('studio.head.jaw') + '</path>')
       .join('');
 }
-const mouthSvg = ({at, rx, ry, suction}) =>
+const mouthSvg = ({at, rx, ry, suction}, opening) =>
     '<ellipse class="aid-head-mouth" data-part="mouth" data-head-control="mouth" cx="' +
-    fixed(at.x) + '" cy="' + fixed(at.y) + '" rx="' + fixed(rx) + '" ry="' + fixed(ry) +
+    fixed(at.x) + '" cy="' + fixed(at.y) + '" rx="' + fixed(rx) +
+    '" data-mouth-radius="' + fixed(ry) + '" ry="' + fixed(ry * opening) +
     '" style="stroke-width:' + fixed(HEAD.lip * lipWidth(suction) / lipWidth(0)) + '">' +
     headTitle('studio.head.mouth') + '</ellipse>';
-function teethSvg(columns, {at, rx, ry}) {
+function teethSvg(columns, {at, rx, ry}, opening) {
   const H = HEAD, bluntness = columns[ANATOMY.blunt_teeth] ?? BODY_UNIT.trait_middle;
   const full = toothForm(1, bluntness).reach;
   let html = '';
@@ -708,10 +711,11 @@ function teethSvg(columns, {at, rx, ry}) {
     for (let i = 0; i < form.count; ++i) {
       const angle = Math.PI - side * H.tooth_arc * (i + .5) / form.count, c = Math.cos(angle),
             s = Math.sin(angle);
-      const base = {x : at.x + c * rx, y : at.y + s * ry};
+      const base = {x : at.x + c * rx, y : at.y + s * ry * opening};
       const point = (along, inward) =>
           fixed(base.x - s * along - c * inward) + ' ' + fixed(base.y + c * along - s * inward);
-      html += '<path class="aid-head-tooth" d="M' + point(-half, 0) + ' L' +
+      html += '<path class="aid-head-tooth" data-mouth-row="' + fixed(s * ry) + '" d="M' +
+              point(-half, 0) + ' L' +
               point(-half * form.flat, height) + ' L' + point(half * form.flat, height) + ' L' +
               point(half, 0) + 'Z">' + headTitle('studio.head.jaw') + '</path>';
     }
@@ -723,6 +727,7 @@ function headSvg(state) {
   const mouth = mouthShape(columns);
   const eats = columns[ANATOMY.suction_strength] > 0 || columns[ANATOMY.aggression] > 0 ||
                columns[ANATOMY.mouth] > 0, pumps = columns[ANATOMY.gill_strength] > 0;
+  const opening = eats || pumps ? MOUTH_CYCLE.rest : 1;
   const water = mouth.suction || pumps
                     ? '<g data-mouth-flow opacity="' + (mouth.suction ? 1 : 0) + '">' +
                           intakeSvg(mouth) + '</g>'
@@ -730,19 +735,26 @@ function headSvg(state) {
   return {
     inside : barbelsSvg(columns, state.anatomy?.barbelPlaces) + throatSvg(mouth) +
              water + cheeksSvg(mouth),
-    opening : '<g data-mouth-opening>' + (eats ? jawsSvg(mouth) : '') + mouthSvg(mouth) +
-              teethSvg(columns, mouth) + '</g>'
+    opening : '<g data-mouth-opening="' + fixed(opening) + '">' +
+              (eats ? jawsSvg(mouth, opening) : '') + mouthSvg(mouth, opening) +
+              teethSvg(columns, mouth, opening) + '</g>'
   };
 }
 export function paintMouthStep(svg, sample) {
   if (!svg || !sample)
     return;
-  const [opening, flow] = sample, y = SNOUT_TIP.y;
+  const [opening, flow] = sample;
   const jaw = svg.querySelector('[data-mouth-opening]');
   const water = svg.querySelector('[data-mouth-flow]');
-  const pose = `translate(0 ${y}) scale(1 ${fixed(opening)}) translate(0 ${-y})`;
-  if (jaw && jaw.getAttribute('transform') !== pose)
-    jaw.setAttribute('transform', pose);
+  const pose = fixed(opening);
+  if (jaw && jaw.getAttribute('data-mouth-opening') !== pose) {
+    jaw.setAttribute('data-mouth-opening', pose);
+    const lip = jaw.querySelector('[data-mouth-radius]');
+    lip.setAttribute('ry', fixed(lip.dataset.mouthRadius * opening));
+    const offset = opening - MOUTH_CYCLE.rest;
+    for (const row of jaw.querySelectorAll('[data-mouth-row]'))
+      row.setAttribute('transform', `translate(0 ${fixed(row.dataset.mouthRow * offset)})`);
+  }
   const opacity = fixed(flow);
   if (water && water.getAttribute('opacity') !== opacity) {
     water.setAttribute('opacity', opacity);

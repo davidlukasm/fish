@@ -18,6 +18,7 @@ import {MOTOR_KIND, BODY_UNIT, ATELIER_LIMITS} from '../../schema.js';
 import {BODY_FRAME, sideOf} from '../model/layout.js';
 import {organLocation, gutShape} from './places.js';
 import {gutTurns} from '../../fish_organs.js';
+import {mouthShare} from '../../fish_forms.js';
 import {muscleShape} from './muscles.js';
 import {feltEnd, spineHandles} from './body.js';
 import {steadyAt, zoomOf, SNOUT_TIP, HEAD} from './frame.js';
@@ -69,10 +70,12 @@ export function anatomyHandles(state, id = state.selected?.id) {
         side * 80);
   }
   if (code === MOTOR_KIND.aggression) {
+    const jaw = muscleTrait(state.document, code, 'jaw_length', state.sites);
+    const rim = HEAD.mouth[1] * mouthShare(jaw) / mouthShare(BODY_UNIT.trait_middle);
     add('jaw_length',
         {x : SNOUT_TIP.x + HEAD.jaw_back, y : BODY_FRAME.middle + side * HEAD.jaw_spread},
-        muscleTrait(state.document, code, 'jaw_length', state.sites), 'x', 90);
-    add('blunt_teeth', {x : SNOUT_TIP.x + 8, y : BODY_FRAME.middle + side * HEAD.mouth[1] * .55},
+        jaw, 'x', 90);
+    add('blunt_teeth', {x : SNOUT_TIP.x + 8, y : SNOUT_TIP.y + side * (rim + GRIP.hit / zoomOf(state))},
         muscleTrait(state.document, code, 'blunt_teeth', state.sites), 'y', side * 40);
   }
   if (code === MOTOR_KIND.forward && shape)
