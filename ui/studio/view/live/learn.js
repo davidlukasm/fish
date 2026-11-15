@@ -133,33 +133,42 @@ liveKind('learn', (studio, centerId) => {
     // A contact through the two rounds: what firing together does to it at the sender's firing
     // (`fires`), the teacher's step (`steps`), and between the rounds the share of it that stays
     // (`stays`) - the engine's values at those moments; between them the line runs evenly down
-    // to what stays, and on at the same pace after the second round.
-    const course = (fires, steps, stays) => {
-      const pts = [], keep = Math.pow(stays, 2 / S.round);
+    // to what stays. It ends with the second teacher: the engine says nothing of what follows.
+    // Each jump is drawn in the colour of what causes it.
+    const last = S.round + probe.teach + 6, course = (fires, steps, stays) => {
+      const pts = [], jumps = [], keep = Math.pow(stays, 2 / S.round);
       let w = start;
-      for (let st = 0; st <= n; st += 2) {
-        const at = st % S.round, second = st >= S.round;
+      const jump = (st, by, cause) => {
+        const to = clamp(w + by, 0, limit);
+        if (to !== w)
+          jumps.push({d : `M${X(st)} ${Y(w)} V${Y(to)}`, cause});
+        w = to;
+      };
+      for (let st = 0; st <= last; st += 2) {
+        const at = st % S.round;
         if (at >= probe.cue && at < probe.cue + 2)
-          w += fires;
+          jump(st, fires, 'cue');
         if (at >= probe.teach && at < probe.teach + 2)
-          w += steps[second ? 1 : 0];
+          jump(st, steps[st >= S.round ? 1 : 0], 'teach');
         else
           w *= keep;
-        w = clamp(w, 0, limit);
         pts.push([ X(st), Y(w) ]);
       }
-      return pts;
+      return {pts, jumps};
     };
-    const quiet = known ? course(L.quietChange, [ 0, 0 ], L.quietKeptBetween) : [],
-          weight = known ? course(L.coactiveChange, [ L.step1, L.step2 ], L.keptBetween) : [];
     if (!known) {
       el('path', {d : `M${S.L} ${Y(start)} H${S.R}`, class : 'aid-live-turn missing'}, live);
       return;
     }
+    const still = course(L.quietChange, [ 0, 0 ], L.quietKeptBetween),
+          learnt = course(L.coactiveChange, [ L.step1, L.step2 ], L.keptBetween), quiet = still.pts,
+          weight = learnt.pts;
     el('path', {d : path(quiet), class : 'aid-live-quiet'}, live);
     el('path', {d : path(weight), class : 'aid-live-weight'}, live);
-    txt(live, S.R, quiet.at(-1)[1] + 10, word('quiet'),
-        {'text-anchor' : 'end', class : 'aid-live-small'});
+    for (const {d, cause} of [...still.jumps, ...learnt.jumps])
+      el('path', {d, class : cause === 'cue' ? 'aid-live-cue jump k0' : 'aid-live-teach jump'},
+         live);
+    txt(live, quiet.at(-1)[0] + 4, quiet.at(-1)[1] + 3, word('quiet'), {class : 'aid-live-small'});
     // How fast the cell learns: the grip on the first step's top. Up makes it learn faster.
     const [wx, wy] = weight[Math.min(weight.length - 1, Math.ceil((probe.teach + 12) / 2))];
     drag(svg,
