@@ -129,6 +129,7 @@ function fieldClips(g, id) {
                          fixed(2 * c)} 0a${fixed(c)} ${fixed(c)} 0 1 0 ${fixed(-2 * c)} 0Z`);
 }
 const RAY_FAINTEST = .15;
+const rayOpacity = answer => fixed(RAY_FAINTEST + (1 - RAY_FAINTEST) * answer);
 export function organCells(state, organ) {
   const sight = state.anatomy?.sight;
   if (!sight?.receptors)
@@ -151,7 +152,7 @@ function seenLight(state, organ, g) {
   if (!sight?.bands || !g.world)
     return '';
   const raster = retinalRaster(sight)[sideIndex(organ.side)], step = FULL_TURN / VISION.pixels;
-  let html = '<g class="aid-vision-seen">';
+  let html = '';
   raster.forEach((pixel, k) => {
     if (!pixel[PIXEL.width] || pixel[PIXEL.distance] <= 0)
       return;
@@ -161,7 +162,7 @@ function seenLight(state, organ, g) {
     html +=
         `<path d="${sector(g, k * step, (k + 1) * step, depth)}" fill="rgb(${colour.join(' ')})"/>`;
   });
-  return html + '</g>';
+  return html;
 }
 const lightAt = (state, organ, g) => {
   const probe = state.sightProbe;
@@ -261,11 +262,12 @@ function cellRays(state, organ, g, profile, rays, chosenNode, reach) {
   for (const cell of cells) {
     const angle = degrees(cell.receptor[RECEPTOR.angle]);
     html +=
-        `<path d="M${pointText(g.origin)} L${pointText(reach.end(angle))}" class="aid-vision-ray${
+        `<path d="M${pointText(g.origin)} L${pointText(reach.end(angle))}" data-vision-neuron="${
+            cell.receptor[RECEPTOR.neuron]}" class="aid-vision-ray${
             cell.center.id === chosenNode ? ' chosen' : ''}" style="stroke:${
             profileColor(
                 organ.field.profiles.find(p => p.id === cell.center.profile) ??
-                profile)};opacity:${fixed(RAY_FAINTEST + (1 - RAY_FAINTEST) * cell.answer)}"/>`;
+                profile)};opacity:${rayOpacity(cell.answer)}"/>`;
   }
   if (!cells.length)
     for (const ray of rays)
@@ -329,10 +331,32 @@ export function visionFan(state, organ) {
   if (!selected)
     return open + field + '</g></g></g>';
   const middle = rays[Math.floor(rays.length / 2)];
-  return open + field + seenLight(state, organ, g) +
+  return open + field + '<g class="aid-vision-seen">' + seenLight(state, organ, g) + '</g>' +
          `<path d="${reach.outline(middle.left, middle.right)}" class="aid-vision-resolution"/>` +
          cellRays(state, organ, g, profile, rays, chosenNode, reach) + '</g></g>' +
          fieldHandles(state, organ, g, near, middle) + testLight(state, organ, g) + '</g>';
+}
+// Moving a probe changes the light and the answers. Keep the existing field and grips once the
+// engine has supplied their geometry.
+export function refreshVisionAnswers(state, organ, fan) {
+  if (!fan.classList.contains('selected'))
+    return;
+  const geometry = visionGeometry(state, organ), seen = fan.querySelector('.aid-vision-seen');
+  const cells = organCells(state, organ), rays = fan.querySelectorAll('.aid-vision-ray');
+  const light = fan.querySelector('.aid-sight-light'), markup = testLightMarkup(state, organ);
+  if (!geometry || !seen || !!light !== !!markup || cells.length !== rays.length ||
+      cells.some(({receptor}, i) => Number(rays[i].dataset.visionNeuron) !== receptor[RECEPTOR.neuron])) {
+    fan.outerHTML = visionFan(state, organ);
+    return;
+  }
+  seen.innerHTML = seenLight(state, organ, geometry);
+  cells.forEach(({answer}, i) => {
+    const opacity = rayOpacity(answer);
+    if (rays[i].style.opacity !== opacity)
+      rays[i].style.opacity = opacity;
+  });
+  if (light)
+    light.outerHTML = markup;
 }
 // The other colour types of the eye, to sit faintly in the same wheel; a click on one chooses it.
 function otherTypes(organ, chosen, definition) {

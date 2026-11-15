@@ -1,5 +1,6 @@
 // What the live inspectors of the skin senses share: a fish seen from above and from the side,
 // and the skin's sectors.
+import {groupReport} from '../../model/document.js';
 import {skinProbeBearing} from '../../model/probe.js';
 import {clamp, el} from './kit.js';
 
@@ -26,25 +27,18 @@ export function fishAbove(parent, x, y, s) {
 }
 // A sector's place round the body, in degrees from the snout to the fish's right
 // (simulation_types.hh, sector_angle), and the sector a direction falls in.
-export const SECTORS = 16;
 // An angle in degrees brought into -180..180.
 export const turnTo = a => ((a + 540) % 360) - 180;
-export const sectorAngle = (k, count = SECTORS) => -180 + (k + .5) * 360 / count;
-export const sectorOf = (angle, count = SECTORS) =>
+export const sectorAngle = (k, count) => -180 + (k + .5) * 360 / count;
+export const sectorOf = (angle, count) =>
     clamp(Math.floor((turnTo(angle) + 180) * count / 360), 0, count - 1);
-// Where a group of skin cells lies, in degrees: the plan's report of its cells' directions
-// (anatomy.felt: direction and half width of each cell, in radians); null before the plan has
-// answered.
-export const placeOf = (studio, cell) =>
-    skinProbeBearing(studio.state.document, studio.state.anatomy, cell.id) ?? 90;
-// The weights of skin cells on the sectors: a wedge round their place, half as wide as `half`
-// degrees, brought to a sum of one (body_plan.cc, contact_weights).
-export function wedge(place, half, count = SECTORS) {
-  const raw = Array.from(
-            {length : count},
-            (_, k) => Math.max(0, 1 - Math.abs(turnTo(sectorAngle(k, count) - place)) / half)),
-        sum = raw.reduce((a, b) => a + b, 0);
-  return raw.map(v => sum > 0 ? v / sum : 0);
+// One profile for the group, using the sector weights of its individual receptors.
+export function skinSectors(state, cellId) {
+  const report = state.outlinePreview ?? state.anatomy;
+  const cells = groupReport(state.document, report, 'felt', cellId) ?? [];
+  const weights = (cells[0]?.[2] ?? []).map(
+      (_, sector) => cells.reduce((sum, [, , weights]) => sum + weights[sector], 0) / cells.length);
+  return {place : skinProbeBearing(state.document, report, cellId) ?? 90, weights};
 }
 // A fish seen from the side, snout to the right.
 // The same fish looking to the left, as the fish panel shows it.

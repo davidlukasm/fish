@@ -43,6 +43,7 @@ liveKind('nose', (studio, organId) => {
   const life = addPicture(root);
   const own = {chosen : 0, probe : null};
   let concentrations = [], total = 0;
+  let drawn = null;
   let step = 0;
   const organ = () => findOrgan(studio.state.document, organId);
   const types = () => organTypes(organ());
@@ -90,43 +91,51 @@ liveKind('nose', (studio, organId) => {
     const nose = organ();
     if (!nose)
       return;
-    const kinds = types(), cells = kinds.map(type => type.centers[0]),
-          caps = studio.state.capabilities;
+    const {senseProbe, anatomy, senseSpread, capabilities : caps} = studio.state;
+    const kinds = organTypes(nose), cells = kinds.map(type => type.centers[0]);
     own.chosen = Math.min(own.chosen, cells.length - 1);
-    const {senseProbe, anatomy} = studio.state;
-    const at = senseProbe?.kind === 'smell' ? senseProbe.scent : 0;
-    own.probe = {...scentTuning(at), scent : at};
+    const scent = senseProbe?.kind === 'smell' ? senseProbe.scent : 0, hatch = hatchOf(studio);
+    own.probe = {...scentTuning(scent), scent};
     concentrations = anatomy?.noseProbe?.[sideIndex(nose.side)] ?? [];
     total = concentrations.reduce((sum, value) => sum + value, 0);
-    scentMap(map, {
-      name : 'nose',
-      own,
-      cells,
-      stone : false,
-      most : MOST,
-      place : (i, tuning) => updateCenter(studio.state.document, cells[i].id, tuning),
-      width : (i, qwidth) => updateCenter(studio.state.document, cells[i].id, {qwidth}),
-      remove : i => remove(kinds[i].id),
-      add : () => add(),
-      draft,
-      settle,
-      redraw : again
-    });
-    course.draw();
-    typeLife(life, {
-      hatch : hatchOf(studio),
-      name : 'nose',
-      own,
-      phases : cells.map(lifePhase),
-      egg : 'one',
-      words : {egg : word('egg'), grown : word('grown')},
-      set : (i, to) => setLifePhase(studio.state.document, cells[i].id, to, caps.sensitivitySpan,
-                                    caps.steepnessSpan),
-      draft,
-      settle,
-      redraw : again
-    });
-    tick(0);
+    const typeChanged = drawn?.nose !== nose || drawn.chosen !== own.chosen;
+    const scentChanged = typeChanged || drawn.scent !== scent;
+    if (scentChanged)
+      scentMap(map, {
+        name : 'nose',
+        own,
+        cells,
+        stone : false,
+        most : MOST,
+        place : (i, tuning) => updateCenter(studio.state.document, cells[i].id, tuning),
+        width : (i, qwidth) => updateCenter(studio.state.document, cells[i].id, {qwidth}),
+        remove : i => remove(kinds[i].id),
+        add : () => add(),
+        draft,
+        settle,
+        redraw : again
+      });
+    if (scentChanged || drawn.senseSpread !== senseSpread ||
+        drawn.concentrations.length !== concentrations.length ||
+        concentrations.some((value, i) => value !== drawn.concentrations[i])) {
+      course.draw();
+      tick(0);
+    }
+    if (typeChanged || drawn.hatch !== hatch)
+      typeLife(life, {
+        hatch,
+        name : 'nose',
+        own,
+        phases : cells.map(lifePhase),
+        egg : 'one',
+        words : {egg : word('egg'), grown : word('grown')},
+        set : (i, to) => setLifePhase(studio.state.document, cells[i].id, to, caps.sensitivitySpan,
+                                      caps.steepnessSpan),
+        draft,
+        settle,
+        redraw : again
+      });
+    drawn = {nose, chosen : own.chosen, scent, concentrations, senseSpread, hatch};
   }
   function tick(dt) {
     step = (step + dt * STEPS / ROUND_MS) % STEPS;

@@ -16,7 +16,6 @@
 // sectors; that a hungry fish does not heal.
 import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
-import {contactHalfAngle} from '../../../tuning.js';
 import {findOrgan} from '../../model/document.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, reportBubble, txt} from './kit.js';
 import {
@@ -33,7 +32,7 @@ import {
   silentStep,
   usedFor
 } from './sense.js';
-import {placeOf, turnTo, wedge} from './skin.js';
+import {skinSectors, turnTo} from './skin.js';
 
 const word = (key, values) => t('studio.live.pain.' + key, values);
 const ROUND_MS = 9000, BITE_STEP = 12;
@@ -86,7 +85,9 @@ liveKind('pain', (studio, organId) => {
   function share(cell, probe) {
     if (!probe)
       return 0;
-    const weights = wedge(placeOf(studio, cell), contactHalfAngle(cell.field ?? 0));
+    const {weights} = skinSectors(studio.state, cell.id);
+    if (!weights.length)
+      return 0;
     let met = 0;
     for (const [sector, part] of woundShares(probe.bearing, weights.length))
       met += weights.length * weights[sector] * part;

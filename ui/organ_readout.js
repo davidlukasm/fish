@@ -118,9 +118,9 @@ export function eyeSight(bands, samples, receptors, side) {
     receptors
   };
 }
-export function eyeTypeAnswers(info, count = EYE_IMAGE.samples) {
-  const half = radians(TUNING.visual_width_max), types = new Map();
-  for (const r of info.receptors ?? []) {
+export function eyeTypes(receptors) {
+  const types = new Map();
+  for (const r of receptors ?? []) {
     const key = [
       r[RECEPTOR.hue], ...r[RECEPTOR.spectrum], r[RECEPTOR.quality2], r[RECEPTOR.response_threshold]
     ].join('|');
@@ -132,7 +132,11 @@ export function eyeTypeAnswers(info, count = EYE_IMAGE.samples) {
       });
     types.get(key).cells.push(r);
   }
-  return [...types.values() ].map(
+  return [...types.values()];
+}
+export function eyeTypeAnswers(info, count = EYE_IMAGE.samples) {
+  const half = radians(TUNING.visual_width_max);
+  return eyeTypes(info.receptors).map(
       type => ({
         colour : type.colour,
         name : type.name,
@@ -141,10 +145,10 @@ export function eyeTypeAnswers(info, count = EYE_IMAGE.samples) {
                               const angle = -half + 2 * half * (i + .5) / count;
                               let total = 0, sum = 0;
                               for (const r of type.cells) {
-                                const weight = organVisualWeight(r, angle),
-                                      sample = info.samples?.get(r[RECEPTOR.neuron]);
+                                const weight = organVisualWeight(r, angle);
                                 if (!weight)
                                   continue;
+                                const sample = info.samples?.get(r[RECEPTOR.neuron]);
                                 total += weight;
                                 sum += weight * (sample?.[VISUAL_SAMPLE.response] ?? 0);
                               }

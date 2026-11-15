@@ -790,7 +790,13 @@ async function checkRedraws(model, caps, root) {
   }
   {
     const {studio, hits} = make(), blocks = [];
-    studio.redrawBlocks = key => blocks.push(key);
+    const live = [];
+    studio.refreshLive = () => live.push(blocks.slice());
+    const redrawBlocks = studio.redrawBlocks.bind(studio);
+    studio.redrawBlocks = (key, ...args) => {
+      blocks.push(key);
+      redrawBlocks(key, ...args);
+    };
     studio.showAnatomy(anatomy, 1);
     assert.equal(hits.scene, 1);
     assert.deepEqual(
@@ -799,7 +805,9 @@ async function checkRedraws(model, caps, root) {
     blocks.length = 0;
     studio.showAnatomy(anatomy, 2);
     assert.equal(hits.scene, 1, 'A probe-only answer keeps the existing fish scene');
-    assert.deepEqual(blocks, [ 'visionOrgan', 'nearAnswers', 'gutProbeControls' ]);
+    assert.deepEqual(blocks, [ 'nearAnswers', 'gutProbeControls' ]);
+    assert.deepEqual(live, [ [ 'hormoneTime', 'organSettings' ], blocks ],
+                     'Each answer repaints the live inspector once, after updating its hosts');
   }
   {
     const {studio, hits} = make();

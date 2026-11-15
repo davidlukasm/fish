@@ -288,14 +288,18 @@ def run(data, data_dir=None, progress=None, cancel=None, *, check_incubation=Fal
         raise Refusal("studio.errors.compilerMissing")
     if op == "design":
         spread = data.get("lightSpread", False)
-        if not isinstance(spread, bool):
+        probe_only = data.get("probeOnly", False)
+        if not isinstance(spread, bool) or not isinstance(probe_only, bool) or (probe_only and spread):
             raise Refusal("studio.errors.invalidRequest")
         body = (str(int(spread)) + "\n" + sight_line(data.get("sight")) +
                 sense_line(data.get("sense")) +
                 learning_context_line(data.get("blood"), data.get("learning")) +
                 encode_plan(data.get("plan")))
         try:
-            completed = subprocess.run([str(tool), "design"], cwd=ROOT, input=body, text=True,
+            args = [str(tool), "design"]
+            if probe_only:
+                args.append("--probe-only")
+            completed = subprocess.run(args, cwd=ROOT, input=body, text=True,
                                        capture_output=True, timeout=QUICK_SECONDS)
         except subprocess.TimeoutExpired as error:
             raise Refusal("studio.errors.timeout") from error

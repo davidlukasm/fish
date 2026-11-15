@@ -335,8 +335,8 @@ async function checkProbeSettling(model, capabilities, root) {
       selected : {kind : 'organ', id : c.organ.id},
       sightProbe
     });
-    for (const key of ['refreshVision', 'drawSight', 'refreshProbes', 'refreshHeader',
-                       'refreshScene', 'refreshGraphics', 'checkPressure'])
+    for (const key of ['refreshVision', 'drawSight', 'refreshProbeGraphics', 'refreshHeader',
+                       'refreshScene', 'refreshGraphics', 'refreshLive', 'checkPressure'])
       studio[key] = () => {};
     return studio;
   };
@@ -430,7 +430,8 @@ async function checkLightSnapshots(model, sites) {
     showAnatomy: designMethods.showAnatomy
   };
   for (const method of ['bringProbes', 'refreshHeader', 'refreshScene', 'refreshGraphics',
-                        'checkPressure', 'refreshVision', 'drawSight', 'refreshProbes'])
+                        'checkPressure', 'refreshVision', 'drawSight', 'refreshProbeGraphics',
+                        'refreshLive'])
     studio[method] = () => {};
   const answer = async value => {
     replies.shift()(value);
@@ -445,6 +446,8 @@ async function checkLightSnapshots(model, sites) {
     studio.requestDesign();
     assert.equal(requests.at(-1).lightSpread, false,
                  'A pure stimulus request does not recompute or transfer the light snapshot');
+    assert.equal(requests.at(-1).probeOnly, true,
+                 'A pure stimulus request reuses the static anatomy');
     await answer({});
     assert.equal(studio.state.lightSpread, first);
   }
@@ -4299,6 +4302,8 @@ assert len(designed['zones'])==4 and abs(sum(e for f,e in designed['zones'])-2)<
 # where no cell of the group senses it.
 sight_scene={'side':0,'bearing':-45,'distance':3,'radius':.5,'hue':20}
 sighted=run({'operation':'design','plan':plan,'sight':sight_scene})
+quick_sight=run({'operation':'design','plan':plan,'sight':sight_scene,'probeOnly':True})
+assert quick_sight=={'probeOnly':True,'sight':sighted['sight']}
 for kind in ('smell','gut'):
     sense_scene={'kind':kind,'bearing':-60,'distance':3,'strength':.5,'scent':0,'nutrient':.2}
     probed=run({'operation':'design','plan':plan,'sight':None,
@@ -5228,13 +5233,13 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         sites,
         selected : {kind : 'organ', id : probed.id},
         senseProbe : probe,
-        anatomy : {lightDimmest : 1e-4}
+        anatomy : {bodyRadius : 1}
       };
       const markup = probesView.senseProbeSvg(probeState);
       const [, hx, hy] =
           /data-sense-handle="[^"]+" data-steady transform="translate\(([^ ]+) ([^)]+)\)/.exec(
               markup);
-      const back = probesView.probePatch(probe.kind, {x : Number(hx), y : Number(hy)}, 1e-4);
+      const back = probesView.probePatch(probe.kind, {x : Number(hx), y : Number(hy)});
       assert.ok(Math.abs(back.bearing - probe.bearing) < 3, type + ' bearing reads back');
       const amount = probe.kind === 'smell' ? 'distance' : 'strength';
       assert.ok(Math.abs(back[amount] - probe[amount]) / probe[amount] < .1, type + ' reads back');

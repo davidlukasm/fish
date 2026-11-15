@@ -54,6 +54,7 @@ function frame(now) {
 }
 // Hangs every live inspector into its place under `root` and repaints it from the state.
 export function mountLive(root, studio) {
+  let shown = false;
   for (const host of root.querySelectorAll('[data-live]')) {
     const key = host.dataset.live + ':' + host.dataset.liveOrgan, make = KINDS.get(host.dataset.live);
     if (!make)
@@ -64,8 +65,10 @@ export function mountLive(root, studio) {
     if (live.root.parentNode !== host)
       host.replaceChildren(live.root);
     live.show(studio.state);
+    shown = true;
   }
-  running ||= requestAnimationFrame(frame);
+  if (shown && !running)
+    running = requestAnimationFrame(frame);
 }
 
 // A picture: what never changes (built once) between a layer under it and one over it; only those

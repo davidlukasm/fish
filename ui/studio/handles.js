@@ -586,18 +586,17 @@ export const handleMethods = {
     this.requestDesign();
   },
   probePointer(event) {
-    const drag = this.handleDrag, probe = this.state.senseProbe,
-          faintest = this.state.anatomy?.lightDimmest;
-    if (probe?.organ !== drag.id || (probe.kind !== 'ground' && !(faintest > 0)))
+    const drag = this.handleDrag, probe = this.state.senseProbe;
+    if (probe?.organ !== drag.id || (probe.kind !== 'ground' && !(this.state.anatomy?.bodyRadius > 0)))
       return;
     const position = cameraCoordinates(event, this.bodyMap(), this.state.camera);
-    const patch = probePatch(drag.control, position, faintest, probe);
+    const patch = probePatch(drag.control, position, probe);
     const smellFlow = drag.control === 'flow' && probe.kind === 'smell';
     const manual = probe.manual || drag.control !== 'attack-gape';
     this.state.senseProbe =
         smellFlow ? {...probe, flow : patch} : {...probe, ...patch, manual};
     this.keepInView(probeHandle(
-        smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, faintest, drag.control,
+        smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, drag.control,
         this.state));
     this.refreshProbes();
     if (probe.kind !== 'ground')
@@ -614,16 +613,19 @@ export const handleMethods = {
     if (!patch)
       return;
     if (drag.key === 'probe' || drag.key === 'probe-size') {
+      if (Object.entries(patch).every(([key, value]) => this.state.sightProbe?.[key] === value))
+        return;
       this.state.sightProbe = {...this.state.sightProbe, ...patch};
       const light = this.bodyMap()?.querySelector('.aid-sight-light');
       if (light)
         light.outerHTML = testLightMarkup(this.state, organ);
       else
         this.refreshScene();
-      this.refreshSpectrum();
       this.requestDesign();
       return;
     }
+    if (!patch.profile && patch[drag.key] === organ.field[drag.key])
+      return;
     const doc = updateField(this.state.document, organ.id, patch, this.state.sites);
     if (!doc)
       return this.notice(label('status.noRoom'));

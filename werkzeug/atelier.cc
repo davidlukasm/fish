@@ -413,12 +413,12 @@ void sense_report(const field::Substrate &t,
 void sight_report(const field::Substrate &t,
                   const std::shared_ptr<const fishsim::BrainInterface> &interface,
                   const std::vector<Group> &groups, const SightScene &scene,
-                  const fishsim::Ecosystem &tank) {
+                  const fishsim::Field &water) {
   fishsim::Body body;
   body.x = body.y = fishsim::SIZE / 2;
   body.organ_mass = interface->organ_mass;
   body.tissue = fishsim::BODY_TISSUE;
-  const auto eye = fishsim::visual_origins(body, *interface, tank.field)[scene.side];
+  const auto eye = fishsim::visual_origins(body, *interface, water)[scene.side];
   const double bearing = fishsim::radians(scene.bearing);
   fishsim::SensoryProbe probe;
   probe.kind = fishsim::probe_kind::sight;
@@ -431,7 +431,7 @@ void sight_report(const field::Substrate &t,
   body.set_inspection(true, true, -1);
   fishsim::Genome g;
   g.interface = interface;
-  fishsim::sense_generated(body, g, tank.field, nullptr, false, tank.physiology());
+  fishsim::sense_generated(body, g, water, nullptr, false, fishsim::PhysiologyParameters{});
   const auto &state = body.perception();
   std::cout << ",\"sight\":{";
   fishsim::write_sight(std::cout, state);
@@ -862,7 +862,14 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
           !groups[i].contains(t.neurons[r.neuron].location))
         continue;
       std::cout << (first ? "" : ",") << '[' << r.mechanical_angle << ','
-                << fishsim::contact_width(r.spatial_width) << ']';
+                << fishsim::contact_width(r.spatial_width);
+      if (sense != field::Flow) {
+        std::cout << ",[";
+        for (std::size_t sector = 0; sector < r.contact_weights.size(); ++sector)
+          std::cout << (sector ? "," : "") << r.contact_weights[sector];
+        std::cout << ']';
+      }
+      std::cout << ']';
       first = false;
     }
     std::cout << ']';
@@ -1379,7 +1386,7 @@ void readiness_report(const fishsim::BrainInterface &a, const field::Substrate &
 }
 void design_report(const Plan &plan, const std::optional<SightScene> &sight,
                    const std::optional<SenseScene> &sense, bool light_spread,
-                   const LearningContext &learning) {
+                   const LearningContext &learning, bool probe_only) {
   const auto &groups = plan.groups;
   ensure(!learning.probe || std::size_t(learning.probe->group) < groups.size(),
          "unknown learning probe group");
@@ -1388,13 +1395,18 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
   const auto &t = *g.blueprint;
   g.interface = fishsim::body_interface(t);
   std::cout << std::setprecision(REPORT_DIGITS) << '{';
-  std::cout << "\"neurons\":" << t.neurons.size()
-            << ",\"limited\":" << (t.resource_limited ? "true" : "false");
-  readiness_report(*g.interface, t, false);
   const auto *attack = sense && sense->kind == sense_scene::attack ? &*sense : nullptr;
   const auto *mouth = sense && sense->kind == sense_scene::mouth ? &*sense : nullptr;
   const auto *gills = sense && sense->kind == sense_scene::gills ? &sense->gills : nullptr;
-  anatomy_report(g, groups, false, attack, &learning, &plan.growth, gills);
+  if (probe_only) {
+    ensure(!attack && !gills && !light_spread, "probe requires an anatomy report");
+    std::cout << "\"probeOnly\":true";
+  } else {
+    std::cout << "\"neurons\":" << t.neurons.size()
+              << ",\"limited\":" << (t.resource_limited ? "true" : "false");
+    readiness_report(*g.interface, t, false);
+    anatomy_report(g, groups, false, attack, &learning, &plan.growth, gills);
+  }
   if (light_spread) {
     const auto sample = light_example(plan);
     const auto binding = fishsim::body_interface(sample);
@@ -1402,8 +1414,10 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
     sense_spread_report(t, *g.interface, sample, *binding, groups);
   }
   if (sight) {
-    const fishsim::Ecosystem probe_tank(SIGHT_TANK_SEED);
-    sight_report(t, g.interface, groups, *sight, probe_tank);
+    // The illuminated probe sits in open water, beyond the range of the tank's boundaries.
+    fishsim::Field water(SIGHT_TANK_SEED, 0);
+    water.initialize_aquarium(fishsim::tank::standard_width, fishsim::tank::standard_height);
+    sight_report(t, g.interface, groups, *sight, water);
   }
   if (mouth)
     mouth_course_report(g, *mouth);
@@ -1716,7 +1730,8 @@ int main(int argc, char **argv) {
       std::cout << "]}\n";
       return 0;
     }
-    if (argc == 2 && std::string(argv[1]) == "design") {
+    const bool probe_only = argc == 3 && std::string(argv[2]) == "--probe-only";
+    if ((argc == 2 || probe_only) && std::string(argv[1]) == "design") {
       int light_spread = 0;
       ensure(bool(std::cin >> light_spread) && (light_spread == 0 || light_spread == 1),
              "invalid light spread flag");
@@ -1731,7 +1746,8 @@ int main(int argc, char **argv) {
         sense = read_sense_scene(std::cin);
       const auto learning = read_learning_context(std::cin);
       std::string name;
-      design_report(read_plan(std::cin, name, true), sight, sense, light_spread, learning);
+      design_report(read_plan(std::cin, name, true), sight, sense, light_spread, learning,
+                    probe_only);
       std::cout << '\n';
       return 0;
     }

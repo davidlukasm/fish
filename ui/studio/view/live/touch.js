@@ -12,11 +12,10 @@
 // Not in the picture: sediment; several touches at once.
 import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
-import {contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, txt, reportBubble} from './kit.js';
 import {BOUNDED} from './sense.js';
-import {placeOf, sectorOf, turnTo, wedge} from './skin.js';
+import {sectorAngle, sectorOf, skinSectors, turnTo} from './skin.js';
 
 const word = (key, values) => t('studio.live.touch.' + key, values);
 const pressureOf = impact => SKIN_RESPONSE.touch_rest + (1 - SKIN_RESPONSE.touch_rest) * impact /
@@ -39,7 +38,6 @@ liveKind('touch', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-touch aid-live-sense-touch';
   const cut = addPicture(root);
-  let pressure = 0;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -52,13 +50,13 @@ liveKind('touch', (studio, organId) => {
   // the probe, in the fish panel's bubble.
   function drawCut(cell) {
     const {svg, under, live} = picture(cut, CUT.height),
-                       {L, R, skin, deep, cells, thing, dent} = CUT, place = placeOf(studio, cell),
-                       weights = wedge(place, contactHalfAngle(cell.field ?? 0)),
-                       most = Math.max(...weights), count = weights.length;
+                       {L, R, skin, deep, cells, thing, dent} = CUT,
+                       {place, weights} = skinSectors(studio.state, cell.id),
+                       most = Math.max(0, ...weights), count = weights.length;
     const active = studio.state.senseProbe,
           probe = active?.kind === 'touch' && active.organ === organId ? active : null,
           X = a => L + (R - L) * (a + 180) / 360, tx = probe ? X(turnTo(probe.bearing - place)) : 0;
-    pressure = probe ? pressureOf(probe.strength) : 0;
+    const pressure = probe ? pressureOf(probe.strength) : 0;
     const dip = x => probe ? pressure * deep * Math.exp(-(((x - tx) / dent) ** 2)) : 0,
           line = Array.from({length : 69}, (_, n) => {
             const x = L + (R - L) * n / 68;
@@ -70,21 +68,23 @@ liveKind('touch', (studio, organId) => {
     },
        under);
     el('path', {d : path(line), class : 'aid-live-skinline'}, live);
-    const hit = probe ? sectorOf(probe.bearing, count) : -1, gate = BOUNDED.gate(cell),
+    const hit = probe && count ? sectorOf(probe.bearing, count) : -1, gate = BOUNDED.gate(cell),
           heard = probe ? groupReport(studio.state.document, studio.state.anatomy, 'senseProbe',
                                       cell.id)
                         : 0;
     // One step per sector of the rim: the cells weigh whole sectors.
-    const half = (R - L) / count / 2;
+    const half = count ? (R - L) / count / 2 : 0;
+    const sectorX = k => X(turnTo(sectorAngle(k, count) - place));
     weights.forEach((v, k) => {
-      const x = X(turnTo(-180 + (k + .5) * 360 / count - place)), d = gate / v;
-      if (v > 0 && d <= 1)
+      if (v > 0 && gate <= v) {
+        const x = sectorX(k), d = gate / v;
         el('path',
            {d : `M${x - half + 1} ${skin + d * deep} h${2 * half - 2}`, class : 'aid-live-hair k0'},
            live);
+      }
     });
     weights.forEach((v, k) => {
-      const x = X(turnTo(-180 + (k + .5) * 360 / count - place)), y = cells;
+      const x = sectorX(k), y = cells;
       if (v <= 0) {
         el('circle', {cx : x, cy : y, r : 1.2, class : 'aid-live-rimdot'}, live);
         return;
@@ -112,6 +112,8 @@ liveKind('touch', (studio, organId) => {
       txt(live, tx, skin - 8, word('pressure'),
           {'text-anchor' : 'middle', class : 'aid-live-small'});
     }
+    if (!most)
+      return;
     // The threshold's grip at an end of the middle step, on the side away from the thing.
     const away = probe && tx < X(0) ? 1 : -1, gx = X(0) + away * (2 * half + 6),
           gy = skin + clamp(gate / most, CUT.least, 1) * deep;

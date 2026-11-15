@@ -3,9 +3,9 @@ import {
   clearOfFish,
   nearAnswers,
   nearObject,
+  refreshVisionAnswers,
   sightLegend,
-  spectrumEditor,
-  visionFan
+  spectrumEditor
 } from './view/vision.js';
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
@@ -19,7 +19,7 @@ import {
   probeWater,
   senseProbeSvg
 } from './view/probes.js';
-import {eyeSight, eyeTypeAnswers} from '../organ_readout.js';
+import {eyeSight, eyeTypes} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
 import {SENSE_TISSUE} from '../tissue.js';
 import {PRESSURE_OF} from './model/organs.js';
@@ -37,7 +37,6 @@ import {
 import {sideOf} from './model/layout.js';
 import {dataAttribute} from './view/markup.js';
 import {organSettingsBlock} from './view/panels.js';
-import {mountLive} from './view/live/kit.js';
 import {label} from './view/kit.js';
 import {previewContextOf} from './view/development.js';
 import {hormoneTime} from './view/substances.js';
@@ -48,6 +47,10 @@ import {newFishDocument} from './canvas_placement.js';
 
 const PRESSURE_TRIES = 12, PRESSURE_BATCH = 'pressure';
 const nativeProbe = probe => probe?.kind === 'ground' ? null : probe;
+const TRANSIENT_REPORTS = [
+  'lightSpread', 'senseSpread', 'sight', 'senseProbe', 'noseProbe', 'barbelProbe', 'mouthCourse',
+  'attackProbe', 'gillFood'
+];
 export const designMethods = {
   async newFish(initial = false) {
     if (!this.state.sites.length) {
@@ -121,18 +124,17 @@ export const designMethods = {
     }
     const anatomy = this.shownDesign === doc ? this.state.anatomy : null;
     const sense = probeFor(organ, this.state.senseProbe, anatomy, doc);
-    const faintest = this.state.anatomy?.lightDimmest;
     if (!sense || sense.kind === 'gut' || (sense.kind === 'ground' && sense.buried))
       this.framedProbe = null;
-    else if ((sense.kind === 'ground' || faintest > 0) && sense !== this.framedProbe &&
+    else if ((sense.kind === 'ground' || this.state.anatomy?.bodyRadius > 0) && sense !== this.framedProbe &&
              !this.handleDrag) {
       const flow = probeFlow(sense);
       this.framedProbe = sense;
-      this.keepInView(probeHandle(sense, faintest, sense.kind, this.state));
+      this.keepInView(probeHandle(sense, sense.kind, this.state));
       if (sense.kind === 'attack')
-        this.keepInView(probeHandle(sense, faintest, 'attack-gape', this.state));
+        this.keepInView(probeHandle(sense, 'attack-gape', this.state));
       if (flow && flow !== sense)
-        this.keepInView(probeHandle(flow, faintest));
+        this.keepInView(probeHandle(flow));
     }
     if (sense && sense !== this.state.senseProbe) {
       this.state.senseProbe = sense;
@@ -206,24 +208,30 @@ export const designMethods = {
       this.designPending = true;
       return;
     }
-    const document = this.state.document, probe = this.state.sightProbe,
-          sense = nativeProbe(this.state.senseProbe),
-          plan = compileDocument(document, this.state.sites);
+    const {document, sites, learnProbe} = this.state, probe = this.state.sightProbe,
+          sense = nativeProbe(this.state.senseProbe), blood = previewContextOf(this.state);
+    const previous = this.designContext;
+    const samePlan = previous?.document === document && previous.sites === sites;
+    const plan = samePlan ? previous.plan : compileDocument(document, sites);
     this.designRunning = true;
     this.designPending = false;
     const request = ++this.designRequest, fishRequest = this.newFishRequest;
     const spineDraft = draft?.key.startsWith('spine-'), colourDraft = draft?.key === 'colour',
+          fieldDraft = draft?.key === 'field',
           learningDraft = draft?.key === 'learning', bladderDraft = draft?.key === 'bladder',
           gillDraft = draft?.key === 'gills';
+    const keepSight = samePlan && probe === previous.probe;
+    const probeOnly = !draft && samePlan && previous.blood === blood &&
+                      previous.learnProbe === learnProbe && sense?.kind !== 'attack' &&
+                      sense?.kind !== 'gills';
     const scene = draft ? {sense : spineDraft || gillDraft ? this.senseScene() : null} : {
-      lightSpread : this.state.lightSpread?.document !== document,
-      sight : sightScene(probe),
+      lightSpread : !probeOnly && this.state.lightSpread?.document !== document,
+      sight : keepSight ? null : sightScene(probe),
       sense : this.senseScene()
     };
     // The blood every estimate of the engine is made at is the life tool's (atelier_service.py,
     // learning_context_line).
-    const learnProbe = this.state.learnProbe,
-          group = learnProbe ? centerIndex(document, learnProbe.center) : -1,
+    const group = learnProbe ? centerIndex(document, learnProbe.center) : -1,
           learning = group < 0 ? null : {
             group,
             delay : learnProbe.delay,
@@ -236,15 +244,26 @@ export const designMethods = {
     this.api(requestBody('design', {
           plan,
           ...scene,
-          blood : previewContextOf(this.state),
+          blood,
+          ...(probeOnly ? {probeOnly : true} : {}),
           ...(learning ? {learning} : {})
         }))
         // An answer for the design shown is shown even when a test stimulus has moved on since:
         // the eyes and senses follow a dragged one step by step instead of waiting for it to
         // rest.
         .then(report => {
-          const anatomy = {...report, learnProbe : learning ? learnProbe : null,
+          const before = this.state.anatomy;
+          const anatomy = {...(probeOnly ? before : null), ...report,
+                           learnProbe : learning ? learnProbe : null,
                            gillProbeKey : scene.sense?.kind === 'gills' ? sense?.key : null};
+          if (probeOnly) {
+            delete anatomy.probeOnly;
+            for (const key of TRANSIENT_REPORTS)
+              if (!(key in report))
+                delete anatomy[key];
+          }
+          if (!draft && keepSight && before?.sight)
+            anatomy.sight = before.sight;
           if (draft) {
             // Follow the drag with the last completed outline, even as the pointer moves on.
             if (this.drafted && this.draftPreview === draft &&
@@ -256,7 +275,7 @@ export const designMethods = {
                 return JSON.stringify([outlineSizes(this.state),
                                        spineDraft && [report?.spinesRest, report?.spinesRaised,
                                                       report?.spineGroups, report?.attackProbe],
-                                       draft.key === 'field' && report?.lateral,
+                                       fieldDraft && [report?.lateral, report?.felt],
                                        draft.key === 'receptor' &&
                                            report?.groups?.map(g => g.responses),
                                        learningDraft && [
@@ -271,15 +290,17 @@ export const designMethods = {
               this.state.outlinePreview = anatomy;
               if (shape() !== previous) {
                 this.refreshScene();
-                if (colourDraft || learningDraft || bladderDraft || gillDraft)
+                if (colourDraft || fieldDraft || learningDraft || bladderDraft || gillDraft)
                   this.refreshLive();
                 // A receptor's curve is the engine's: the inspector follows each answer.
                 if (draft.key === 'receptor')
                   this.refreshDragged();
               }
             }
-          } else if (this.state.document === document)
+          } else if (this.state.document === document) {
+            this.designContext = {document, sites, plan, probe, blood, learnProbe};
             this.showAnatomy(anatomy, request);
+          }
         })
         .catch(error => {
           if (!draft && this.newFishRequest === fishRequest && this.state.document === document &&
@@ -295,21 +316,16 @@ export const designMethods = {
   },
   showAnatomy(anatomy, request) {
     const probesOnly = this.shownDesign === this.state.document;
-    const spineChange = JSON.stringify(this.state.anatomy?.attackProbe?.spines) !==
-                        JSON.stringify(anatomy.attackProbe?.spines);
+    const before = this.state.anatomy, sightChange = before?.sight !== anatomy.sight;
+    const differs = (a, b) => a !== b && JSON.stringify(a) !== JSON.stringify(b);
+    const spineChange = differs(before?.attackProbe?.spines, anatomy.attackProbe?.spines);
     // A new blood from the life band changes which cells are there and how receptors answer.
-    const groupsOf = (report, key) => JSON.stringify(report?.groups?.map(g => g[key]));
-    const lifeChange = groupsOf(this.state.anatomy, 'life') !== groupsOf(anatomy, 'life');
-    const answerChange = groupsOf(this.state.anatomy, 'effects') !== groupsOf(anatomy, 'effects') ||
-                         JSON.stringify(this.state.anatomy?.hormoneCourse) !==
-                             JSON.stringify(anatomy.hormoneCourse);
-    const learningChange = this.state.anatomy?.learnProbe !== anatomy.learnProbe ||
-                           groupsOf(this.state.anatomy, 'learning') !== groupsOf(anatomy, 'learning');
-    const bladderChange = JSON.stringify(this.state.anatomy?.bladderEstimate) !==
-                          JSON.stringify(anatomy.bladderEstimate);
-    const gillChange = this.state.anatomy?.gillProbeKey !== anatomy.gillProbeKey ||
-                       JSON.stringify(this.state.anatomy?.gillFood) !==
-                           JSON.stringify(anatomy.gillFood);
+    const groupsDiffer = key => before?.groups !== anatomy.groups &&
+                                differs(before?.groups?.map(g => g[key]),
+                                        anatomy.groups?.map(g => g[key]));
+    const lifeChange = groupsDiffer('life');
+    const answerChange = groupsDiffer('effects') || differs(before?.hormoneCourse, anatomy.hormoneCourse);
+    const learningChange = before?.learnProbe !== anatomy.learnProbe || groupsDiffer('learning');
     this.shownDesign = this.state.document;
     if (anatomy.lightSpread)
       this.state.lightSpread = {document : this.state.document, report : anatomy.lightSpread};
@@ -326,14 +342,17 @@ export const designMethods = {
       if (!traced) {
         if (spineChange || lifeChange)
           this.refreshScene();
+        if (sightChange) {
+          this.drawSight();
+          this.refreshVision();
+        }
+        this.refreshProbeGraphics();
         if ((answerChange && this.state.tool === 'hormone') ||
-            ((answerChange || learningChange) && this.state.tool === 'learn'))
+            ((answerChange || learningChange) && this.state.tool === 'learn')) {
           this.refreshInspector();
-        else if (bladderChange || gillChange)
+        } else {
           this.refreshLive();
-        this.refreshVision();
-        this.drawSight();
-        this.refreshProbes();
+        }
       }
       return;
     }
@@ -374,7 +393,11 @@ export const designMethods = {
     }
   },
   refreshVision() {
-    this.redrawBlocks('visionOrgan', findOrgan, organ => visionFan(this.state, organ), BODY_MAP);
+    for (const fan of this.root.querySelectorAll(BODY_MAP + ' [data-vision-organ]')) {
+      const organ = findOrgan(this.state.document, fan.dataset.visionOrgan);
+      if (organ)
+        refreshVisionAnswers(this.state, organ, fan);
+    }
   },
   refreshGraphics() {
     this.redrawBlocks('hormoneTime', (doc, id) => ({index : Number(id)}),
@@ -385,10 +408,15 @@ export const designMethods = {
       this.refreshSpectrum();
       this.refreshProbeControls();
     }
+    this.refreshLive();
     this.drawSight();
     // The scene and organSettings already include their probe graphics and controls.
   },
   refreshProbes() {
+    this.refreshProbeGraphics();
+    this.refreshLive();
+  },
+  refreshProbeGraphics() {
     const map = this.bodyMap(), layer = map?.querySelector('#' + PROBE_LAYER),
           ground = map?.querySelector('[data-probe-ground]');
     if (ground)
@@ -410,9 +438,6 @@ export const designMethods = {
   refreshProbeControls() {
     this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
     this.redrawBlocks('gutProbeControls', findOrgan, organ => gutProbeControls(this.state, organ));
-    if ([ 'smell', 'taste', 'touch', 'wound', 'flow', 'balance', 'attack', 'ground', 'mouth' ].includes(
-            this.state.senseProbe?.kind))
-      mountLive(this.root, this);
   },
   drawSight() {
     const sight = this.state.anatomy?.sight;
@@ -429,7 +454,7 @@ export const designMethods = {
       // Each row's mark names its cell type below the picture.
       const legend = canvas.closest('figure').querySelector('[data-sight-legend]');
       if (legend)
-        legend.innerHTML = sightLegend(eyeTypeAnswers(seen));
+        legend.innerHTML = sightLegend(eyeTypes(receptors));
     }
   },
   refreshSpectrum() {
@@ -446,7 +471,5 @@ export const designMethods = {
       if (found)
         block.outerHTML = render(found);
     }
-    // A redrawn block has new places for the live inspectors.
-    mountLive(this.root, this);
   }
 };

@@ -8,17 +8,36 @@ export const bearing = site => HALF_VIEW * (.5 * (1 - site.u) + .5 * site.w);
 export const bearingAt = position => bearing(bodyCoordinates(position, ZONE.head));
 const BEARING_SCALE = 1e6;
 export const latticeBearing = site => Math.round(bearing(site) * BEARING_SCALE) / BEARING_SCALE;
+const layouts = new WeakMap();
 export const binSites = (sites, side, bin) =>
-    sites.filter(s => s.zone === ZONE.head && s.side === side && latticeBearing(s) === bin.angle);
-export function retinalBins(sites) {
-  const angles = [...new Set(sites.filter(s => s.zone === ZONE.head).map(latticeBearing)) ].sort(
-      (a, b) => a - b);
-  return angles.map((angle, i) => ({
-                      angle,
-                      index : i,
-                      lo : i ? (angles[i - 1] + angle) / 2 : 0,
-                      hi : i + 1 < angles.length ? (angle + angles[i + 1]) / 2 : HALF_VIEW
-                    }));
+    retinalLayout(sites).byBearing.get(bin.angle)?.get(side) ?? [];
+export const retinalBins = sites => retinalLayout(sites).bins;
+function retinalLayout(sites) {
+  const stored = layouts.get(sites);
+  if (stored)
+    return stored;
+  const byBearing = new Map();
+  for (const site of sites) {
+    if (site.zone !== ZONE.head)
+      continue;
+    const angle = latticeBearing(site);
+    if (!byBearing.has(angle))
+      byBearing.set(angle, new Map());
+    const sides = byBearing.get(angle);
+    if (!sides.has(site.side))
+      sides.set(site.side, []);
+    sides.get(site.side).push(site);
+  }
+  const angles = [...byBearing.keys()].sort((a, b) => a - b);
+  const bins = angles.map((angle, i) => ({
+    angle,
+    index : i,
+    lo : i ? (angles[i - 1] + angle) / 2 : 0,
+    hi : i + 1 < angles.length ? (angle + angles[i + 1]) / 2 : HALF_VIEW
+  }));
+  const index = {byBearing, bins, byAngle : new Map(bins.map(bin => [bin.angle, bin]))};
+  layouts.set(sites, index);
+  return index;
 }
 const NEW_EYE = Object.freeze({reach : 32, density : 3, resolution : .2});
 const NEW_PROFILE = Object.freeze({
@@ -174,14 +193,15 @@ export function generateRetina(organ, sites, used, create) {
   return profiles.every(p => centers.some(c => c.profile === p.id)) ? centers : null;
 }
 export function retinalRays(organ, sites) {
-  const bins = retinalBins(sites);
+  const {bins, byAngle} = retinalLayout(sites);
   return organ.centers.flatMap(center => {
     const site = findSite(sites, center.site);
     if (!site)
       return [];
-    const bin = bins.reduce(
-        (best, b) =>
-            Math.abs(b.angle - bearing(site)) < Math.abs(best.angle - bearing(site)) ? b : best);
+    const angle = bearing(site);
+    const bin = byAngle.get(latticeBearing(site)) ??
+                bins.reduce((best, b) =>
+                                Math.abs(b.angle - angle) < Math.abs(best.angle - angle) ? b : best);
     const width = receptorWidth(center.field);
     return Array.from({length : center.copies}, (_, i) => {
       const angle = site.side * (bin.lo + (bin.hi - bin.lo) * (i + .5) / center.copies);

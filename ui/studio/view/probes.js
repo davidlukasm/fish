@@ -27,6 +27,8 @@ const PROBE_SCENE = Object.freeze({
   teeth : {step : 18, size : 12},
   far : 150,
   reach : 300,
+  // The lower end of the grip's logarithmic scale, in the units of the probe.
+  strengthFloor : 1e-4,
   // Pressure and a bite's depth act on the skin and need no arrow half a fish long: the fish
   // stays large in the panel.
   skin : 100,
@@ -93,13 +95,16 @@ function attackMouth(probe, state) {
 const beyondSkin = distance => (distance - PROBE_LIMITS.least.smell) * BODY_RADIUS;
 const distanceAt = beyond => clamp(PROBE_LIMITS.least.smell + beyond / BODY_RADIUS,
                                    PROBE_LIMITS.least.smell, PROBE_LIMITS.most.smell);
-const strengthShare = (strength, kind, faintest) =>
-    Math.max(0, Math.log(Math.max(strength, faintest) / faintest) /
-                    Math.log(PROBE_LIMITS.most[kind] / faintest));
-const shareStrength = (share, kind, faintest) =>
-    faintest * (PROBE_LIMITS.most[kind] / faintest) ** clamp(share);
+function strengthShare(strength, kind) {
+  const floor = PROBE_SCENE.strengthFloor;
+  return Math.log(Math.max(strength, floor) / floor) / Math.log(PROBE_LIMITS.most[kind] / floor);
+}
+function shareStrength(share, kind) {
+  const floor = PROBE_SCENE.strengthFloor;
+  return floor * (PROBE_LIMITS.most[kind] / floor) ** clamp(share);
+}
 const reachOf = kind => kind === 'wound' || kind === 'touch' ? PROBE_SCENE.skin : PROBE_SCENE.reach;
-function handleRadius(probe, faintest) {
+function handleRadius(probe) {
   const P = PROBE_SCENE, angle = radians(probe.bearing), skin = skinDistance(angle);
   if (probe.kind === 'taste')
     return probe.distance * BODY_RADIUS;
@@ -107,20 +112,20 @@ function handleRadius(probe, faintest) {
     return skin + P.gravity;
   return probe.kind === 'smell' ? skin + beyondSkin(probe.distance)
                                 : skin + (probe.kind === 'flow' ? P.far : P.gap) +
-                                      reachOf(probe.kind) * strengthShare(probe.strength, probe.kind, faintest);
+                                      reachOf(probe.kind) * strengthShare(probe.strength, probe.kind);
 }
-export function probeHandle(probe, faintest, control = probe.kind, state = null) {
+export function probeHandle(probe, control = probe.kind, state = null) {
   if (probe.kind === 'ground')
     return {x : GROUND.left + GROUND.width * probe.strength, y : GROUND.y};
   if (probe.kind === 'attack') {
     const mouth = attackMouth(probe, state);
     return control === 'attack-gape' ? mouth.tip : mouth.hinge;
   }
-  return pointAt(radians(probe.bearing), handleRadius(probe, faintest));
+  return pointAt(radians(probe.bearing), handleRadius(probe));
 }
 export const probeFlow = probe =>
     probe.kind === 'flow' ? probe : probe.flow && {...probe.flow, kind : 'flow'};
-export function probePatch(kind, position, faintest, probe = null) {
+export function probePatch(kind, position, probe = null) {
   if (kind === 'ground')
     return {strength : clamp((position.x - GROUND.left) / GROUND.width)};
   const dx = position.x - BODY_MIDDLE.x, dy = position.y - BODY_MIDDLE.y;
@@ -140,7 +145,7 @@ export function probePatch(kind, position, faintest, probe = null) {
     bearing,
     strength : kind === 'flow' && beyond <= from
                    ? 0
-                   : shareStrength((beyond - from) / reachOf(kind), kind, faintest)
+                   : shareStrength((beyond - from) / reachOf(kind), kind)
   };
 }
 function smellRings(zoom) {
@@ -163,9 +168,9 @@ function smellRings(zoom) {
       })
       .join('');
 }
-function stimulusSvg(probe, faintest, zoom) {
+function stimulusSvg(probe, zoom) {
   const P = PROBE_SCENE, angle = radians(probe.bearing),
-        at = pointAt(angle, handleRadius(probe, faintest));
+        at = pointAt(angle, handleRadius(probe));
   const onto = pointAt(angle, skinDistance(angle) + P.gap);
   if (probe.kind === 'smell') {
     const colour = scentColors?.[probe.scent] ?? '';
@@ -208,11 +213,11 @@ function waterVelocity(p, flow) {
   const vx = c * wx - s * wy, vy = s * wx + c * wy;
   return {x : vx * E.along, y : vy * E.across, inside : r2 < 1};
 }
-function waterSvg(probe, faintest, zoom) {
+function waterSvg(probe, zoom) {
   const W = PROBE_SCENE.water, angle = radians(probe.bearing);
   const toward = bodyDirection(angle), flow = {x : -toward.x, y : -toward.y};
   const across = {x : -flow.y, y : flow.x}, step = 2 * W.upstream / W.steps;
-  const share = strengthShare(probe.strength, probe.kind, faintest);
+  const share = strengthShare(probe.strength, probe.kind);
   const seconds = W.slow + (W.fast - W.slow) * share;
   let lines = '', particles = '';
   for (let lane = 0; lane < W.lanes; ++lane) {
@@ -366,15 +371,15 @@ export function gutProbeControls(state, organ) {
          escapeText(t('studio.probe.response')) + '</text>' + cells + '</svg></section>';
 }
 function visibleProbe(state) {
-  const probe = state.senseProbe, faintest = state.anatomy?.lightDimmest;
+  const probe = state.senseProbe;
   const organ = probe ? findOrgan(state.document, probe.organ) : null;
   return organ && probe.kind !== 'gut' && !isCommand(probe) && isChosen(state.selected, organ) &&
-                 (probe.kind === 'ground' || faintest > 0)
-             ? {probe, organ, faintest, zoom : zoomOf(state)}
+                 (probe.kind === 'ground' || state.anatomy?.bodyRadius > 0)
+             ? {probe, organ, zoom : zoomOf(state)}
              : null;
 }
-function probeGrip(organ, probe, faintest, zoom, bodyRadius, control = probe.kind,
-                   at = probeHandle(probe, faintest, control)) {
+function probeGrip(organ, probe, zoom, bodyRadius, control = probe.kind,
+                   at = probeHandle(probe, control)) {
   const taste = probe.kind === 'taste';
   const radius = taste && bodyRadius > 0  ? SENSORY_PROBE.radius * BODY_RADIUS / bodyRadius * zoom
                  : probe.kind === 'smell' ? PROBE_SCENE.source
@@ -384,7 +389,7 @@ function probeGrip(organ, probe, faintest, zoom, bodyRadius, control = probe.kin
          escapeText(t('studio.probe.handle.' + control)) + '</title><circle r="' +
          fixed(radius) + '"/>' + (taste ? probeObject(probe.scent) : '') + '</g>';
 }
-function attackSvg(state, organ, probe, zoom, faintest) {
+function attackSvg(state, organ, probe, zoom) {
   const {rim, contact, hinge, tip, other} = attackMouth(probe, state),
         xy = p => fixed(p.x) + ' ' + fixed(p.y),
         part = state.anatomy?.attackProbe?.active, T = PROBE_SCENE.teeth,
@@ -408,8 +413,8 @@ function attackSvg(state, organ, probe, zoom, faintest) {
   return '<path class="aid-probe-arrow" data-attack-jaws d="M' +
          xy(tip) + ' L' + xy(hinge) + ' L' + xy(other) + '"/><path class="aid-probe-teeth" d="' + teeth + '"/>' + direction +
          answerBadge(contact, zoom, part?.held) +
-         probeGrip(organ, probe, faintest, zoom, state.anatomy.bodyRadius, 'attack', hinge) +
-         probeGrip(organ, probe, faintest, zoom, state.anatomy.bodyRadius, 'attack-gape', tip);
+         probeGrip(organ, probe, zoom, state.anatomy.bodyRadius, 'attack', hinge) +
+         probeGrip(organ, probe, zoom, state.anatomy.bodyRadius, 'attack-gape', tip);
 }
 function probeObject(scent) {
   if (scent === STONE)
@@ -506,30 +511,30 @@ export function senseProbeSvg(state) {
   const config = visibleProbe(state);
   if (!config)
     return foodSvg(state);
-  const {probe, organ, faintest, zoom} = config, flow = probeFlow(probe);
+  const {probe, organ, zoom} = config, flow = probeFlow(probe);
   if (probe.kind === 'ground')
     return '<g class="aid-sense-probe">' + groundGrip(config) + '</g>';
   if (probe.kind === 'attack')
-    return '<g class="aid-sense-probe">' + attackSvg(state, organ, probe, zoom, faintest) +
+    return '<g class="aid-sense-probe">' + attackSvg(state, organ, probe, zoom) +
            '</g>';
   const arrows = flow?.strength > 0
-                     ? flowArrows(radians(flow.bearing), probeHandle(flow, faintest), PROBE_SCENE)
+                     ? flowArrows(radians(flow.bearing), probeHandle(flow), PROBE_SCENE)
                      : '';
-  return '<g class="aid-sense-probe">' + arrows + stimulusSvg(probe, faintest, zoom) +
+  return '<g class="aid-sense-probe">' + arrows + stimulusSvg(probe, zoom) +
          (probe.kind === 'taste' ? barbelProbeSvg(state) : '') + answerSvg(state, organ, zoom) +
          (probe.kind === 'flow'
               ? ''
-              : probeGrip(organ, probe, faintest, zoom, state.anatomy.bodyRadius)) +
-         (flow ? probeGrip(organ, flow, faintest, zoom) : '') + '</g>';
+              : probeGrip(organ, probe, zoom, state.anatomy.bodyRadius)) +
+         (flow ? probeGrip(organ, flow, zoom) : '') + '</g>';
 }
 export function probeWater(state) {
   const config = visibleProbe(state), flow = config && probeFlow(config.probe);
   if (!(flow?.strength > 0))
     return null;
-  const {faintest, zoom} = config;
+  const {zoom} = config;
   return {
-    key : [ flow.bearing, flow.strength, faintest, zoom ].join(':'),
-    svg : () => waterSvg(flow, faintest, zoom)
+    key : [ flow.bearing, flow.strength, zoom ].join(':'),
+    svg : () => waterSvg(flow, zoom)
   };
 }
 export function probeScents(state) {
