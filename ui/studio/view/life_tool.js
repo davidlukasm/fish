@@ -2,14 +2,15 @@
 // lies its life from egg to grown fish, on the axis of the cells' life cycle (life_cycle.js), with
 // the knob "now": the maturity every picture of the Atelier is drawn at. Beside it the rest of
 // that state: the energy reserve, the exhaustion and the level of each messenger the fish uses,
-// each a vessel filled to its level, the knob on the level.
+// each a vessel filled to its level, in the colour it has in the blood sense's wheel, the knob
+// at its rim at the level's height.
 // All of it is the preview's blood (trials.js, setPreviewContext; development.js,
 // previewContextOf): one state, read by the inspectors, set here and nowhere else. The pictures
-// show that state whatever tool is chosen, so the life stays in view with every tool, with its
-// knobs only while this tool is chosen; a click on it chooses the tool. The fish itself stays as
-// it is. Every knob is an input (round): it tries the fish, it does not change it.
+// show that state whatever tool is chosen, so all of it stays in view with every tool, with its
+// knobs and words only while this tool is chosen; a click on it chooses the tool. The fish itself
+// stays as it is. Every knob is an input (round): it tries the fish, it does not change it.
 import {BLOOD_SUBSTANCE} from '../../schema.js';
-import {substanceColor} from '../../hormones.js';
+import {bloodColour} from '../../hormones.js';
 import {bloodLevel} from '../model/document.js';
 import {previewContextOf, previewSubstances} from './development.js';
 import {LIFE_STAGE, stageIcon, stageWord} from './life_cycle.js';
@@ -17,7 +18,8 @@ import {escapeText, fixed} from './markup.js';
 import {substanceName} from './substances.js';
 
 // The bar: the life from `left` to `right`, its band `band` high round `line`; the knob `over`
-// the band. Then a vessel every `pitch`, `vessel` in radius.
+// the band. Then a vessel every `pitch`, `vessel` in radius; beside the closed life every
+// `close`, `small` in radius, the first `near` the life.
 const BAR = Object.freeze({
   left : 16,
   right : 316,
@@ -29,9 +31,13 @@ const BAR = Object.freeze({
   closed : 34,
   knob : 7,
   gap : 46,
-  pitch : 96,
+  pitch : 100,
   vessel : 14,
-  grip : 6
+  grip : 6,
+  near : 22,
+  close : 26,
+  small : 9,
+  aside : .8
 });
 const lifeX = share => BAR.left + (BAR.right - BAR.left) * share;
 // What is set beside the maturity: reserve and exhaustion always, a messenger once the fish
@@ -43,9 +49,21 @@ function levelsOf(state) {
     ...previewSubstances(state.document, state.capabilities).filter(k => !always.includes(k))
   ];
 }
-// A vessel's place and where its level stands.
-const vesselX = n => BAR.right + BAR.gap + BAR.pitch * n;
-const surface = level => BAR.line + BAR.vessel - 2 * BAR.vessel * level;
+// A vessel's place, its radius and where its level stands in it: beside the open life with room
+// for its name, beside the closed one small and close.
+const vesselOf = (n, open) => {
+  const B = BAR, r = open ? B.vessel : B.small, line = open ? B.line : B.closed / 2;
+  return {
+    x : B.right + (open ? B.gap + B.pitch * n : B.near + B.close * n),
+    line,
+    r,
+    surface : level => line + r - 2 * r * level,
+    // Where the knob sits for a level at height y: outside the rim, on it, and never nearer the
+    // vessel's middle line than `aside` of its radius, so that it stays beside the vessel.
+    rim : y => B.right + (open ? B.gap + B.pitch * n : B.near + B.close * n) +
+               Math.max(B.aside * r, Math.sqrt(Math.max(0, r * r - (y - line) ** 2))) + B.grip + 1
+  };
+};
 const nowLine = (x, top) => 'M' + x + ' ' + (top - BAR.over) + ' V' + (top + BAR.band + 3);
 function lifeLine(context, open) {
   const B = BAR, line = open ? B.line : B.closed / 2, top = line - B.band / 2,
@@ -73,32 +91,38 @@ function lifeLine(context, open) {
                      now + '" cy="' + (top - B.over) + '" r="' + B.knob + '"/>'
                : '');
 }
-function vessel(state, context, index, n) {
-  const B = BAR, x = vesselX(n), r = B.vessel, level = bloodLevel(context, index),
-        y = surface(level), colour = substanceColor(index), clip = 'aid-life-vessel-' + index;
+// A vessel filled to its level. Open, its knob sits outside its rim at the level's height and is
+// dragged up and down; closed, it only shows the level.
+function vessel(state, context, index, n, open) {
+  const B = BAR, {x, line, r, surface, rim} = vesselOf(n, open),
+        y = surface(bloodLevel(context, index)), colour = bloodColour(index),
+        clip = 'aid-life-vessel-' + index;
   return '<g style="--substance:' + colour + '"><clipPath id="' + clip + '"><circle cx="' + x +
-         '" cy="' + B.line + '" r="' + r + '"/></clipPath><circle class="aid-life-vessel" cx="' +
-         x + '" cy="' + B.line + '" r="' + r + '"/><rect class="aid-life-amount" ' +
-         'data-life-amount="' + index + '" clip-path="url(#' + clip + ')" x="' + (x - r) + '" y="' +
-         fixed(y) + '" width="' + 2 * r + '" height="' + fixed(B.line + r - y) +
-         '"/><text text-anchor="middle" x="' + x + '" y="' + B.words + '" style="fill:' + colour +
-         '">' + escapeText(substanceName(state, index)) +
-         '</text><circle class="aid-graphic-handle" data-preview-handle="' + index +
-         '" data-level-bottom="' + (B.line + r) + '" data-level-top="' + (B.line - r) + '" cx="' +
-         x + '" cy="' + fixed(y) + '" r="' + B.grip + '"/></g>';
+         '" cy="' + line + '" r="' + r + '"/></clipPath><circle class="aid-life-vessel" cx="' + x +
+         '" cy="' + line + '" r="' + r + '"/><rect class="aid-life-amount" data-life-amount="' +
+         index + '" data-life-vessel="' + n + '" clip-path="url(#' + clip + ')" x="' + (x - r) +
+         '" y="' + fixed(y) + '" width="' + 2 * r + '" height="' + fixed(line + r - y) + '"/>' +
+         (open ? '<text text-anchor="middle" x="' + x + '" y="' + B.words +
+                     '" style="fill:' + colour + '">' + escapeText(substanceName(state, index)) +
+                     '</text><circle class="aid-graphic-handle" data-preview-handle="' + index +
+                     '" data-level-bottom="' + (line + r) + '" data-level-top="' + (line - r) +
+                     '" cx="' + fixed(rim(y)) + '" cy="' + fixed(y) + '" r="' + B.grip + '"/>'
+               : '') +
+         '</g>';
 }
 export function lifeBar(state) {
   if (state.mode !== 'fish')
     return '';
   const B = BAR, open = state.tool === 'life', context = previewContextOf(state),
-        levels = open ? levelsOf(state) : [],
-        width = (levels.length ? vesselX(levels.length - 1) + B.pitch / 2 : B.right + B.left),
+        levels = levelsOf(state), last = vesselOf(levels.length - 1, open),
+        width = last.x + (open ? B.pitch / 2 : last.r + B.left),
         height = open ? B.height : B.closed;
   return '<div class="aid-life-bar' + (open ? ' open' : '') + '"' +
          (open ? '' : ' data-tool="life" title="' + escapeText(stageWord('tool')) + '"') +
          '><svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' +
-         height + '" data-preview-bars role="group">' + lifeLine(context, open) +
-         levels.map((index, n) => vessel(state, context, index, n)).join('') + '</svg></div>';
+         height + '" data-preview-bars data-life-open="' + (open ? 1 : 0) + '" role="group">' +
+         lifeLine(context, open) +
+         levels.map((index, n) => vessel(state, context, index, n, open)).join('') + '</svg></div>';
 }
 // A dragged knob stays the element it is; the bar follows the state in place.
 export function syncLifeBar(root, state) {
@@ -112,9 +136,13 @@ export function syncLifeBar(root, state) {
   knob?.setAttribute('cx', x);
   bar.querySelector('[data-life-now-word]')?.setAttribute('x', fixed(Number(x) + B.knob + 4));
   for (const amount of bar.querySelectorAll('[data-life-amount]')) {
-    const index = amount.dataset.lifeAmount, y = surface(bloodLevel(context, Number(index)));
+    const index = amount.dataset.lifeAmount,
+          {line, r, surface, rim} = vesselOf(Number(amount.dataset.lifeVessel), !!knob),
+          y = surface(bloodLevel(context, Number(index))),
+          grip = bar.querySelector('[data-preview-handle="' + index + '"]');
     amount.setAttribute('y', fixed(y));
-    amount.setAttribute('height', fixed(B.line + B.vessel - y));
-    bar.querySelector('[data-preview-handle="' + index + '"]')?.setAttribute('cy', fixed(y));
+    amount.setAttribute('height', fixed(line + r - y));
+    grip?.setAttribute('cy', fixed(y));
+    grip?.setAttribute('cx', fixed(rim(y)));
   }
 }

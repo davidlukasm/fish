@@ -1,8 +1,16 @@
 import {cssPercent, t, textArea, tList} from './strings.js';
-import {HORMONE_CONTEXT, HORMONES, TOLERANCE} from './schema.js';
+import {BLOOD_SUBSTANCE, HORMONE_CONTEXT, HORMONES, TOLERANCE} from './schema.js';
 export const hormoneColors = [ '#d4a0ee', '#77d2bd', '#e9b66d', '#8daded', '#ee9f9a', '#b8d47a' ];
 const BODY_SIGNAL_COLOR = '#b7d3c9';
 export const substanceColor = index => hormoneColors[index] ?? BODY_SIGNAL_COLOR;
+// The body's own three have one colour among the hormones'; where each is shown for itself (the
+// blood sense's wheel, the life tool's vessels) it has its own, the same everywhere.
+const BODY_COLOURS = Object.freeze({
+  [BLOOD_SUBSTANCE.maturity] : '#b7d3c9',
+  [BLOOD_SUBSTANCE.reserve] : '#f1e3a4',
+  [BLOOD_SUBSTANCE.fatigue] : '#c7a7b9'
+});
+export const bloodColour = index => BODY_COLOURS[index] ?? substanceColor(index);
 const HORMONE_CHART = Object.freeze({
   width : 460,
   head : 28,
