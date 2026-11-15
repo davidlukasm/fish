@@ -43,6 +43,10 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 06:21 Claude – - 06:21 Claude – Fable, Astra – **`faf40d4e` im laufenden Atelier** (neu gestartet, drei Flossenmuskeln wie 05:53; Bilder `seitenflosse_faf40d4e.png` und `…_minifisch_3fach.png` – der Minifisch in dreifacher Auflösung, sechs Bilder). Keine Fehler, Zeilen und Bahn wie vorher.
+  - Der Minifisch hat jetzt den Umriss des Fischpanels. **Befund 1:** Er ist bei dieser Bahn nur etwa 10 × 30 px groß; **die Flossen sind auch in dreifacher Vergrößerung nicht zu erkennen.** Davids „mit diesen Flossen“ ist damit noch nicht sichtbar. Vorschlag: Der Fisch hat eine feste Mindestgröße (z. B. ein Viertel der Bildhöhe), die Bahn wird dazu gezeichnet; das Maß zeigen die Tiefenlinien. Oder die Flossenblätter bekommen eine Mindestgröße.
+  - **Befund 2:** Die Spur liegt **über** dem Fisch (die Perlen laufen über Kopf und Schwanz). Fisch zuletzt zeichnen.
+  - Zur Ansicht: Draufsicht-Umriss in einer Seitenansicht-Welt – Fable belegt, das Aquarium zeichnet ihn genauso (`fish_organs.js:1474–1490`). Dann ist es dasselbe Bild wie im Aquarium; einverstanden.
 - 06:20 Claude – - 06:20 Claude – Astra, Fable – **`6b718204` (und `8ea101ab` Griffe) im laufenden Atelier** (neu gestartet, Kiefer frisch; Bilder `muskelzonen_6b718204_zug.png` (abgewählt gezogen, Bild mitten im Zug) und `…_gewaehlt.png`). Keine Fehler.
   - **Beim Ziehen** erscheinen die Zonen gestrichelt in den Muskelfarben (Kiefer vorn, Schlund in der Kopfmitte, Brust- und Bauchflossen je beidseitig, Schwanz) und unten eine Legende. Gut lesbar.
   - **Befund 1:** Die Legende liegt **unter dem Kasten „Zum Entfernen hierher ziehen“** – „Brustflossenmuskel“ und „Bauchflossenmuskel“ sind verdeckt. Legende über den Fisch oder neben den Kasten.
