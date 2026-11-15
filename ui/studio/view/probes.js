@@ -9,6 +9,7 @@ import {organLocation} from './places.js';
 import {arrowPath} from './lateral.js';
 import {escapeText, fixed, idSafe} from './markup.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
+import {FOOD_SLOT} from '../../nutrition_model.js';
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
 import {BARBEL, ODOR_KIND, SEABED, SENSORY_PROBE} from '../../schema.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
@@ -450,16 +451,20 @@ function groundGrip(config) {
          '" rx="' + strip / 2 + '" fill="url(#aid-ground-strip)"/>' +
          probeGrip(organ, probe, null, zoom, 0);
 }
-// Food before the mouth, while a muscle of the mouth is chosen: the four kinds the engine tells
-// apart (anatomy.mouthForces: flesh, plants and shells, morsels, algae to scrape), each bitten as
-// deep as the mouth's force on it, its name below it. Nothing is set at the food; it is not kept in view, so the
-// fish stays large.
+// Food before the mouth, while a muscle of the mouth is chosen: the four bites the engine tells
+// apart (anatomy.mouthForces; feeding.cc: cutting for flesh, grinding for crabs and mussels,
+// loose for feed, scraping for algae), each a piece with the Aquarium's sign for such food on
+// it, bitten as deep as the mouth's force on it, its name below it. Nothing is set at the food; it is not kept in
+// view, so the fish stays large.
 const FOOD = Object.freeze({
   far : 55,
-  spread : 30,
-  half : 8,
+  spread : 35,
+  half : 9,
   round : 4,
   word : 9,
+  sign : .7,
+  ink : '#0c252b',
+  signs : [ FOOD_SLOT.fish, FOOD_SLOT.mussel, FOOD_SLOT.feed, FOOD_SLOT.algae ],
   colours : [ '#ee9f9a', '#8fd18a', '#e6b47c', '#77d2bd' ]
 });
 function foodSvg(state) {
@@ -468,25 +473,26 @@ function foodSvg(state) {
   if (probe?.kind !== 'mouth' || !organ || !isChosen(state.selected, organ) || !forces)
     return '';
   const F = FOOD, h = F.half, names = tList('studio.live.mouth.foods');
-  const turns = F.colours.map((_, j) => F.spread * (j - (F.colours.length - 1) / 2));
+  const places = F.colours.map((_, j) => {
+    const turn = radians(F.spread * (j - (F.colours.length - 1) / 2));
+    return 'translate(' + fixed(SNOUT_TIP.x - F.far * Math.cos(turn)) + ' ' +
+           fixed(SNOUT_TIP.y + F.far * Math.sin(turn)) + ')';
+  });
   const pieces = F.colours.map((colour, j) => {
-    // The bite is taken from the side that faces the mouth; its area follows the force.
+    // The bite is taken out of the piece on the side of the mouth; its area follows the force.
     const deep = Math.sqrt(clamp(forces[j] ?? 0)),
-          bite = deep > 0 ? '<path class="aid-live-mouth-bite" d="M' + h + ' ' + fixed(-h * deep) +
-                                ' Q' + fixed(h - 3.6 * h * deep) + ' 0 ' + h + ' ' +
+          bite = deep > 0 ? '<path class="aid-probe-bite" d="M' + h + ' ' + fixed(-h * deep) +
+                                ' Q' + fixed(h - 3.2 * h * deep) + ' 0 ' + h + ' ' +
                                 fixed(h * deep) + 'Z"/>'
                           : '';
-    return '<g transform="rotate(' + fixed(-turns[j]) + ' ' + fixed(SNOUT_TIP.x) + ' ' +
-           fixed(SNOUT_TIP.y) + ') translate(' + fixed(SNOUT_TIP.x - F.far) + ' ' +
-           fixed(SNOUT_TIP.y) + ')"><rect x="' + -h + '" y="' + -h + '" width="' + 2 * h +
-           '" height="' + 2 * h + '" rx="' + F.round + '" fill="' + colour + '"/>' + bite + '</g>';
+    return '<g transform="' + places[j] + '"><rect x="' + -h + '" y="' + -h + '" width="' +
+           2 * h + '" height="' + 2 * h + '" rx="' + F.round + '" fill="' + colour + '"/>' +
+           ecologyIconSvg(F.signs[j], F.ink, F.sign) + bite + '</g>';
   });
-  // The names below the pieces, upright and over them: the colour alone does not say what a
-  // piece is.
+  // The names over the pieces, so that no piece hides its neighbour's name.
   const words = F.colours.map(
       (colour, j) => '<text class="aid-handle-word" text-anchor="middle" style="fill:' + colour +
-                     '" x="' + fixed(SNOUT_TIP.x - F.far * Math.cos(radians(turns[j]))) + '" y="' +
-                     fixed(SNOUT_TIP.y + F.far * Math.sin(radians(turns[j])) + h + F.word) + '">' +
+                     '" transform="' + places[j] + '" y="' + (h + F.word) + '">' +
                      escapeText(names[j] ?? '') + '</text>');
   return '<g class="aid-sense-probe" pointer-events="none">' + pieces.join('') + words.join('') +
          '</g>';

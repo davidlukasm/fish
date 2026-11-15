@@ -671,6 +671,7 @@
 .aid-probe-arrow.touch{stroke:var(--aid-touch-felt)}
 .aid-probe-arrow.wound{stroke:var(--aid-pain-felt)}
 .aid-probe-teeth{fill:var(--aid-flow-light)}
+.aid-probe-bite{fill:#0c252b}
 .aid-probe-arrow.flow{stroke:var(--aid-flow);stroke-width:1.6;stroke-opacity:.55}
 .aid-probe-particle{fill:var(--aid-flow-light);fill-opacity:.85}
 .aid-probe-stream{fill:none;stroke:var(--aid-flow);stroke-opacity:var(--lines);stroke-width:1;vector-effect:non-scaling-stroke}
@@ -1376,7 +1377,6 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-mouth-line{fill:none;stroke:#f4efd8;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .aid-live-mouth-water{fill:#9cc8f0;opacity:.7}
 .aid-live-mouth-tooth{fill:#f4efd8}
-.aid-live-mouth-bite{fill:var(--aid-ground)}
 .aid-live-gland-mark{fill:var(--key);opacity:.45;cursor:pointer}
 .aid-live-gland-mark.on{opacity:1;stroke:#f1dda6;stroke-width:1.2;cursor:default}
 .aid-live-grip.aid-live-gland-time{stroke:var(--aid-ink);stroke-width:1.5}

@@ -1809,7 +1809,7 @@
       "steps": "{n} Schritte"
     },
     "mouth": {
-      "foods": ["Fleisch", "Pflanze", "Brocken", "Algen"],
+      "foods": ["Fleisch", "Schale", "Brocken", "Algen"],
       "gills": "Kiemen",
       "gut": "Darm"
     },
