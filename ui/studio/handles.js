@@ -177,8 +177,9 @@ export const GRIPS = Object.freeze([
     // An engine curve's grip moves the values by how far it is dragged from where it was taken.
     start : (studio, g, h) => {
       const target = g.dataset.receptorCurve, cut = target.lastIndexOf(':');
-      const receptor = findCenter(studio.state.document, target.slice(0, cut))
-                           ?.center.receptors?.[Number(target.slice(cut + 1))];
+      const center = findCenter(studio.state.document, target.slice(0, cut))?.center;
+      const which = target.slice(cut + 1);
+      const receptor = which === BIRTH ? center?.growth : center?.receptors?.[Number(which)];
       return {
         target,
         handle : h.dataset.curveHandle,
