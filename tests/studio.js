@@ -1152,6 +1152,23 @@ async function checkBloodReceptors(model, capabilities) {
                  'The live bladder uses the exact 0.51 maturity beyond the death threshold');
     assert.equal(bladderEstimate.now.hover, null);
   }
+  {
+    const shared = {...receptor, substance : 0};
+    const neuron = model.updateReceptor(placed.document, placed.centerId, E.excitation, shared);
+    const site = wheel.sites.find(site => eligible(ORGAN_BY_KEY.muscle.centers[0], site));
+    const muscle = model.addOrgan(neuron, 'muscle', wheel.sites, sitePoint(site));
+    const motor = model.findOrgan(muscle.document, muscle.organId).centers[0];
+    const document = model.updateReceptor(muscle.document, motor.id, E.excitation, shared);
+    const anatomy = design(document);
+    const html = substances.hormoneInspector({
+      document, anatomy, capabilities : wheel, sites : wheel.sites, focusSubstance : 0,
+      previewContext : blood
+    }, anatomy);
+    const rows = html.split('<div class="aid-hormone-row">').slice(1);
+    const target = id => 'data-select-center="' + id + '" data-select-effect="' + E.excitation + '"';
+    assert.ok(rows.some(row => row.includes(target(placed.centerId)) && row.includes(target(motor.id))),
+              'A shared hormone response can open either organ’s receptor');
+  }
   const region =
       model.addOrgan(model.newDocument('Region'), 'olfaction', wheel.sites, {x : 380, y : 325});
   const regionOrgan = model.findOrgan(region.document, region.organId);

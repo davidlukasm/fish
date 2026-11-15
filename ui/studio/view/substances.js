@@ -495,11 +495,11 @@ function bloodCurves(state, index, context) {
       const key = effect + ':' + (curve ?? []).map(v => v.toFixed(3)).join(',');
       const row = seen.get(key);
       if (row) {
-        if (!row.names.includes(name))
-          row.names.push(name);
+        if (!row.targets.has(name))
+          row.targets.set(name, cell.id);
         return [];
       }
-      const fresh = {id : cell.id, effect, names : [ name ], curve};
+      const fresh = {effect, targets : new Map([[ name, cell.id ]]), curve};
       seen.set(key, fresh);
       return [ fresh ];
     });
@@ -509,7 +509,7 @@ function bloodCurves(state, index, context) {
   const words = tList('studio.axes.effects');
   return '<section class="aid-hormone-receivers" style="--substance:' + substanceColor(index) +
          '"><h4>' + label('hormoneCard.acts') + '</h4>' +
-         rows.map(({id, effect, names, curve}) => {
+         rows.map(({effect, targets, curve}) => {
                const birth = effect === BIRTH;
                const scale = birth || effect === HORMONE_EFFECT.death
                                  ? GROWTH_SCALE
@@ -535,14 +535,16 @@ function bloodCurves(state, index, context) {
                           '"/><circle class="aid-hormone-point" cx="' + fixed(x(now)) + '" cy="' +
                           A.y + '" r="3"/></svg>';
                }
-               return '<button class="aid-hormone-row" data-select-center="' + escapeText(id) +
-                      '" data-select-effect="' + effect + '"><span>' +
-                      escapeText(names.join(' · ')) + '</span>' +
+               const names = [...targets].map(([name, id]) =>
+                   '<button type="button" data-select-center="' + escapeText(id) +
+                   '" data-select-effect="' + effect + '">' + escapeText(name) + '</button>');
+               return '<div class="aid-hormone-row"><span class="aid-hormone-targets">' +
+                      names.join('<span aria-hidden="true"> · </span>') + '</span>' +
                       (birth ? glyph(BIRTH_ICON, ICON.mark, {line : true})
                              : boundEffect(effect, 0)) +
                       '<small>' +
                       escapeText(birth ? label('hormoneCard.birthTile') : words[effect]) +
-                      '</small>' + answer + '</button>';
+                      '</small>' + answer + '</div>';
              })
              .join('') +
          '</section>';
