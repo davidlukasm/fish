@@ -1308,8 +1308,8 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
     sense_report(t, g.interface, groups, *sense, probe_tank ? &probe_tank->field : nullptr);
   std::cout << '}';
 }
-void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan = nullptr,
-            const AddressFit &fit = {}) {
+void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan,
+            const AddressFit &fit, bool check_incubation) {
   const auto &t = *g.blueprint;
   std::cout << std::setprecision(REPORT_DIGITS) << '{';
   std::cout << "\"viable\":" << (g.viable() ? "true" : "false")
@@ -1335,17 +1335,19 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
   }
   const auto &a = *g.interface;
   readiness_report(a, t, true);
-  const auto incubation = incubation_probe(g);
-  std::cout << ",\"eggIncubation\":";
-  if (incubation)
-    std::cout << incubation->steps;
-  else
-    std::cout << "null";
-  std::cout << ",\"eggMinimum\":";
-  if (incubation)
-    std::cout << incubation->energy;
-  else
-    std::cout << "null";
+  if (check_incubation) {
+    const auto incubation = incubation_probe(g);
+    std::cout << ",\"eggIncubation\":";
+    if (incubation)
+      std::cout << incubation->steps;
+    else
+      std::cout << "null";
+    std::cout << ",\"eggMinimum\":";
+    if (incubation)
+      std::cout << incubation->energy;
+    else
+      std::cout << "null";
+  }
   fishsim::Body adult;
   adult.organ_mass = a.organ_mass;
   adult.tissue = fishsim::tissue_capacity(adult);
@@ -1638,7 +1640,9 @@ int main(int argc, char **argv) {
     std::vector<Group> groups;
     std::optional<Plan> compiledPlan;
     AddressFit addressFit;
-    if (operation == "build" && argc == 3) {
+    const bool check_incubation =
+        operation == "build" && argc == 4 && std::string(argv[3]) == "--incubation";
+    if (operation == "build" && (argc == 3 || check_incubation)) {
       std::string name;
       auto plan = read_plan(std::cin, name);
       auto progress = [](const char *phase, const AddressFit &fit) {
@@ -1779,7 +1783,7 @@ int main(int argc, char **argv) {
     }
     if (operation != "inspect")
       g.save(argv[operation == "edit" ? 3 : 2]);
-    report(g, groups, compiledPlan ? &*compiledPlan : nullptr, addressFit);
+    report(g, groups, compiledPlan ? &*compiledPlan : nullptr, addressFit, check_incubation);
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
     return 1;

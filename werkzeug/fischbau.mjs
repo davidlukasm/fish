@@ -50,7 +50,8 @@ from atelier_service import run
 from file_io import atomic_write
 request=json.load(sys.stdin)
 for operation in ("design", "build"):
-    r=run({"operation":operation,"plan":request["plan"]})
+    r=run({"operation":operation,"plan":request["plan"]},
+          check_incubation=(operation == "build"))
     wrong=[i for i,source in enumerate(request["pressure"])
            if source is not None and r["pressure"][i] != source]
     if wrong:
@@ -58,6 +59,8 @@ for operation in ("design", "build"):
 if not r["compiler"]["ok"] or not r["viable"]:
     raise ValueError(json.dumps(r["compiler"]))
 egg = request["eggStore"] * r["adultScale"]
+if r["eggMinimum"] is None:
+    raise ValueError("Schlupf in der Brutprüfung blieb aus")
 if egg < r["eggMinimum"]:
     raise ValueError(f"Ei zu klein: {egg:.2f} Energie, Entwicklung braucht {r['eggMinimum']:.2f}")
 atomic_write(Path(sys.argv[1]), r["genome"])
