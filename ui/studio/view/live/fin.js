@@ -39,21 +39,25 @@ import {fishPath, sideFins} from '../frame.js';
 import {label} from '../kit.js';
 import {addPicture, chip, clamp, drag, el, liveKind, path, picture} from './kit.js';
 
-// The water: `box` wide and high, a body radius at most `radius` pixels, `edge` free round the
+// The water: `box` wide and high; the fish is drawn `fish` pixels to a body radius, the way at
+// most `radius` pixels to one; `edge` free round the
 // way. The beats: steps from L to R, `steps` in all, a beat at most `longest`; the first row's
 // line at `row`, the next `gap` below; a full beat `high` from its line; a pull of `turn` across
 // the line turns the stroke round.
 const SWIM = Object.freeze({
-  box : [ 300, 150 ],
-  radius : 22,
-  edge : 26,
+  box : [ 300, 190 ],
+  fish : 48,
+  radius : 30,
+  edge : 58,
+  pearl : 2.6,
+  slack : .15,
   lines : 12,
   L : 30,
   R : 288,
   steps : 128,
   longest : 64,
   every : 4,
-  row : 180,
+  row : 220,
   gap : 34,
   high : 14,
   least : .15,
@@ -158,16 +162,18 @@ liveKind('fin', (studio, organId) => {
     }
     if (course.length > 1)
       el('path', {d : path(course.map(at)), class : 'aid-live-track-line'}, live);
-    // Where a fin pulls, the way carries its colour.
+    // Where a fin pulls, the way carries its colour, the stronger the pull the larger; a fin
+    // nearly slack leaves no mark.
     for (const row of course) {
       const [x, y] = at(row);
       rows.forEach(({channel}, k) => {
-        if (row[4]?.[channel] > 0)
-          el('circle', {cx : x, cy : y, r : 2.8 - .5 * k, class : 'aid-live-petal k' + k}, live);
+        const pull = clamp(row[4]?.[channel] ?? 0);
+        if (pull > S.slack)
+          el('circle', {cx : x, cy : y, r : S.pearl * pull, class : 'aid-live-petal k' + k}, live);
       });
     }
     // The fish with its fins, as the fish panel draws it; a fin that has a row carries its colour.
-    const fish = el('g', {}, live), small = S.radius / BODY_RADIUS,
+    const fish = el('g', {}, live), small = S.fish / BODY_RADIUS,
           drawn = el('g', {
             transform :
                 `scale(${small.toFixed(4)}) translate(${- BODY_MIDDLE.x} ${- BODY_MIDDLE.y})`
