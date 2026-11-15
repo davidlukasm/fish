@@ -42,7 +42,7 @@ import {label} from './view/kit.js';
 import {hormoneTime} from './view/substances.js';
 import {requestBody} from './requests.js';
 import {BODY_MAP, PROBE_LAYER} from './view/scene.js';
-import {outlineSizes} from './view/body.js';
+import {outlineSizes, paintMouthStep} from './view/body.js';
 import {newFishDocument} from './canvas_placement.js';
 
 const PRESSURE_TRIES = 12, PRESSURE_BATCH = 'pressure';
@@ -169,6 +169,10 @@ export const designMethods = {
       return;
     this.state.senseProbe = {kind : 'fins', organ : organId, phases, key};
     this.requestDesign();
+  },
+  showMouthStep(organId, sample) {
+    if (organOf(this.state.document, this.state.selected?.id)?.id === organId)
+      paintMouthStep(this.bodyMap(), sample);
   },
   setAttackCommand(command) {
     const probe = this.state.senseProbe;

@@ -974,6 +974,7 @@
 .aid-move-suck{transform-box:fill-box;transform-origin:center;animation:aid-suck .45s ease-in-out 2}
 @keyframes aid-suck{0%,100%{transform:scale(1)}45%{transform:scale(1.25,1.45)}}
 .aid-head-intake.aid-move-suck{animation:aid-intake .45s linear 4}
+.aid-mouth-flowing .aid-head-intake{animation:aid-intake .45s linear infinite}
 @keyframes aid-intake{to{stroke-dashoffset:-18}}
 .aid-move-throat{animation:aid-throat .45s ease-in-out 2}
 @keyframes aid-throat{0%,100%{stroke-opacity:.5}45%{stroke-opacity:1;stroke-width:26px}}

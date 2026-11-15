@@ -656,8 +656,6 @@ function throatSvg({at, rx, suction}) {
          headTitle('studio.head.throat') + '</path>';
 }
 function intakeSvg({at, ry, suction}) {
-  if (!suction)
-    return '';
   const I = HEAD.intake, reachOut = I.least + I.span * suction;
   let html = '';
   for (let k = 0; k < I.lines; ++k) {
@@ -724,10 +722,32 @@ function headSvg(state) {
   const columns = state.anatomy?.anatomy ?? [];
   const mouth = mouthShape(columns);
   const eats = columns[ANATOMY.suction_strength] > 0 || columns[ANATOMY.aggression] > 0 ||
-               columns[ANATOMY.mouth] > 0;
-  return '<g class="aid-head">' + barbelsSvg(columns, state.anatomy?.barbelPlaces) +
-         throatSvg(mouth) + (eats ? intakeSvg(mouth) + cheeksSvg(mouth) + jawsSvg(mouth) : '') +
-         mouthSvg(mouth) + teethSvg(columns, mouth) + '</g>';
+               columns[ANATOMY.mouth] > 0, pumps = columns[ANATOMY.gill_strength] > 0;
+  const water = mouth.suction || pumps
+                    ? '<g data-mouth-flow opacity="' + (mouth.suction ? 1 : 0) + '">' +
+                          intakeSvg(mouth) + '</g>'
+                    : '';
+  return {
+    inside : barbelsSvg(columns, state.anatomy?.barbelPlaces) + throatSvg(mouth) +
+             water + cheeksSvg(mouth),
+    opening : '<g data-mouth-opening>' + (eats ? jawsSvg(mouth) : '') + mouthSvg(mouth) +
+              teethSvg(columns, mouth) + '</g>'
+  };
+}
+export function paintMouthStep(svg, sample) {
+  if (!svg || !sample)
+    return;
+  const [opening, flow] = sample, y = SNOUT_TIP.y;
+  const jaw = svg.querySelector('[data-mouth-opening]');
+  const water = svg.querySelector('[data-mouth-flow]');
+  const pose = `translate(0 ${y}) scale(1 ${fixed(opening)}) translate(0 ${-y})`;
+  if (jaw && jaw.getAttribute('transform') !== pose)
+    jaw.setAttribute('transform', pose);
+  const opacity = fixed(flow);
+  if (water && water.getAttribute('opacity') !== opacity) {
+    water.setAttribute('opacity', opacity);
+    water.classList.toggle('aid-mouth-flowing', flow > 0);
+  }
 }
 export function outlineSizes(state) {
   const anatomy = state.outlinePreview ?? state.anatomy;
@@ -795,7 +815,7 @@ export function bodySvg(state) {
   }
   const tail = tailFin(sizes), origin = p => fixed(p.x) + 'px ' + fixed(p.y) + 'px';
   const body = fishPath(sizes, false), M = BODY_FRAME.middle, S = BODY_SHADE;
-  const vent = cloacaPoint();
+  const vent = cloacaPoint(), head = headSvg(state);
   const G = shownGut(state),
         hidden = '<g class="aid-hidden-passages" clip-path="url(#aid-cns-cover)">' +
                  '<path d="' + smoothLine(G.gullet) + ' ' + smoothLine(G.intestine) + '"/>' +
@@ -820,6 +840,6 @@ export function bodySvg(state) {
          '<path class="aid-symmetry-line" d="M130 365 H905"/>' + (gut || gutPath(state)) + ducts +
          brainSvg(fill, state) + hidden +
          '<path class="aid-operculum" d="M435 264 Q487 300 448 335 M435 466 Q487 430 448 395"/>' +
-         headSvg(state) + felt + organs + '<ellipse class="aid-cloaca" cx="' + fixed(vent.x) +
+         head.inside + felt + organs + head.opening + '<ellipse class="aid-cloaca" cx="' + fixed(vent.x) +
          '" cy="' + fixed(vent.y) + '" rx="5" ry="3"/>';
 }

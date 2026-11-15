@@ -290,9 +290,9 @@ export function cameraCoordinates(event, svg, camera) {
 export const HEAD = Object.freeze({
   mouth : [ 10, 15 ],
   mouth_in : 16,
-  lip : 2.4,
+  lip : 3.6,
   tooth_arc : 1.4,
-  tooth : [ 4, 7 ],
+  tooth : [ 6, 10 ],
   jaw_back : 62,
   jaw_spread : 14,
   jaw_width : [ 4, 6 ],
