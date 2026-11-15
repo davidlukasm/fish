@@ -1280,7 +1280,14 @@
       "touch": "Berührung: Richtung und Stärke",
       "wound": "Biss: Richtung und Schwere",
       "flow": "Strömung: Richtung und Stärke",
-      "balance": "Ziehen: Wo ist unten?"
+      "balance": "Ziehen: Wo ist unten?",
+      "attack": "Angreifer",
+      "attack-gape": "Maulweite"
+    },
+    "attack": {
+      "guard": "Abgewehrt bei ausreichender Reserve",
+      "fits": "Passt ins Maul",
+      "blocked": "Maul zu klein"
     },
     "strength": "Darmfüllung · Anteil",
     "nutrient": "Nährstoffzufluss · Signalstärke"
@@ -1556,7 +1563,9 @@
     "strength": "Muskelstärke",
     "undulation": "Schwanzbewegung",
     "jaw_length": "Kieferlänge",
-    "blunt_teeth": "Zahnform"
+    "blunt_teeth": "Zahnform",
+    "spine-field": "Breite des Stachelfelds",
+    "spine-strength": "Stachelhöhe"
   },
   "sense": {
     "cellsHandle": "{n} von {most} Zellen; ziehen fügt Zellen hinzu oder nimmt sie weg",

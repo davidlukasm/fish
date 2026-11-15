@@ -109,6 +109,7 @@ struct SenseScene {
 };
 namespace sense_scene {
 constexpr int smell = 1, touch = 2, flow = 3, wound = 4, gut = 5, taste = 6, balance = 7;
+constexpr int attack = 8;
 }
 constexpr double SENSE_SCENE_REACH = 40, SENSE_SCENE_STRENGTH = 20;
 SenseScene read_sense_scene(std::istream &in) {
@@ -117,7 +118,7 @@ SenseScene read_sense_scene(std::istream &in) {
   ensure(
       bool(in >> scene.kind >> scene.bearing >> scene.distance >> scene.strength >> scene.scent >>
            scene.nutrient) &&
-          scene.kind >= sense_scene::smell && scene.kind <= sense_scene::balance &&
+          scene.kind >= sense_scene::smell && scene.kind <= sense_scene::attack &&
           between(scene.bearing, -half_turn, half_turn) &&
           between(scene.distance, 0, SENSE_SCENE_REACH) &&
           between(scene.strength, 0, scene.kind == sense_scene::gut ? 1 : SENSE_SCENE_STRENGTH) &&
@@ -328,7 +329,7 @@ constexpr int COLOUR_STEPS = 9;
 constexpr double ADAPT_HELD = 4, ADAPT_SPAN = 4;
 constexpr int ADAPT_SAMPLES = 96;
 double raised_spine_height(const fishsim::BrainInterface &plan,
-                           const fishsim::PhysiologyParameters &physiology) {
+                           const fishsim::PhysiologyParameters &physiology, float command = 1) {
   namespace fs = fishsim;
   constexpr auto channel = fs::StrokeDefense;
   if (plan.stroke_capacity[channel] < physiology.stroke_threshold)
@@ -345,7 +346,7 @@ double raised_spine_height(const fishsim::BrainInterface &plan,
     muscle.pulls.push_back({std::uint32_t(index), channel, pull.share});
   }
   const auto count = muscle.effectors.size();
-  const auto drive = fs::effector_activity(std::vector<float>(count, 1), muscle);
+  const auto drive = fs::effector_activity(std::vector<float>(count, command), muscle);
   std::vector<double> reserve(count, 1);
   const auto &hold = plan.stroke_timing[channel];
   fs::StrokeState stroke;
@@ -425,7 +426,8 @@ void light_spread_report(const field::Substrate &t, const fishsim::BrainInterfac
   }
   std::cout << "]}";
 }
-std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &groups, bool developed) {
+std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &groups, bool developed,
+                                const SenseScene *attack = nullptr) {
   const auto &t = *g.blueprint;
   const auto &a = *g.interface;
   std::cout << ",\"hormoneTimes\":[";
@@ -644,6 +646,33 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
     const auto direction = [](int k) {
       return -fishsim::PI + (k + .5) * 2 * fishsim::PI / SPINE_DIRECTIONS;
     };
+    if (attack) {
+      // The mouth aperture is in units of the prey's collision radius. Absolute cost also
+      // requires the unblocked damage of the bite, which this probe leaves unspecified.
+      const double bearing = fishsim::radians(attack->bearing), gape = attack->distance;
+      const float command = float(std::clamp(attack->strength, 0., 1.));
+      const double active = command <= 0   ? rest
+                            : command >= 1 ? raised
+                                           : std::max(rest, raised_spine_height(a, physiology, command));
+      const auto report = [&](const char *name, double height) {
+        const double held = fishsim::local_defense(height, density, bearing);
+        const double cost = physiology.spine_block_cost * fishsim::BODY_TISSUE * held;
+        std::cout << '"' << name << "\":{\"held\":" << held << ",\"height\":" << height
+                  << ",\"reservePerDamage\":" << cost
+                  << ",\"fits\":" << (gape >= 1 + height ? "true" : "false") << '}';
+      };
+      std::cout << ",\"attackProbe\":{";
+      report("rest", rest);
+      std::cout << ',';
+      report("raised", raised);
+      std::cout << ',';
+      report("active", active);
+      std::cout << ",\"spines\":[";
+      for (int k = 0; k < SPINE_DIRECTIONS; ++k)
+        std::cout << (k ? "," : "") << fishsim::local_defense(active, density, direction(k));
+      std::cout << ']';
+      std::cout << '}';
+    }
     for (const auto &[name, defense] : {std::pair{"spinesRest", rest}, {"spinesRaised", raised}}) {
       std::cout << ",\"" << name << "\":[";
       for (int k = 0; k < SPINE_DIRECTIONS; ++k)
@@ -1037,13 +1066,14 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
   std::cout << "\"neurons\":" << t.neurons.size()
             << ",\"limited\":" << (t.resource_limited ? "true" : "false");
   readiness_report(*g.interface, t, false);
-  anatomy_report(g, groups, false);
+  const auto *attack = sense && sense->kind == sense_scene::attack ? &*sense : nullptr;
+  anatomy_report(g, groups, false, attack);
   if (light_spread) {
     const auto sample = light_example(plan);
     light_spread_report(sample, *fishsim::body_interface(sample), groups, true);
   }
   std::optional<fishsim::Ecosystem> probe_tank;
-  if (sight || (sense && sense->kind != sense_scene::gut && sense->kind != sense_scene::flow &&
+  if (sight || (sense && !attack && sense->kind != sense_scene::gut && sense->kind != sense_scene::flow &&
                 sense->kind != sense_scene::balance))
     probe_tank.emplace(SIGHT_TANK_SEED);
   if (sight)
@@ -1053,7 +1083,7 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
     probe_tank->field.set_uniform_flow(
         {-sense->flow_strength * std::cos(from), -sense->flow_strength * std::sin(from)});
   }
-  if (sense)
+  if (sense && !attack)
     sense_report(t, g.interface, groups, *sense, probe_tank ? &probe_tank->field : nullptr);
   std::cout << '}';
 }

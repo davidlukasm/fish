@@ -1,6 +1,6 @@
 import {findOrgan, groupReport, isChosen, organTypes} from '../model/document.js';
 import {profileNames} from './scents.js';
-import {PROBE_LIMITS, STONE} from '../model/probe.js';
+import {ATTACK_GAPE, PROBE_LIMITS, STONE} from '../model/probe.js';
 import {BODY_MIDDLE, BODY_RADIUS, sideSign} from '../model/layout.js';
 import {bodyDirection, skinPoints, steadyAt, zoomOf} from './frame.js';
 import {organLocation} from './places.js';
@@ -20,6 +20,7 @@ const PROBE_SCENE = Object.freeze({
   ringGap : 28,
   gap : 14,
   gravity : 68,
+  attack : 88,
   far : 150,
   reach : 300,
   streams : 3,
@@ -58,6 +59,13 @@ const pointAt = (angle, r) => {
   const d = bodyDirection(angle);
   return {x : BODY_MIDDLE.x + d.x * r, y : BODY_MIDDLE.y + d.y * r};
 };
+function attackMouth(probe) {
+  const angle = radians(probe.bearing), skin = skinDistance(angle), direction = bodyDirection(angle),
+        across = {x : -direction.y, y : direction.x}, rim = pointAt(angle, skin + PROBE_SCENE.gap),
+        half = probe.gape * skinDistance(Math.PI / 2);
+  const jaw = side => ({x : rim.x + side * half * across.x, y : rim.y + side * half * across.y});
+  return {rim, across, tip : jaw(1), other : jaw(-1)};
+}
 // A scent lies as far beyond the skin as it is from the fish, one body radius per unit of
 // distance; dragged further out, the view zooms out with it (keepInView).
 const beyondSkin = distance => (distance - PROBE_LIMITS.least.smell) * BODY_RADIUS;
@@ -74,19 +82,27 @@ function handleRadius(probe, faintest) {
     return probe.distance * BODY_RADIUS;
   if (probe.kind === 'balance')
     return skin + P.gravity;
+  if (probe.kind === 'attack')
+    return skin + P.attack;
   return probe.kind === 'smell' ? skin + beyondSkin(probe.distance)
                                 : skin + (probe.kind === 'flow' ? P.far : P.gap) +
                                       P.reach * strengthShare(probe.strength, probe.kind, faintest);
 }
-export const probeHandle = (probe, faintest) =>
-    pointAt(radians(probe.bearing), handleRadius(probe, faintest));
+export const probeHandle = (probe, faintest, control = probe.kind) =>
+    control === 'attack-gape' ? attackMouth(probe).tip
+                              : pointAt(radians(probe.bearing), handleRadius(probe, faintest));
 export const probeFlow = probe =>
     probe.kind === 'flow' ? probe : probe.flow && {...probe.flow, kind : 'flow'};
-export function probePatch(kind, position, faintest) {
+export function probePatch(kind, position, faintest, probe = null) {
   const dx = position.x - BODY_MIDDLE.x, dy = position.y - BODY_MIDDLE.y;
   const angle = Math.atan2(dy, -dx), r = Math.hypot(dx, dy), bearing = degrees(angle);
-  if (kind === 'balance')
+  if (kind === 'balance' || kind === 'attack')
     return {bearing};
+  if (kind === 'attack-gape') {
+    const {rim, across} = attackMouth(probe);
+    const half = (position.x - rim.x) * across.x + (position.y - rim.y) * across.y;
+    return {gape : clamp(half / skinDistance(Math.PI / 2), ...ATTACK_GAPE)};
+  }
   if (kind === 'taste')
     return {bearing, distance : clamp(r / BODY_RADIUS, 0, PROBE_LIMITS.most.taste)};
   const beyond = r - skinDistance(angle);
@@ -218,14 +234,16 @@ function answerSvg(state, organ, zoom) {
         const home = organLocation(a.organ, state.sites, state.document);
         const side = sideSign(a.organ.side);
         const at = {x : home.x, y : home.y + side * P.off / zoom};
-        const known = Number.isFinite(a.value);
-        return '<g class="aid-probe-answer' + (known ? '' : ' unknown') + '"' + steadyAt(at, zoom) +
-               ' style="--lit:' + fixed(known ? clamp(a.value) : 0) + '"><title>' +
-               escapeText(a.name) + '</title><circle r="' + P.answer + '"/><text y="' + P.label +
-               '" text-anchor="middle">' + (known ? percent(a.value) : formatNumber(NaN)) +
-               '</text></g>';
+        return answerBadge(at, zoom, a.value, a.name);
       })
       .join('');
+}
+function answerBadge(at, zoom, value, name) {
+  const P = PROBE_SCENE, known = Number.isFinite(value);
+  return '<g class="aid-probe-answer' + (known ? '' : ' unknown') + '"' + steadyAt(at, zoom) +
+         ' style="--lit:' + fixed(known ? clamp(value) : 0) + '"><title>' + escapeText(name) +
+         '</title><circle r="' + P.answer + '"/><text y="' + P.label +
+         '" text-anchor="middle">' + (known ? percent(value) : formatNumber(NaN)) + '</text></g>';
 }
 function barbelProbeSvg(state) {
   const body = state.anatomy.bodyRadius;
@@ -324,16 +342,27 @@ function visibleProbe(state) {
              ? {probe, organ, faintest, zoom : zoomOf(state)}
              : null;
 }
-function probeGrip(organ, probe, faintest, zoom, bodyRadius) {
-  const at = probeHandle(probe, faintest);
+function probeGrip(organ, probe, faintest, zoom, bodyRadius, control = probe.kind) {
+  const at = probeHandle(probe, faintest, control);
   const taste = probe.kind === 'taste';
   const radius = taste && bodyRadius > 0  ? SENSORY_PROBE.radius * BODY_RADIUS / bodyRadius * zoom
                  : probe.kind === 'smell' ? PROBE_SCENE.source
                                           : PROBE_SCENE.handle;
-  return '<g class="aid-probe-handle ' + probe.kind + '" data-sense-control="' + probe.kind +
+  return '<g class="aid-probe-handle ' + probe.kind + '" data-sense-control="' + control +
          '" data-sense-handle="' + escapeText(organ.id) + '"' + steadyAt(at, zoom) + '><title>' +
-         escapeText(t('studio.probe.handle.' + probe.kind)) + '</title><circle r="' +
+         escapeText(t('studio.probe.handle.' + control)) + '</title><circle r="' +
          fixed(radius) + '"/>' + (taste ? probeObject(probe.scent) : '') + '</g>';
+}
+function attackSvg(state, organ, probe, zoom, faintest) {
+  const {rim, tip, other} = attackMouth(probe), hinge = probeHandle(probe, faintest),
+        xy = p => fixed(p.x) + ' ' + fixed(p.y),
+        part = state.anatomy?.attackProbe?.active,
+        title = namedText(t('studio.probe.attack.guard'),
+                          t('studio.probe.attack.' + (part?.fits ? 'fits' : 'blocked')));
+  return '<path class="aid-probe-arrow wound" d="M' + xy(tip) + ' L' + xy(hinge) + ' L' +
+         xy(other) + '"/>' + answerBadge(rim, zoom, part?.held, part ? title : '') +
+         probeGrip(organ, probe, faintest, zoom, state.anatomy.bodyRadius) +
+         probeGrip(organ, probe, faintest, zoom, state.anatomy.bodyRadius, 'attack-gape');
 }
 function probeObject(scent) {
   if (scent === STONE)
@@ -345,6 +374,9 @@ export function senseProbeSvg(state) {
   if (!config)
     return '';
   const {probe, organ, faintest, zoom} = config, flow = probeFlow(probe);
+  if (probe.kind === 'attack')
+    return '<g class="aid-sense-probe">' + attackSvg(state, organ, probe, zoom, faintest) +
+           '</g>';
   const arrows = flow?.strength > 0
                      ? flowArrows(radians(flow.bearing), probeHandle(flow, faintest), PROBE_SCENE)
                      : '';

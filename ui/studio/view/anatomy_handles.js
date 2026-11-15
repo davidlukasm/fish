@@ -19,7 +19,7 @@ import {BODY_FRAME, sideOf} from '../model/layout.js';
 import {organLocation, gutShape} from './places.js';
 import {gutTurns} from '../../fish_organs.js';
 import {muscleShape} from './muscles.js';
-import {feltEnd} from './body.js';
+import {feltEnd, spineHandles} from './body.js';
 import {steadyAt, zoomOf, SNOUT_TIP, HEAD} from './frame.js';
 import {fixed, escapeText} from './markup.js';
 import {label} from './kit.js';
@@ -49,6 +49,14 @@ export function anatomyHandles(state, id = state.selected?.id) {
     const end = feltEnd(state, organ);
     if (end)
       add('field', end, organ.centers[0]?.field ?? 0, 'x', FIELD_SPAN);
+  }
+  if (organ.type === 'defense') {
+    const grips = spineHandles(state, organ), cell = organ.centers[0];
+    if (grips) {
+      add('spine-field', grips.field, cell.field, 'x', FIELD_SPAN);
+      add('spine-strength', grips.strength, cell.copies / ATELIER_LIMITS.max_copies, 'y',
+          sideOf(organ) * 80);
+    }
   }
   if (organ.type !== 'muscle')
     return specs;
@@ -83,13 +91,13 @@ export function anatomyPatch(state, spec, delta) {
     return setGutLength(doc, value);
   if (spec.key === 'gills')
     return setGillRakers(doc, organ.id, value);
-  if (spec.key === 'field')
+  if (spec.key === 'field' || spec.key === 'spine-field')
     return updateCenter(doc, organ.centers[0].id, {field : value});
   if (spec.key === 'angle')
     return setFinAngle(doc, organ.id, value, state.sites);
   if (spec.key === 'fibre')
     return setMuscleFibre(doc, organ.id, value);
-  if (spec.key === 'strength')
+  if (spec.key === 'strength' || spec.key === 'spine-strength')
     return updateCenter(doc, organ.centers[0].id,
                         {copies : Math.max(1, Math.round(value * ATELIER_LIMITS.max_copies))});
   return setMuscleTrait(doc, organFunction(organ, state.sites), spec.key, value, state.sites);

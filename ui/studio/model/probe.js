@@ -11,9 +11,11 @@ export const PROBE_KIND = Object.freeze({
   pain : 'wound',
   lateral : 'flow',
   balance : 'balance',
+  defense : 'attack',
   gut : 'gut'
 });
 export const STONE = -1;
+export const ATTACK_GAPE = Object.freeze([ .5, 2.1 ]);
 export const PROBE_LIMITS = Object.freeze(
     {least : {smell : 1}, most : {smell : 24, taste : 3, touch : 1, wound : .5, flow : 2}});
 // A new scent starts just beyond the snout, so choosing it keeps the view; dragged further out,
@@ -25,6 +27,7 @@ const START = Object.freeze({
   wound : {bearing : 90, distance : 0, strength : SKIN_RESPONSE.bite_wound},
   flow : {bearing : 60, distance : 0, strength : .02},
   balance : {bearing : 90, distance : 0, strength : 0},
+  attack : {bearing : 60, distance : 0, strength : 0, gape : 1.2},
   gut : {bearing : 0, distance : 0, strength : .5, nutrient : .2}
 });
 export function skinProbeBearing(document, anatomy, cellId) {
@@ -64,7 +67,7 @@ export function probeFor(organ, probe, anatomy, document) {
 export const senseScene = probe => probe ? {
   kind : probe.kind,
   bearing : probe.bearing,
-  distance : probe.distance,
+  distance : probe.kind === 'attack' ? probe.gape : probe.distance,
   strength : probe.strength,
   scent : probe.scent,
   nutrient : probe.nutrient ?? 0,

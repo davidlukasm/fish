@@ -1,8 +1,8 @@
 import {groupReport} from '../model/document.js';
 import {fixed} from './markup.js';
 
-export function lateralFeel(state, organ) {
-  const found = organ.centers.map(c => groupReport(state.document, state.anatomy, 'lateral', c.id))
+export function lateralFeel(state, organ, report = state.anatomy) {
+  const found = organ.centers.map(c => groupReport(state.document, report, 'lateral', c.id))
                     .filter(Boolean);
   if (!found.length)
     return null;

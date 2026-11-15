@@ -9,7 +9,7 @@
 // x (1 + the spines' height). In the egg, raising them against the shell harms the fish itself.
 // The guard round the fish at rest and raised is the plan's report (anatomy.spinesRest,
 // spinesRaised: all the fish's spines together), this organ's direction too (spineAims).
-// The mouth and the raising are the picture's own knobs; the fish panel has no probe for them.
+// The fish panel sets the attack's direction and gape; the command to raise the spines is here.
 // Raised is as high as the planned muscles can raise them under a lasting command
 // (anatomy.spineHeights and spinesRaised).
 // Not in the pictures: that a hungry fish holds off less; the brake in the water and in the sand.
@@ -29,7 +29,6 @@ const SPINE = Object.freeze({
   ry : 21,
   body : 30,
   long : 26,
-  gape : [ .5, 2.1 ],
   step : 2
 });
 
@@ -37,9 +36,7 @@ liveKind('defense', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-defense aid-live-sense-ache';
   const spines = addPicture(root);
-  // What is tried on the spines: how far the brain has them raised, and the mouth (where it bites
-  // from, in degrees from the snout; how wide it opens, in body radii). Not part of the fish.
-  const own = {up : .4, mouth : {bearing : -60, gape : 1.2}, pull : null};
+  const own = {pull : null};
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => {
@@ -48,21 +45,21 @@ liveKind('defense', (studio, organId) => {
       studio.settleGraphic();
   };
   function drawSpines(cell) {
+    const probe = studio.state.senseProbe;
     const {spinesRest : rest, spinesRaised : raised} = studio.state.anatomy ?? {},
                                              aim = groupReport(studio.state.document,
                                                                studio.state.anatomy, 'spineAims',
                                                                cell.id);
     const {svg, live} =
         picture(spines, SPINE.height, fixed => fishAbove(fixed, SPINE.cx, SPINE.cy, SPINE.s));
-    if (!rest?.length || !raised?.length || !Number.isFinite(aim))
+    if (probe?.kind !== 'attack' || !rest?.length || !raised?.length || !Number.isFinite(aim))
       return;
-    const {cx, cy, rx, ry} = SPINE, count = rest.length, mouth = own.mouth,
-                       guard =
-                           rest.map((v, k) => Math.min(1, v + Math.max(0, raised[k] - v) * own.up)),
+    const {cx, cy, rx, ry} = SPINE, count = rest.length, bite = studio.state.anatomy.attackProbe,
+        mouth = probe, guard = bite?.spines ?? rest,
                        // The spines' height for the whole fish, at rest and as high as its
                        // muscles can raise them: what a mouth that would swallow it reckons with.
         [ low, high ] = studio.state.anatomy?.spineHeights ?? [ 0, 0 ],
-                       lift = Math.max(0, high - low), height = low + own.up * lift;
+          lift = Math.max(0, high - low), height = bite?.active.height ?? low;
     // A place on the rim, the fish's right side down; a direction in degrees from the snout.
     const rim = (angle, out = 0) => [cx - 4 - (rx + out) * Math.cos(radians(angle)),
                                      cy + (ry + out) * Math.sin(radians(angle))],
@@ -86,7 +83,7 @@ liveKind('defense', (studio, organId) => {
     // How big the fish is for a mouth: a circle, its radius x (1 + the spines' height). The
     // mouth: two jaws in a V; their tips stand at the circle, as far apart as the mouth opens, in
     // the circle's measure: it swallows the fish whole only if they clear it.
-    const big = SPINE.body * (1 + height), fits = mouth.gape >= 1 + height,
+    const big = SPINE.body * (1 + height), fits = bite?.active.fits,
           ux = Math.cos(radians(mouth.bearing)), uy = -Math.sin(radians(mouth.bearing)),
           from = out => [cx - 4 - out * ux, cy - out * uy], [ mx, my ] = from(big + 38),
           [ tx, ty ] = from(big + 5), half = SPINE.body * mouth.gape,
@@ -100,7 +97,7 @@ liveKind('defense', (studio, organId) => {
     }
     // The bite: what the spines there hold off stops at them, the rest goes into the body;
     // beside it what holding it off costs: a drop of the reserve, as big as the harm held off.
-    const held = guard[at(mouth.bearing)], [ bx, by ] = rim(mouth.bearing, SPINE.long * held + 3),
+    const held = bite?.active.held ?? 0, [ bx, by ] = rim(mouth.bearing, SPINE.long * held + 3),
           [ ix, iy ] = rim(mouth.bearing, -16 * (1 - held)), [ sx, sy ] = from(big + 24);
     el('path', {d : `M${sx} ${sy} L${bx} ${by}`, class : 'aid-live-jaw', 'stroke-width' : 5}, live);
     if (held < 1)
@@ -141,25 +138,14 @@ liveKind('defense', (studio, organId) => {
            if (copies !== cell.copies)
              draft(setNodeCopies(studio.state.document, organId, copies));
          }, 'defensecells', 'grip', settle);
-    // The inputs: the brain raises the spines (the knob beyond the middle spine's tip); the mouth
-    // is dragged round the fish at its hinge and opened at a jaw's tip.
+    // The command to raise the spines is separate from the attack being tried on the fish.
     const [rx2, ry2] = rim(direction(mid), SPINE.long * guard[mid] + 9),
                 span = Math.max(.02, raised[mid] - rest[mid]);
     // Muscles that cannot raise the spines above their rest have no knob for it.
     if (lift > 0)
       drag(svg, el('circle', {cx : rx2, cy : ry2, r : 5, class : 'aid-live-petal k0'}, live), p => {
-        own.up = clamp(((outOf(p) - 9) / SPINE.long - rest[mid]) / span);
-        show();
+        studio.setAttackCommand(clamp(((outOf(p) - 9) / SPINE.long - rest[mid]) / span));
       }, 'defenseup', 'knob');
-    drag(svg, el('circle', {cx : mx, cy : my, r : 5.5, class : 'aid-live-thing'}, live), p => {
-      mouth.bearing = degrees(Math.atan2(p.y - cy, cx - 4 - p.x));
-      show();
-    }, 'defensemouth', 'knob');
-    const [gx, gy] = jaw(1);
-    drag(svg, el('circle', {cx : gx, cy : gy, r : 4.5, class : 'aid-live-thing'}, live), p => {
-      mouth.gape = clamp(Math.abs((p.x - tx) * uy - (p.y - ty) * ux) / SPINE.body, ...SPINE.gape);
-      show();
-    }, 'defensegape', 'knob');
   }
   function show() {
     const cell = organ()?.centers[0];

@@ -124,6 +124,8 @@ export const designMethods = {
       const flow = probeFlow(sense);
       this.framedProbe = sense;
       this.keepInView(probeHandle(sense, faintest));
+      if (sense.kind === 'attack')
+        this.keepInView(probeHandle(sense, faintest, 'attack-gape'));
       if (flow && flow !== sense)
         this.keepInView(probeHandle(flow, faintest));
     }
@@ -154,6 +156,13 @@ export const designMethods = {
     const probe = this.state.senseProbe;
     return probe && findOrgan(this.state.document, probe.organ) ? senseScene(probe) : null;
   },
+  setAttackCommand(command) {
+    const probe = this.state.senseProbe;
+    if (probe?.kind === 'attack' && probe.strength !== command) {
+      this.state.senseProbe = {...probe, strength : command};
+      this.requestDesign();
+    }
+  },
   requestDesign() {
     const draft = this.drafted && this.heldHandle('anatomy');
     if (this.designRunning || (this.drafted && !draft)) {
@@ -165,12 +174,13 @@ export const designMethods = {
     this.designRunning = true;
     this.designPending = false;
     const request = ++this.designRequest, fishRequest = this.newFishRequest;
-    this.api(requestBody('design', draft ? {plan} : {
-          plan,
-          lightSpread : this.state.lightSpread?.document !== document,
-          sight : sightScene(probe),
-          sense : this.senseScene()
-        }))
+    const spineDraft = draft?.spec?.key.startsWith('spine-');
+    const scene = draft ? {sense : spineDraft ? this.senseScene() : null} : {
+      lightSpread : this.state.lightSpread?.document !== document,
+      sight : sightScene(probe),
+      sense : this.senseScene()
+    };
+    this.api(requestBody('design', {plan, ...scene}))
         // An answer for the design shown is shown even when a test stimulus has moved on since:
         // the eyes and senses follow a dragged one step by step instead of waiting for it to
         // rest.
@@ -179,9 +189,16 @@ export const designMethods = {
             // Follow the drag with the last completed outline, even as the pointer moves on.
             if (this.drafted && this.heldHandle('anatomy') === draft &&
                 this.state.document !== this.draftStart && this.newFishRequest === fishRequest) {
-              const previous = JSON.stringify(outlineSizes(this.state));
-              this.state.outlinePreview = {fins : anatomy.fins, forms : anatomy.forms};
-              if (JSON.stringify(outlineSizes(this.state)) !== previous)
+              const shape = () => {
+                const report = this.state.outlinePreview ?? this.state.anatomy;
+                return JSON.stringify([outlineSizes(this.state),
+                                       spineDraft && [report?.spinesRest, report?.spinesRaised,
+                                                      report?.spineGroups, report?.attackProbe],
+                                       draft.spec.key === 'field' && report?.lateral]);
+              };
+              const previous = shape();
+              this.state.outlinePreview = anatomy;
+              if (shape() !== previous)
                 this.refreshScene();
             }
           } else if (this.state.document === document)
@@ -201,6 +218,8 @@ export const designMethods = {
   },
   showAnatomy(anatomy, request) {
     const probesOnly = this.shownDesign === this.state.document;
+    const spineChange = JSON.stringify(this.state.anatomy?.attackProbe?.spines) !==
+                        JSON.stringify(anatomy.attackProbe?.spines);
     this.shownDesign = this.state.document;
     if (anatomy.lightSpread)
       this.state.lightSpread = {document : this.state.document, report : anatomy.lightSpread};
@@ -213,6 +232,8 @@ export const designMethods = {
     const traced = this.traceAnswered(request);
     if (probesOnly) {
       if (!traced) {
+        if (spineChange)
+          this.refreshScene();
         this.refreshVision();
         this.drawSight();
         this.refreshProbes();
@@ -290,7 +311,7 @@ export const designMethods = {
   refreshProbeControls() {
     this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
     this.redrawBlocks('gutProbeControls', findOrgan, organ => gutProbeControls(this.state, organ));
-    if ([ 'smell', 'taste', 'touch', 'wound', 'flow', 'balance' ].includes(
+    if ([ 'smell', 'taste', 'touch', 'wound', 'flow', 'balance', 'attack' ].includes(
             this.state.senseProbe?.kind))
       mountLive(this.root, this);
   },

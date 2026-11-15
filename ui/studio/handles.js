@@ -627,12 +627,12 @@ export const handleMethods = {
     if (probe?.organ !== drag.id || !(faintest > 0))
       return;
     const position = cameraCoordinates(event, this.bodyMap(), this.state.camera);
-    const patch = probePatch(drag.control, position, faintest);
+    const patch = probePatch(drag.control, position, faintest, probe);
     const smellFlow = drag.control === 'flow' && probe.kind === 'smell';
     this.state.senseProbe =
         smellFlow ? {...probe, flow : patch} : {...probe, ...patch, manual : true};
     this.keepInView(probeHandle(
-        smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, faintest));
+        smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, faintest, drag.control));
     this.refreshProbes();
     this.requestDesign();
   },

@@ -222,7 +222,7 @@ def sight_line(sight):
 
 
 SENSE_SCENES = {"smell": 1, "touch": 2, "flow": 3, "wound": 4, "gut": 5, "taste": 6,
-                "balance": 7}
+                "balance": 7, "attack": 8}
 
 
 def sense_line(sense):

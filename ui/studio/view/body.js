@@ -406,18 +406,41 @@ function aroundAt(samples, angle) {
          samples[((k + 1) % count + count) % count] * share;
 }
 function spinePath(root, out, value) {
-  const S = SPINES, length = S.length[0] + (S.length[1] - S.length[0]) * value;
-  const along = {x : -out.y, y : out.x}, back = along.x >= 0 ? 1 : -1;
-  const tip = {
-    x : root.x + out.x * length + back * along.x * length * S.lean,
-    y : root.y + out.y * length + back * along.y * length * S.lean
-  };
+  const S = SPINES, along = {x : -out.y, y : out.x}, tip = spineTip(root, out, value);
   const end = sign => fixed(root.x + sign * along.x * S.base / 2) + ' ' +
                       fixed(root.y + sign * along.y * S.base / 2);
   return 'M' + end(-1) + ' L' + fixed(tip.x) + ' ' + fixed(tip.y) + ' L' + end(1) + 'Z';
 }
+function spineTip(root, out, value) {
+  const S = SPINES, length = S.length[0] + (S.length[1] - S.length[0]) * value;
+  const along = {x : -out.y, y : out.x}, back = along.x >= 0 ? 1 : -1;
+  return {
+    x : root.x + out.x * length + back * along.x * length * S.lean,
+    y : root.y + out.y * length + back * along.y * length * S.lean
+  };
+}
+export function spineHandles(state, organ) {
+  const data = state.outlinePreview?.spinesRest ? state.outlinePreview : state.anatomy;
+  const aim = groupReport(state.document, data, 'spineAims', organ.centers[0]?.id);
+  if (!Number.isFinite(aim) || !data?.spinesRest?.length)
+    return null;
+  const points = skinPoints(OUTLINE_STEP), zones = state.anatomy?.zones;
+  const near = target => points.reduce((best, point) =>
+      Math.abs(wrapAngle(skinDirection(point, zones) - target)) <
+              Math.abs(wrapAngle(skinDirection(best, zones) - target))
+          ? point
+          : best);
+  const center = near(aim), edge = near(aim + sideOf(organ) *
+                                            radians(contactHalfAngle(organ.centers[0].field)));
+  return {
+    strength : spineTip(center, center.out, aroundAt(data.attackProbe?.spines ?? data.spinesRest, aim)),
+    field : {x : edge.x + edge.out.x * FELT.grip, y : edge.y + edge.out.y * FELT.grip}
+  };
+}
 function spinesSvg(state, organ) {
-  const {spinesRest : rest, spinesRaised : raised, spineGroups : owners} = state.anatomy ?? {};
+  const data = state.outlinePreview?.spinesRest ? state.outlinePreview : state.anatomy;
+  const {spinesRest : rest, spinesRaised : raised, spineGroups : owners} = data ?? {};
+  const active = state.senseProbe?.kind === 'attack' ? data?.attackProbe?.spines : null;
   const own = new Set(organ.centers.map(c => centerIndex(state.document, c.id)));
   const chosen = isChosen(state.selected, organ);
   let resting = '', lifted = '';
@@ -428,7 +451,7 @@ function spinesSvg(state, organ) {
     if (!own.has(owners[nearest]) || most < SPINES.least)
       continue;
     lifted += '<path d="' + spinePath(point, point.out, most) + '"/>';
-    resting += '<path d="' + spinePath(point, point.out, aroundAt(rest, angle)) + '"/>';
+    resting += '<path d="' + spinePath(point, point.out, aroundAt(active ?? rest, angle)) + '"/>';
   }
   if (!resting)
     for (const center of organ.centers) {
@@ -567,7 +590,8 @@ function feltSkin(state, cells) {
       .join('');
 }
 function feltFlow(state, organ, cells) {
-  const feel = lateralFeel(state, organ), ring = state.capabilities?.lateralRing;
+  const feel = lateralFeel(state, organ, state.outlinePreview ?? state.anatomy),
+        ring = state.capabilities?.lateralRing;
   const centre = BODY_MIDDLE;
   const discs =
       feel && ring
