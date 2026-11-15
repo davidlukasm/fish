@@ -38,10 +38,10 @@ import {addPicture, chip, clamp, el, liveKind, path, picture} from './kit.js';
 
 // The water: `box` wide and high; the fish in its middle, `fish` pixels to a body radius. The
 // turn's line starts `near` from the middle before the snout and lies `apart` further out with
-// every full turn, so that more than one turn can be read. A round of the film lasts `round`
-// milliseconds, of which the fish rests `rest`.
-const SWIM =
-    Object.freeze({box : [ 300, 190 ], fish : 22, near : 58, apart : 9, round : 5000, rest : .2});
+// every full turn, so that more than one turn can be read, and never further out than `far`. A
+// round of the film lasts `round` milliseconds, of which the fish rests `rest`.
+const SWIM = Object.freeze(
+    {box : [ 300, 190 ], fish : 32, near : 56, far : 88, apart : 9, round : 5000, rest : .2});
 const BLADE_SCALE = 1.8;
 const CHANNELS = Object.freeze([ FIN.left, FIN.right, FIN.pelvic_left, FIN.pelvic_right ]);
 
@@ -69,16 +69,22 @@ liveKind('fin', (studio, organId) => {
        {x : 0, y : 0, width : S.box[0], height : S.box[1], rx : 6, class : 'aid-live-ground'},
        under);
     // The turn's line: where the snout points as the fish turns, further out with every turn.
-    const end = twitch ? twitch.settled ?? twitch.during : 0, spot = turn => {
-      const a = radians(-turn), r = S.near + S.apart * Math.abs(turn) / 360;
-      return [ cx - r * Math.cos(a), cy - r * Math.sin(a) ];
-    }, line = (from, to) => {
-      const parts = Math.max(1, Math.ceil(Math.abs(to - from) / 6));
-      return path(Array.from({length : parts + 1}, (_, n) => spot(from + (to - from) * n / parts)));
-    };
+    // Every full turn lies `apart` further out, less where many turns would leave the water.
+    const end = twitch ? twitch.settled ?? twitch.during : 0,
+          apart = Math.min(S.apart, (S.far - S.near) / Math.max(1, Math.abs(end) / 360)),
+          spot = turn => {
+            const a = radians(-turn), r = S.near + apart * Math.abs(turn) / 360;
+            return [ cx - r * Math.cos(a), cy - r * Math.sin(a) ];
+          }, line = (from, to) => {
+            const parts = Math.max(1, Math.ceil(Math.abs(to - from) / 6));
+            return path(
+                Array.from({length : parts + 1}, (_, n) => spot(from + (to - from) * n / parts)));
+          };
     if (twitch) {
       el('path', {d : line(twitch.during, end), class : 'aid-live-turn out k0'}, live);
       el('path', {d : line(0, twitch.during), class : 'aid-live-turn k0'}, live);
+      // Where the turn begins: before the resting fish's snout.
+      el('circle', {cx : spot(0)[0], cy : spot(0)[1], r : 3.2, class : 'aid-live-petal k0'}, live);
     } else
       el('circle', {cx, cy, r : S.near, class : 'aid-live-turn missing'}, live);
     // The fish with its fins, as the fish panel draws it; this muscle's fin carries its colour.
