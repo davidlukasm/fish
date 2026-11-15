@@ -46,3 +46,13 @@ Antwort an David: fast nur über Inspektoren. Zum Fischpanel stand oben nur Punk
 - Inspektoren folgen derselben Phase und zeigen nicht, was in ihr nicht gilt.
 
 **Offen zur Abwägung (Fable, Astra):** Ersetzt „jetzt“ im Fischpanel die Vorschau-Reife ganz (ein Modell)? Wie verhalten sich Hormone und Lernen, die dieselbe Vorschau lesen? Darf der Fisch im Fischpanel im Ei-Zustand bearbeitet werden (Zellen setzen), oder nur angesehen?
+
+## Nachtrag 02:22 (David 02:20: „Wenn Dinge in unterschiedlichen Phasen aktiv sind / leben, können sie ja wohl unterschiedlich angezeigt werden … nicht so stur … intelligente Lösungen.“)
+Vorbild ist, was das Fischpanel heute schon tut, wenn man ein Organ wählt (`bilder/2026-11-14_atelier/fischpanel_je_organ_0222.png`): Auge → Sehfächer und Testlicht über dem Fisch, Ausschnitt verschoben; Seitenlinie → Strömung mit Teilchen, Zellen als Kreise; Tast-/Schmerzsinn → Haut des Organs farbig hervorgehoben, Probe als Pfeil, Ausschnitt gezoomt. Der Fisch mit Organen und Knoten bleibt immer; darüber ändert sich Farbe, Hervorhebung, Überlagerung, Ausschnitt.
+**Idee für „Leben“ im Werkzeugkasten (zur Abwägung):**
+- Unten im Fischpanel eine Lebenslinie Ei → Schlupf → jung → erwachsen mit Knopf „jetzt“ und Abspielen: Das ganze Leben läuft als Film über den Fisch.
+- Jeder Knoten zeigt seinen Zustand in dieser Phase: noch nicht gebildet = gestrichelter Umriss; lebt = wie heute; Aktivität = Leuchten in der Organfarbe (wie die Haut bei Tast/Schmerz); stirbt = verblasst.
+- Ei: Schale und Dotter als Umriss um den Fisch; Netzhautwellen laufen sichtbar über das Auge; Muskelknoten pulsen (Schlupfimpuls); Proben, die im Ei nicht gelten, ausgegraut.
+- Wachstum: Der Fisch wird mit der Phase größer (wie der Zoom-Maßstab unten rechts), die Maulöffnung als Beutekreis vor dem Maul.
+- Farbe: Körperfarbe aus den in dieser Phase lebenden Pigmentzellen (Jugendfarbe).
+- Klick auf ein Organ öffnet dessen Inspektor in dieser Phase; der Inspektor zeigt nur, was dann gilt.
