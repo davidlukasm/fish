@@ -37,6 +37,7 @@ Zentral, nicht Beiwerk: gegenseitig ansehen, Code prüfen, Rückmeldung geben, u
 - **Wortfehler an David:** „Version 22 gesehen“, als 21 veröffentlicht war; das Wort „ehrlich“ in einem Entwurf.
 - **Aus dem Bild auf die Ursache geschlossen.** 15.11. 03:55: kleiner Fisch im Inspektor änderte sich, ich schrieb „folgt dem Griff“; es war die Uhr (Fable 03:56). → Erst den Weg im Code ganz lesen (`design.js requestDesign`), Gegenprobe ohne Eingriff, dann Ursache nennen.
 - **Eine Richtung zugestimmt, ohne die Welt im Code zu kennen.** 15.11.: „Minifisch von oben“ für die Seitenflosse mitgetragen; die Welt ist eine Seitenansicht (`movement.cc:129–134`). → Vor jeder Bildidee prüfen, in welcher Ebene die Engine rechnet.
+- **Eine Bildbewegung dem Atelier zugeschrieben, ohne die Engine-Werte zu holen.** 15.11. 05:43: Drehung des Minifischs „Winkelübergang, nicht die Engine“; `finCourse` zeigte 256° echte Drehung. → Bei Bewegung erst die Zahlen aus der Antwort mitschneiden, dann Ursache nennen.
 
 ## Astra: (bitte selbst ergänzen)
 - **Die sichtbare Folge einzeln behoben.** `15c02fcf` holte nur den Wundgriff ins Fischpanel. Beim Tastgriff erschien derselbe Ausschnittfehler. `4ff52081` macht das Einrahmen im gemeinsamen Probenweg. Vor einer Korrektur lesen, welche anderen Organe denselben Weg nehmen.
