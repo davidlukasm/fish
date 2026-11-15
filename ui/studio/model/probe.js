@@ -38,6 +38,11 @@ export function skinProbeBearing(document, anatomy, cellId) {
                                            felt.reduce((sum, [ aim ]) => sum + Math.cos(aim), 0)))
                       : null;
 }
+// A mouth first bites where the spines stand: there the guard answers.
+function spineBearing(document, anatomy, cellId) {
+  const aim = document ? groupReport(document, anatomy, 'spineAims', cellId) : null;
+  return Number.isFinite(aim) ? degrees(aim) : null;
+}
 export function probeFor(organ, probe, anatomy, document) {
   const kind = organ ? PROBE_KIND[organ.type] : null;
   if (!kind)
@@ -50,6 +55,7 @@ export function probeFor(organ, probe, anatomy, document) {
     return bearing === null || bearing === probe.bearing ? probe : {...probe, bearing};
   const facing = kind === 'balance' ? 1 : prior ? prior.side === side ? 1 : -1 : side;
   const scene = prior ?? START[kind], tuning = organ.centers[0];
+  const spines = kind === 'attack' ? spineBearing(document, anatomy, tuning?.id) : null;
   const tip = !prior && kind === 'taste' && anatomy?.bodyRadius > 0
                   ? anatomy.barbelPlaces?.[sideIndex(side)]
                   : null;
@@ -61,7 +67,7 @@ export function probeFor(organ, probe, anatomy, document) {
     kind,
     side,
     scent : prior?.scent ?? (kind === 'smell' && tuning ? preferredScent(tuning) : 0),
-    bearing : bearing ?? (tip ? degrees(Math.atan2(across, tip[0])) : facing * scene.bearing),
+    bearing : bearing ?? spines ?? (tip ? degrees(Math.atan2(across, tip[0])) : facing * scene.bearing),
     ...(tip ? {distance : Math.hypot(tip[0], across)} : {}),
     ...(scene.flow ? {flow : {...scene.flow, bearing : facing * scene.flow.bearing}} : {})
   };

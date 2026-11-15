@@ -23,6 +23,7 @@ const PROBE_SCENE = Object.freeze({
   gap : 14,
   gravity : 68,
   attack : 88,
+  teeth : {step : 14, size : 7},
   far : 150,
   reach : 300,
   // Pressure and a bite's depth act on the skin and need no arrow half a fish long: the fish
@@ -385,12 +386,26 @@ function probeGrip(organ, probe, faintest, zoom, bodyRadius, control = probe.kin
 function attackSvg(state, organ, probe, zoom, faintest) {
   const {rim, contact, hinge, tip, other} = attackMouth(probe, state),
         xy = p => fixed(p.x) + ' ' + fixed(p.y),
-        part = state.anatomy?.attackProbe?.active,
+        part = state.anatomy?.attackProbe?.active, T = PROBE_SCENE.teeth,
         aimed = Math.hypot(rim.x - contact.x, rim.y - contact.y) > PROBE_SCENE.gap,
         direction = aimed ? '<path class="aid-probe-arrow" d="' + arrowPath(rim, contact) + '"/>'
                           : '';
-  return '<path class="aid-probe-arrow' + (part?.fits ? ' wound' : '') + '" data-attack-jaws d="M' +
-         xy(tip) + ' L' + xy(hinge) + ' L' + xy(other) + '"/>' + direction +
+  // The mouth: two jaws from the hinge, their teeth inward, as the defence's inspector draws it.
+  const teeth = [ tip, other ].map(end => {
+    const length = Math.hypot(end.x - hinge.x, end.y - hinge.y), count = Math.floor(length / T.step),
+          along = {x : (end.x - hinge.x) / length, y : (end.y - hinge.y) / length},
+          far = end === tip ? other : tip,
+          turn = Math.sign((far.x - end.x) * -along.y + (far.y - end.y) * along.x) || 1,
+          inward = {x : -along.y * turn, y : along.x * turn};
+    return Array.from({length : Math.max(0, count - 1)}, (_, n) => {
+      const at = (n + 1.5) * T.step, x = hinge.x + along.x * at, y = hinge.y + along.y * at;
+      return 'M' + fixed(x - along.x * T.size / 2) + ' ' + fixed(y - along.y * T.size / 2) + ' L' +
+             fixed(x + inward.x * T.size) + ' ' + fixed(y + inward.y * T.size) + ' L' +
+             fixed(x + along.x * T.size / 2) + ' ' + fixed(y + along.y * T.size / 2);
+    }).join('');
+  }).join('');
+  return '<path class="aid-probe-arrow" data-attack-jaws d="M' +
+         xy(tip) + ' L' + xy(hinge) + ' L' + xy(other) + '"/><path class="aid-probe-teeth" d="' + teeth + '"/>' + direction +
          answerBadge(contact, zoom, part?.held) +
          probeGrip(organ, probe, faintest, zoom, state.anatomy.bodyRadius, 'attack', hinge) +
          probeGrip(organ, probe, faintest, zoom, state.anatomy.bodyRadius, 'attack-gape', tip);

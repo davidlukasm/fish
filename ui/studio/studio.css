@@ -670,6 +670,7 @@
 .aid-probe-arrow{fill:none;stroke:var(--aid-flow-light);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .aid-probe-arrow.touch{stroke:var(--aid-touch-felt)}
 .aid-probe-arrow.wound{stroke:var(--aid-pain-felt)}
+.aid-probe-teeth{fill:none;stroke:var(--aid-flow-light);stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .aid-probe-arrow.flow{stroke:var(--aid-flow);stroke-width:1.6;stroke-opacity:.55}
 .aid-probe-particle{fill:var(--aid-flow-light);fill-opacity:.85}
 .aid-probe-stream{fill:none;stroke:var(--aid-flow);stroke-opacity:var(--lines);stroke-width:1;vector-effect:non-scaling-stroke}
