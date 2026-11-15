@@ -452,13 +452,14 @@ function groundGrip(config) {
 }
 // Food before the mouth, while a muscle of the mouth is chosen: the four kinds the engine tells
 // apart (anatomy.mouthForces: flesh, plants and shells, morsels, algae to scrape), each bitten as
-// deep as the mouth's force on it. Nothing is set at the food; it is not kept in view, so the
+// deep as the mouth's force on it, its name below it. Nothing is set at the food; it is not kept in view, so the
 // fish stays large.
 const FOOD = Object.freeze({
-  far : 64,
-  spread : 23,
-  half : 9,
+  far : 55,
+  spread : 30,
+  half : 8,
   round : 4,
+  word : 9,
   colours : [ '#ee9f9a', '#8fd18a', '#e6b47c', '#77d2bd' ]
 });
 function foodSvg(state) {
@@ -467,18 +468,28 @@ function foodSvg(state) {
   if (probe?.kind !== 'mouth' || !organ || !isChosen(state.selected, organ) || !forces)
     return '';
   const F = FOOD, h = F.half, names = tList('studio.live.mouth.foods');
-  return '<g class="aid-sense-probe" pointer-events="none">' +
-         F.colours.map((colour, j) => {
-           const turn = F.spread * (j - (F.colours.length - 1) / 2), deep = Math.sqrt(clamp(forces[j] ?? 0));
-           // The bite is taken from the side that faces the mouth; its area follows the force.
-           const bite = deep > 0 ? '<path class="aid-live-mouth-bite" d="M' + h + ' ' + fixed(-h * deep) +
-                                       ' Q' + fixed(h - 3.6 * h * deep) + ' 0 ' + h + ' ' + fixed(h * deep) + 'Z"/>'
-                                 : '';
-           return '<g transform="rotate(' + fixed(-turn) + ' ' + fixed(SNOUT_TIP.x) + ' ' + fixed(SNOUT_TIP.y) +
-                  ') translate(' + fixed(SNOUT_TIP.x - F.far) + ' ' + fixed(SNOUT_TIP.y) + ')"><title>' +
-                  escapeText(names[j] ?? '') + '</title><rect x="' + -h + '" y="' + -h + '" width="' + 2 * h +
-                  '" height="' + 2 * h + '" rx="' + F.round + '" fill="' + colour + '"/>' + bite + '</g>';
-         }).join('') + '</g>';
+  const turns = F.colours.map((_, j) => F.spread * (j - (F.colours.length - 1) / 2));
+  const pieces = F.colours.map((colour, j) => {
+    // The bite is taken from the side that faces the mouth; its area follows the force.
+    const deep = Math.sqrt(clamp(forces[j] ?? 0)),
+          bite = deep > 0 ? '<path class="aid-live-mouth-bite" d="M' + h + ' ' + fixed(-h * deep) +
+                                ' Q' + fixed(h - 3.6 * h * deep) + ' 0 ' + h + ' ' +
+                                fixed(h * deep) + 'Z"/>'
+                          : '';
+    return '<g transform="rotate(' + fixed(-turns[j]) + ' ' + fixed(SNOUT_TIP.x) + ' ' +
+           fixed(SNOUT_TIP.y) + ') translate(' + fixed(SNOUT_TIP.x - F.far) + ' ' +
+           fixed(SNOUT_TIP.y) + ')"><rect x="' + -h + '" y="' + -h + '" width="' + 2 * h +
+           '" height="' + 2 * h + '" rx="' + F.round + '" fill="' + colour + '"/>' + bite + '</g>';
+  });
+  // The names below the pieces, upright and over them: the colour alone does not say what a
+  // piece is.
+  const words = F.colours.map(
+      (colour, j) => '<text class="aid-handle-word" text-anchor="middle" style="fill:' + colour +
+                     '" x="' + fixed(SNOUT_TIP.x - F.far * Math.cos(radians(turns[j]))) + '" y="' +
+                     fixed(SNOUT_TIP.y + F.far * Math.sin(radians(turns[j])) + h + F.word) + '">' +
+                     escapeText(names[j] ?? '') + '</text>');
+  return '<g class="aid-sense-probe" pointer-events="none">' + pieces.join('') + words.join('') +
+         '</g>';
 }
 export function senseProbeSvg(state) {
   const config = visibleProbe(state);
