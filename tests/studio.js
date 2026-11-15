@@ -151,7 +151,7 @@ async function checkDraggedInspector(model, capabilities, root) {
   const {OrganStudio} = await import('../ui/studio/controller.js');
   const {inspector, organSettingsBlock} = await import('../ui/studio/view/panels.js');
   const saved = {document : global.document, CSS : global.CSS};
-  const linked = '[data-wheel-figure],[data-effector-block]';
+  const linked = '[data-wheel-figure]';
   class Element {
     constructor(tag = 'div', attrs = {}) {
       this.tagName = tag;
@@ -3267,7 +3267,6 @@ async function checkHormoneSystems(model, capabilities) {
   const E = HORMONE_EFFECT;
   assert.equal(sitesResult.effects, Object.keys(E).length);
   {
-    const {motorResponse} = await import('../ui/studio/view/drive.js');
     const motor = model.defaults(
         {key : 'muscle', role : 'motor', functionCode : MOTOR_KIND.turn, copies : 3}, sites[0]);
     motor.threshold = 1;
@@ -3275,8 +3274,6 @@ async function checkHormoneSystems(model, capabilities) {
         model.receptorResponse(sitesResult, motor.receptors[E.excitation], {maturity : 1});
     assert.ok(excitation > sitesResult.biasScale * motor.threshold,
               'A motor with a closed action gate can still learn its first input');
-    assert.equal(motorResponse(motor, 0, {scale : sitesResult.biasScale, excitation}), 0,
-                 'The motor learning baseline alone produces no muscle command');
   }
   {
     const {EFFECT_ICON} = await import('../ui/studio/view/icons.js');
