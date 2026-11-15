@@ -106,6 +106,7 @@ export class OrganStudio {
       panels : storedPanels(),
       layers : storedLayers(),
       anatomy : null,
+      outlinePreview : null,
       choices : null,
       report : null,
       genome : '',
@@ -399,8 +400,13 @@ export class OrganStudio {
   // A grip on the fish: the fish, with the grip, and the organ's live pictures follow it while it
   // is dragged.
   refreshFishAndLive() {
+    const changed = this.state.document !== this.draftStart;
+    if (!changed)
+      this.state.outlinePreview = null;
     this.refreshScene();
     this.refreshLive();
+    if (changed && !this.designRunning)
+      this.requestDesign();
   }
   refreshInspector(reset = false) {
     const element = this.root.querySelector('.aid-inspector-scroll');
@@ -573,14 +579,16 @@ export class OrganStudio {
     // A click that sets what is already set adds no undo step and keeps the developed fish.
     const unchanged =
         doc !== this.state.document && JSON.stringify(next) === JSON.stringify(this.state.document);
+    const keepOutline = finish && batch?.startsWith('anatomy:');
     if (!unchanged)
       this.recordHistory(batch);
     if (finish)
       this.historyBatch = null;
     if (!unchanged) {
       this.state.document = next;
-      this.designChanged();
-    }
+      this.designChanged(keepOutline);
+    } else if (keepOutline)
+      this.state.outlinePreview = null;
     this.state.selected = selected;
     this.state.multi.clear();
     this.refreshScene();
@@ -608,8 +616,10 @@ export class OrganStudio {
     this.zoom('fit');
     this.changeDocument(doc);
   }
-  designChanged() {
+  designChanged(keepOutline = false) {
     ++this.newFishRequest;
+    if (!keepOutline)
+      this.state.outlinePreview = null;
     this.stopPulse();
     this.state.stimulus = null;
     this.state.stale = true;

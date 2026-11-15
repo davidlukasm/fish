@@ -663,8 +663,7 @@ export const handleMethods = {
     this.draftDesign(doc, 'field:' + organ.id, 'refreshScene');
   },
   // While an inspector handle is dragged only the inspector, or the part named by `redraw`,
-  // follows, once a frame; the fish, the library and the design run catch up when it is let go, so
-  // dragging stays smooth.
+  // follows, once a frame; the library and the full design report catch up when it is let go.
   draftDesign(doc, batch, redraw = 'refreshDragged') {
     if (!doc)
       return;
@@ -694,6 +693,8 @@ export const handleMethods = {
     this.drafted = this.draftStart = null;
     this.historyBatch = null;
     if (dragged === start) {
+      if (this.heldHandle('anatomy'))
+        this.state.outlinePreview = null;
       this.refreshScene();
       this.refreshInspector();
     } else {

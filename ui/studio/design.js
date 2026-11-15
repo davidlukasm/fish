@@ -40,6 +40,7 @@ import {label} from './view/kit.js';
 import {hormoneTime} from './view/substances.js';
 import {requestBody} from './requests.js';
 import {BODY_MAP, PROBE_LAYER} from './view/scene.js';
+import {outlineSizes} from './view/body.js';
 import {newFishDocument} from './canvas_placement.js';
 
 const PRESSURE_TRIES = 12, PRESSURE_BATCH = 'pressure';
@@ -154,18 +155,18 @@ export const designMethods = {
     return probe && findOrgan(this.state.document, probe.organ) ? senseScene(probe) : null;
   },
   requestDesign() {
-    // A drag asks for its design run once, when it is let go.
-    if (this.designRunning || this.drafted) {
+    const draft = this.drafted && this.heldHandle('anatomy');
+    if (this.designRunning || (this.drafted && !draft)) {
       this.designPending = true;
       return;
     }
+    const document = this.state.document, probe = this.state.sightProbe,
+          sense = this.state.senseProbe, plan = compileDocument(document, this.state.sites);
     this.designRunning = true;
     this.designPending = false;
     const request = ++this.designRequest, fishRequest = this.newFishRequest;
-    const document = this.state.document, probe = this.state.sightProbe,
-          sense = this.state.senseProbe;
-    this.api(requestBody('design', {
-          plan : compileDocument(document, this.state.sites),
+    this.api(requestBody('design', draft ? {plan} : {
+          plan,
           lightSpread : this.state.lightSpread?.document !== document,
           sight : sightScene(probe),
           sense : this.senseScene()
@@ -174,11 +175,20 @@ export const designMethods = {
         // the eyes and senses follow a dragged one step by step instead of waiting for it to
         // rest.
         .then(anatomy => {
-          if (this.state.document === document)
+          if (draft) {
+            // Follow the drag with the last completed outline, even as the pointer moves on.
+            if (this.drafted && this.heldHandle('anatomy') === draft &&
+                this.state.document !== this.draftStart && this.newFishRequest === fishRequest) {
+              const previous = JSON.stringify(outlineSizes(this.state));
+              this.state.outlinePreview = {fins : anatomy.fins, forms : anatomy.forms};
+              if (JSON.stringify(outlineSizes(this.state)) !== previous)
+                this.refreshScene();
+            }
+          } else if (this.state.document === document)
             this.showAnatomy(anatomy, request);
         })
         .catch(error => {
-          if (this.newFishRequest === fishRequest && this.state.document === document &&
+          if (!draft && this.newFishRequest === fishRequest && this.state.document === document &&
               this.state.sightProbe === probe && this.state.senseProbe === sense)
             this.notice(error.message);
         })
@@ -194,6 +204,7 @@ export const designMethods = {
     this.shownDesign = this.state.document;
     if (anatomy.lightSpread)
       this.state.lightSpread = {document : this.state.document, report : anatomy.lightSpread};
+    this.state.outlinePreview = null;
     this.state.anatomy = anatomy;
     if (this.state.station === 'hub')
       this.refreshHubDraft();

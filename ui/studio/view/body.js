@@ -705,8 +705,11 @@ function headSvg(state) {
          throatSvg(mouth) + (eats ? intakeSvg(mouth) + cheeksSvg(mouth) + jawsSvg(mouth) : '') +
          mouthSvg(mouth) + teethSvg(columns, mouth) + '</g>';
 }
-export const fishOutline = state =>
-    fishPath(finSizes(state.anatomy?.fins, finAttachments(state), state.anatomy?.forms));
+export function outlineSizes(state) {
+  const anatomy = state.outlinePreview ?? state.anatomy;
+  return finSizes(anatomy?.fins, finAttachments(state), anatomy?.forms);
+}
+export const fishOutline = state => fishPath(outlineSizes(state));
 // Where organs take clicks: above the wires, so a visible organ is chosen where it is seen, and
 // over the whole of a fine or hollow glyph (a lateral line, a near sense's pits).
 const SKIN_FIRST = (a, b) => (b.type === 'pigment') - (a.type === 'pigment');
@@ -743,8 +746,7 @@ function organChosen(state, organ) {
 const BODY_SHADE = Object.freeze({reach : 150, flank : .08, back : .12});
 export function bodySvg(state) {
   const fill = fishBodyColour(state.document, state.anatomy);
-  const drawnEyes = new Set(),
-        sizes = finSizes(state.anatomy?.fins, finAttachments(state), state.anatomy?.forms);
+  const drawnEyes = new Set(), sizes = outlineSizes(state);
   let organs = '', gut = '', felt = '', ducts = '';
   for (const organ of [...state.document.organs].sort(SKIN_FIRST)) {
     if (isRegion(organ))
