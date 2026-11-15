@@ -230,8 +230,7 @@ async function checkDraggedInspector(model, capabilities, root) {
       const cases = [
         [ 'eye', '[data-spectrum]' ], [ 'motor', '[data-region-picture]' ],
         [ 'spine', '[data-region-picture]' ], [ 'choice', '[data-response]', true ],
-        [ 'choice', '[data-nerve-tissue]', true ], [ 'choice', '[data-variation]', true ],
-        [ 'choice', '[data-preview-bars]', true ]
+        [ 'choice', '[data-nerve-tissue]', true ], [ 'choice', '[data-variation]', true ]
       ];
       for (const [type, selector, cell] of cases) {
         const organ = source.organs.find(o => o.type === type);
@@ -1005,6 +1004,7 @@ async function checkLiveCommandOrder() {
 async function checkBloodReceptors(model, capabilities) {
   const {BLOOD_SUBSTANCE : B, HORMONE_EFFECT : E} = await import('../ui/schema.js');
   const development = await import('../ui/studio/view/development.js');
+  const {lifeBar} = await import('../ui/studio/view/life_tool.js');
   const substances = await import('../ui/studio/view/substances.js');
   const {lifeResponses} = await import('../ui/studio/model/cell_life.js');
   const {driveContext} = await import('../ui/studio/view/preview.js');
@@ -1160,8 +1160,11 @@ async function checkBloodReceptors(model, capabilities) {
   doc = model.updateReceptor(doc, id, E.learning, {substance : B.fatigue, width : 1});
   const unused = model.newDocument('Vorschau');
   const one = model.addSubstance(unused, wheel.hormones, 0);
-  for (const [document, expected] of [[ unused, [] ], [ one, [ 0 ] ],
-                                      [ doc, [ 0, 1, 2, 3, 4, 5, B.reserve, B.fatigue ] ]]) {
+  assert.equal(development.previewContextOf({}).maturity, 1);
+  const lifePicture = (document, previewContext, tool = 'life') =>
+      lifeBar({document, capabilities : wheel, mode : 'fish', tool, previewContext});
+  for (const [document, messengers] of [[ unused, [] ], [ one, [ 0 ] ],
+                                        [ doc, [ 0, 1, 2, 3, 4, 5 ] ]]) {
     for (const value of [0, .25, .5, .75, 1]) {
       const previewContext = {
         ...model.DEFAULT_BLOOD_CONTEXT,
@@ -1169,40 +1172,34 @@ async function checkBloodReceptors(model, capabilities) {
         reserve : value,
         fatigue : value
       };
-      const picture = development.previewControls({document, capabilities : wheel, previewContext});
+      const picture = lifePicture(document, previewContext);
       assert.doesNotMatch(picture, /NaN|Infinity|undefined/);
+      assert.match(picture, /data-preview-handle="maturity"/);
       const levels = [
         ...picture.matchAll(
-            /data-preview-handle="(\d+)" data-level-left="([^"]+)" data-level-right="([^"]+)" cx="([^"]+)" cy="([^"]+)"/g)
+            /data-preview-handle="(\d+)" data-level-bottom="([^"]+)" data-level-top="([^"]+)" cx="([^"]+)" cy="([^"]+)"/g)
       ];
-      assert.deepEqual(levels.map(m => Number(m[1])), expected);
-      assert.equal((picture.match(/class="aid-preview-level-row"/g) ?? []).length,
-                   expected.length + 1);
-      assert.equal((picture.match(/data-preview-handle="maturity"/g) ?? []).length, 1);
-      for (const mark of levels) {
-        const left = Number(mark[2]), right = Number(mark[3]);
-        assert.ok(right - left >= 40,
-                  'Each fixed-size vessel leaves at least 40 pixels for dragging');
-        const marks = {levelLeft : mark[2], levelRight : mark[3]};
-        const patch = (x, y) => development.previewPatch(mark[1], {x, y}, marks)[mark[1]];
-        assert.ok(Math.abs(patch(Number(mark[4]), Number(mark[5])) - value) < 1e-9,
-                  'Touching any substance handle retains its current level');
-        for (const y of [-1e3, Number(mark[5]), 1e3]) {
-          assert.equal(patch(left - 1, y), 0);
-          assert.equal(patch(right + 1, y), 1);
-          assert.equal(patch((left + right) / 2, y), .5, 'The row position cannot change a level');
-        }
+      assert.deepEqual(levels.map(m => Number(m[1])), [B.reserve, B.fatigue, ...messengers]);
+      const closed = lifePicture(document, previewContext, 'select');
+      assert.doesNotMatch(closed, /data-preview-handle/);
+      assert.equal((closed.match(/data-life-amount/g) ?? []).length, levels.length);
+      for (const [ , substance, bottom, top, x, y ] of levels) {
+        const marks = {levelBottom : bottom, levelTop : top};
+        const patch = (x, y) => development.previewPatch(substance, {x, y}, marks)[substance];
+        assert.equal(patch(Number(x), Number(y)), value,
+                     'Touching any substance handle retains its current level');
+        assert.equal(patch(-1e3, Number(top) - 1), 1);
+        assert.equal(patch(1e3, Number(bottom) + 1), 0);
+        assert.equal(patch(1e3, (Number(top) + Number(bottom)) / 2), .5);
       }
     }
   }
   const named = model.setSubstance(one, 0, '<Langer eigener Stoffname>');
-  const namedPicture = development.previewControls({document : named, capabilities : wheel});
-  assert.match(namedPicture, /<span>&lt;Langer eigener Stoffname&gt;<\/span>/);
-  assert.match(development.previewControls({document : one, capabilities : wheel}),
-               /<span>Botenstoff 1<\/span>/);
-  const fullPicture = development.previewControls({document : doc, capabilities : wheel});
-  assert.match(fullPicture, /<span>Energiereserve<\/span>/);
-  assert.match(fullPicture, /<span>Muskelerschöpfung<\/span>/);
+  assert.match(lifePicture(named), />&lt;Langer eigener Stoffname&gt;<\/text>/);
+  assert.match(lifePicture(one), />A<\/text>/);
+  const fullPicture = lifePicture(doc);
+  assert.match(fullPicture, />Energiereserve<\/text>/);
+  assert.match(fullPicture, />Muskelerschöpfung<\/text>/);
   assert.deepEqual(development.previewPatch('0', {x : 50, y : 0}, {}), {});
   const animation = globalThis.requestAnimationFrame;
   globalThis.requestAnimationFrame = () => 1;
@@ -4490,7 +4487,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   };
   const planningInspector = panels.inspector(planned);
   assert.match(planningInspector, /aid-contact-plan/);
-  assert.match(planningInspector, /data-preview-handle="maturity"/);
   assert.match(planningInspector, /aid-life-cycle/);
   assert.doesNotMatch(planningInspector, /NaN|undefined|studio\.[a-zA-Z]/);
 
