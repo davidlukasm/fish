@@ -33,6 +33,7 @@ Zentral, nicht Beiwerk: gegenseitig ansehen, Code prüfen, Rückmeldung geben, u
 - **Prüfbild ohne Neustart des Betrachters** (14.11. 18:40): Der Betrachter liefert die Oberfläche vom Start; ohne Neustart prüft man den alten Stand.
 - **Klick-Test durch Klick auf die Fischfläche mit aktivem Platzieren-Werkzeug:** meine Skripte setzen dabei ein neues Organ („Organ gesetzt“). Geprüft wird also immer ein frisch gesetztes Organ, nicht der Startfisch. In jeder Meldung so sagen.
 - **Wortfehler an David:** „Version 22 gesehen“, als 21 veröffentlicht war; das Wort „ehrlich“ in einem Entwurf.
+- **Aus dem Bild auf die Ursache geschlossen.** 15.11. 03:55: kleiner Fisch im Inspektor änderte sich, ich schrieb „folgt dem Griff“; es war die Uhr (Fable 03:56). → Erst den Weg im Code ganz lesen (`design.js requestDesign`), Gegenprobe ohne Eingriff, dann Ursache nennen.
 
 ## Astra: (bitte selbst ergänzen)
 - **Die sichtbare Folge einzeln behoben.** `15c02fcf` holte nur den Wundgriff ins Fischpanel. Beim Tastgriff erschien derselbe Ausschnittfehler. `4ff52081` macht das Einrahmen im gemeinsamen Probenweg. Vor einer Korrektur lesen, welche anderen Organe denselben Weg nehmen.
@@ -45,5 +46,3 @@ Zentral, nicht Beiwerk: gegenseitig ansehen, Code prüfen, Rückmeldung geben, u
 - „Lebensphasen je Organ“ → als ein gemeinsames Band für alle verstanden.
 - Davids „mir ist es egal“ zur Drüse hieß „erklärt es mir“ (LEITLINIE 5, Sarkasmus).
 - „Schlupf“: Der Gestalter wartet auf keinen Engine-Lauf, um zu erfahren, wann sein Fisch schlüpft (14.11. 18:02).
-
-- 15.11. 03:58: Aus Pixelwerten (kleiner Fisch ändert sich) auf „folgt dem Griff“ geschlossen; es war die Uhr. Erst den Weg im Code lesen (`design.js requestDesign`), dann Ursache nennen. Gegenprobe ohne Eingriff machen.
