@@ -160,7 +160,8 @@ liveKind('mouth', (studio, organId) => {
       // The fish panel's mouth moves with the same step.
       studio.showMouthStep?.(organId, samples[i]);
     };
-    film(0);
+    // Redrawn while the grip is pulled, the beat stays at the step it was showing.
+    film(Math.min(1, clock / B.round));
   }
   // Before the mouth the four kinds of food, each bitten as deep as the force on it.
   function drawFoods() {
