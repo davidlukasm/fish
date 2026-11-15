@@ -1402,7 +1402,6 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-gape{fill:none;stroke:#e9e2c6;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .aid-live-gape.fits{stroke:#ef8f8f}
 .aid-live-reservedrop{fill:#f1e3a4}
-.aid-live-groundknob{stroke:#f4efd8;stroke-width:1.5}
 .aid-live-notch{fill:var(--aid-chip);stroke:var(--key);stroke-width:1;opacity:.92}
 .aid-live-notch.on{stroke-width:2}
 .aid-live-fin-effect{fill:none;stroke:#f4efd8;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}

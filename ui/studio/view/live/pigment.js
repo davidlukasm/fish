@@ -7,7 +7,9 @@
 // positive command spreads it up to all, in the cells' own time. Only other fishes' eyes see the
 // colour.
 // The colours from rest to all the pigment spread are the plan's report (anatomy.colour.range).
-// The command and the ground are the picture's own knobs; the fish panel has no probe for them.
+// The ground behind the fish is the fish panel's probe (probes.js; model/probe.js, groundColour:
+// sediment, or a surface from bare to overgrown with algae, in the engine's colours). The command
+// is an input, set here.
 import {t} from '../../../strings.js';
 import {ATELIER_LIMITS, TUNING} from '../../../schema.js';
 import {
@@ -26,6 +28,7 @@ import {
   removeOrganType,
   updateCenter
 } from '../../model/document.js';
+import {groundColour} from '../../model/probe.js';
 import {label} from '../kit.js';
 import {addPicture, chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {keyGrip, STEPS} from './sense.js';
@@ -40,18 +43,11 @@ const SCENE = Object.freeze({
   course : {L : 60, R : 256, top : 128, base : 178},
   time : [ 4, 200 ],
   stop : [ 100, 800 ],
-  grounds : [ [ 14, 42, 54 ], [ 47, 111, 106 ], [ 185, 166, 120 ] ]
 });
 const BAND =
     Object.freeze({height : 100, L : 16, R : 284, top : 10, base : 58, deep : 44, hues : 60});
 const NEW = Object.freeze({q1 : hueQuality(TURN / 3), qwidth : .2});
 const css = rgb => 'rgb(' + rgb.map(v => Math.round(255 * clamp(v))).join(',') + ')';
-const groundColour = g => {
-  const [a, b] =
-      g < .5 ? [ SCENE.grounds[0], SCENE.grounds[1] ] : [ SCENE.grounds[1], SCENE.grounds[2] ],
-            u = g < .5 ? g * 2 : (g - .5) * 2;
-  return css(a.map((v, c) => (v + (b[c] - v) * u) / 255));
-};
 const turnTo = a => ((a + 1.5 * TURN) % TURN) - TURN / 2;
 const paint = (group, colour) => {
   for (const part of [group.firstChild, group.firstChild.nextSibling])
@@ -71,7 +67,7 @@ liveKind('pigment', (studio, organId) => {
   const band = addPicture(root);
   // What is tried: how far the brain has the pigment spread and at which step it lets go; what
   // lies behind the fish (0 deep water - 1 sand). Not part of the fish.
-  const own = {chosen : 0, command : 1, stop : 450, ground : .35, pull : null};
+  const own = {chosen : 0, command : 1, stop : 450, pull : null};
   let step = 0, clock = null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = (doc, preview = null) =>
@@ -93,6 +89,10 @@ liveKind('pigment', (studio, organId) => {
                        range = (studio.state.outlinePreview ?? studio.state.anatomy)?.colour?.range,
                        time = timeConstantSteps(cell.tau), X = st => L + (R - L) * st / STEPS,
                        Y = v => base - (base - top) * clamp(v),
+                       ground = studio.state.senseProbe?.kind === 'ground' &&
+                                        studio.state.senseProbe.organ === organId
+                                    ? studio.state.senseProbe
+                                    : null,
                        colourAt = spread =>
                            range?.length
                                ? css(range[Math.round(clamp(spread) * (range.length - 1))])
@@ -103,25 +103,12 @@ liveKind('pigment', (studio, organId) => {
       width : 300,
       height : SCENE.ground,
       rx : 6,
-      style : 'fill:' + groundColour(own.ground)
+      class : 'aid-live-ground',
+      ...(ground ? {style : 'fill:' + css(groundColour(ground))} : {})
     },
        under);
     const body = el('g', {}, live);
     fishSide(body, f.x, f.y, f.s);
-    drag(svg,
-         el('circle', {
-           cx : 14 + 60 * own.ground,
-           cy : SCENE.ground - 10,
-           r : 5,
-           class : 'aid-live-groundknob',
-           style : 'fill:' + groundColour(own.ground)
-         },
-            live),
-         p => {
-           own.ground = clamp((p.x - 14) / 60);
-           again();
-         },
-         'pigmentground', 'knob');
     el('rect', {x : L, y : top, width : R - L, height : base - top, class : 'aid-live-ground'},
        under);
     for (const [v, name] of [[ 0, 'rest' ], [ 1, 'full' ]]) {
@@ -236,9 +223,10 @@ liveKind('pigment', (studio, organId) => {
            p => {
              own.chosen = i;
              draft(updateCenter(studio.state.document, cell.id, {
-               q1 : hueQuality(hueOf(p.x)),
-               copies : Math.round(clamp((p.y - top) / deep * most, 1, most))
-             }), 'colour');
+                     q1 : hueQuality(hueOf(p.x)),
+                     copies : Math.round(clamp((p.y - top) / deep * most, 1, most))
+                   }),
+                   'colour');
            },
            'pigmenttype' + i, 'grip', settle);
       if (!chosen)
