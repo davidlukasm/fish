@@ -5,7 +5,6 @@ import {nextVisionProfile} from './model/retina.js';
 import {findSite, sitePoint} from './model/layout.js';
 import {toggleInnerLink, updateRegion, routedLinks} from './model/regions.js';
 import {
-  addAntagonist,
   addOrgan,
   addOrganType,
   addSubstance,
@@ -31,7 +30,6 @@ import {
   removeSubstance,
   selectionCenters,
   setBends,
-  setFinStroke,
   setMuscleFibre,
   setSubstance,
   switchReceptor,
@@ -442,21 +440,6 @@ export const FISH_CLICKS = Object.freeze([
     '[data-inner-link]',
     (studio, e) => keep(studio, toggleInnerLink(studio.state.document, e.dataset.organId,
                                                 e.dataset.innerLink))
-  ],
-  [
-    '[data-fin-antagonist]',
-    (studio, e) => {
-      // The new antagonist is selected, so its stroke shows at once.
-      const added = addAntagonist(studio.state.document, e.dataset.finAntagonist, studio.state.sites);
-      if (!added)
-        return studio.notice(label('status.noRoom'));
-      studio.changeDocument(added.document, {kind : 'organ', id : added.organId});
-    }
-  ],
-  [
-    '[data-fin-stroke]',
-    (studio, e) => keep(studio, setFinStroke(studio.state.document, e.dataset.organId,
-                                             Number(e.dataset.finStroke), studio.state.sites))
   ],
   [
     '[data-fibre-type]',

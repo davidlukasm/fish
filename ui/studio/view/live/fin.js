@@ -78,7 +78,8 @@ liveKind('fin', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-fin';
   const water = addPicture(root);
-  // What is tried: for each fin, how long its beat lasts (steps) and how strong the command is.
+  // What is tried: for each muscle shown, how long its beat lasts (steps) and how strong the
+  // command is.
   // Not part of the fish. This muscle's fin beats at first, the others rest.
   const own = {beats : new Map()};
   let clock = 0, film = null;
@@ -106,9 +107,10 @@ liveKind('fin', (studio, organId) => {
         rows.push({muscle : candidate, channel});
     }
     for (const [k, row] of rows.entries()) {
-      if (!own.beats.has(row.channel))
-        own.beats.set(row.channel, {steps : k ? 0 : 16, strength : 1});
-      row.beat = own.beats.get(row.channel);
+      // A beat belongs to its muscle: which fin that works can change with the plan.
+      if (!own.beats.has(row.muscle.id))
+        own.beats.set(row.muscle.id, {steps : k ? 0 : 16, strength : 1});
+      row.beat = own.beats.get(row.muscle.id);
     }
     return rows;
   }
@@ -229,13 +231,14 @@ liveKind('fin', (studio, organId) => {
       const k = clamp(step / S.every, 0, Math.max(0, course.length - 1)), a = course[Math.floor(k)],
             b = course[Math.ceil(k)] ?? a;
       if (a) {
-        // The engine keeps the heading within half a turn either way: between two rows the fish
-        // turns the shorter way.
+        // The heading as it has run on since the start (the engine also folds it into half a turn
+        // either way, but a fish can turn further than that between two rows).
         const f = k - Math.floor(k),
               [ x, y ] = at([ a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f ]),
-              turned = Math.atan2(Math.sin(b[2] - a[2]), Math.cos(b[2] - a[2]));
-        fish.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${
-                                           (-degrees(a[2] + turned * f)).toFixed(1)})`);
+              heading = (a[5] ?? a[2]) + ((b[5] ?? b[2]) - (a[5] ?? a[2])) * f;
+        fish.setAttribute(
+            'transform',
+            `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(-degrees(heading)).toFixed(1)})`);
         for (const {channel, x : bx, y : by, blade} of blades) {
           const pull =
               (a[4]?.[channel] ?? 0) + ((b[4]?.[channel] ?? 0) - (a[4]?.[channel] ?? 0)) * f;

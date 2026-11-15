@@ -380,9 +380,6 @@
 .aid-contrast-choices{display:flex;gap:6px;margin:12px 0}
 .aid-contrast-choices button{display:flex;align-items:center;gap:6px;border:1px solid var(--aid-control-edge);background:var(--aid-control);border-radius:7px;padding:5px 9px}
 .aid-contrast-choices button.active{border-color:#ecdba8;background:#35504a}
-.aid-stroke-choices{flex-wrap:wrap}
-.aid-stroke{width:30px;height:16px}
-.aid-stroke path{fill:none;stroke:#f4f1e4;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .aid-trash{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:10px;padding:10px 18px;border:2px dashed #73515d;border-radius:14px;background:#2a1c22e6;color:#edbaba;font-size:13px;pointer-events:none}
 .aid-trash[hidden]{display:none}
 .aid-trash.armed{background:#6b2f3bf0;border-color:#f3a7b5;color:#fff0f2}
