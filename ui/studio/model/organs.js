@@ -346,6 +346,11 @@ export const organSlots = organ => {
   const slots = ORGAN_BY_KEY[organ?.type]?.slots;
   return typeof slots === 'function' ? slots(organ) : slots ?? [];
 };
+// The ports a kind of organ has before the fish has one: an organ without nodes, twin or settings
+// of its own.
+const UNBUILT =
+    Object.freeze({centers : Object.freeze([]), region : Object.freeze({}), pair : null});
+export const kindSlots = key => organSlots({type : key, ...UNBUILT});
 export function slotCenters(organ, key, dir) {
   const slot = organSlots(organ).find(s => s.key === key && s.dir === dir);
   if (!slot)

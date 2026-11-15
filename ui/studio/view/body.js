@@ -532,32 +532,38 @@ function feltCells(state, organ) {
                       at : nodeLocation(state.document, state.sites, c, organ.type)
                     })));
 }
-// Where a skin sense's felt stretch of skin ends towards the tail, on the organ's own side: the
-// place of the grip for its field's width, a little off the skin so that it can be caught.
+// The skin in short stretches, each with how much the cells feel it at its middle; of them those
+// the cells feel at all. The colour and the grip at its end both read these.
+function feltStretches(state, cells) {
+  const points = skinPoints(FELT.step), zones = state.anatomy?.zones;
+  return points.slice(1)
+      .map((to, k) => {
+        const from = points[k], middle = {x : (from.x + to.x) / 2, y : (from.y + to.y) / 2},
+              angle = skinDirection(middle, zones);
+        return {
+          from,
+          to,
+          weight : Math.max(...cells.map(({cell : [ aim, width ]}) =>
+                                             1 - Math.abs(wrapAngle(angle - aim)) / width))
+        };
+      })
+      .filter(stretch => stretch.weight > FELT.least);
+}
+// Where a skin sense's felt skin ends towards the tail, on the organ's own side: the place of the
+// grip for its field's width, a little off the skin so that it can be caught.
 export function feltEnd(state, organ) {
-  const cells = feltCells(state, organ), side = sideOf(organ) || 1, zones = state.anatomy?.zones;
-  const felt = point => cells.some(
-      ({cell : [ aim, width ]}) =>
-          1 - Math.abs(wrapAngle(skinDirection(point, zones) - aim)) / width > FELT.least);
-  const end = skinPoints(FELT.step)
-                  .filter(point => (point.y - BODY_FRAME.middle) * side >= 0 && felt(point))
+  const side = sideOf(organ) || 1;
+  const end = feltStretches(state, feltCells(state, organ))
+                  .map(stretch => stretch.to)
+                  .filter(point => (point.y - BODY_FRAME.middle) * side >= 0)
                   .reduce((far, point) => !far || point.x > far.x ? point : far, null);
   return end && {x : end.x, y : end.y + side * FELT.grip};
 }
 function feltSkin(state, cells) {
-  const points = skinPoints(FELT.step);
-  return points.slice(1)
-      .map((point, k) => {
-        const from = points[k], middle = {x : (from.x + point.x) / 2, y : (from.y + point.y) / 2},
-              angle = skinDirection(middle, state.anatomy?.zones);
-        const weight = Math.max(...cells.map(({cell : [ aim, width ]}) =>
-                                                 1 - Math.abs(wrapAngle(angle - aim)) / width));
-        return weight <= FELT.least
-                   ? ''
-                   : '<path d="M' + fixed(from.x) + ' ' + fixed(from.y) + ' L' + fixed(point.x) +
-                         ' ' + fixed(point.y) + '" stroke-opacity="' +
-                         fixed(FELT.base + (1 - FELT.base) * weight) + '"/>';
-      })
+  return feltStretches(state, cells)
+      .map(({from, to, weight}) => '<path d="M' + fixed(from.x) + ' ' + fixed(from.y) + ' L' +
+                                   fixed(to.x) + ' ' + fixed(to.y) + '" stroke-opacity="' +
+                                   fixed(FELT.base + (1 - FELT.base) * weight) + '"/>')
       .join('');
 }
 function feltFlow(state, organ, cells) {

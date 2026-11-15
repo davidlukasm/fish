@@ -72,7 +72,7 @@ export function outletsSection(state, organ) {
           .map(({target, kind, slot, joined}) => {
             const fill = joined ? 'filled' : target ? 'free' : 'absent';
             const name = target ? organTitle(target, state.sites) : label('organs.' + kind);
-            return '<li class="' + fill + '">' + icon(organ.type, ICON.list) +
+            return '<li class="' + fill + '">' + icon(organ.type, ICON.part) +
                    '<span class="aid-outlet-line">' +
                    (target && !joined
                         ? '<button class="aid-slot-add" data-outlet-source="' +
@@ -83,9 +83,9 @@ export function outletsSection(state, organ) {
                    '</span>' +
                    (target
                         ? '<button data-select-organ="' + escapeText(target.id) + '" title="' +
-                              escapeText(name) + '">' + icon(target.type, ICON.list) + '</button>'
+                              escapeText(name) + '">' + icon(target.type, ICON.part) + '</button>'
                         : '<span class="aid-outlet-absent" title="' + escapeText(name) + '">' +
-                              icon(kind, ICON.list) + '</span>') +
+                              icon(kind, ICON.part) + '</span>') +
                    '<small>' + escapeText(name.replace(/\u00ad/g, '')) + ' · ' +
                    escapeText(slotTitle(slot)) + '</small></li>';
           })

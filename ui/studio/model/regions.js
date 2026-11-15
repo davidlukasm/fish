@@ -1,5 +1,6 @@
 import {
   isModulator,
+  kindSlots,
   NEURON_BY_KEY,
   ORGAN_BY_KEY,
   ORGANS,
@@ -415,7 +416,7 @@ export function organOutlets(doc, source) {
   const present = new Set(doc.organs.map(o => o.type));
   const missing =
       ORGANS.filter(kind => kind.slots && !present.has(kind.key))
-          .flatMap(kind => organSlots({type : kind.key, centers : [], region : {}, pair : null})
+          .flatMap(kind => kindSlots(kind.key)
                                .filter(slot => slot.dir === 'in' && slot.fits.includes(source.type))
                                .map(slot => ({kind : kind.key, slot, joined : false})));
   return [
