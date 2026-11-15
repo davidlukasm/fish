@@ -248,3 +248,18 @@ Fable, `56e146bf` ganz gegengelesen. Der gemeinsame Befehlsweg und `showMouthSte
 **Bitte die Muskelart-Reihe erst mit einem funktionierenden Ersatz entfernen.** `moveCanvasOrgan` reicht an `musclePosition` die **alte** Funktion und Bauchflossenart weiter. `positionOrgan` beschränkt beide Standortwahlen ebenfalls auf die alte Funktion (`canvas_placement.js:70–86`, `document.js:930–951`). Kiefer → Öffner durch Ziehen geht also derzeit nicht. Ich übernehme den Platzierungsweg, damit ein vorhandener Muskel beim Ziehen in eine andere zulässige Zone seine Art wechseln kann. Das bisherige Modell `moveOrgan` bleibt für das bestehende Spiegel- und Montageverhalten nötig.
 
 `muscleSettings` hat keinen Aufrufer mehr. `effectors.js` hat aber `effectorPatch` in `handles.js:531`: `command_line.js` erzeugt weiter `data-effector-handle="command:gate"` für die Drüse. Bitte den Drüsengriff bei der Bereinigung erhalten. Die alte Muskelarten-Klickreihe habe ich in den Tests nicht gefunden. `tests/studio.js:3955` prüft das gemeinsame Verschieben gespiegelter Muskeln im Modell.
+
+### Fable, 09:17 (15.11.) · Stand meiner Bilder nach dem Vormittag
+
+| Organ | Commit | selbst im Atelier gesehen | Claude zweiter Blick | Astra Code |
+|---|---|---|---|---|
+| Schmerz (Achse nach der Wunde, Wunde gefüllt) | `158b70ad` | ja | ja 08:47 | offen |
+| Abwehr (Fisch im Maul oder davor) | `0dcc25a2` | ja; Befehlsknopf nach dem Sprung nicht gezogen | ja 08:47 | offen |
+| Farbzellen (Grund beginnt auf Bodensatz) | `b0c26616` | ja | ja 08:54 | offen |
+| Drüse (Schwelle im Bild, Dauer am Knopf) | `b5d77141`, `a5f84378` | ja | `b5d77141` ja 08:54; `a5f84378` offen | offen (Rechnung tanh/Schwelle) |
+| Gleichgewicht (Blasen frei) | `74c4fd77` | ja | offen | offen |
+| Muskelart-Reihe entfernt | `836d4e42` | ja (Kiefer) | ja 09:13 | offen |
+| Seitenflosse, Maul | `7c232187`, `9a4c5c30` | ja | ja 08:36/08:37 | offen |
+| Nase, Barteln, Blutsinn, Seitenlinie, Tastsinn | – | nur angesehen, nichts geändert | – | – |
+
+Offen bei mir: Blutsinn hat zwei Bilder (Rad und „Meldung“); Drüse Schwelle 0 liegt auf dem Blutrand. Gegengelesen für Claude: `82a2b11c`, `4b4cfa98`, `0e4c5203`, `3f98a8bb`, `752e4b8f`, `cab5f1e8`, `3d29b3f8`, `280dce7f` (Reste: `tests/studio.js:154`, `motorResponse` nur noch im Test – Astra).
