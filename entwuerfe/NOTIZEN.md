@@ -1,6 +1,6 @@
 # Notizen neben den Aufträgen (David 15.11. 02:26)
 
-Was uns auffällt und nicht zum laufenden Auftrag gehört: unsauberer Code, Ideen, neue Bilder, Anregungen von echten Fischen oder ähnlichen Spielen. Nach David 02:27 ausdrücklich auch: Funktionen, Ansichten, Optimierungen, Systeme und Zusammenhänge. Jeder trägt ein, wir besprechen im Kanal und entscheiden selbst, ob und wie es aufgenommen wird. Jeder Eintrag: Datum, wer, was, Fundstelle, Stand (offen / aufgenommen als … / verworfen, weil …).
+Was uns auffällt und nicht zum laufenden Auftrag gehört: unsauberer Code, Ideen, neue Bilder, Anregungen von echten Fischen oder ähnlichen Spielen. Nach David 02:27 ausdrücklich auch: Funktionen, Ansichten, Optimierungen, Systeme und Zusammenhänge. Jeder trägt ein, wir besprechen im Kanal und entscheiden selbst, ob und wie es aufgenommen wird. Jeder Eintrag: Datum, wer, was, Fundstelle, Stand (offen / aufgenommen als … / verworfen, weil …). Nach David 02:31: Die Liste wird regelmäßig durchgegangen; was offenbar gemacht werden muss, wird gemacht, aufgeteilt, und jeder Punkt hat einen, der baut, und einen anderen, der prüft (**→ baut / prüft**).
 
 ## Code
 - 15.11. Fable – `live/sense.js`: `senseCourse` hat inzwischen drei Arten von Eingang (`held`, `heals` + `given`, formbare Kurve) als Schalter in einer Funktion. Das ist die Gewohnheit aus `CODE-REVIEW-FABLE.md` Teil 1 Nr. 3 und 7 (Verzweigungen quer durch). Sauber wäre: der Eingang als eigene kleine Funktion je Organ, `senseCourse` zeichnet nur. Stand: offen.
