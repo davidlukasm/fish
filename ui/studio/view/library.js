@@ -204,7 +204,7 @@ function substanceTiles(state, effects) {
                                 }) + tile({
                                   kind : 'birth',
                                   value : String(index),
-                                  name : label('development.birthReceptor'),
+                                  name : label('hormoneCard.birthTile'),
                                   path : BIRTH_ICON,
                                   colour,
                                   title : label('development.birthEffect')

@@ -932,13 +932,13 @@
   },
   "hormoneCard": {
     "title": "Stoffe",
-    "previewBlood": "Blutpegel in der Vorschau",
     "rise": "steigt",
     "stays": "bleibt",
     "sources": "Quellen",
     "acts": "Wirkt auf",
     "course": "Spiegel, wenn alle Drüsen voll gießen und dann aufhören",
     "glandOn": "Drüse an",
+    "birthTile": "Entstehen",
     "level": "Spiegel",
     "gland": "Drüse",
     "glandTitle": "Eine Drüse, die diesen Stoff abgibt",
@@ -1325,8 +1325,8 @@
       "Verdrängung",
       "Eigenanteil",
       "Rhythmus",
-      "Ausgabefaktor",
-      "Todesantwort",
+      "Ausgabe",
+      "Tod",
       "Lehrsignal",
       "Festigung"
     ]

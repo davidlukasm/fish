@@ -117,6 +117,26 @@ void receptor_curve(const Receptor &plan, const field::HormoneReceptor &receptor
   }
   std::cout << ']';
 }
+// The body's growth permission over the level of the hormone its receptor reads, the other
+// hormones as the life band sets them: what physiology.hh asks of the growth receptor (occupancy,
+// no baseline, 0…1). Whether the body then grows also needs reserve, digestion and room.
+void growth_curve(const Receptor &plan, const LearningContext &context,
+                  const std::array<double, field::HORMONES> &spans) {
+  constexpr int SAMPLES = 32;
+  std::cout << ",\"growthResponse\":";
+  if (!plan.active || plan.substance >= field::HORMONES) {
+    std::cout << "null";
+    return;
+  }
+  const auto receptor = planned_receptor(plan, field::GROWTH_RECEPTOR);
+  std::cout << '[';
+  for (int i = 0; i <= SAMPLES; ++i) {
+    auto levels = context.levels;
+    levels[plan.substance] = spans[plan.substance] * double(i) / SAMPLES;
+    std::cout << (i ? "," : "") << receptor.occupancy(levels);
+  }
+  std::cout << ']';
+}
 // The curves the hormone tool draws, from the engine's response: each effect's receptor, and the
 // receptor that lets the cell come into being (its answer, clamped to 0…1, is how fast it forms).
 void receptor_curves(const Group &group, const field::Neuron &cell, const LearningContext &context,
@@ -132,8 +152,11 @@ void receptor_curves(const Group &group, const field::Neuron &cell, const Learni
       receptor_curve(plan, planned_receptor(plan, effect), context, spans);
   }
   std::cout << "],\"birthResponse\":";
+  // Birth reads the blood without the cell's own maturity (substrate.cc, the cell is not yet).
+  auto unborn = context;
+  unborn.cell_maturity = 0;
   if (group.growth.active)
-    receptor_curve(group.growth, planned_receptor(group.growth, field::GROWTH_RECEPTOR), context,
+    receptor_curve(group.growth, planned_receptor(group.growth, field::GROWTH_RECEPTOR), unborn,
                    spans);
   else
     std::cout << "null";
