@@ -295,8 +295,13 @@ export function senseCourse(svg, {
             : stimulusOf(inp, after);
     // What each key's cells meet of the input: all of it, or the share their sense gives them.
     play.offered = offered;
-    const met = keys.map(k => offered.map(v => (held ? concentration : scale.val(v)) *
-                                               (share ? share(k) : 1))),
+    const met = keys.map(k => {
+      const fraction = share ? share(k) : 1;
+      return offered.map(v => {
+        const stimulus = (held ? concentration : scale.val(v)) * fraction;
+        return scale === BOUNDED ? clamp(stimulus) : stimulus;
+      });
+    }),
           stim = play.stim = met[own.chosen].map(scale.pos);
     const IY = v => I1 - (I1 - I0) * clamp(v), vOf = y => clamp((I1 - y) / (I1 - I0));
     const X = st => L + (R - L) * st / STEPS,

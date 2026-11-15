@@ -3,9 +3,8 @@
 // Read in the engine (physiology.hh, harm_body; body_plan.cc, the skin cells' wedge of weights and
 // the damage stimulus; physiology.cc, healing; feeding.cc and physiology_parameters.cc, bite_wound;
 // embryo.cc): every harm takes from the fish's health; a bite is booked on the sector it comes
-// from. Pain cells weigh the sectors like the other skin cells and feel 16 x weight x what is
-// booked there, at most all. A fed fish heals 0.001 of its health each step and the booked wounds
-// shrink with it. The answer is bounded, and the cells get used to a wound that stays.
+// from, split between the two nearest sector centres. Pain cells weigh the sectors like the other
+// skin cells. A fed fish heals each step and the booked wounds shrink with it.
 // The wound is the fish panel's probe (probes.js), where it lies and how deep it is; the bite
 // falls at the start of the course. The cells' place is the plan's report (anatomy.felt).
 // Not in the pictures: harm without a place (hunger, illness, age), which lies evenly on all
@@ -17,12 +16,19 @@ import {contactFieldOf, contactHalfAngle} from '../../../tuning.js';
 import {findOrgan, updateCenter} from '../../model/document.js';
 import {addPicture, drag, el, liveKind, picture} from './kit.js';
 import {BOUNDED, keysOf, senseCourse, STEPS} from './sense.js';
-import {fishAbove, placeOf, sectorAngle, sectorOf, turnTo, wedge} from './skin.js';
+import {fishAbove, placeOf, sectorAngle, turnTo, wedge} from './skin.js';
 
 const word = (key, values) => t('studio.live.pain.' + key, values);
 const ROUND_MS = 12000, BITE_STEP = 12;
 const WOUND =
     Object.freeze({height : 132, cx : 150, cy : 66, s : 2.5, rx : 70, ry : 27, bite : 13});
+// Match harm_body's linear split, including across the seam behind the fish.
+function woundShares(bearing, count) {
+  const position = (turnTo(bearing) + 180) * count / 360 - .5, lower = Math.floor(position),
+        upperShare = position - lower;
+  return new Map(
+      [ [ (lower + count) % count, 1 - upperShare ], [ (lower + 1) % count, upperShare ] ]);
+}
 
 liveKind('pain', (studio, organId) => {
   const root = document.createElement('div');
@@ -62,7 +68,7 @@ liveKind('pain', (studio, organId) => {
   // as the group weighs it; the grip at the field's edge sets its width. The bite out of the rim
   // is as big as the wound is at the clock's step and closes as the fish heals; the ring round
   // the bitten cell is as thick as its stimulus and as bright as its report.
-  function drawFish(cell) {
+  function drawFish(cell, probe) {
     const {svg, live} =
         picture(fish, WOUND.height, fixed => fishAbove(fixed, WOUND.cx, WOUND.cy, WOUND.s)),
                 {cx, cy, rx, ry} = WOUND, place = placeOf(studio, cell),
@@ -71,21 +77,20 @@ liveKind('pain', (studio, organId) => {
     const at = (angle, inset = 0) => [cx - 5 - (rx - inset) * Math.cos(radians(angle)),
                                       cy + (ry - inset * .6) * Math.sin(radians(angle))],
           angleOf = p => degrees(Math.atan2((p.y - cy) / ry, (cx - 5 - p.x) / rx));
-    const probe = studio.state.senseProbe?.kind === 'wound' ? studio.state.senseProbe : null,
-          hit = probe ? sectorOf(probe.bearing, count) : -1;
-    share = hit < 0 ? 0 : count * weights[hit];
-    let glow = null;
+    const affected = probe ? woundShares(probe.bearing, count) : new Map();
+    share = 0;
+    const glows = [];
     weights.forEach((v, k) => {
       if (v <= 0)
         return;
       const [x, y] = at(sectorAngle(k, count), 7), r = 1.5 + 4 * v / most;
       el('circle', {cx : x, cy : y, r, class : 'aid-live-petal k0', opacity : .45 + .55 * v / most},
          live);
-      if (k === hit)
-        glow = {
-          e : el('circle', {cx : x, cy : y, r : r + 3, class : 'aid-live-water'}, live),
-          part : count * v
-        };
+      const part = count * v * (affected.get(k) ?? 0);
+      share += part;
+      if (part > 0)
+        glows.push(
+            {e : el('circle', {cx : x, cy : y, r : r + 3, class : 'aid-live-water'}, live), part});
     });
     const [gx, gy] = at(place + Math.min(half, 179), 7);
     drag(svg, el('circle', {cx : gx, cy : gy, r : 4.5}, live),
@@ -105,7 +110,7 @@ liveKind('pain', (studio, organId) => {
       const open = course.offeredAt(at), sent = course.sentAt(at);
       bite.setAttribute('transform', `translate(${wx} ${wy}) rotate(${probe.bearing - 90}) scale(${
                                          (open > 0 ? .35 + 2.6 * open : 0).toFixed(3)})`);
-      if (glow) {
+      for (const glow of glows) {
         glow.e.setAttribute('stroke-width',
                             (open > 0 ? .8 + 3 * Math.min(1, glow.part * open) : 0).toFixed(1));
         glow.e.setAttribute('opacity', (.25 + .75 * sent).toFixed(2));
@@ -116,9 +121,10 @@ liveKind('pain', (studio, organId) => {
     const cell = organ()?.centers[0];
     if (!cell)
       return;
-    const probe = studio.state.senseProbe;
-    own.input.height = probe?.kind === 'wound' ? probe.strength : 0;
-    drawFish(cell);
+    const active = studio.state.senseProbe,
+          probe = active?.kind === 'wound' && active.organ === organId ? active : null;
+    own.input.height = probe?.strength ?? 0;
+    drawFish(cell, probe);
     course.draw();
     tick(0);
   }
