@@ -347,6 +347,16 @@ void sense_report(const field::Substrate &t,
   const double bearing = fishsim::radians(scene.bearing), radius = fishsim::body_radius(body);
   const fishsim::PhysiologyParameters physiology{};
   std::vector<float> answers(interface->sensory.size(), 0);
+  const auto stirred = [&](const fishsim::BrainInterface::Receptor &r) {
+    const int sense = r.dominant_sense();
+    return scene.kind == sense_scene::gut ? sense == field::Intake || sense == field::InnerPressure
+           : scene.kind == sense_scene::smell   ? sense == field::Odor
+           : scene.kind == sense_scene::taste   ? sense == field::Taste
+           : scene.kind == sense_scene::flow    ? sense == field::Flow && !r.inner
+           : scene.kind == sense_scene::balance ? sense == field::Flow && r.inner
+           : scene.kind == sense_scene::touch   ? sense == field::Touch
+                                                : sense == field::Damage;
+  };
   if (scene.kind == sense_scene::gut) {
     fishsim::SensoryFrame frame;
     frame.satiety = scene.strength;
@@ -379,6 +389,18 @@ void sense_report(const field::Substrate &t,
       if (r.dominant_sense() == field::Flow && !r.inner)
         answers[i] = fishsim::receptor_response(
             r, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
+    }
+  } else if (scene.kind == sense_scene::touch || scene.kind == sense_scene::wound) {
+    if (scene.kind == sense_scene::touch)
+      fishsim::record_touch(body, std::cos(bearing), std::sin(bearing), scene.strength);
+    else
+      fishsim::harm_body(body, scene.strength, fishsim::death_reason::injury, bearing);
+    const auto frame = fishsim::prepare_sensory_frame(body);
+    for (auto i : interface->active_sensory) {
+      const auto &r = interface->sensory[i];
+      if (stirred(r))
+        answers[i] = std::clamp(fishsim::anatomical_sensor(body, r, frame, 0, nullptr, physiology),
+                                0.f, 1.f);
     }
   } else {
     if (scene.kind == sense_scene::smell) {
@@ -421,10 +443,7 @@ void sense_report(const field::Substrate &t,
         std::cout << "]}";
       }
       std::cout << ']';
-    } else if (scene.kind == sense_scene::touch)
-      fishsim::record_touch(body, std::cos(bearing), std::sin(bearing), scene.strength);
-    else
-      fishsim::harm_body(body, scene.strength, fishsim::death_reason::injury, bearing);
+    }
     fishsim::Genome g;
     g.interface = interface;
     fishsim::sense_generated(body, g, *world, nullptr, false, physiology);
@@ -445,16 +464,6 @@ void sense_report(const field::Substrate &t,
     for (std::size_t i = 0; i < answers.size() && i < buffer.size(); ++i)
       answers[i] = buffer[i];
   }
-  const auto stirred = [&](const fishsim::BrainInterface::Receptor &r) {
-    const int sense = r.dominant_sense();
-    return scene.kind == sense_scene::gut ? sense == field::Intake || sense == field::InnerPressure
-           : scene.kind == sense_scene::smell   ? sense == field::Odor
-           : scene.kind == sense_scene::taste   ? sense == field::Taste
-           : scene.kind == sense_scene::flow    ? sense == field::Flow && !r.inner
-           : scene.kind == sense_scene::balance ? sense == field::Flow && r.inner
-           : scene.kind == sense_scene::touch   ? sense == field::Touch
-                                                : sense == field::Damage;
-  };
   std::cout << ",\"senseProbe\":[";
   for (std::size_t i = 0; i < groups.size(); ++i) {
     double sum = 0;
@@ -1336,8 +1345,8 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
     sense_spread_report(t, *g.interface, sample, *binding, groups);
   }
   std::optional<fishsim::Ecosystem> probe_tank;
-  if (sight || (sense && !attack && !fins && !mouth && sense->kind != sense_scene::gut &&
-                sense->kind != sense_scene::flow && sense->kind != sense_scene::balance))
+  if (sight ||
+      (sense && (sense->kind == sense_scene::smell || sense->kind == sense_scene::taste)))
     probe_tank.emplace(SIGHT_TANK_SEED);
   if (sight)
     sight_report(t, g.interface, groups, *sight, *probe_tank);
