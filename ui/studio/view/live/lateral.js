@@ -48,8 +48,7 @@ const BAND = Object.freeze({
   lines : 7,
   hair : 36,
   lean : 72,
-  beyond : 13,
-  every : 150,
+  tick : 4,
   loud : 34,
   gap : 6,
   bubble : 12,
@@ -129,57 +128,55 @@ liveKind('lateral', (studio, organId) => {
          live);
     }
     el('path', {d : `M${B.L} ${B.skin} H${B.R}`, class : 'aid-live-skinline'}, live);
-    // The hairs along the steps: the current bends them all alike for as long as it lasts.
-    for (let st = B.every; st < STEPS; st += B.every)
-      hair(X(st), bend, {class : 'aid-live-hair k0'});
-    // How far a hair must lean before its cells report it: the dashed hair at the start, with the
-    // grip at its tip. A hair leans below that too.
-    // The arc is the way its tip can go, from upright to the full lean.
-    el('path', {
-      d : path(Array.from({length : 13}, (_, n) => tip(B.L, B.least + (1 - B.least) * n / 12))),
-      class : 'aid-live-track-line'
-    },
-       live);
-    // Each cell has its own lean, drawn by the engine within the plan's threshold and its spread
-    // either way, within the thresholds a cell can have: that fan is the plan's, the hairs in it
-    // the engine's, pale while they are the last run's. The grip beyond the fan's far edge sets
-    // how far the cells may spread.
-    const reach = c.key.spread / 2, [ none, most ] = INTENSITY.span,
-          near = Math.max(B.least, none, c.key.gate - reach),
-          far = Math.min(most, c.key.gate + reach);
-    if (reach > 0)
+    // The hairs along the skin, one for each cell the engine drew: the current bends them all
+    // alike. On each hair's arc the mark where its own cell begins to report, pale while it is the
+    // last run's; a hair past its mark reports. The thicker arc is where the plan lets a mark
+    // lie: its threshold and its spread either way, within the thresholds a cell can have.
+    const [none, most] = INTENSITY.span, reach = c.key.spread / 2,
+                 near = Math.max(B.least, none, c.key.gate - reach),
+                 far = Math.min(most, c.key.gate + reach),
+                 leanOf = (p, x) =>
+                     clamp(degrees(Math.atan2(p.x - x, B.skin - p.y)) / B.lean, B.least, most),
+                 arc = (x, from, to) =>
+                     path(Array.from({length : 9}, (_, n) => tip(x, from + (to - from) * n / 8))),
+                 gates = INTENSITY.gates(c.key),
+                 stand = n => B.L + (B.R - B.L - B.hair) * (n + 1) / gates.length;
+    gates.forEach((gate, n) => {
+      const x = stand(n), at = radians(B.lean * INTENSITY.pos(gate));
+      if (reach > 0)
+        el('path', {d : arc(x, near, far), class : 'aid-live-keyarc k0'}, live);
       el('path', {
-        d : path([
-              [ B.L, B.skin ],
-              ...Array.from({length : 9}, (_, n) => tip(B.L, near + (far - near) * n / 8))
-            ]) + ' Z',
-        class : 'aid-live-keyband k0'
+        d : `M${x + (B.hair - B.tick) * Math.sin(at)} ${
+            B.skin - (B.hair - B.tick) * Math.cos(at)} L${x + (B.hair + B.tick) * Math.sin(at)} ${
+            B.skin - (B.hair + B.tick) * Math.cos(at)}`,
+        class : 'aid-live-keytick k0' + (c.key.stale ? ' stale' : '')
       },
          live);
-    for (const gate of INTENSITY.gates(c.key))
-      hair(B.L, INTENSITY.pos(gate),
-           {class : 'aid-live-keyline k0 cell' + (c.key.stale ? ' stale' : '')});
+      hair(x, bend, {class : 'aid-live-hair k0'});
+    });
+    // How far the marks may spread: the grip at the far end of the last hair's arc.
+    if (gates.length) {
+      const x = stand(gates.length - 1), [ sx, sy ] = tip(x, far);
+      drag(svg,
+           el('rect', {
+             x : sx - 5,
+             y : sy - 4,
+             width : 10,
+             height : 8,
+             rx : 2.5,
+             class : 'aid-live-keygrip k0 on'
+           },
+              live),
+           p => draft(setSpread(studio.state.document, c.key,
+                                2 * Math.max(0, leanOf(p, x) - c.key.gate), INTENSITY)),
+           'lateralspread', 'grip', settle);
+    }
+    // The plan's threshold: the dashed hair at the start, with the grip at its tip. The arc is the
+    // way its tip can go, from upright to the highest threshold a cell can have.
+    el('path', {d : arc(B.L, B.least, most), class : 'aid-live-track-line'}, live);
     hair(B.L, c.key.gate, {class : 'aid-live-keyline k0'});
-    const [gx, gy] = tip(B.L, c.key.gate), [ fx, fy ] = tip(B.L, far),
-               out = (B.hair + B.beyond) / B.hair, sx = B.L + (fx - B.L) * out,
-               sy = B.skin + (fy - B.skin) * out;
-    drag(svg,
-         el('rect', {
-           x : sx - 5,
-           y : sy - 4,
-           width : 10,
-           height : 8,
-           rx : 2.5,
-           class : 'aid-live-keygrip k0 on'
-         },
-            live),
-         p => draft(setSpread(
-             studio.state.document, c.key,
-             2 * Math.max(0, clamp(degrees(Math.atan2(p.x - B.L, B.skin - p.y)) / B.lean) -
-                                 c.key.gate),
-             INTENSITY)),
-         'lateralspread', 'grip', settle);
-    txt(live, sx + 9, sy + 3, word('reports'), {class : 'aid-live-small'});
+    const [gx, gy] = tip(B.L, c.key.gate);
+    txt(live, gx + 8, gy - 5, word('reports'), {class : 'aid-live-small'});
     drag(svg,
          el('rect', {
            x : gx - 5,
@@ -190,9 +187,7 @@ liveKind('lateral', (studio, organId) => {
            class : 'aid-live-keygrip k0 on'
          },
             live),
-         p => draft(setGate(
-             studio.state.document, c.key,
-             clamp(degrees(Math.atan2(p.x - B.L, B.skin - p.y)) / B.lean, B.least, 1), INTENSITY)),
+         p => draft(setGate(studio.state.document, c.key, leanOf(p, B.L), INTENSITY)),
          'lateralgate', 'grip', settle);
     // What the cells send, under the skin, over the same steps.
     el('path', {
