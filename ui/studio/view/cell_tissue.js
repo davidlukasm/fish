@@ -95,11 +95,12 @@ export function variationGraphic(value, target, family, examples) {
          text(V.left, height - 6, word('exampleTraits'), 'start') + '</svg>';
 }
 
-export function cellVariation(center) {
+// `elsewhere`: the spreads that are set in the organ's own picture and so not shown here.
+export function cellVariation(center, elsewhere = []) {
   return '<details class="aid-cell-variation"><summary>' + label('cellPicture.variation') +
          '</summary>' +
          Object.entries(center.distribution)
-             .filter(([ key ]) => key !== 'spread_receptors')
+             .filter(([ key ]) => key !== 'spread_receptors' && !elsewhere.includes(key))
              .map(([ key, value ]) =>
                       variationGraphic(value, center.id, key, cellVariationExamples(center, key)))
              .join('') +
