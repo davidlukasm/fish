@@ -1176,7 +1176,9 @@ async function checkBloodReceptors(model, capabilities) {
             /data-preview-handle="(\d+)" data-level-left="([^"]+)" data-level-right="([^"]+)" cx="([^"]+)" cy="([^"]+)"/g)
       ];
       assert.deepEqual(levels.map(m => Number(m[1])), expected);
-      assert.equal((picture.match(/class="aid-preview-level-row"/g) ?? []).length, expected.length);
+      assert.equal((picture.match(/class="aid-preview-level-row"/g) ?? []).length,
+                   expected.length + 1);
+      assert.equal((picture.match(/data-preview-handle="maturity"/g) ?? []).length, 1);
       for (const mark of levels) {
         const left = Number(mark[2]), right = Number(mark[3]);
         assert.ok(right - left >= 40,
@@ -4487,7 +4489,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   };
   const planningInspector = panels.inspector(planned);
   assert.match(planningInspector, /aid-contact-plan/);
-  assert.match(planningInspector, /data-preview-handle="situation"/);
+  assert.match(planningInspector, /data-preview-handle="maturity"/);
   assert.match(planningInspector, /aid-life-cycle/);
   assert.doesNotMatch(planningInspector, /NaN|undefined|studio\.[a-zA-Z]/);
 
