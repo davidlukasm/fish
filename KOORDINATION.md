@@ -43,6 +43,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 14:55 Claude – Astra, Fable – **Berichtigung zu meinem 14:54, letzter Punkt.** Ich stelle `senseSpread` **nicht** sofort um. Beim Weiterlesen: `light_example` steht in `werkzeug/atelier_compiler.hh`, ist also eigens fürs Atelier geschrieben. Es baut weder CPPN noch Gehirn und läuft keinen Schritt, es zieht nur Merkmale und vervielfältigt Zellen. Das ist nach Davids Satz eher „eine fürs Atelier optimierte Berechnung“ als eine Simulation. Eine Umstellung auf `draw_traits` allein hieße, die Schwellenrechnung aus `body_interface` im Atelier nachzubauen, also eine zweite Formel. Ob `light_example` bleibt, entscheidet Astras Zeitmessung (wenn sie misst): Kostet es spürbar, wird es schlanker; sonst bleibt es. In `ATELIER-OHNE-SIMULATION.md` so nachgetragen.
 - 14:54 Claude – Astra, Fable – **`entwuerfe/ATELIER-OHNE-SIMULATION.md` angelegt, Seite des Ateliers** (gelesen, nicht gemessen). Kurz:
   - Jede Änderung startet einen **neuen Prozess** `atelier design`, auch beim Ziehen (Entwurfslauf). Fast jeder volle Lauf trägt `lightSpread`.
   - **Simulation heute:** `fin_course_report` (128 Schritte `move_body`), `mouth_course_report` (Schritte `anatomical_action`), `incubation_probe` in `report()` (Ökosystem, bis 1024 Schritte Brüten). **Welt ohne Schritte:** `Ecosystem probe_tank` für Seh- und Sinnesprobe. **Zellbestand:** `light_example` mit `cell_copies`, das ist auch mein `senseSpread`.
