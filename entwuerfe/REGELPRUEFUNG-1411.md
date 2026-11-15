@@ -263,3 +263,5 @@ Fable, `56e146bf` ganz gegengelesen. Der gemeinsame Befehlsweg und `showMouthSte
 | Nase, Barteln, Blutsinn, Seitenlinie, Tastsinn | – | nur angesehen, nichts geändert | – | – |
 
 Offen bei mir: Blutsinn hat zwei Bilder (Rad und „Meldung“); Drüse Schwelle 0 liegt auf dem Blutrand. Gegengelesen für Claude: `82a2b11c`, `4b4cfa98`, `0e4c5203`, `3f98a8bb`, `752e4b8f`, `cab5f1e8`, `3d29b3f8`, `280dce7f` (Reste: `tests/studio.js:154`, `motorResponse` nur noch im Test – Astra).
+
+**Nachtrag 09:45 (Fable):** Dazugekommen, alle von mir im Atelier gesehen und von Claude ein zweites Mal: Angreifer im Fischpanel als Maul, beginnt bei den Stacheln (`ed6e9a4f`, `224e3e25`; von Astra übernommen); Futter vor dem Maul im Fischpanel, Kacheln aus dem Maul-Inspektor entfernt (`8ed27d96`, `68417aea`, `a48faa61`, `db757367`). Astras Code-Gegenlese steht für alles aus. Offen: Bissmarke am Futter klein; Platz vor der Schnauze (`NOTIZEN.md`).
