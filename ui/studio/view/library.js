@@ -393,7 +393,7 @@ export function workflow() {
          '</span></li></ol>';
 }
 export function toolPalette(state) {
-  const tools = [ 'select', 'wire', 'hormone', 'learn', 'stimulate', 'erase', 'pan' ];
+  const tools = [ 'select', 'wire', 'hormone', 'learn', 'life', 'stimulate', 'erase', 'pan' ];
   return '<div class="aid-tools" role="toolbar" aria-label="' + label('app.parts') + '">' +
          [ 'undo', 'redo' ]
              .map(key => '<button type="button" data-history="' + key + '" title="' +

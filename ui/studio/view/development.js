@@ -32,7 +32,7 @@ const LEVEL =
     Object.freeze({width : 100, height : 32, left : 12, right : 88, middle : 16, depth : 12});
 export const PREVIEW_INPUT_LOW = -1;
 // A substance gets an example level once it is named or a cell answers it.
-function previewSubstances(doc, wheel) {
+export function previewSubstances(doc, wheel) {
   const used = new Set(doc.substances.map(substance => substance.index));
   for (const center of allCenters(doc))
     for (const receptor of [center.growth, ...center.receptors])

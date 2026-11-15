@@ -43,6 +43,9 @@ export const steers = receptor =>
     (receptor.sensitivity !== 0 || (receptor.baseline !== 0 && receptor.baseline !== 1));
 // Where the young fish counts as grown, for the picture only; hatching from the anatomy.
 const ADULT = .72, HATCH = .3;
+// The same marks and words for the life tool's line (life_tool.js).
+export const LIFE_STAGE = Object.freeze({hatch : HATCH, adult : ADULT});
+export const stageWord = key => word(key);
 
 // The picture's geometry, shared with the handles that turn a pointer into a change.
 export const LIFE = Object.freeze({
@@ -218,7 +221,7 @@ function triggers(state, center) {
 // ---- The pictures. ----
 const text = (x, y, content, attributes = '') => '<text x="' + fixed(x) + '" y="' + fixed(y) + '"' +
                                                  attributes + '>' + escapeText(content) + '</text>';
-function stageIcon(kind, x, cy, s) {
+export function stageIcon(kind, x, cy, s) {
   if (kind === 'egg')
     return '<ellipse class="aid-life-stage" cx="' + fixed(x) + '" cy="' + fixed(cy) + '" rx="' +
            fixed(14 * s) + '" ry="' + fixed(18 * s) + '"/>';
