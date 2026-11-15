@@ -884,14 +884,12 @@
       "headOther": "Kopf runter",
       "flankOther": "linke Seite unten",
       "tailOther": "Kopf hoch"
-    },
-    "sensitivityHandle": "Ziehen: ein längeres Härchen spürt schon eine kleinere Neigung"
+    }
   },
   "lateral": {
     "title": "Strömung",
     "handle": "Ziehen: ob die Zellen das Wasser nahe bei sich spüren oder rund um den Körper",
     "lobe": "woher die Zellen Strömung spüren",
-    "sensitivityHandle": "Ziehen: wie schwache Strömung die Zellen schon melden",
     "cells": "Seitenlinienzellen",
     "report": "Meldung",
     "faint": "kaum Strömung",
@@ -899,7 +897,6 @@
     "steady": "gleichmäßige Strömung",
     "later": "{n} Schritte später",
     "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
-    "fadeHandle": "Ziehen: wie schnell sich die Zellen an gleichmäßige Strömung gewöhnen",
     "field": "Wasser aus ±{degrees}°"
   },
   "systems": {
@@ -1502,8 +1499,7 @@
       "to": "schwere Wunde",
       "handle": "Ziehen: wie kleine Wunden die Zellen schon melden",
       "stays": "Wunde bleibt",
-      "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
-      "fadeHandle": "Ziehen: wie schnell alte Wunden in den Hintergrund treten"
+      "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran"
     }
   },
   "strand": {
