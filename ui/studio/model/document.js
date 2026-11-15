@@ -417,7 +417,8 @@ export function centerIndex(doc, id) {
 }
 export const groupReport = (doc, report, key, id) => report?.[key]?.[centerIndex(doc, id)] ?? null;
 // The thresholds a sense group's cells drew in the design run's example (atelier.cc,
-// sense_spread_report), in the measure of the sense report's "begins"; null until that run is in.
+// sense_spread_report), in the measure of the sense report's "begins": null until that run is in,
+// [] when no cell drew the planned sense (then the organ does not answer).
 export const drawnThresholds = (state, id) =>
     state.senseSpread?.document === state.document
         ? state.senseSpread.report[centerIndex(state.document, id)] ?? null
