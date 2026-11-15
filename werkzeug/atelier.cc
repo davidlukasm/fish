@@ -584,7 +584,8 @@ void sense_spread_report(const field::Substrate &planned, const fishsim::BrainIn
 }
 std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &groups, bool developed,
                                 const SenseScene *attack = nullptr,
-                                const LearningContext *learning = nullptr) {
+                                const LearningContext *learning = nullptr,
+                                const Receptor *body_growth = nullptr) {
   const auto &t = *g.blueprint;
   const auto &a = *g.interface;
   std::cout << ",\"hormoneTimes\":[";
@@ -640,7 +641,9 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
         std::cout << (i ? "," : "")
                   << fishsim::HormoneState::approach(0, target, rise, on * i / SAMPLES);
       const double top = fishsim::HormoneState::approach(0, target, rise, on);
-      hormone_span[k] = top > 0 ? std::clamp(1.25 * top, .02, 1.) : 1.;
+      // The span also reaches the level the life band sets, so its mark is never cut off.
+      const double set = learning ? learning->levels[k] : 0.;
+      hormone_span[k] = top > 0 || set > 0 ? std::clamp(1.25 * std::max(top, set), .02, 1.) : 1.;
       std::cout << "],\"fall\":[";
       for (int i = 0; i <= SAMPLES; ++i)
         std::cout << (i ? "," : "")
@@ -648,7 +651,10 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
       std::cout << "],\"span\":" << hormone_span[k] << '}';
     }
   }
-  std::cout << "],\"pigmentTimes\":[";
+  std::cout << ']';
+  if (learning && body_growth)
+    growth_curve(*body_growth, *learning, hormone_span);
+  std::cout << ",\"pigmentTimes\":[";
   for (int k = 0; k < fishsim::rgb::count; ++k)
     std::cout << (k ? "," : "") << a.pigment_timing[k].steps;
   std::cout << "],\"motorTiming\":[";
@@ -1279,7 +1285,7 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
   readiness_report(*g.interface, t, false);
   const auto *attack = sense && sense->kind == sense_scene::attack ? &*sense : nullptr;
   const auto *mouth = sense && sense->kind == sense_scene::mouth ? &*sense : nullptr;
-  anatomy_report(g, groups, false, attack, &learning);
+  anatomy_report(g, groups, false, attack, &learning, &plan.growth);
   if (light_spread) {
     const auto sample = light_example(plan);
     const auto binding = fishsim::body_interface(sample);
