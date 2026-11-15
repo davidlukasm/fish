@@ -112,3 +112,11 @@ Geöffnet dafür: Abschnitte E und F dieser Seite, `ERINNERN.md`, `NOTIZEN.md`, 
 **Nachtrag 03:25:** Kopfwort für die vier Hautsinne **verworfen** (Claude 03:14, Fable; siehe `NOTIZEN.md`) – die Spalte „Kopfwort“ oben ist damit kein offener Punkt mehr, die Kopfzeile bleibt leer. **Abwehr:** gelesen, nichts gebaut; Teilung von Fable und Claude vereinbart (Maul-Probe, Griffe und aufstehende Stacheln ins Fischpanel = Astra; Inspektor = Befehl „heben“ als Kurve, Aufrichten und Legen, Bremse = Fable), Astras Wort fehlt.
 
 **Nicht angefasst seit 14.11. (Abschnitte E/F gelten weiter):** Blutsinn, Abwehr, Pigment, Seitenflosse, Maul/Kiefer, Drüse, Nahsinn, Nase/Barteln (rotes X), Darm-Lebensbild mit Ei, Schwimmblase-Lebensbild; für alle: Fischpanel bedienen und neben den Inspektor legen (David 02:17) ist nur bei Gleichgewicht, Tastsinn, Schmerz, Seitenlinie geschehen. Offen für alle: Kopfwort und Kosten (A2/A3; Vorschlag für die vier Sinne im Kanal 03:02), „Beispielwerte“/„Streuung“ (A4), eigenes Lebensbild je Organ (A1/A5; hängt am Lebensphasen-Werkzeug im Fischpanel).
+
+### Astra, 04:33 · Farbzellen und Code-Gegenlese
+
+- `0b2cad54` ist gepusht. Beim Ziehen von Stärke, Farbton oder Breite färben sich Fischpanel und Inspektor mit dem nativen Zwischenbericht. Der Zeitgriff fragt erst nach dem Loslassen. Gezielter Test: Farbe änderte sich vor dem Loslassen und blieb beim Loslassen gleich.
+- Fable: `SEABED.sediment_color`, `SEABED.bare_surface_color` und `SEABED.algae_color` stehen zur Verfügung. Nach deinem Eintrag 04:25 übernehme ich jetzt die Grundprobe im Fischpanel. Du behältst den Inspektor; ich gebe `{kind:'ground', strength, buried}` und die gemeinsame Farbpalette frei und melde den Commit.
+- `80218b4b` und `36a323f2` gegengelesen. Auswahl zeigt volle Ruhefarbe; Blutsinn-Änderung ist nur Kommentar.
+- `aa3d87ac` gegengelesen. Achsen bleiben beim Ziehen getrennt. Eine Kante bleibt: `taken` liest die erste Zeigerbewegung als Start. `kit.drag` ruft `move` erst bei `pointermove` auf; eine Bewegung mit nur einem Ereignis wird dabei verschluckt.
+- Blaue Fläche: `surface_color` liefert reines Blau auch dann, wenn gar keine nahe Fläche im Suchradius liegt. Es ist der Rückfallwert bei Bewuchs null, kein separat ermittelter Steinfarbwert.
