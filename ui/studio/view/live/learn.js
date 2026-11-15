@@ -27,7 +27,7 @@ const word = key => t('studio.live.learn.' + key);
 // The strip: two rounds from L to R, `round` steps each; four rows, each `row` high with its
 // base line at the given height.
 const STRIP = Object.freeze({
-  height : 236,
+  height : 258,
   L : 40,
   R : 292,
   round : 200,
@@ -35,7 +35,9 @@ const STRIP = Object.freeze({
   cue : 44,
   trace : 80,
   teach : 118,
-  weight : 196,
+  cell : 146,
+  expect : 14,
+  weight : 218,
   rise : 56,
   least : .02
 });
@@ -45,12 +47,14 @@ liveKind('learn', (studio, centerId) => {
   const strip = addPicture(root);
   // The example tried on the cell: when the sender fires and the teacher comes in a round, and
   // how far the second round's teacher is expected.
-  const probe = {cue : 30, teach : 70, expected : .5};
+  // Until its knob is moved the teacher comes a quarter of the cell's learning time after the
+  // sender, where the trace still teaches.
+  const probe = {cue : 30, teach : null, expected : .5};
   const center = () => findCenter(studio.state.document, centerId)?.center;
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + centerId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
-  const ask = () =>
-      studio.setLearnProbe(centerId, probe.teach - probe.cue, probe.expected, STRIP.round);
+  const ask = () => probe.teach !== null && studio.setLearnProbe(centerId, probe.teach - probe.cue,
+                                                                 probe.expected, STRIP.round);
   function draw(cell) {
     const S = STRIP, {svg, live} = picture(strip, S.height), n = 2 * S.round,
           L = groupReport(studio.state.document, studio.state.anatomy, 'groups', centerId)
@@ -64,18 +68,25 @@ liveKind('learn', (studio, centerId) => {
                            X(from + at + wide)} V${base} H${X(from + S.round)}`)
                   .join(' ');
     for (const [key, y] of [[ 'cue', S.cue ], [ 'trace', S.trace ], [ 'teach', S.teach ],
-                            [ 'contact', S.weight - S.rise / 2 ]])
+                            [ 'cell', S.cell ], [ 'contact', S.weight - S.rise / 2 ]])
       txt(live, 2, y - 4, word(key), {class : 'aid-live-small'});
     el('path', {d : `M${X(S.round)} 14 V${S.weight + 4}`, class : 'aid-live-axis'}, live);
     txt(live, S.L + 2, 12, word('first'), {class : 'aid-live-small'});
     txt(live, X(S.round) + 3, 12, word('second'), {class : 'aid-live-small'});
-    // The sender's firing and the teacher, and in the second round how far the cell expects it.
+    if (probe.teach === null) {
+      // The engine has not answered for this cell yet: there is no example to show.
+      for (const y of [S.cue, S.trace, S.teach, S.cell, S.weight])
+        el('path', {d : `M${S.L} ${y} H${S.R}`, class : 'aid-live-turn missing'}, live);
+      return;
+    }
+    // The sender's firing and the teacher; under them the cell, and in the second round how much
+    // of the teacher it expects.
     el('path', {d : pulse(probe.cue, 12, S.cue, S.row - 8), class : 'aid-live-cue k0'}, live);
     el('path', {d : pulse(probe.teach, 8, S.teach, S.row - 6), class : 'aid-live-teach'}, live);
-    const ey = S.teach - (S.row - 6) * probe.expected;
+    const ey = S.cell - S.expect * probe.expected;
+    el('path', {d : `M${S.L} ${S.cell} H${S.R}`, class : 'aid-live-axis'}, live);
     el('path', {d : `M${X(S.round)} ${ey} H${S.R}`, class : 'aid-live-teach expected'}, live);
-    txt(live, S.R - 14, ey - 4, word('expected'),
-        {'text-anchor' : 'end', class : 'aid-live-small'});
+    txt(live, X(S.round) + 3, S.cell + 10, word('expected'), {class : 'aid-live-small'});
     el('path', {d : `M${S.L} ${S.trace} H${S.R}`, class : 'aid-live-axis'}, live);
     el('path', {d : `M${S.L} ${S.weight} H${S.R}`, class : 'aid-live-axis'}, live);
     for (const st of [100, 200, 300, 400])
@@ -88,7 +99,7 @@ liveKind('learn', (studio, centerId) => {
       show();
     }, 'learnteach', 'knob');
     drag(svg, el('circle', {cx : S.R - 6, cy : ey, r : 5}, live), p => {
-      probe.expected = clamp((S.teach - p.y) / (S.row - 6));
+      probe.expected = clamp((S.cell - p.y) / S.expect);
       ask();
       show();
     }, 'learnexpected', 'knob');
@@ -168,7 +179,8 @@ liveKind('learn', (studio, centerId) => {
     for (const {d, cause} of [...still.jumps, ...learnt.jumps])
       el('path', {d, class : cause === 'cue' ? 'aid-live-cue jump k0' : 'aid-live-teach jump'},
          live);
-    txt(live, quiet.at(-1)[0] + 4, quiet.at(-1)[1] + 3, word('quiet'), {class : 'aid-live-small'});
+    txt(live, S.R, quiet.at(-1)[1] + 11, word('quiet'),
+        {'text-anchor' : 'end', class : 'aid-live-small'});
     // How fast the cell learns: the grip on the first step's top. Up makes it learn faster.
     const [wx, wy] = weight[Math.min(weight.length - 1, Math.ceil((probe.teach + 12) / 2))];
     drag(svg,
@@ -208,6 +220,10 @@ liveKind('learn', (studio, centerId) => {
     const cell = center();
     if (!cell)
       return;
+    const lasts = groupReport(studio.state.document, studio.state.anatomy, 'groups', centerId)
+                      ?.learning?.traceSteps;
+    if (probe.teach === null && lasts > 0)
+      probe.teach = clamp(probe.cue + Math.round(lasts / 4), probe.cue + 2, STRIP.round - 10);
     ask();
     draw(cell);
   }
