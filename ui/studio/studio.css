@@ -1163,11 +1163,12 @@
 .aid-life-picture text.aid-life-cover-text{font-size:16px}
 .aid-life-field{fill:#112f37}.aid-life-egg{fill:#1d4149}
 .aid-life-bar{position:absolute;z-index:8;left:50%;bottom:14px;transform:translateX(-50%);padding:6px 10px;border:1px solid var(--aid-panel-edge);border-radius:14px;background:#0b2229e6}
+.aid-life-bar:not(.open){padding:3px 6px;cursor:pointer;opacity:.85}
 .aid-life-bar svg{display:block;overflow:visible}
 .aid-life-bar text{fill:var(--aid-axis-text);font:10px system-ui}
 .aid-life-now{fill:none;stroke:var(--aid-handle);stroke-width:1.6}
-.aid-life-level{fill:none;stroke:var(--substance);stroke-opacity:.35;stroke-width:6;stroke-linecap:round}
-.aid-life-amount{fill:none;stroke:var(--substance);stroke-width:6;stroke-linecap:round;pointer-events:none}
+.aid-life-vessel{fill:var(--aid-ground);stroke:var(--substance);stroke-opacity:.6}
+.aid-life-amount{fill:var(--substance);fill-opacity:.7;pointer-events:none}
 .aid-life-stage{fill:none;stroke:#e9e2c6;stroke-width:1.6}
 .aid-life-cover{fill:var(--aid-chip);stroke:var(--aid-panel-edge);stroke-dasharray:3 4}
 .aid-life-unborn{fill:#b6ab7a;fill-opacity:.18}

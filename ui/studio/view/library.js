@@ -380,7 +380,7 @@ export function libraryOf(state) {
     html : '<div class="aid-library-intro">' + heading(label('tools.' + kind)) + '</div>' + marked
   };
 }
-const WORKFLOW = Object.freeze([ 'select', 'wire', 'hormone', 'learn', 'stimulate' ]);
+const WORKFLOW = Object.freeze([ 'select', 'wire', 'hormone', 'learn', 'life', 'stimulate' ]);
 export function workflow() {
   return '<ol class="aid-workflow">' +
          WORKFLOW

@@ -63,17 +63,18 @@ export function previewPatch(key, p, marks) {
       input :
           PREVIEW_INPUT_LOW + (1 - PREVIEW_INPUT_LOW) * clamp((P.bottom - p.y) / (P.bottom - P.top))
     };
-  const left = Number(marks.levelLeft), right = Number(marks.levelRight);
+  // A level is dragged along its picture: across it, or up it (life_tool.js, the vessels).
+  const left = Number(marks.levelLeft), right = Number(marks.levelRight),
+        bottom = Number(marks.levelBottom), top = Number(marks.levelTop);
   return Number.isFinite(left) && Number.isFinite(right) && right > left
              ? {[key] : clamp((p.x - left) / (right - left))}
-             : {};
+             : Number.isFinite(bottom) && Number.isFinite(top) && bottom > top
+                   ? {[key] : clamp((bottom - p.y) / (bottom - top))}
+                   : {};
 }
 function substanceLevel(state, index, context) {
   const L = LEVEL, span = L.right - L.left, level = bloodLevel(context, index);
-  const name = index < HORMONES.levels
-                   ? state.document.substances.find(substance => substance.index === index)?.name ||
-                         word('unnamedSubstance', {n : index + 1})
-                   : substanceName(state, index);
+  const name = substanceName(state, index);
   const colour = substanceColor(index);
   const x = L.left + span * level, top = L.middle - L.depth / 2;
   return '<div class="aid-preview-level-row">' +
