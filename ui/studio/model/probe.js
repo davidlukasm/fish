@@ -1,6 +1,6 @@
 import {preferredScent} from '../../tuning.js';
-import {degrees} from '../../units.js';
-import {BARBEL, SENSORY_PROBE, SKIN_RESPONSE} from '../../schema.js';
+import {clamp, degrees} from '../../units.js';
+import {BARBEL, SEABED, SENSORY_PROBE, SKIN_RESPONSE} from '../../schema.js';
 import {groupReport} from './document.js';
 import {sideIndex, sideOf} from './layout.js';
 
@@ -12,6 +12,7 @@ export const PROBE_KIND = Object.freeze({
   lateral : 'flow',
   balance : 'balance',
   defense : 'attack',
+  pigment : 'ground',
   gut : 'gut'
 });
 export const STONE = -1;
@@ -28,6 +29,7 @@ const START = Object.freeze({
   flow : {bearing : 60, distance : 0, strength : .02},
   balance : {bearing : 90, distance : 0, strength : 0},
   attack : {bearing : 60, distance : 0, strength : 0, gape : 1.2},
+  ground : {bearing : 0, distance : 0, strength : .35, buried : false},
   gut : {bearing : 0, distance : 0, strength : .5, nutrient : .2}
 });
 export function skinProbeBearing(document, anatomy, cellId) {
@@ -64,7 +66,13 @@ export function probeFor(organ, probe, anatomy, document) {
     ...(scene.flow ? {flow : {...scene.flow, bearing : facing * scene.flow.bearing}} : {})
   };
 }
-export const senseScene = probe => probe ? {
+export function groundColour(probe) {
+  const {sediment_color, bare_surface_color, algae_color} = SEABED;
+  const coverage = clamp(probe.strength);
+  return probe.buried ? sediment_color
+                      : bare_surface_color.map((value, i) => value + coverage * (algae_color[i] - value));
+}
+export const senseScene = probe => probe && probe.kind !== 'ground' ? {
   kind : probe.kind,
   bearing : probe.bearing,
   distance : probe.kind === 'attack' ? probe.gape : probe.distance,

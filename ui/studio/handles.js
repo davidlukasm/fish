@@ -624,7 +624,7 @@ export const handleMethods = {
   probePointer(event) {
     const drag = this.handleDrag, probe = this.state.senseProbe,
           faintest = this.state.anatomy?.lightDimmest;
-    if (probe?.organ !== drag.id || !(faintest > 0))
+    if (probe?.organ !== drag.id || (probe.kind !== 'ground' && !(faintest > 0)))
       return;
     const position = cameraCoordinates(event, this.bodyMap(), this.state.camera);
     const patch = probePatch(drag.control, position, faintest, probe);
@@ -635,7 +635,8 @@ export const handleMethods = {
         smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, faintest, drag.control,
         this.state));
     this.refreshProbes();
-    this.requestDesign();
+    if (probe.kind !== 'ground')
+      this.requestDesign();
   },
   visionPointer(event) {
     const drag = this.handleDrag;

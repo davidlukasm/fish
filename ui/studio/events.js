@@ -593,6 +593,18 @@ export const FISH_CLICKS = Object.freeze([
     }
   ],
   [
+    '[data-probe-ground-type]',
+    (studio, e) => {
+      const probe = studio.state.senseProbe;
+      if (probe?.kind !== 'ground')
+        return PASS;
+      const type = e.dataset.probeGroundType;
+      studio.state.senseProbe = {...probe, buried : type === 'sediment'};
+      studio.refreshProbes();
+      studio.root.querySelector('[data-probe-ground-type="' + type + '"]')?.focus();
+    }
+  ],
+  [
     '[data-add-substance]',
     studio => {
       const {document, capabilities, tool} = studio.state;

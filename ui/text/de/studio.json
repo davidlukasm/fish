@@ -1282,7 +1282,13 @@
       "flow": "Strömung: Richtung und Stärke",
       "balance": "Ziehen: Wo ist unten?",
       "attack": "Angreifer",
-      "attack-gape": "Maulweite"
+      "attack-gape": "Maulweite",
+      "ground": "Algenbewuchs"
+    },
+    "ground": {
+      "title": "Grundprobe",
+      "surface": "Fläche",
+      "sediment": "Bodensatz"
     },
     "strength": "Darmfüllung · Anteil",
     "nutrient": "Nährstoffzufluss · Signalstärke"

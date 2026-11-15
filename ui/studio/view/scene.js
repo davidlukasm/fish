@@ -30,7 +30,7 @@ import {
 } from './wires.js';
 import {ICON} from './kit.js';
 import {stimulusKind} from './stimulus.js';
-import {probeScents, probeWater, senseProbeSvg} from './probes.js';
+import {groundOptions, probeGround, probeScents, probeWater, senseProbeSvg} from './probes.js';
 import {detailMix, nodeOpacity, layerShown} from './layers.js';
 
 const MARKER = Object.freeze({
@@ -224,6 +224,7 @@ export function fishScene(state) {
          '<defs>' + wireMarkers(camera.zoom) + '</defs><rect x="' + fixed(camera.x) + '" y="' +
          fixed(camera.y) + '" width="' + fixed(camera.width) + '" height="' + fixed(camera.height) +
          '" class="aid-canvas-ground"/>' +
+         '<g data-probe-ground>' + probeGround(state) + '</g>' +
          '<g class="aid-anatomy">' + anatomy + '</g>' +
          '' + hormoneOverlay(state) + '<g class="aid-wires">' + wires.lines + '</g>' +
          reachSvg(state) + organHitsSvg(state) + wires.branches +
@@ -239,7 +240,7 @@ export function fishScene(state) {
          '<path id="' + LAYER_ID.line +
          '" d="" class="aid-connecting-line" pointer-events="none"/>' +
          '</svg>' + trashZone() + stimulusKind(state) + '<div data-probe-scents-layer>' +
-         probeScents(state) + '</div>' +
+         probeScents(state) + groundOptions(state) + '</div>' +
          '<div class="aid-hint-legend" data-hint-legend hidden></div>';
 }
 function trashZone() {

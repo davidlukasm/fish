@@ -1,6 +1,7 @@
 import {findOrgan, groupReport, isChosen, organTypes} from '../model/document.js';
 import {profileNames} from './scents.js';
-import {ATTACK_GAPE, PROBE_LIMITS, STONE} from '../model/probe.js';
+import {ATTACK_GAPE, PROBE_LIMITS, STONE, groundColour} from '../model/probe.js';
+import {cssColour} from '../model/pigment.js';
 import {BODY_MIDDLE, BODY_RADIUS, sideSign} from '../model/layout.js';
 import {bodyDirection, fishFront, skinPoints, steadyAt, zoomOf} from './frame.js';
 import {outlineSizes} from './body.js';
@@ -9,7 +10,7 @@ import {arrowPath} from './lateral.js';
 import {escapeText, fixed, idSafe} from './markup.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
-import {BARBEL, ODOR_KIND, SENSORY_PROBE} from '../../schema.js';
+import {BARBEL, ODOR_KIND, SEABED, SENSORY_PROBE} from '../../schema.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
 import {formatNumber, namedText, percent, t} from '../../strings.js';
 import {centerTitle} from './names.js';
@@ -46,6 +47,14 @@ const PROBE_SCENE = Object.freeze({
   label : 4,
   below : 15,
   digits : 1
+});
+const GROUND = Object.freeze({
+  left : BODY_MIDDLE.x - 150,
+  width : 300,
+  y : BODY_MIDDLE.y + 212,
+  radiusX : BODY_RADIUS + 103,
+  radiusY : 228,
+  strip : 8
 });
 let skinRing = null;
 const skinAround = () => skinRing ??= skinPoints(PROBE_SCENE.skin_step).map(p => {
@@ -95,6 +104,8 @@ function handleRadius(probe, faintest) {
                                       P.reach * strengthShare(probe.strength, probe.kind, faintest);
 }
 export function probeHandle(probe, faintest, control = probe.kind, state = null) {
+  if (probe.kind === 'ground')
+    return {x : GROUND.left + GROUND.width * probe.strength, y : GROUND.y};
   if (probe.kind === 'attack') {
     const mouth = attackMouth(probe, state);
     return control === 'attack-gape' ? mouth.tip : mouth.hinge;
@@ -104,6 +115,8 @@ export function probeHandle(probe, faintest, control = probe.kind, state = null)
 export const probeFlow = probe =>
     probe.kind === 'flow' ? probe : probe.flow && {...probe.flow, kind : 'flow'};
 export function probePatch(kind, position, faintest, probe = null) {
+  if (kind === 'ground')
+    return {strength : clamp((position.x - GROUND.left) / GROUND.width)};
   const dx = position.x - BODY_MIDDLE.x, dy = position.y - BODY_MIDDLE.y;
   const angle = Math.atan2(dy, -dx), r = Math.hypot(dx, dy), bearing = degrees(angle);
   if (kind === 'balance' || kind === 'attack')
@@ -349,7 +362,8 @@ export function gutProbeControls(state, organ) {
 function visibleProbe(state) {
   const probe = state.senseProbe, faintest = state.anatomy?.lightDimmest;
   const organ = probe ? findOrgan(state.document, probe.organ) : null;
-  return organ && probe.kind !== 'gut' && isChosen(state.selected, organ) && faintest > 0
+  return organ && probe.kind !== 'gut' && isChosen(state.selected, organ) &&
+                 (probe.kind === 'ground' || faintest > 0)
              ? {probe, organ, faintest, zoom : zoomOf(state)}
              : null;
 }
@@ -382,11 +396,48 @@ function probeObject(scent) {
     return '<path class="aid-probe-stone" d="M-8 2 L-6 -5 L1 -8 L8 -3 L6 5 L-3 7Z"/>';
   return ecologyIconSvg(scentIcons?.[scent], scentColors?.[scent] ?? '', PROBE_SCENE.icon);
 }
+export function probeGround(state) {
+  const config = visibleProbe(state);
+  if (config?.probe.kind !== 'ground')
+    return '';
+  const colour = cssColour(groundColour(config.probe));
+  return '<defs><radialGradient id="aid-ground-patch"><stop offset=".6" stop-color="' +
+         colour + '"/><stop offset="1" stop-color="' + colour +
+         '" stop-opacity="0"/></radialGradient></defs><ellipse cx="' + BODY_MIDDLE.x + '" cy="' +
+         BODY_MIDDLE.y + '" rx="' + GROUND.radiusX + '" ry="' + GROUND.radiusY +
+         '" fill="url(#aid-ground-patch)" pointer-events="none"/>';
+}
+export function groundOptions(state) {
+  const config = visibleProbe(state);
+  if (config?.probe.kind !== 'ground')
+    return '';
+  return '<div class="aid-ground-options" role="group" aria-label="' +
+         escapeText(t('studio.probe.ground.title')) + '">' +
+         ['surface', 'sediment'].map(kind => {
+           const on = config.probe.buried === (kind === 'sediment');
+           return '<button type="button" aria-pressed="' + on + '" data-probe-ground-type="' +
+                  kind + '">' + escapeText(t('studio.probe.ground.' + kind)) + '</button>';
+         }).join('') + '</div>';
+}
+function groundGrip(config) {
+  const {probe, organ, zoom} = config;
+  if (probe.buried)
+    return '';
+  const {left, width, y, strip} = GROUND;
+  return '<defs><linearGradient id="aid-ground-strip"><stop offset="0" stop-color="' +
+         cssColour(SEABED.bare_surface_color) + '"/><stop offset="1" stop-color="' +
+         cssColour(SEABED.algae_color) + '"/></linearGradient></defs><rect x="' +
+         left + '" y="' + (y - strip / 2) + '" width="' + width + '" height="' + strip +
+         '" rx="' + strip / 2 + '" fill="url(#aid-ground-strip)"/>' +
+         probeGrip(organ, probe, null, zoom, 0);
+}
 export function senseProbeSvg(state) {
   const config = visibleProbe(state);
   if (!config)
     return '';
   const {probe, organ, faintest, zoom} = config, flow = probeFlow(probe);
+  if (probe.kind === 'ground')
+    return '<g class="aid-sense-probe">' + groundGrip(config) + '</g>';
   if (probe.kind === 'attack')
     return '<g class="aid-sense-probe">' + attackSvg(state, organ, probe, zoom, faintest) +
            '</g>';

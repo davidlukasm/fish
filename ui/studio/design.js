@@ -10,8 +10,10 @@ import {
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
 import {
+  groundOptions,
   gutProbeControls,
   probeFlow,
+  probeGround,
   probeHandle,
   probeScents,
   probeWater,
@@ -44,6 +46,7 @@ import {outlineSizes} from './view/body.js';
 import {newFishDocument} from './canvas_placement.js';
 
 const PRESSURE_TRIES = 12, PRESSURE_BATCH = 'pressure';
+const nativeProbe = probe => probe?.kind === 'ground' ? null : probe;
 export const designMethods = {
   async newFish(initial = false) {
     if (!this.state.sites.length) {
@@ -118,9 +121,10 @@ export const designMethods = {
     const anatomy = this.shownDesign === doc ? this.state.anatomy : null;
     const sense = probeFor(organ, this.state.senseProbe, anatomy, doc);
     const faintest = this.state.anatomy?.lightDimmest;
-    if (!sense || sense.kind === 'gut')
+    if (!sense || sense.kind === 'gut' || (sense.kind === 'ground' && sense.buried))
       this.framedProbe = null;
-    else if (faintest > 0 && sense !== this.framedProbe && !this.handleDrag) {
+    else if ((sense.kind === 'ground' || faintest > 0) && sense !== this.framedProbe &&
+             !this.handleDrag) {
       const flow = probeFlow(sense);
       this.framedProbe = sense;
       this.keepInView(probeHandle(sense, faintest, sense.kind, this.state));
@@ -131,7 +135,8 @@ export const designMethods = {
     }
     if (sense && sense !== this.state.senseProbe) {
       this.state.senseProbe = sense;
-      this.requestDesign();
+      if (nativeProbe(sense))
+        this.requestDesign();
     }
     if (!organ.field || !this.state.capabilities)
       return;
@@ -170,7 +175,8 @@ export const designMethods = {
       return;
     }
     const document = this.state.document, probe = this.state.sightProbe,
-          sense = this.state.senseProbe, plan = compileDocument(document, this.state.sites);
+          sense = nativeProbe(this.state.senseProbe),
+          plan = compileDocument(document, this.state.sites);
     this.designRunning = true;
     this.designPending = false;
     const request = ++this.designRequest, fishRequest = this.newFishRequest;
@@ -211,13 +217,13 @@ export const designMethods = {
         })
         .catch(error => {
           if (!draft && this.newFishRequest === fishRequest && this.state.document === document &&
-              this.state.sightProbe === probe && this.state.senseProbe === sense)
+              this.state.sightProbe === probe && nativeProbe(this.state.senseProbe) === sense)
             this.notice(error.message);
         })
         .finally(() => {
           this.designRunning = false;
           if (this.designPending || this.state.document !== document ||
-              this.state.sightProbe !== probe || this.state.senseProbe !== sense)
+              this.state.sightProbe !== probe || nativeProbe(this.state.senseProbe) !== sense)
             this.requestDesign();
         });
   },
@@ -298,7 +304,10 @@ export const designMethods = {
     // The scene and organSettings already include their probe graphics and controls.
   },
   refreshProbes() {
-    const layer = this.bodyMap()?.querySelector('#' + PROBE_LAYER);
+    const map = this.bodyMap(), layer = map?.querySelector('#' + PROBE_LAYER),
+          ground = map?.querySelector('[data-probe-ground]');
+    if (ground)
+      ground.innerHTML = probeGround(this.state);
     if (layer) {
       const controls = layer.querySelector('[data-probe-controls]'),
             water = layer.querySelector('[data-probe-water]'), current = probeWater(this.state);
@@ -310,13 +319,13 @@ export const designMethods = {
     }
     const scents = this.root.querySelector('[data-probe-scents-layer]');
     if (scents)
-      scents.innerHTML = probeScents(this.state);
+      scents.innerHTML = probeScents(this.state) + groundOptions(this.state);
     this.refreshProbeControls();
   },
   refreshProbeControls() {
     this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
     this.redrawBlocks('gutProbeControls', findOrgan, organ => gutProbeControls(this.state, organ));
-    if ([ 'smell', 'taste', 'touch', 'wound', 'flow', 'balance', 'attack' ].includes(
+    if ([ 'smell', 'taste', 'touch', 'wound', 'flow', 'balance', 'attack', 'ground' ].includes(
             this.state.senseProbe?.kind))
       mountLive(this.root, this);
   },
