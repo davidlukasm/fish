@@ -33,6 +33,7 @@ import {
   finSizes,
   fishPath,
   HEAD,
+  jawShare,
   OUTLINE_STEP,
   skinAt,
   skinDirection,
@@ -42,7 +43,7 @@ import {
   zoomOf
 } from './frame.js';
 import {ANATOMY, BODY_UNIT, FIN_STROKE, MOUTH_CYCLE} from '../../schema.js';
-import {gutTurns, jawReach, lipWidth, toothForm} from '../../fish_organs.js';
+import {gutTurns, lipWidth, toothForm} from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {t} from '../../strings.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
@@ -639,7 +640,7 @@ function barbelsSvg(columns, probe) {
 }
 function mouthShape(columns) {
   const H = HEAD, middle = BODY_UNIT.trait_middle, jaw = columns[ANATOMY.jaw_length] ?? middle;
-  const reach = jawReach(jaw) / jawReach(middle);
+  const reach = jawShare(jaw);
   return {
     at : {x : SNOUT_TIP.x + H.mouth_in, y : SNOUT_TIP.y},
     rx : H.mouth[0] * reach,

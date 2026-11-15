@@ -4,8 +4,8 @@ import {MOTOR_TISSUE} from '../../tissue.js';
 import {clamp} from '../../units.js';
 import {fixed} from './markup.js';
 import {BODY_FRAME, BODY_KNOTS, BODY_MIDDLE, ZONE_X} from '../model/layout.js';
-import {finVolumeOf, sideFinSize, tailFinSize, tailFinCurves} from '../../fish_organs.js';
-import {FIN} from '../../schema.js';
+import {finVolumeOf, jawReach, sideFinSize, tailFinSize, tailFinCurves} from '../../fish_organs.js';
+import {BODY_UNIT, FIN} from '../../schema.js';
 
 export const FISH_BOX = Object.freeze({x : 60, y : 0, width : 1000, height : 730});
 export const CAMERA_ZOOM = Object.freeze({min : .04, max : 20, step : 1.35});
@@ -298,3 +298,6 @@ export const HEAD = Object.freeze({
   barbel_bend : [ 4, 46 ],
   barbel_end : [ -14, 62 ]
 });
+// How far the jaw reaches for a jaw length, against a jaw of middle length: the drawing (body.js,
+// from the report) and the length grip (anatomy_handles.js, from the document) share it.
+export const jawShare = jaw => jawReach(jaw) / jawReach(BODY_UNIT.trait_middle);

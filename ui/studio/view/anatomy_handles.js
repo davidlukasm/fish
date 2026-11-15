@@ -17,11 +17,11 @@ import {organFunction} from '../model/organs.js';
 import {MOTOR_KIND, BODY_UNIT, ATELIER_LIMITS} from '../../schema.js';
 import {BODY_FRAME, sideOf} from '../model/layout.js';
 import {organLocation, gutShape} from './places.js';
-import {gutTurns, jawReach} from '../../fish_organs.js';
+import {gutTurns} from '../../fish_organs.js';
 import {mouthShare} from '../../fish_forms.js';
 import {muscleShape} from './muscles.js';
 import {feltEnd, spineHandles} from './body.js';
-import {steadyAt, zoomOf, SNOUT_TIP, HEAD} from './frame.js';
+import {jawShare, steadyAt, zoomOf, SNOUT_TIP, HEAD} from './frame.js';
 import {fixed, escapeText} from './markup.js';
 import {label} from './kit.js';
 import {clamp} from '../../units.js';
@@ -79,7 +79,7 @@ export function anatomyHandles(state, id = state.selected?.id) {
     const rim = HEAD.mouth[1] * mouthShare(jaw) / mouthShare(BODY_UNIT.trait_middle);
     // The jaw's length is pulled at the end of the jawbone, just outside it, so the jaw muscle under
     // the bone stays free to be dragged.
-    const reach = HEAD.jaw_back * jawReach(jaw) / jawReach(BODY_UNIT.trait_middle);
+    const reach = HEAD.jaw_back * jawShare(jaw);
     add('jaw_length', {
       x : SNOUT_TIP.x + HEAD.mouth_in + reach,
       y : BODY_FRAME.middle + side * (HEAD.jaw_spread + (GRIP.hit + GRIP.ring) / zoomOf(state))
