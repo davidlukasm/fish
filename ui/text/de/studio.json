@@ -1732,8 +1732,7 @@
       "second": "Durchgang 2",
       "expected": "erwartet",
       "quiet": "stiller Eingang",
-      "steps": "Schritte",
-      "placeholder": "Platzhalter · Kurven noch nicht aus der Engine"
+      "steps": "Schritte"
     },
     "pain": {
       "used": "gewöhnt",

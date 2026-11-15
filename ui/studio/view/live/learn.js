@@ -1,17 +1,26 @@
 // A learning cell's live inspector: one of its contacts over two rounds of one example. A
-// sender fires, its trace on the contact fades, the teacher comes, the contact's weight steps
-// up; in the second round the teacher is expected, and the step is the smaller for it. Beside
-// the contact a still input, which a competing cell pushes out.
-// Read in the engine (colony-core/field/substrate.cc, evaluate; dynamics.hh, trace_update;
-// koordination entwuerfe/LERNEN-ENGINE.md): the trace keeps what the sender and the cell did
-// together for as long as the cell's learning time; the weight changes by the cell's learning
-// rate x the teacher's surprise x the trace; a teacher the inputs foretell teaches nothing.
-// DRAFT. The engine's report does not carry the example yet (LERNEN-ENGINE.md, section 9:
-// `example`): until it does the curves are a PLACEHOLDER drawn by hand below, marked so in the
-// picture, and to fall with the first report. Only the grips' values are the plan's own.
+// sender fires with the cell, the trace of that on the contact fades, the teacher comes, the
+// contact's weight steps up; in the second round the cell expects the teacher, and the step is
+// the smaller for it.
+// Read in the engine (colony-core/field/substrate.cc, evaluate; dynamics.hh, plasticity;
+// werkzeug/atelier_learning.hh, learning_group_report; koordination entwuerfe/LERNEN-ENGINE.md):
+// the trace keeps what the sender and the cell did together, a share less each step; the weight
+// changes by the cell's learning rate x the teacher's surprise x the trace; what the cell
+// expects of the teacher is no surprise.
+// An ESTIMATE, as the engine gives it for the plan's cell at the life tool's blood
+// (anatomy.groups, learning): the share of the trace kept each step and the steps to 1/e of it;
+// the two steps of the weight for this example, without and with the expectation; what an
+// unused contact loses each step; the contact's limit. No brain is built and nothing runs. The
+// lines between those values are drawn here: the trace and the loss as that share step after
+// step, the weight from a start at half its limit.
+// The example's knobs (round) are inputs: when the teacher comes after the sender, how much of
+// it the cell expects in the second round. The cell's grips (square) are its settings: how long
+// the trace lasts, how fast the cell learns, how it treats what does not fire with it.
+// Not in the picture: what firing together alone does to the contact (strengthening, pushing
+// out, cancelling) - the engine's report has no estimate of it, so the grip for it shows only
+// where it stands; consolidation; the making and loss of contacts.
 import {t} from '../../../strings.js';
-import {learningTimeOf, learningTimeSteps} from '../../../tuning.js';
-import {findCenter, updateCenter} from '../../model/document.js';
+import {findCenter, groupReport, updateCenter} from '../../model/document.js';
 import {PORT_LIMIT_DRAG} from '../circuit.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 
@@ -29,99 +38,79 @@ const STRIP = Object.freeze({
   teach : 118,
   weight : 196,
   rise : 56,
+  lean : 12,
   least : .02
 });
-// PLACEHOLDER for the report's `example`: what a hand would draw for a sender firing at `cue`
-// and a teacher at `teach` in each round, the second round expected by `expected`.
-function placeholder(center, probe) {
-  const S = STRIP, n = 2 * S.round, lasts = learningTimeSteps(center.learning_tau),
-        list = make => Array.from({length : n + 1}, (_, st) => make(st % S.round, st >= S.round));
-  const cue = list(at => at >= probe.cue && at < probe.cue + 12 ? 1 : 0),
-        teach = list(at => at >= probe.teach && at < probe.teach + 8 ? 1 : 0),
-        trace = list(at => at < probe.cue ? 0 : Math.exp(-(at - probe.cue) / lasts)), weight = [],
-        quiet = [];
-  const mode = center.mode ?? 0;
-  let w = .2, q = .3;
-  for (let st = 0; st <= n; st++) {
-    const second = st >= S.round;
-    w = clamp(w + center.qwidth * .05 * teach[st] * trace[st] * (second ? 1 - probe.expected : 1) *
-                      (1 + Math.min(0, mode)));
-    q = Math.max(0, q - .0006 * Math.max(0, mode));
-    weight.push(w);
-    quiet.push(q);
-  }
-  return {cue, teach, trace, weight, quiet, placeholder : true};
-}
-
 liveKind('learn', (studio, centerId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-learn';
   const strip = addPicture(root);
   // The example tried on the cell: when the sender fires and the teacher comes in a round, and
   // how far the second round's teacher is expected.
-  const probe = {cue : 30, teach : 70, expected : .7};
+  const probe = {cue : 30, teach : 70, expected : .5};
   const center = () => findCenter(studio.state.document, centerId)?.center;
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + centerId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
+  const ask = () => studio.setLearnProbe(centerId, probe.teach - probe.cue, probe.expected);
   function draw(cell) {
     const S = STRIP, {svg, live} = picture(strip, S.height), n = 2 * S.round,
-          ex = studio.state.learning?.example?.[centerId] ?? placeholder(cell, probe);
+          L = groupReport(studio.state.document, studio.state.anatomy, 'groups', centerId)
+                  ?.learning,
+          known = L?.step1 !== undefined;
     const X = st => S.L + (S.R - S.L) * st / n,
-          stOf = x => clamp(Math.round((x - S.L) / (S.R - S.L) * n), 0, n),
-          line = (values, base, high) => path(values.map((v, st) => [X(st), base - high * v])),
-          every = values => values.filter((_, st) => st % 2 === 0),
-          thin = (values, base, high) =>
-              path(every(values).map((v, n2) => [X(2 * n2), base - high * v]));
-    const names = [
-      [ 'cue', S.cue ], [ 'trace', S.trace ], [ 'teach', S.teach ],
-      [ 'contact', S.weight - S.rise / 2 ]
-    ];
-    for (const [key, y] of names)
+          stOf = x => clamp(Math.round((x - S.L) / (S.R - S.L) * n), 0, n), rounds = [ 0, S.round ],
+          pulse = (at, wide, base, high) =>
+              rounds
+                  .map(from => `M${X(from)} ${base} H${X(from + at)} V${base - high} H${
+                           X(from + at + wide)} V${base} H${X(from + S.round)}`)
+                  .join(' ');
+    for (const [key, y] of [[ 'cue', S.cue ], [ 'trace', S.trace ], [ 'teach', S.teach ],
+                            [ 'contact', S.weight - S.rise / 2 ]])
       txt(live, 2, y - 4, word(key), {class : 'aid-live-small'});
     el('path', {d : `M${X(S.round)} 14 V${S.weight + 4}`, class : 'aid-live-axis'}, live);
     txt(live, S.L + 2, 12, word('first'), {class : 'aid-live-small'});
     txt(live, X(S.round) + 3, 12, word('second'), {class : 'aid-live-small'});
-    // The sender's firing, and its trace on the contact.
-    el('path', {d : thin(ex.cue, S.cue, S.row - 8), class : 'aid-live-cue k0'}, live);
-    el('path', {
-      d : thin(ex.trace, S.trace, S.row) + ` L${S.R} ${S.trace} L${S.L} ${S.trace} Z`,
-      class : 'aid-live-glow k0',
-      opacity : .5
-    },
-       live);
-    el('path', {d : `M${S.L} ${S.trace} H${S.R}`, class : 'aid-live-axis'}, live);
-    // The teacher, and in the second round how far it is expected.
-    el('path', {d : thin(ex.teach, S.teach, S.row - 6), class : 'aid-live-teach'}, live);
+    // The sender's firing and the teacher, and in the second round how far the cell expects it.
+    el('path', {d : pulse(probe.cue, 12, S.cue, S.row - 8), class : 'aid-live-cue k0'}, live);
+    el('path', {d : pulse(probe.teach, 8, S.teach, S.row - 6), class : 'aid-live-teach'}, live);
     const ey = S.teach - (S.row - 6) * probe.expected;
     el('path', {d : `M${X(S.round)} ${ey} H${S.R}`, class : 'aid-live-teach expected'}, live);
     txt(live, S.R - 14, ey - 4, word('expected'),
         {'text-anchor' : 'end', class : 'aid-live-small'});
-    // The contact's weight, and the still input's under it.
+    el('path', {d : `M${S.L} ${S.trace} H${S.R}`, class : 'aid-live-axis'}, live);
     el('path', {d : `M${S.L} ${S.weight} H${S.R}`, class : 'aid-live-axis'}, live);
-    el('path', {d : thin(ex.quiet, S.weight, S.rise), class : 'aid-live-quiet'}, live);
-    el('path', {d : thin(ex.weight, S.weight, S.rise), class : 'aid-live-weight'}, live);
-    txt(live, S.R, S.weight - S.rise * ex.quiet[n] - 4, word('quiet'),
-        {'text-anchor' : 'end', class : 'aid-live-small'});
     for (const st of [100, 200, 300, 400])
-      txt(live, X(st), S.height - 22, String(st),
-          {'text-anchor' : 'end', class : 'aid-live-small'});
-    txt(live, S.L, S.height - 22, word('steps'), {class : 'aid-live-small'});
-    if (ex.placeholder)
-      txt(live, S.L, S.height - 6, word('placeholder'),
-          {class : 'aid-live-small aid-live-missing'});
-    // The example's knobs (round, an input): when the teacher comes, how far it is expected.
+      txt(live, X(st), S.height - 8, String(st), {'text-anchor' : 'end', class : 'aid-live-small'});
+    txt(live, S.L, S.height - 8, word('steps'), {class : 'aid-live-small'});
+    // The example's knobs: when the teacher comes, how far it is expected.
     drag(svg, el('circle', {cx : X(probe.teach), cy : S.teach - (S.row - 6), r : 5}, live), p => {
-      probe.teach = clamp(stOf(p.x), probe.cue + 4, S.round - 10);
+      probe.teach = clamp(stOf(p.x), probe.cue + 1, S.round - 10);
+      ask();
       show();
     }, 'learnteach', 'knob');
     drag(svg, el('circle', {cx : S.R - 6, cy : ey, r : 5}, live), p => {
       probe.expected = clamp((S.teach - p.y) / (S.row - 6));
+      ask();
       show();
     }, 'learnexpected', 'knob');
-    // The cell's grips (square, a setting): how long the trace lasts, on the trace where it has
-    // fallen to 1/e; how fast the cell learns, on the first step's top.
-    const lasts = learningTimeSteps(cell.learning_tau),
-          tx = X(Math.min(S.round - 4, probe.cue + lasts));
+    if (!L) {
+      // The engine has not answered for this cell: nothing to show of its learning.
+      el('path', {d : `M${S.L} ${S.trace - S.row / 2} H${S.R}`, class : 'aid-live-turn missing'},
+         live);
+      el('path', {d : `M${S.L} ${S.weight - S.rise / 2} H${S.R}`, class : 'aid-live-turn missing'},
+         live);
+      return;
+    }
+    // The trace: full when the sender fires with the cell, a share less with every step.
+    const fade = at => Math.pow(L.traceKeep, at), trace = rounds.map(from => {
+      const pts = [];
+      for (let at = probe.cue; at <= S.round; at += 2)
+        pts.push([ X(from + at), S.trace - S.row * fade(at - probe.cue) ]);
+      return path(pts) + ` L${X(from + S.round)} ${S.trace} L${X(from + probe.cue)} ${S.trace} Z`;
+    });
+    el('path', {d : trace.join(' '), class : 'aid-live-glow k0', opacity : .5}, live);
+    // How long the trace lasts: the grip where it has fallen to 1/e. Right makes it last longer.
+    const tx = X(Math.min(S.round - 4, probe.cue + L.traceSteps));
     drag(svg,
          el('rect', {
            x : tx - 5,
@@ -132,48 +121,72 @@ liveKind('learn', (studio, centerId) => {
            class : 'aid-live-keygrip k0 on'
          },
             live),
-         p => draft(
-             updateCenter(studio.state.document, centerId,
-                          {learning_tau : learningTimeOf(Math.max(4, stOf(p.x) - probe.cue))})),
+         (p, from) => draft(updateCenter(
+             studio.state.document, centerId,
+             {learning_tau : clamp(cell.learning_tau + (p.x - from.x) / (2 * PORT_LIMIT_DRAG))})),
          'learntime', 'grip', settle);
-    const top = ex.weight[Math.min(n, probe.teach + 12)], wx = X(probe.teach + 12);
+    // The contact's weight against its limit, from a start at half of it: the two steps the
+    // engine estimates for this example; between them what an unused contact loses each step.
+    // Under it a still input from the same start, losing as much.
+    const limit = L.limits.electrical, Y = w => S.weight - S.rise * clamp(w / limit),
+          loss = steps => Math.pow(1 - L.forgetUnused, steps), start = limit / 2;
+    el('path', {d : `M${S.L} ${Y(limit)} H${S.R}`, class : 'aid-live-track-line'}, live);
+    const quiet = [], weight = [];
+    let w = start;
+    for (let st = 0; st <= n; st += 2) {
+      const at = st % S.round;
+      if (known && at >= probe.teach && at < probe.teach + 2)
+        w = Math.min(limit, w + (st < S.round ? L.step1 : L.step2));
+      else
+        w *= loss(2);
+      weight.push([ X(st), Y(w) ]);
+      quiet.push([ X(st), Y(start * loss(st)) ]);
+    }
+    el('path', {d : path(quiet), class : 'aid-live-quiet'}, live);
+    el('path', {d : path(weight), class : 'aid-live-weight' + (known ? '' : ' stale')}, live);
+    txt(live, S.R, quiet.at(-1)[1] + 10, word('quiet'),
+        {'text-anchor' : 'end', class : 'aid-live-small'});
+    // How fast the cell learns: the grip on the first step's top. Up makes it learn faster.
+    const [wx, wy] = weight[Math.min(weight.length - 1, Math.ceil((probe.teach + 12) / 2))];
     drag(svg,
          el('rect', {
            x : wx - 5,
-           y : S.weight - S.rise * top - 4,
+           y : wy - 4,
            width : 10,
            height : 8,
            rx : 2.5,
            class : 'aid-live-keygrip k0 on'
          },
             live),
-         // Up makes the cell learn faster; what the step then is, the redraw shows.
          (p, from) => draft(updateCenter(
              studio.state.document, centerId,
              {qwidth : clamp(cell.qwidth + (from.y - p.y) / PORT_LIMIT_DRAG, S.least, 1)})),
          'learnrate', 'grip', settle);
-    // How the cell treats what does not fire with it: the grip on the still input's line. Down,
-    // the cell pushes it out the harder; up, the cell cancels what fires with it instead.
-    const qx = X(S.round), qy = S.weight - S.rise * ex.quiet[S.round];
+    // How the cell treats what does not fire with it: the grip beside the still input, as far
+    // down as the cell pushes it out, as far up as it cancels what fires with it instead.
+    const [qx, qy] = quiet[Math.floor(S.round / 2)], lean = S.lean * clamp(L.mode, -1, 1);
+    el('path', {d : `M${qx} ${qy - S.lean} V${qy + S.lean}`, class : 'aid-live-track-line'}, live);
     drag(svg,
          el('rect', {
            x : qx - 5,
-           y : qy - 4,
+           y : qy + lean - 4,
            width : 10,
            height : 8,
            rx : 2.5,
            class : 'aid-live-keygrip k0 on'
          },
             live),
-         (p, from) => draft(updateCenter(
-             studio.state.document, centerId,
-             {mode : clamp((cell.mode ?? 0) + 2 * (p.y - from.y) / PORT_LIMIT_DRAG, -1, 1)})),
+         (p, from) =>
+             draft(updateCenter(studio.state.document, centerId,
+                                {mode : clamp((cell.mode ?? 0) + (p.y - from.y) / S.lean, -1, 1)})),
          'learnmode', 'grip', settle);
   }
   function show() {
     const cell = center();
-    if (cell)
-      draw(cell);
+    if (!cell)
+      return;
+    ask();
+    draw(cell);
   }
   return {root, show, tick() {}};
 });
