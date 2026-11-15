@@ -1204,7 +1204,13 @@ async function checkBloodReceptors(model, capabilities) {
   const animation = globalThis.requestAnimationFrame;
   globalThis.requestAnimationFrame = () => 1;
   try {
-    const studio = {state : {}, clearStimulus() {}, refreshInspector() {}};
+    const requested = [];
+    const studio = {
+      state : {},
+      clearStimulus() {},
+      refreshInspector() {},
+      requestDesign() { requested.push(this.state.previewContext); }
+    };
     const change = (key, value) => trialMethods.setPreviewContext.call(studio, key, value);
     change(String(B.reserve), -.1);
     const first = studio.state.previewContext;
@@ -1219,6 +1225,9 @@ async function checkBloodReceptors(model, capabilities) {
     change(String(B.reserve), Infinity);
     change('9', .5);
     assert.equal(studio.state.previewContext, current);
+    assert.equal(requested.length, 3);
+    assert.equal(requested[0], first);
+    assert.equal(requested.at(-1), current);
     assert.equal(model.DEFAULT_BLOOD_CONTEXT.reserve, 1);
     assert.equal(model.DEFAULT_BLOOD_CONTEXT.fatigue, 0);
   } finally {

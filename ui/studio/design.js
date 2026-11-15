@@ -162,11 +162,11 @@ export const designMethods = {
     const probe = this.state.senseProbe;
     return probe && findOrgan(this.state.document, probe.organ) ? senseScene(probe) : null;
   },
-  // The example the learning inspector tries on a cell: the teacher comes `delay` steps after
-  // the sender fired with the cell, the cell expects `prediction` of it the second time, and
-  // the two rounds lie `interval` steps apart (anatomy.groups, learning: step1 without and step2
-  // with that expectation, what stays of a contact between the rounds, what firing together
-  // alone does).
+  // The example the learning inspector tries on a cell: a sender and the cell are active
+  // together at middling strength, the teacher comes `delay` steps later, the cell expects
+  // `prediction` of it the second time, and the two rounds lie `interval` steps apart
+  // (anatomy.groups, learning: step1 without and step2 with that expectation, what stays of a
+  // contact between the rounds, what being active together alone does).
   setLearnProbe(centerId, delay, prediction, interval) {
     const probe = this.state.learnProbe;
     if (probe?.center === centerId && probe.delay === delay && probe.prediction === prediction &&
@@ -181,16 +181,13 @@ export const designMethods = {
     return group < 0 ? null : {
       group,
       delay : probe.delay,
-      pre : 1,
-      post : 1,
+      pre : .5,
+      post : .5,
       teaching : 1,
       prediction : probe.prediction,
       interval : probe.interval
     };
   },
-  // The commands the side fin's inspector tries: the engine answers with the way the fish takes
-  // (anatomy.finCourse).
-  setFinCommand(organId, phases) { this.tryCommand(organId, {kind : 'fins', phases}); },
   // The mouth's inspector tries one beat of the mouth: the closer begins `delay` steps after the
   // opener, the gills pump along or not (anatomy.mouthCourse).
   setMouthCommand(organId, delay, gills) {
@@ -382,7 +379,7 @@ export const designMethods = {
   refreshProbeControls() {
     this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
     this.redrawBlocks('gutProbeControls', findOrgan, organ => gutProbeControls(this.state, organ));
-    if ([ 'smell', 'taste', 'touch', 'wound', 'flow', 'balance', 'attack', 'ground', 'fins', 'mouth' ].includes(
+    if ([ 'smell', 'taste', 'touch', 'wound', 'flow', 'balance', 'attack', 'ground', 'mouth' ].includes(
             this.state.senseProbe?.kind))
       mountLive(this.root, this);
   },

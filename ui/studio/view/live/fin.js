@@ -38,7 +38,8 @@ import {label} from '../kit.js';
 import {addPicture, chip, clamp, el, liveKind, path, picture} from './kit.js';
 
 // The water: `box` wide and high; the fish in its middle, `fish` pixels to a body radius, and
-// `large` where the turn is at most `small` degrees, so that the fish itself shows it. The
+// `large` where the turn is at most `small` degrees, so that the fish itself shows it, and
+// evenly smaller from there to a turn of `wide` degrees. The
 // turn's line starts before the snout, `snout` body radii from the middle, and lies `apart`
 // further out with every full turn, so that more than one turn can be read, and never further
 // out than `far`; its head is `tip` long. A round of the film lasts `round` milliseconds, of
@@ -48,6 +49,7 @@ const SWIM = Object.freeze({
   fish : 32,
   large : 62,
   small : 40,
+  wide : 90,
   snout : 1.45,
   far : 88,
   apart : 9,
@@ -84,7 +86,9 @@ liveKind('fin', (studio, organId) => {
     // The turn's line: where the snout points as the fish turns, further out with every turn,
     // less where many turns would leave the water.
     const end = twitch ? twitch.settled ?? twitch.during : 0,
-          scale = Math.abs(end) <= S.small ? S.large : S.fish, near = S.snout * scale,
+          scale =
+              S.fish + (S.large - S.fish) * clamp((S.wide - Math.abs(end)) / (S.wide - S.small)),
+          near = S.snout * scale,
           apart = Math.min(S.apart, Math.max(0, S.far - near) / Math.max(1, Math.abs(end) / 360)),
           spot = turn => {
             const a = radians(-turn), r = near + apart * Math.abs(turn) / 360;
