@@ -8,7 +8,6 @@ import {REGION_PICTURE, regionHandle, regionPatch} from './view/region_controls.
 import {updateRegion} from './model/regions.js';
 import {RHYTHM_TAU} from './model/region_cells.js';
 import {hasColourTuning, nominalSpectrum} from './model/retina.js';
-import {effectorPatch} from './view/effectors.js';
 import {clamp} from '../units.js';
 import {kindNodes} from './model/organs.js';
 import {gutProbePatch, probeFlow, probeHandle, probePatch} from './view/probes.js';
@@ -185,19 +184,6 @@ export const GRIPS = Object.freeze([
     held : 'life',
     start : (studio, g, h) =>
         ({id : g.dataset.lifeCycle, axis : g.dataset.lifeAxis, handle : h.dataset.lifeGrip})
-  },
-  {
-    graphic : '[data-effector-graphic]',
-    handle : '[data-effector-handle]',
-    held : 'drive',
-    start : (studio, g, h) => ({
-      id : g.dataset.effectorGraphic,
-      handle : 'effector',
-      name : h.dataset.effectorHandle,
-      marks : {...h.dataset},
-      code : Number(g.dataset.effectorCode),
-      side : Number(g.dataset.effectorSide)
-    })
   },
   {
     graphic : '[data-cell-group]',
@@ -515,19 +501,9 @@ export const handleMethods = {
   drivePointer(event) {
     const drag = this.handleDrag;
     const {fx, fy} = pointerShare(event, drag.rect);
-    if (drag.handle === 'effector')
-      return this.effectorPointer(drag, fx, fy);
     if (drag.handle === 'copies')
       return this.draftDesign(updateCenter(this.state.document, drag.id, cellPatch(fx, fy)),
                               'cells:' + drag.id);
-  },
-  effectorPointer(drag, fx, fy) {
-    const doc = this.state.document;
-    const patch = findOrgan(doc, drag.id) && effectorPatch(drag.name, fx, fy, drag.marks);
-    const cell = patch && findCenter(doc, patch.id)?.center;
-    if (!cell || !Object.entries(patch.center).some(([ key, value ]) => cell[key] !== value))
-      return;
-    this.draftDesign(updateCenter(doc, patch.id, patch.center), 'effector:' + drag.id);
   },
   spectrumPointer(event) {
     const drag = this.handleDrag, target = this.spectrumTarget(drag.target);

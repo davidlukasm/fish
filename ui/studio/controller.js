@@ -437,7 +437,7 @@ export class OrganStudio {
     const same = sameElement(organ ? settings : element, fresh, graphic);
     if (!same)
       return this.refreshInspector();
-    const linked = '[data-wheel-figure],[data-effector-block]', block = graphic.closest(linked);
+    const linked = '[data-wheel-figure]', block = graphic.closest(linked);
     if (block)
       block.replaceWith(same.closest(linked));
     else

@@ -1505,26 +1505,6 @@
     "halfUp": "halb oben nach {n} {n:Schritt|Schritten}",
     "peak": "{n} {n:Zelle|Zellen}: bis {p}"
   },
-  "command": {
-    "title": "Befehl",
-    "inhibits": "hemmend",
-    "excites": "erregend",
-    "gateHandle": "Ziehen: wie stark ein Befehl sein muss, bevor das Organ etwas tut",
-    "gland": {
-      "up": "gibt Stoff ins Blut",
-      "down": "nimmt Stoff aus dem Blut"
-    },
-    "bladder": {
-      "up": "füllt",
-      "down": "leert"
-    },
-    "growth": {
-      "up": "füllt den Vorrat"
-    },
-    "release": {
-      "up": "gibt ab"
-    }
-  },
   "gutSense": {
     "fullness": "Füllzellen",
     "food": "Futterzellen",

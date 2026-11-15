@@ -318,7 +318,6 @@ export const designMethods = {
       this.redrawBlocks('organSettings', findOrgan, organ => organSettingsBlock(this.state, organ));
     else {
       this.refreshSpectrum();
-      this.refreshEffectors();
       this.refreshProbeControls();
     }
     this.drawSight();
@@ -374,10 +373,6 @@ export const designMethods = {
     const target = editor && this.spectrumTarget(editor.dataset);
     if (target)
       block.outerHTML = spectrumEditor(this.state, target.organ, target.tuning);
-  },
-  refreshEffectors() {
-    if (this.handleDrag?.graphic?.closest('[data-effector-block],[data-effector-graphic]'))
-      this.refreshDragged();
   },
   redrawBlocks(key, find, render, within = '') {
     const selector = `[${dataAttribute(key)}]`;
