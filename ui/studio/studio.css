@@ -1396,8 +1396,8 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-picture text.aid-live-inflesh{paint-order:stroke;stroke:#1f4852;stroke-width:5px;stroke-linejoin:round}
 .aid-live-spine{fill:none;stroke:#f4efd8;stroke-width:1.8;stroke-linecap:round}
 .aid-live-jaw{fill:none;stroke:currentColor;stroke-width:3.5;stroke-linecap:round;opacity:.9}
-.aid-live-swallow{fill:none;stroke:#e9e2c6;stroke-dasharray:3 4;opacity:.85}
-.aid-live-swallow.fits{stroke:#ef8f8f}
+.aid-live-gape{fill:none;stroke:#e9e2c6;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.aid-live-gape.fits{stroke:#ef8f8f}
 .aid-live-reservedrop{fill:#f1e3a4}
 .aid-live-groundknob{stroke:#f4efd8;stroke-width:1.5}
 .aid-live-notch{fill:var(--aid-chip);stroke:var(--key);stroke-width:1;opacity:.92}
