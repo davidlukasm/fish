@@ -31,7 +31,7 @@ Auftrag (David 07:37, `AUFTRAG-1411.md` Punkt 6): ein Lebensphasen-Werkzeug im A
 - Hormonwerkzeug (Astra) und Lebensphasen-Werkzeug teilen das Blut der Vorschau. Abstimmen, wer den Knopf besitzt.
 
 ## Nachtrag 15.11. 02:20 (nach Davids Frage: „Wie interagiert das Werkzeug mit dem Fischpanel, oder habt ihr nur über Inspektoren nachgedacht?“)
-Ehrliche Antwort an David: fast nur über Inspektoren. Zum Fischpanel stand oben nur Punkt 3.
+Antwort an David: fast nur über Inspektoren. Zum Fischpanel stand oben nur Punkt 3.
 
 **Befund im Code (`dd89af3e`):** Die Vorschau-Reife (`previewContext`, `controller.js:100`, `development.js:93ff`) wird nur von Inspektoren gelesen: `life_cycle.js:76`, `learning.js:72/127/162`, `substances.js:102/630`, `live/blood.js:271`, `preview.js:8`, `trials.js:227`. Das Fischpanel zeichnet den Fisch unabhängig davon.
 
