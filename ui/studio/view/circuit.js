@@ -62,29 +62,36 @@ export function slotsSection(state, organ) {
   return '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +
          '"><ul class="aid-region-slots">' + slots + '</ul></section>';
 }
-// The same list from the other end: the ports of other organs this organ can plug into, each
-// with the organ that owns it; a free one is joined by its button.
+// The same from the other end: where this organ can plug in. Each as this organ's symbol, a
+// line and the symbol of the organ it leads to: joined, a full line; free, a dashed one with the
+// button that joins it; the fish lacking that organ, pale and without a button. The symbol of the
+// other organ leads to its inspector.
 export function outletsSection(state, organ) {
-  const outlets = organOutlets(state.document, organ)
-                      .map(({target, slot, joined}) => {
-                        const fill = joined ? 'filled' : 'free';
-                        return '<li class="' + fill + '"><span class="aid-slot-symbol ' + fill +
-                               ' in">' + glyph(slotShape(slot), ICON.slot, {line : true}) +
-                               '</span><small>' + escapeText(slotTitle(slot)) +
-                               '</small><button data-select-organ="' + escapeText(target.id) +
-                               '" title="' + escapeText(organTitle(target, state.sites)) + '">' +
-                               icon(target.type, ICON.list) + '</button>' +
-                               (joined ? ''
-                                       : '<button class="aid-slot-add" data-outlet-source="' +
-                                             escapeText(organ.id) + '" data-outlet-target="' +
-                                             escapeText(target.id) + '" data-outlet-key="' +
-                                             escapeText(slot.key) + '" title="' +
-                                             label('wiring.connect') + '">+</button>') +
-                               '</li>';
-                      })
-                      .join('');
+  const outlets =
+      organOutlets(state.document, organ)
+          .map(({target, kind, slot, joined}) => {
+            const fill = joined ? 'filled' : target ? 'free' : 'absent';
+            const name = target ? organTitle(target, state.sites) : label('organs.' + kind);
+            return '<li class="' + fill + '">' + icon(organ.type, ICON.list) +
+                   '<span class="aid-outlet-line">' +
+                   (target && !joined
+                        ? '<button class="aid-slot-add" data-outlet-source="' +
+                              escapeText(organ.id) + '" data-outlet-target="' +
+                              escapeText(target.id) + '" data-outlet-key="' + escapeText(slot.key) +
+                              '" title="' + label('wiring.connect') + '">+</button>'
+                        : '') +
+                   '</span>' +
+                   (target
+                        ? '<button data-select-organ="' + escapeText(target.id) + '" title="' +
+                              escapeText(name) + '">' + icon(target.type, ICON.list) + '</button>'
+                        : '<span class="aid-outlet-absent" title="' + escapeText(name) + '">' +
+                              icon(kind, ICON.list) + '</span>') +
+                   '<small>' + escapeText(name.replace(/\u00ad/g, '')) + ' · ' +
+                   escapeText(slotTitle(slot)) + '</small></li>';
+          })
+          .join('');
   return outlets ? '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +
-                       '"><ul class="aid-region-slots">' + outlets + '</ul></section>'
+                       '"><ul class="aid-outlets">' + outlets + '</ul></section>'
                  : '';
 }
 function regionTeacher(state, organ) {

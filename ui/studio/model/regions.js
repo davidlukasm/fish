@@ -2,6 +2,7 @@ import {
   isModulator,
   NEURON_BY_KEY,
   ORGAN_BY_KEY,
+  ORGANS,
   nerve,
   organSlots,
   slotCenters
@@ -409,8 +410,19 @@ export function organOutlets(doc, source) {
   const place = ({target, slot}) =>
       slot.key + ':' + (target.pair ? [ target.id, target.pair ].sort()[0] : target.id);
   const taken = new Set(ports.filter(port => port.joined).map(place));
-  return ports.filter(
-      port => port.joined ||
-              (!taken.has(place(port)) &&
-               (!port.target.pair || port.target.side === (source.side || port.target.side))));
+  // A kind of organ the fish does not have, with a port made for this organ: shown as missing,
+  // so that the organ's use is seen before the fish can make it.
+  const present = new Set(doc.organs.map(o => o.type));
+  const missing =
+      ORGANS.filter(kind => kind.slots && !present.has(kind.key))
+          .flatMap(kind => organSlots({type : kind.key, centers : [], region : {}, pair : null})
+                               .filter(slot => slot.dir === 'in' && slot.fits.includes(source.type))
+                               .map(slot => ({kind : kind.key, slot, joined : false})));
+  return [
+    ...ports.filter(
+        port => port.joined ||
+                (!taken.has(place(port)) &&
+                 (!port.target.pair || port.target.side === (source.side || port.target.side)))),
+    ...missing
+  ];
 }
