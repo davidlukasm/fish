@@ -468,13 +468,6 @@
 .aid-response-polarity circle{fill:var(--aid-control);stroke:var(--aid-control-edge)}
 .aid-response-polarity:focus-visible{outline:none;stroke:white}
 .aid-response [data-response-handle]:focus-visible{stroke:#fff;stroke-width:3;outline:none}
-.aid-muscle-kind{margin:10px 0 4px;border-top:1px solid #24484d;padding-top:8px}
-.aid-muscle-functions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:8px 0}
-.aid-muscle-function{display:grid;justify-items:center;gap:3px;min-width:0;border:1px solid var(--aid-control-edge);background:var(--aid-control);border-radius:9px;padding:7px 0;color:var(--aid-control-text)}
-.aid-muscle-function span{font-size:10.5px;max-width:100%}
-.aid-muscle-function svg path{fill:none;stroke:var(--aid-motor);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.aid-muscle-function.current{border-color:#ecdba8;background:#35504a}
-.aid-muscle-function:disabled{opacity:.35}
 .aid-hormone-teach{fill:none;stroke:var(--hormone);stroke-width:2;stroke-dasharray:2 4}
 .aid-hormone-cloud circle{fill:var(--hormone);opacity:0;transform-box:fill-box;transform-origin:center;animation:aid-cloud 2.4s ease-out infinite}
 .aid-hormone-cloud circle:nth-child(2){animation-delay:.8s}

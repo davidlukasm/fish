@@ -2,7 +2,6 @@ import {BLOOD_SUBSTANCE, HORMONES, MOTOR_KIND} from '../schema.js';
 import {keepLayers, switchLayer} from './view/layers.js';
 import {ORGAN_BY_KEY, PAIRINGS, organFunction} from './model/organs.js';
 import {nextVisionProfile} from './model/retina.js';
-import {findSite, sitePoint} from './model/layout.js';
 import {toggleInnerLink, updateRegion, routedLinks} from './model/regions.js';
 import {
   addOrgan,
@@ -23,7 +22,6 @@ import {
   linkPair,
   mirrorOrgan,
   moveCenterToSide,
-  moveOrgan,
   nextTypeTuning,
   removeOrganType,
   removeWire,
@@ -269,14 +267,6 @@ function startSlotWire(studio, element) {
   studio.refreshViews();
   studio.notice(label(out ? 'status.slotOut' : 'status.slotIn'));
 }
-function moveMuscle(studio, element) {
-  const doc = studio.state.document, sites = studio.state.sites;
-  const found = findCenter(doc, element.dataset.centerId);
-  const here = findSite(sites, found?.center.site);
-  const code = Number(element.dataset.muscleFunction);
-  keepIfRoom(studio, here && moveOrgan(doc, found.organ.id, sites, sitePoint(here, 'muscle'),
-                                       Infinity, null, code));
-}
 function addType(studio, element) {
   const doc = studio.state.document, organ = findOrgan(doc, element.dataset.addType);
   const added = organ && addOrganType(doc, organ.id, studio.state.sites,
@@ -383,7 +373,6 @@ export const FISH_CLICKS = Object.freeze([
                        {removeProfile : chosen.organ.field.profiles.indexOf(chosen.profile)});
     }
   ],
-  [ '[data-muscle-function]', moveMuscle ],
   [
     '[data-wire-pairing]',
     (studio, e) => {

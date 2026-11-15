@@ -8,10 +8,7 @@ import {visionInspector} from './vision.js';
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {
-  functionFor,
-  isPelvicMuscle,
   isRegion,
-  MUSCLE_LABEL_INDEX,
   ORGAN_BY_KEY,
   organFunction
 } from '../model/organs.js';
@@ -30,7 +27,7 @@ import {modulesOf} from '../model/assemblies.js';
 import {moduleSides} from './module_sides.js';
 import {escapeText, fixed, glyph} from './markup.js';
 import {onMidline} from '../model/layout.js';
-import {formatNumber, formatSigned, joinParts, linkText, t, tList} from '../../strings.js';
+import {formatNumber, formatSigned, joinParts, linkText, t} from '../../strings.js';
 import {
   heading,
   icon,
@@ -70,39 +67,6 @@ import './live/mouth.js';
 import './live/gland.js';
 import './live/near.js';
 
-const MUSCLE_ICON = Object.freeze({
-  [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
-  [MOTOR_KIND.turn] : 'M5 18c0-7 5-12 13-12M18 6l-4-2M18 6l-2 4',
-  [MOTOR_KIND.suction] : 'M20 12H8M8 12l4-4M8 12l4 4M4 7v10',
-  [MOTOR_KIND.aggression] : 'M4 8l8 4-8 4M20 8l-8 4 8 4'
-});
-function muscleGraphic(state, center) {
-  const site = state.sites?.find(item => item.id === center.site);
-  const own = site ? functionFor(center, site) : -1;
-  const reachable =
-      new Set(state.sites
-                  .filter(s => (s.motors &
-                                ((1 << MOTOR_KIND.forward) | (1 << MOTOR_KIND.turn) |
-                                 (1 << MOTOR_KIND.suction) | (1 << MOTOR_KIND.aggression))) !== 0)
-                  .map(s => functionFor(center, s)));
-  const chips =
-      [...MUSCLE_LABEL_INDEX.entries() ]
-          .map(([ code, index ]) =>
-                   '<button class="aid-muscle-function' + (code === own ? ' current' : '') + '"' +
-                   (code !== own && reachable.has(code)
-                        ? ' data-muscle-function="' + code + '" data-center-id="' +
-                              escapeText(center.id) + '"'
-                    : code === own ? ' aria-current="true"'
-                                   : ' disabled') +
-                   '>' + glyph(MUSCLE_ICON[code], ICON.muscle) + '<span>' +
-                   escapeText(tList('studio.muscles')[index] ?? '') + '</span></button>')
-          .join('');
-  return '<div class="aid-muscle-functions">' + chips + '</div>';
-}
-const muscleKind = (state, center) => '<div class="aid-muscle-kind" title="' +
-                                      label('inspector.muscleKind') + '">' +
-                                      muscleGraphic(state, center) + '</div>';
-
 export const biasScale = state => state.capabilities?.biasScale ?? 0;
 const ORGAN_PANELS = Object.freeze({
   nose : (state, organ) => livePlace('nose', organ),
@@ -140,8 +104,6 @@ const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
                                       escapeText(organTitle(organ)) + '</span></div>';
 const organPanel = (state, organ, center) =>
     (ORGAN_PANELS[organ.type] ?? organMetric)(state, organ, center);
-const muscleChoice = (state, organ, center) =>
-    organ.type === 'muscle' && !isPelvicMuscle(organ) ? muscleKind(state, center) : '';
 function organSettings(state, organ, center) {
   if (!center)
     return '<div class="aid-empty-centre">' + label('sections.empty') + '</div>';
@@ -152,7 +114,7 @@ function organSettings(state, organ, center) {
            (state.selected?.kind === 'center' ? nerveEditor(state, center) : '');
   if (center.role === 'nerve')
     return centerSide(state, center) + nerveEditor(state, center);
-  return organPanel(state, organ, center) + muscleChoice(state, organ, center);
+  return organPanel(state, organ, center);
 }
 export function organSettingsBlock(state, organ) {
   return '<div class="aid-organ-settings" data-organ-settings="' + escapeText(organ.id) + '">' +
