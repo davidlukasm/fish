@@ -921,8 +921,8 @@ export function positionOrgan(doc, organId, sites, position, layout = null, orig
   const movedIds = new Set(members.map(o => o.id));
   const used = usedSites(draft, c => !movedIds.has(c.organId));
   for (const member of members) {
-    const p =
-        member.side === organ.side ? point : {x : point.x, y : 2 * BODY_FRAME.middle - point.y};
+    const p = member.side === original.side ? point
+                                            : {x : point.x, y : 2 * BODY_FRAME.middle - point.y};
     member.position = {...member.position, ...p};
     const oldHome = findSite(sites, member.region?.site ?? member.centers[0]?.site);
     if (!oldHome)

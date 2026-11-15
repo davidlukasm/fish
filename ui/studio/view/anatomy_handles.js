@@ -64,10 +64,15 @@ export function anatomyHandles(state, id = state.selected?.id) {
   const code = organFunction(organ, state.sites), shape = muscleShape(organ, state.sites),
         side = sideOf(organ);
   if (shape) {
-    const p = {x : (shape.from.x + shape.to.x) / 2, y : (shape.from.y + shape.to.y) / 2};
-    add('fibre', p, muscleFibre(organ), 'y', side * 60);
-    add('strength', shape.to, (organ.centers[0]?.copies ?? 1) / ATELIER_LIMITS.max_copies, 'y',
-        side * 80);
+    // Leave the muscle itself exposed so it can still be dragged while selected.
+    const dx = shape.to.x - shape.from.x, dy = shape.to.y - shape.from.y,
+          gap = side * (Math.sign(dx) || 1) * (GRIP.hit + GRIP.ring) /
+                (zoomOf(state) * (Math.hypot(dx, dy) || 1));
+    const offMuscle = p => ({x : p.x - dy * gap, y : p.y + dx * gap});
+    const middle = {x : (shape.from.x + shape.to.x) / 2, y : (shape.from.y + shape.to.y) / 2};
+    add('fibre', offMuscle(middle), muscleFibre(organ), 'y', side * 60);
+    add('strength', offMuscle(shape.to),
+        (organ.centers[0]?.copies ?? 1) / ATELIER_LIMITS.max_copies, 'y', side * 80);
   }
   if (code === MOTOR_KIND.aggression) {
     const jaw = muscleTrait(state.document, code, 'jaw_length', state.sites);
