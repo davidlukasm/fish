@@ -8,6 +8,7 @@ import {isRegion} from '../model/organs.js';
 import {regionNodeMap} from './region_graph.js';
 import {
   allCenters,
+  centerIndex,
   boundEffects,
   bloodLevel,
   effectsFor,
@@ -477,102 +478,116 @@ export function hormoneTime(state, index) {
 const BLOOD_CURVE = Object.freeze(
     {width : 280, height : 45, left : 10, right : 270, top : 4, bottom : 41, samples : 36});
 const BLOOD_AXIS = Object.freeze({height : 31, y : 16, knob : 7});
-function bloodAxis(index, now) {
+function bloodAxis(index, now, span = 1) {
   const C = BLOOD_CURVE, A = BLOOD_AXIS;
   const title = escapeText(label('hormoneCard.previewBlood'));
   return '<svg class="aid-hormone-axis" viewBox="0 0 ' + C.width + ' ' + A.height +
          '" data-preview-bars aria-label="' + title + '"><path class="aid-chart-axis" d="M' +
          C.left + ' ' + A.y + 'H' + C.right + '"/><path class="aid-hormone-level-mark" d="M' +
          fixed(now) + ' ' + A.y + 'V' + A.height + '"/><circle class="aid-graphic-handle" ' +
-         'data-preview-handle="' + index + '" data-level-left="' + C.left + '" data-level-right="' +
-         C.right + '" cx="' + fixed(now) + '" cy="' + A.y + '" r="' + A.knob + '"><title>' + title +
-         '</title></circle><text x="' + C.left + '" y="' + (A.height - 1) + '">0</text><text x="' +
-         C.right + '" y="' + (A.height - 1) + '" text-anchor="end">1</text></svg>';
+         'data-preview-handle="' + index + '" data-level-span="' + span + '" data-level-left="' +
+         C.left + '" data-level-right="' + C.right + '" cx="' + fixed(now) + '" cy="' + A.y +
+         '" r="' + A.knob + '"><title>' + title + '</title></circle><text x="' + C.left + '" y="' +
+         (A.height - 1) + '">0</text><text x="' + C.right + '" y="' + (A.height - 1) +
+         '" text-anchor="end">' + escapeText(percent(span)) + '</text></svg>';
 }
+// The substance's level when its glands pour at full drive and then stop, as the engine estimates
+// it (anatomy.hormoneCourse: up with the glands' cell time, down with their residence). The level
+// the life band sets stands as a line.
+// The span of a substance's level the hormone pictures share: a little beyond what its glands
+// reach (anatomy.hormoneCourse[].span), all of it for a body signal or without a report.
+const levelSpan = (state, index) => state.anatomy?.hormoneCourse?.[index]?.span ?? 1;
+const COURSE =
+    Object.freeze({width : 280, height : 64, left : 10, right : 270, top : 6, bottom : 50});
+function levelCourse(state, index, now) {
+  const course = state.anatomy?.hormoneCourse?.[index], C = COURSE;
+  if (!course?.rise?.length || !course?.fall?.length)
+    return '';
+  // The height is what the glands reach: a few per cent are common, so the picture is scaled to
+  // the peak and says it.
+  const peak = Math.max(...course.rise, ...course.fall), top = levelSpan(state, index);
+  const total = course.on + course.off, x = step => C.left + (C.right - C.left) * step / total,
+        y = level => C.bottom - (C.bottom - C.top) * Math.min(1, level / top);
+  const points = (levels, start, span) =>
+      levels.map((v, i) => fixed(x(start + span * i / (levels.length - 1))) + ',' + fixed(y(v)));
+  const line =
+      [...points(course.rise, 0, course.on), ...points(course.fall, course.on, course.off) ];
+  return '<h4>' + label('hormoneCard.level') +
+         '</h4><svg class="aid-hormone-course" style="--substance:' + substanceColor(index) +
+         '" viewBox="0 0 ' + C.width + ' ' + (C.height + 4) + '" aria-label="' +
+         escapeText(label('hormoneCard.course')) + '">' +
+         '<path class="aid-chart-axis" d="M' + C.left + ' ' + C.top + ' V' + C.bottom + ' H' +
+         C.right + '"/><path class="aid-hormone-on" d="M' + C.left + ' ' + (C.bottom + 6) + ' H' +
+         fixed(x(course.on)) + '"/><polygon class="aid-hormone-course-area" points="' +
+         fixed(C.left) + ',' + C.bottom + ' ' + line.join(' ') + ' ' + fixed(C.right) + ',' +
+         C.bottom + '"/><polyline class="aid-hormone-response" points="' + line.join(' ') +
+         '"/><path class="aid-hormone-level-mark" d="M' + C.left + ' ' + fixed(y(now)) + ' H' +
+         C.right + '"/><text x="' + (C.left + 4) + '" y="' + fixed(y(peak) - 3) + '">' +
+         escapeText(percent(peak)) + '</text><text x="' + C.left + '" y="' + (C.height + 2) + '">' +
+         escapeText(label('hormoneCard.glandOn')) + '</text><text x="' + fixed(x(total)) + '" y="' +
+         (C.height + 2) + '" text-anchor="end">' +
+         escapeText(t('units.steps', {n : formatNumber(total)})) + '</text></svg>';
+}
+// The cells that answer the substance, one row per organ and effect: the engine's response of
+// the cell's receptor from none of the substance to full (anatomy.groups[].responses), and where
+// the blood of the life band puts it (anatomy.groups[].effects).
 function bloodCurves(state, index, context) {
   const {document : doc, capabilities : wheel} = state, C = BLOOD_CURVE;
-  const x = level => C.left + (C.right - C.left) * level;
-  const controls = receivers(doc, index, wheel).flatMap(cell => {
-    const organ = findOrgan(doc, cell.organId);
-    const title = joinParts([ organTitle(organ, state.sites), centerTitle(cell) ]);
-    const effects =
-        boundEffects(cell, index, wheel).map(effect => ({
-                                               id : cell.id,
-                                               effect,
-                                               title,
-                                               receptor : cell.receptors[effect],
-                                               word : tList('studio.axes.effects')[effect]
-                                             }));
-    if (birthAffinity(cell, index, wheel) >= NOTICEABLE_AFFINITY)
-      effects.push({
-        id : cell.id,
-        effect : BIRTH,
-        title,
-        receptor : cell.growth,
-        word : label('development.birthReceptor')
-      });
-    return effects;
-  });
+  const span = levelSpan(state, index);
+  const x = level => C.left + (C.right - C.left) * Math.min(1, level / span);
   const present = bloodLevel(context, index), now = x(present);
-  if (!controls.length)
-    return growsWith(doc, index, wheel)
-               ? '<section class="aid-hormone-receivers">' + bloodAxis(index, now) + '</section>'
-               : '';
-  const contexts = Array.from({length : C.samples + 1}, (_, k) => {
-    const level = k / C.samples;
-    const hormones = [...context.hormones ];
-    hormones[index] = level;
-    return {level, context : {...context, hormones}};
+  const seen = new Set();
+  const rows = receivers(doc, index, wheel).flatMap(cell => {
+    const organ = findOrgan(doc, cell.organId), name = organTitle(organ, state.sites);
+    const group = state.anatomy?.groups?.[centerIndex(doc, cell.id)];
+    return boundEffects(cell, index, wheel).flatMap(effect => {
+      const curve = cell.receptors[effect]?.substance === index ? group?.responses?.[effect] : null;
+      const key = name + ':' + effect + ':' + (curve ?? []).join(',');
+      if (seen.has(key))
+        return [];
+      seen.add(key);
+      return [ {id : cell.id, effect, name, curve, value : group?.effects?.[effect]} ];
+    });
   });
+  if (!rows.length)
+    return growsWith(doc, index, wheel) ? '<section class="aid-hormone-receivers">' +
+                                              bloodAxis(index, now, span) + '</section>'
+                                        : '';
+  const words = tList('studio.axes.effects');
   return '<section class="aid-hormone-receivers" style="--substance:' + substanceColor(index) +
-         '"><h4>' + label('hormoneCard.acts') + '</h4>' + bloodAxis(index, now) +
-         controls
-             .map(entry => {
-               const {effect, receptor, id, title, word} = entry;
-               const scale = effect === BIRTH || effect === HORMONE_EFFECT.death
-                                 ? GROWTH_SCALE
-                                 : EFFECT_SCALE[effect] ?? SHARE_SCALE;
-               const effectValue = values => {
-                 const response = receptorResponse(wheel, receptor, values);
-                 return effect === HORMONE_EFFECT.death ? effectLevel(effect, response)
-                        : effect === BIRTH              ? clamp(response)
-                                                        : scale.value(response);
-               };
-               const y = value =>
-                   C.bottom - (C.bottom - C.top) * (value - scale.low) / (scale.high - scale.low);
-               const value = effectValue(context);
-               const points = contexts
-                                  .map(probe => fixed(x(probe.level)) + ',' +
-                                                fixed(y(effectValue(probe.context))))
-                                  .join(' ');
-               const name =
-                   '<span>' + escapeText(title) + '</span><small>' + escapeText(word) + '</small>';
-               const values =
-                   '<svg viewBox="0 0 ' + C.width + ' ' + C.height + '" aria-hidden="true">' +
-                   '<path class="aid-chart-axis" d="M' + C.left + ' ' + C.top + ' V' + C.bottom +
-                   ' H' + C.right + '"/><polyline class="aid-hormone-response" points="' + points +
-                   '"/>' +
-                   '<path class="aid-hormone-level-mark" d="M' + fixed(now) + ' ' + C.top + ' V' +
-                   C.bottom + '"/><circle class="aid-hormone-point" cx="' + fixed(now) + '" cy="' +
-                   fixed(y(value)) + '" r="3"/></svg>';
+         '"><h4>' + label('hormoneCard.acts') + '</h4>' + bloodAxis(index, now, span) +
+         rows.map(({id, effect, name, curve, value}) => {
+               const scale = effect === HORMONE_EFFECT.death ? GROWTH_SCALE
+                                                             : EFFECT_SCALE[effect] ?? SHARE_SCALE;
+               const y = response => C.bottom - (C.bottom - C.top) *
+                                                    (scale.value(response) - scale.low) /
+                                                    (scale.high - scale.low);
+               const drawn =
+                   curve ? '<polyline class="aid-hormone-response" points="' +
+                               curve
+                                   .map((r, i) => fixed(x(span * i / (curve.length - 1))) + ',' +
+                                                  fixed(y(r)))
+                                   .join(' ') +
+                               '"/>' +
+                               (Number.isFinite(value)
+                                    ? '<circle class="aid-hormone-point" cx="' + fixed(now) +
+                                          '" cy="' + fixed(y(value)) + '" r="3"/>'
+                                    : '')
+                         : '';
                return '<button data-select-center="' + escapeText(id) + '" data-select-effect="' +
-                      effect + '"><span class="aid-hormone-receiver-heading">' + name + '<output>' +
-                      escapeText(formatNumber(value, 2)) + '</output></span>' + values +
-                      '</button>';
+                      effect + '"><span class="aid-hormone-receiver-heading"><span>' +
+                      escapeText(name) + '</span>' + boundEffect(effect, 0) + '<small>' +
+                      escapeText(words[effect]) + '</small></span><svg viewBox="0 0 ' + C.width +
+                      ' ' + C.height + '" aria-hidden="true"><path class="aid-chart-axis" d="M' +
+                      C.left + ' ' + C.top + ' V' + C.bottom + ' H' + C.right + '"/>' + drawn +
+                      '<path class="aid-hormone-level-mark" d="M' + fixed(now) + ' ' + C.top +
+                      ' V' + C.bottom + '"/></svg></button>';
              })
              .join('') +
          '</section>';
 }
-const GLAND_FLOW = Object.freeze({
-  width : 280,
-  height : 84,
-  left : 10,
-  right : 245,
-  top : 8,
-  bottom : 68,
-  labelWidth : 15,
-  labelHeight : 16
-});
+// The glands that pour the substance, one row per organ: how much of the level it raises when all
+// pour at full drive (its share of anatomy.hormoneSources times the peak of anatomy.hormoneCourse).
 function substanceSources(state, index) {
   const {document : doc} = state, cells = allCenters(doc), byOrgan = new Map();
   for (const row of state.anatomy?.hormoneSources ?? []) {
@@ -583,38 +598,22 @@ function substanceSources(state, index) {
   const total = [...byOrgan.values() ].reduce((sum, n) => sum + n, 0);
   if (!(total > 0))
     return '';
-  const G = GLAND_FLOW, scale = Math.max(1, Math.ceil(total));
-  const height = (G.bottom - G.top) * total / scale, top = G.bottom - height;
-  const junction = (G.left + G.right) / 2;
-  let left = G.left, ordinal = 0;
+  const course = state.anatomy?.hormoneCourse?.[index];
+  const peak = course?.rise?.length ? Math.max(...course.rise) : NaN;
   return '<section class="aid-hormone-sources" style="--substance:' + substanceColor(index) +
-         '"><h4>' + label('hormoneCard.sources') + '</h4><svg viewBox="0 0 ' + G.width + ' ' +
-         G.height + '" aria-label="' + label('hormoneCard.sources') + '"><title>' +
-         escapeText(t('studio.hormoneCard.totalDrive', {n : formatNumber(total, 2)})) + '</title>' +
-         '<path class="aid-chart-axis" d="M' + G.right + ' ' + G.top + 'V' + G.bottom +
-         '"/><text x="' + (G.right + 5) + '" y="' + (G.top + 3) + '">' + formatNumber(scale) +
-         '</text><text x="' + (G.right + 5) + '" y="' + G.bottom + '">0</text>' +
+         '"><h4>' + label('hormoneCard.sources') + '</h4>' +
          [...byOrgan ]
              .map(([ id, amount ]) => {
-               const name = organTitle(findOrgan(doc, id), state.sites);
-               const start = left, width = (G.right - G.left) * amount / total;
-               const middle = start + width / 2;
-               left += width;
-               ++ordinal;
-               const title = escapeText(name + ' ' + ordinal + ' · ' + formatNumber(amount, 2));
-               return '<a href="#aid-body-map" data-source-gland="' + escapeText(id) +
-                      '" aria-label="' + title + '"><title>' + title + '</title>' +
-                      '<path class="aid-gland-flow" d="M' + fixed(start) + ' ' + fixed(top) + ' H' +
-                      fixed(left) + ' V' + G.bottom + ' L' + junction + ' ' + (G.height - 2) +
-                      ' L' + fixed(start) + ' ' + G.bottom + 'Z"/>' +
-                      (width >= G.labelWidth && height >= G.labelHeight
-                           ? '<text class="aid-gland-number" x="' + fixed(middle) + '" y="' +
-                                 fixed(top + height / 2) + '">' + ordinal + '</text>'
-                           : '') +
-                      '</a>';
+               const share = amount / total;
+               return '<a class="aid-hormone-source" href="#aid-body-map" data-source-gland="' +
+                      escapeText(id) + '"><span>' +
+                      escapeText(organTitle(findOrgan(doc, id), state.sites)) +
+                      '</span><i style="--share:' + fixed(share) + '"></i><output>' +
+                      escapeText(Number.isFinite(peak) ? percent(share * peak) : percent(share)) +
+                      '</output></a>';
              })
              .join('') +
-         '</svg></section>';
+         '</section>';
 }
 function substanceInspector(state, currentAnatomy) {
   const {document : doc, capabilities : wheel} = state;
@@ -637,6 +636,7 @@ function substanceInspector(state, currentAnatomy) {
          grows + '" title="' + label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') +
          '">' + glyph(GROWTH_ICON, ICON.mark, {line : true}) + '</button>' +
          '</div>' + (currentAnatomy ? substanceSources(state, index) : '') +
+         levelCourse(state, index, bloodLevel(context, index)) +
          bloodCurves(state, index, context) + (grows ? growthEditor(state) : '') +
          (substance.id ? '<button class="aid-danger" data-remove-substance="' + index + '">' +
                              label('inspector.removeSubstance') + '</button>'

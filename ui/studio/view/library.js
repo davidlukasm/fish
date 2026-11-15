@@ -184,45 +184,48 @@ function wiringLibrary(state) {
                      ' title="' + label('wiring.bundleHint') + '">' + label('wiring.bundle') +
                      '</button>');
 }
-function hormoneLibrary(state) {
-  const titles = tList('studio.hormoneCard.tileTitles');
+// A substance's tiles: the gland that pours it, the birth receptor, and one tile per effect, named
+// by its word (the sentence is the tile's title).
+function substanceTiles(state, effects) {
+  const titles = tList('studio.hormoneCard.tileTitles'), words = tList('studio.axes.effects');
   const substances = visibleSubstances(state.document, state.capabilities);
   const active = substances.find(s => s.index === state.focusSubstance) ?? substances[0];
   return substances
-             .map(sub => {
-               const index = sub.index, colour = substanceColor(index);
-               return substanceSection(state, index,
-                                       tile({
-                                         kind : 'gland',
-                                         value : String(index),
-                                         name : label('hormoneCard.gland'),
-                                         path : STUDIO_ICON.gland,
-                                         colour,
-                                         title : label('hormoneCard.glandTitle')
-                                       }) + tile({
-                                         kind : 'birth',
-                                         value : String(index),
-                                         name : label('development.birthReceptor'),
-                                         path : BIRTH_ICON,
-                                         colour,
-                                         title : label('development.birthEffect'),
-                                         wide : true
-                                       }) +
-                                           EFFECT_ORDER
-                                               .map(effect => tile({
-                                                      kind : 'effect',
-                                                      value : index + ':' + effect,
-                                                      name : label('effects.' + effect),
-                                                      path : EFFECT_ICON[effect],
-                                                      colour,
-                                                      title : titles[effect],
-                                                      wide : true
-                                                    }))
-                                               .join(''),
-                                       sub === active);
-             })
-             .join('') +
-         systemsSection(state, SYSTEMS.map(s => s.key)) +
+      .map(sub => {
+        const index = sub.index, colour = substanceColor(index);
+        return substanceSection(state, index,
+                                tile({
+                                  kind : 'gland',
+                                  value : String(index),
+                                  name : label('hormoneCard.gland'),
+                                  path : STUDIO_ICON.gland,
+                                  colour,
+                                  title : label('hormoneCard.glandTitle')
+                                }) + tile({
+                                  kind : 'birth',
+                                  value : String(index),
+                                  name : label('development.birthReceptor'),
+                                  path : BIRTH_ICON,
+                                  colour,
+                                  title : label('development.birthEffect')
+                                }) +
+                                    effects
+                                        .map(effect => tile({
+                                               kind : 'effect',
+                                               value : index + ':' + effect,
+                                               name : words[effect],
+                                               path : EFFECT_ICON[effect],
+                                               colour,
+                                               title : titles[effect]
+                                             }))
+                                        .join(''),
+                                sub === active);
+      })
+      .join('');
+}
+function hormoneLibrary(state) {
+  const substances = visibleSubstances(state.document, state.capabilities);
+  return substanceTiles(state, EFFECT_ORDER) + systemsSection(state, SYSTEMS.map(s => s.key)) +
          section(label('hormoneCard.body'), tile({
                                               kind : 'birth',
                                               value : String(HORMONES.levels),
@@ -279,45 +282,12 @@ const systemsSection = (state, keys) =>
     section(label('systems.title'), keys.map(key => systemTile(state, key)).join(''));
 const LEARNING_CELLS = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
 function learningLibrary(state) {
-  const titles = tList('studio.hormoneCard.tileTitles');
   const substances = state.capabilities ? state.document.substances : [];
-  const active = substances.find(s => s.index === state.focusSubstance) ?? substances[0];
   return section(label('learnCard.cells'), LEARNING_CELLS.map(cellTile).join('')) +
          systemsSection(state, [ 'reward' ]) +
-         substances
-             .map(sub => {
-               const index = sub.index, colour = substanceColor(index);
-               return substanceSection(state, index,
-                                       tile({
-                                         kind : 'gland',
-                                         value : String(index),
-                                         name : label('hormoneCard.gland'),
-                                         path : STUDIO_ICON.gland,
-                                         colour,
-                                         title : label('hormoneCard.glandTitle')
-                                       }) + tile({
-                                         kind : 'birth',
-                                         value : String(index),
-                                         name : label('development.birthReceptor'),
-                                         path : BIRTH_ICON,
-                                         colour,
-                                         title : label('development.birthEffect'),
-                                         wide : true
-                                       }) +
-                                           EFFECT_ORDER.filter(e => LEARNING_EFFECTS.includes(e))
-                                               .map(effect => tile({
-                                                      kind : 'effect',
-                                                      value : index + ':' + effect,
-                                                      name : label('effects.' + effect),
-                                                      path : EFFECT_ICON[effect],
-                                                      colour,
-                                                      title : titles[effect],
-                                                      wide : true
-                                                    }))
-                                               .join(''),
-                                       sub === active);
-             })
-             .join('') +
+         (state.capabilities
+              ? substanceTiles(state, EFFECT_ORDER.filter(e => LEARNING_EFFECTS.includes(e)))
+              : '') +
          section(label('hormoneCard.more'), addSubstanceTile(substances));
 }
 function stimulusLibrary(state) {

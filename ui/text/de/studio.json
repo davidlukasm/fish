@@ -933,11 +933,13 @@
   "hormoneCard": {
     "title": "Stoffe",
     "previewBlood": "Blutpegel in der Vorschau",
-    "totalDrive": "Abgabe bei vollem Befehl: {n}",
     "rise": "steigt",
     "stays": "bleibt",
     "sources": "Quellen",
     "acts": "Wirkt auf",
+    "course": "Spiegel, wenn alle Drüsen voll gießen und dann aufhören",
+    "glandOn": "Drüse an",
+    "level": "Spiegel",
     "gland": "Drüse",
     "glandTitle": "Eine Drüse, die diesen Stoff abgibt",
     "tileTitles": [
