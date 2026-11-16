@@ -3,7 +3,7 @@ import {invalidateFishLayer} from './view/scene.js';
 import {paintTestLight, sensitivityShare, visionDragPatch} from './view/vision.js';
 import {stimulusOfShare} from './view/sensitivity.js';
 import {planOfUnit, thresholdQualityShift} from '../tuning.js';
-import {spectrumPatch} from './view/spectrum.js';
+import {paintSpectrumLight, spectrumPatch} from './view/spectrum.js';
 import {RESPONSE, responseHandle, responsePatch} from './view/response.js';
 import {REGION_PICTURE, regionHandle, regionPatch} from './view/region_controls.js';
 import {updateRegion} from './model/regions.js';
@@ -528,10 +528,13 @@ export const handleMethods = {
     if (!patch)
       return;
     if (drag.handle === 'light') {
-      if (this.state.sightProbe) {
+      if (this.state.sightProbe && this.state.sightProbe.hue !== patch.hue) {
         this.state.sightProbe = {...this.state.sightProbe, ...patch};
-        this.refreshScene();
-        this.refreshSpectrum();
+        const organ = findOrgan(this.state.document, drag.target.spectrumId);
+        this.refreshTestLight(organ);
+        paintSpectrumLight(this.root.querySelector('[data-spectrum="field"]'), target.tuning,
+                           nominalSpectrum(target.tuning, this.state.capabilities.visionSpectrum),
+                           patch.hue);
         this.requestDesign();
       }
       return;
@@ -588,7 +591,8 @@ export const handleMethods = {
   },
   probePointer(event) {
     const drag = this.handleDrag, probe = this.state.senseProbe;
-    if (probe?.organ !== drag.id || (probe.kind !== 'ground' && !(this.state.anatomy?.bodyRadius > 0)))
+    if (probe?.organ !== drag.id ||
+        (probe.kind !== 'ground' && !(this.state.anatomy?.bodyRadius > 0)))
       return;
     const position = cameraCoordinates(event, this.bodyMap(), this.state.camera);
     const patch = probePatch(drag.control, position, probe);
@@ -597,11 +601,10 @@ export const handleMethods = {
     const was = smellFlow ? probe.flow : probe;
     if (Object.entries(patch).every(([ key, value ]) => was?.[key] === value))
       return;
-    this.state.senseProbe =
-        smellFlow ? {...probe, flow : patch} : {...probe, ...patch, manual};
-    this.keepInView(probeHandle(
-        smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe, drag.control,
-        this.state));
+    this.state.senseProbe = smellFlow ? {...probe, flow : patch} : {...probe, ...patch, manual};
+    this.keepInView(
+        probeHandle(smellFlow ? probeFlow(this.state.senseProbe) : this.state.senseProbe,
+                    drag.control, this.state));
     this.refreshProbes();
     if (probe.kind !== 'ground')
       this.requestDesign();
@@ -617,15 +620,10 @@ export const handleMethods = {
     if (!patch)
       return;
     if (drag.key === 'probe' || drag.key === 'probe-size') {
-      if (Object.entries(patch).every(([key, value]) => this.state.sightProbe?.[key] === value))
+      if (Object.entries(patch).every(([ key, value ]) => this.state.sightProbe?.[key] === value))
         return;
       this.state.sightProbe = {...this.state.sightProbe, ...patch};
-      const light = this.bodyMap()?.querySelector('.aid-sight-light');
-      if (paintTestLight(this.state, organ, light)) {
-        if (light)
-          invalidateFishLayer(light);
-      } else
-        this.refreshScene();
+      this.refreshTestLight(organ);
       this.requestDesign();
       return;
     }
@@ -635,6 +633,13 @@ export const handleMethods = {
     if (!doc)
       return this.notice(label('status.noRoom'));
     this.draftDesign(doc, 'field:' + organ.id, 'refreshScene');
+  },
+  refreshTestLight(organ) {
+    const light = this.bodyMap()?.querySelector('.aid-sight-light');
+    if (!organ || !paintTestLight(this.state, organ, light))
+      this.refreshScene();
+    else if (light)
+      invalidateFishLayer(light);
   },
   // While an inspector handle is dragged only the inspector, or the part named by `redraw`,
   // follows, once a frame; the library and the full design report catch up when it is let go.
@@ -728,7 +733,9 @@ export const handleMethods = {
       if (!how.keepsClick)
         this.ignoreClickUntil = performance.now() + DRAG_CLICK;
     }
-    if (!drafted && how.done)
+    const hueProbe = drag.held === 'spectrum' && drag.handle === 'light';
+    const lightProbe = drag.held === 'vision' && [ 'probe', 'probe-size' ].includes(drag.key);
+    if (!drafted && how.done && !hueProbe && !lightProbe)
       this[how.done]();
     if (drag.held === 'probe' && drag.control === 'flow')
       this.refreshProbes();

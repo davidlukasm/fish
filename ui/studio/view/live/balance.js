@@ -36,6 +36,29 @@ const TILT = Object.freeze({
 });
 // A hair's direction from the snout, in degrees: 0 to the snout, 90 to the flank, 180 to the tail.
 const hairOf = q1 => 90 * (1 + (q1 ?? 0)), qualityOf = hair => clamp(hair / 90 - 1, -1, 1);
+const at =
+    (angle, r) => [TILT.cx - r * Math.cos(radians(angle)), TILT.cy + r * Math.sin(radians(angle))];
+const down = (snout, s) => Math.max(0, Math.sin(radians(snout + s.side * s.hair)));
+
+function drawRoses(group, sides) {
+  const {cx, cy, ring, petal} = TILT;
+  el('circle', {cx, cy, r : ring, class : 'aid-live-rim'}, group);
+  for (const s of sides) {
+    const outline = [], inner = [];
+    for (let angle = 0; angle <= 360; angle += 3) {
+      const response = answer(down(angle, s), s.gate, 0);
+      outline.push(at(angle, ring + (s.k ? -.7 : 1) * petal * response));
+      inner.push(at(angle, ring));
+    }
+    el('path', {
+      d : path(outline) + ' L' + path(inner.reverse()).slice(1) + 'Z',
+      class : 'aid-live-petal k' + s.k,
+      opacity : .75
+    },
+       group);
+  }
+  el('circle', {cx, cy, r : ring, class : 'aid-live-ringline'}, group);
+}
 
 liveKind('balance', (studio, organId) => {
   const root = document.createElement('div');
@@ -44,7 +67,7 @@ liveKind('balance', (studio, organId) => {
   // Where the snout points (0 to the left, as in the fish panel; 90 down), from the fish panel's
   // probe: its bearing is where "down" lies round the fish, 90 for a level fish.
   const LEVEL = 90;
-  const tried = {tilt : 0};
+  let tiltNow = 0, shown;
   const heard = cell =>
       groupReport(studio.state.document, studio.state.anatomy, 'senseProbe', cell.id);
   const organ = () => findOrgan(studio.state.document, organId);
@@ -56,58 +79,29 @@ liveKind('balance', (studio, organId) => {
   // fish panel's probe turns it; the grip at the hair's tip sets where the hair points; the grip
   // at the rose's end sets the threshold. At each hair's tip the bolt of its stimulus, and round
   // the tip the glow of what the engine reports for its cells.
-  function drawTilt(own, twin) {
-    const {svg,
-           live} =
-        picture(tilt, TILT.height,
-                fixed => {
-                  el('path', {d : `M278 172 v26 m-5 -7 l5 7 l5 -7`, class : 'aid-live-arrow'},
-                     fixed);
-                  txt(fixed, 278, 210, word('down'),
-                      {'text-anchor' : 'middle', class : 'aid-live-small'});
-                }),
-           {cx, cy, ring, petal} = TILT, cell = own.centers[0], face = sideOf(own) || 1,
-           sides =
-               [ {cell, side : face, k : 0}, twin && {cell : twin.centers[0], side : -face, k : 1} ]
-                   .filter(Boolean)
-                   .map(s => ({...s, hair : hairOf(s.cell.q1), gate : BOUNDED.gate(s.cell)})),
-           at =
-               (angle, r) => [cx - r * Math.cos(radians(angle)), cy + r * Math.sin(radians(angle))],
-           down = (snout, s) => Math.max(0, Math.sin(radians(snout + s.side * s.hair))),
-           report = (snout, s) => answer(down(snout, s), s.gate, 0);
-    el('circle', {cx, cy, r : ring, class : 'aid-live-rim'}, live);
-    for (const s of sides) {
-      const outline = [], inner = [];
-      for (let a = 0; a <= 360; a += 3) {
-        outline.push(at(a, ring + (s.k ? -.7 : 1) * petal * report(a, s)));
-        inner.unshift(at(a, ring));
-      }
-      el('path', {
-        d : path(outline) + ' L' +
-                inner.map(([ x, y ]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(' L') + 'Z',
-        class : 'aid-live-petal k' + s.k,
-        opacity : .75
-      },
-         live);
-    }
-    // The ring between the two sides' roses, so that they stay apart where both report.
-    el('circle', {cx, cy, r : ring, class : 'aid-live-ringline'}, live);
+  function drawTilt(sides) {
+    const [{cell, side : face}] = sides, {cx, cy, ring, petal} = TILT;
+    const stamp = sides.map(s => [s.side, s.hair, s.gate].join(':')).join('|');
+    const {svg, live} = picture(tilt, TILT.height, fixed => {
+      el('path', {d : `M278 172 v26 m-5 -7 l5 7 l5 -7`, class : 'aid-live-arrow'}, fixed);
+      txt(fixed, 278, 210, word('down'), {'text-anchor' : 'middle', class : 'aid-live-small'});
+      drawRoses(fixed, sides);
+    }, stamp);
     // Where the fish lies now on the rose: a tick across the ring where its snout points.
-    const [t0x, t0y] = at(tried.tilt, ring - petal),
-                [ t1x, t1y ] = at(tried.tilt, ring + petal + 4);
+    const [t0x, t0y] = at(tiltNow, ring - petal), [ t1x, t1y ] = at(tiltNow, ring + petal + 4);
     el('path', {d : `M${t0x} ${t0y} L${t1x} ${t1y}`, class : 'aid-live-arrow'}, live);
-    const body = el('g', {transform : `rotate(${- tried.tilt} ${cx} ${cy})`}, live);
+    const body = el('g', {transform : `rotate(${- tiltNow} ${cx} ${cy})`}, live);
     fishLeft(body, cx, cy, TILT.fish);
     // Beside each hair the stimulus as the bolt it is in every sense (how far gravity bends the
     // hair), and beyond its tip what the engine reports for its cells, in the fish panel's bubble.
     const reports = [];
     for (const s of [...sides].reverse()) {
-      const [x, y] = at(tried.tilt + s.side * s.hair, TILT.hair), pull = down(tried.tilt, s),
-                now = heard(s.cell),
-                [ bx, by ] = at(tried.tilt + s.side * s.hair, TILT.hair + TILT.beyond),
-                [ px, py ] = at(tried.tilt + s.side * s.hair + TILT.aside, TILT.hair * .62);
-      if (Number.isFinite(now))
-        reports.push([ bx, by, now ]);
+      const direction = tiltNow + s.side * s.hair, pull = down(tiltNow, s),
+            [ x, y ] = at(direction, TILT.hair),
+            [ bx, by ] = at(direction, TILT.hair + TILT.beyond),
+            [ px, py ] = at(direction + TILT.aside, TILT.hair * .62);
+      if (Number.isFinite(s.response))
+        reports.push([ bx, by, s.response ]);
       el('path', {d : `M${cx} ${cy} L${x} ${y}`, class : 'aid-live-hair k' + s.k}, live);
       if (pull > 0)
         el('path', {
@@ -121,7 +115,7 @@ liveKind('balance', (studio, organId) => {
     for (const [x, y, share] of reports)
       reportBubble(live, TILT.bubble)(x, y, share);
     const angleOf = p => degrees(Math.atan2(p.y - cy, cx - p.x)), mine = sides[0],
-          [ hx, hy ] = at(tried.tilt + face * mine.hair, TILT.hair);
+          [ hx, hy ] = at(tiltNow + face * mine.hair, TILT.hair);
     drag(svg,
          el('rect', {
            x : hx - 4.5,
@@ -134,7 +128,7 @@ liveKind('balance', (studio, organId) => {
             live),
          p => draft(
              updateCenter(studio.state.document, cell.id,
-                          {q1 : qualityOf(clamp(face * turnTo(angleOf(p) - tried.tilt), 0, 180))})),
+                          {q1 : qualityOf(clamp(face * turnTo(angleOf(p) - tiltNow), 0, 180))})),
          'balancehair', 'grip', settle);
     const [ex, ey] = at(degrees(Math.asin(clamp(mine.gate))) - face * mine.hair, ring + 8);
     drag(svg, el('circle', {cx : ex, cy : ey, r : 4.5}, live),
@@ -147,9 +141,23 @@ liveKind('balance', (studio, organId) => {
   }
   function show() {
     const own = organ(), probe = studio.state.senseProbe;
-    tried.tilt = LEVEL - (probe?.kind === 'balance' ? probe.bearing : LEVEL);
-    if (own?.centers[0])
-      drawTilt(own, findOrgan(studio.state.document, own.pair));
+    const cell = own?.centers[0];
+    if (!cell)
+      return;
+    const nextTilt = LEVEL - (probe?.kind === 'balance' ? probe.bearing : LEVEL);
+    const face = sideOf(own) || 1, twin = findOrgan(studio.state.document, own.pair)?.centers[0];
+    const ownResponse = heard(cell), twinResponse = twin ? heard(twin) : null;
+    const inputs = [ cell, face, twin, nextTilt, ownResponse, twinResponse ];
+    if (shown?.every((value, index) => value === inputs[index]))
+      return;
+    shown = inputs;
+    tiltNow = nextTilt;
+    const side = (cell, side, k, response) =>
+        ({cell, side, k, response, hair : hairOf(cell.q1), gate : BOUNDED.gate(cell)});
+    const sides = [ side(cell, face, 0, ownResponse) ];
+    if (twin)
+      sides.push(side(twin, -face, 1, twinResponse));
+    drawTilt(sides);
   }
   return {root, show};
 });

@@ -12,7 +12,7 @@ import {ecologyIconSvg} from '../../feeding_view.js';
 import {FOOD_SLOT} from '../../nutrition_model.js';
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
 import {BARBEL, ODOR_KIND, SEABED, SENSORY_PROBE} from '../../schema.js';
-import {clamp, degrees, radians, wrapAngle} from '../../units.js';
+import {clamp, degrees, radians} from '../../units.js';
 import {formatNumber, namedText, percent, t, tList} from '../../strings.js';
 import {centerTitle} from './names.js';
 
@@ -68,11 +68,20 @@ const GROUND = Object.freeze({
 let skinRing = null;
 const skinAround = () => skinRing ??= skinPoints(PROBE_SCENE.skin_step).map(p => {
   const dx = p.x - BODY_MIDDLE.x, dy = p.y - BODY_MIDDLE.y;
-  return {angle : Math.atan2(dy, -dx), r : Math.hypot(dx, dy)};
+  const r = Math.hypot(dx, dy);
+  return {angle : Math.atan2(dy, -dx), r, x : -dx / r, y : dy / r};
 });
 function skinDistance(bearing) {
-  const turn = a => Math.abs(wrapAngle(a - bearing));
-  return skinAround().reduce((best, p) => (turn(p.angle) < turn(best.angle) ? p : best)).r;
+  const x = Math.cos(bearing), y = Math.sin(bearing);
+  let closest = -Infinity, radius = BODY_RADIUS;
+  for (const p of skinAround()) {
+    const alignment = x * p.x + y * p.y;
+    if (alignment > closest) {
+      closest = alignment;
+      radius = p.r;
+    }
+  }
+  return radius;
 }
 const pointAt = (angle, r) => {
   const d = bodyDirection(angle);
@@ -533,13 +542,19 @@ export function senseProbeSvg(state) {
                      : '';
   const stimulus = stimulusSvg(probe, zoom), balance = probe.kind === 'balance';
   return '<g class="aid-sense-probe">' + (balance ? '' : stimulus) +
-         (probe.kind === 'taste' ? barbelProbeSvg(state) : '') + answerSvg(state, organ, zoom) +
          (probe.kind === 'flow'
               ? ''
               : probeGrip(organ, probe, zoom, state.anatomy.bodyRadius, probe.kind,
                           probeHandle(probe), balance ? stimulus : '')) +
          (flow ? probeGrip(organ, flow, zoom, null, 'flow', probeHandle(flow), arrows) : '') +
          '</g>';
+}
+export function senseProbeAnswers(state) {
+  const config = visibleProbe(state);
+  if (!config || config.probe.kind === 'ground' || config.probe.kind === 'attack')
+    return '';
+  const {probe, organ, zoom} = config;
+  return (probe.kind === 'taste' ? barbelProbeSvg(state) : '') + answerSvg(state, organ, zoom);
 }
 export function probeWater(state) {
   const config = visibleProbe(state), flow = config && probeFlow(config.probe);

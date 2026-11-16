@@ -30,7 +30,14 @@ import {
 } from './wires.js';
 import {ICON} from './kit.js';
 import {stimulusKind} from './stimulus.js';
-import {groundOptions, probeGround, probeScents, probeWater, senseProbeSvg} from './probes.js';
+import {
+  groundOptions,
+  probeGround,
+  probeScents,
+  probeWater,
+  senseProbeAnswers,
+  senseProbeSvg
+} from './probes.js';
 import {lifeBar} from './life_tool.js';
 import {detailMix, nodeOpacity, layerShown} from './layers.js';
 
@@ -255,10 +262,22 @@ function sceneLayers(state) {
 export function paintFishProbes(target, state, animateWater = true) {
   const water = target?.querySelector('[data-probe-water]');
   const current = water && animateWater ? probeWater(state) : null;
-  setMarkup(target?.querySelector('[data-probe-ground]'), probeGround(state));
-  setMarkup(target?.querySelector('[data-probe-controls]'), senseProbeSvg(state));
-  setMarkup(target?.querySelector('[data-probe-scents-layer]'),
-            probeScents(state) + groundOptions(state));
+  const controls = target?.querySelector('[data-probe-controls]');
+  if (controls) {
+    const {document, sites, selected, senseProbe, anatomy, outlinePreview} = state;
+    const inputs = [
+      document, sites, selected, senseProbe, zoomOf(state), anatomy?.bodyRadius,
+      anatomy?.mouthForces, anatomy?.attackProbe, outlinePreview
+    ];
+    if (!sameInputs(probeInputs.get(controls), inputs)) {
+      probeInputs.set(controls, inputs);
+      setMarkup(controls, senseProbeSvg(state));
+      setMarkup(target.querySelector('[data-probe-ground]'), probeGround(state));
+      setMarkup(target.querySelector('[data-probe-scents-layer]'),
+                probeScents(state) + groundOptions(state));
+    }
+  }
+  setMarkup(target?.querySelector('[data-probe-answers]'), senseProbeAnswers(state));
   if (water && water.dataset.probeWater !== (current?.key ?? '')) {
     water.dataset.probeWater = current?.key ?? '';
     water.innerHTML = current?.svg() ?? '';
@@ -267,6 +286,9 @@ export function paintFishProbes(target, state, animateWater = true) {
 
 const painted = new WeakMap();
 const sceneInputs = new WeakMap();
+const probeInputs = new WeakMap();
+const sameInputs = (before, after) =>
+    before?.length === after.length && before.every((value, i) => value === after[i]);
 function setMarkup(element, markup) {
   if (!element || painted.get(element) === markup)
     return false;
@@ -299,6 +321,7 @@ export function fishScene(state) {
          ' class="aid-canvas-ground"/>' +
          '<g data-probe-ground>' + probeGround(state) + '</g>' + layers + '<g id="' + PROBE_LAYER +
          '"><g data-probe-water="' + (water?.key ?? '') + '">' + (water?.svg() ?? '') +
+         '</g><g data-probe-answers pointer-events="none">' + senseProbeAnswers(state) +
          '</g><g data-probe-controls>' + senseProbeSvg(state) + '</g></g>' +
          '<g id="' + LAYER_ID.hints + '"></g>' +
          '<g id="' + LAYER_ID.preview + '" pointer-events="none"></g>' +
@@ -332,8 +355,7 @@ export function paintFishScene(target, state, scope, animateWater = true) {
   const previous = sceneInputs.get(svg);
   const life = target.querySelector('[data-fish-life]');
   const lifeDirty = life?.hasAttribute('data-life-dirty');
-  if (!lifeDirty && previous?.length === inputs.length &&
-      previous.every((value, i) => value === inputs[i]))
+  if (!lifeDirty && sameInputs(previous, inputs))
     return false;
   sceneInputs.set(svg, inputs);
   const camera = cameraBox(state.camera);

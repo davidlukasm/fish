@@ -68,6 +68,30 @@ const sampleIndex = (values, hue) =>
     Math.round((hueX(hue) - SPECTRUM.left) / PLOT * values.length) % values.length;
 const opposite = tuning => tuningHue(tuning.q1) + HUE_CIRCLE / 2;
 
+function probeMark(hue, values) {
+  const x = rounded(hueX(hue)), marker = SPECTRUM.marker;
+  const y = values ? rounded(levelY(values[sampleIndex(values, hue)])) : ZERO;
+  return {
+    x,
+    y,
+    colour : lightColor(hue),
+    shape : `M${x} ${STRIP - marker / 2} l${marker} ${marker} l-${marker} ${marker} l-${marker} -${
+        marker} Z`
+  };
+}
+export function paintSpectrumLight(graph, tuning, light, hue) {
+  const line = graph?.querySelector('.aid-spectrum-test');
+  const marker = graph?.querySelector('[data-spectrum-handle="light"]');
+  if (!line || !marker)
+    return;
+  const {x, y, colour, shape} = probeMark(hue, balance(tuning, light));
+  line.setAttribute('x1', x);
+  line.setAttribute('x2', x);
+  line.setAttribute('y2', y);
+  marker.setAttribute('d', shape);
+  marker.style.fill = colour;
+}
+
 // The change a handle makes, from the pointer `p` in the picture's units.
 export function spectrumPatch(tuning, handle, p) {
   const hue = clamp((p.x - SPECTRUM.left) / PLOT) * HUE_CIRCLE;
@@ -167,12 +191,10 @@ export function spectrumElement(tuning, target, label, {
       `<line class="aid-spectrum-zero" x1="${S.left}" y1="${ZERO}" x2="${S.width}" y2="${ZERO}"/>` +
       `<path class="aid-spectrum-tuning" d="M${line(nominal)}"/>`;
   if (Number.isFinite(testHue)) {
-    const x = rounded(hueX(testHue)),
-          y = values ? rounded(levelY(values[sampleIndex(values, testHue)])) : ZERO;
+    const {x, y, colour, shape} = probeMark(testHue, values);
     html += `<line class="aid-spectrum-test" x1="${x}" y1="${STRIP}" x2="${x}" y2="${y}"/>` +
-            `<path class="aid-spectrum-handle light" data-spectrum-handle="light" d="M${x} ${
-                STRIP - S.marker / 2} l${S.marker} ${S.marker} l-${S.marker} ${S.marker} l-${
-                S.marker} -${S.marker} Z" style="fill:${lightColor(testHue)}"/>`;
+            `<path class="aid-spectrum-handle light" data-spectrum-handle="light" d="${shape}" ` +
+            `style="fill:${colour}"/>`;
   }
   if (values) {
     const hue = opposite(tuning);
