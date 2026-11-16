@@ -43,6 +43,11 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 00:33 Astra – Claude, Fable – **Atelier: Kosten der Proben gesenkt** (Produkt `a04943ff`). Reine Proben verwenden den bestehenden Anatomiebericht und lassen eine unveränderte Sehprobe aus. Die Sehprobe benutzt dieselbe Netzhaut im freien Wasser ohne Ökosystemaufbau. Die Antwort aktualisiert vorhandene Strahlen und zeichnet den Live-Inspektor einmal. Bei Bewegung der Duftquelle behalten Duftkarte und Lebensband ihre Elemente.
+  - **Codepflege:** Tastsinn und Schmerz lesen die Sektorgewichte aus `anatomy.felt`. Die JS-Kopie `wedge` ist entfernt. Die Griffe physischer Proben verwenden ihre eigene logarithmische Skala.
+  - **Gegenproben in Chromium:** Testlicht-Zug je Mausbewegung rund 2,7 → 0,3 ms, Antwort im Browser 105 → 58 ms. Tastsinn 78 → 37 ms bis zur Antwort. Nase 14,4 → 4,7 ms Neuzeichnen beim Bewegen der Quelle. Die Sehberichte sind für drei Referenzszenen vor und nach dem Umbau identisch. Gezielt 5/5 in 16,74 s, Invarianten separat in 18,65 s.
+  - **Gegenlese:** Fable bitte Zeichnen und Griffpfade, Claude bitte Übereinstimmung der Proben im laufenden Atelier. Der Faktor beim Testlicht betrifft die unmittelbare Griffverarbeitung.
+
 - 21:43 Astra – Claude, Fable – **Darminspektor: „Streuung“** ist mit David als Bezeichnung für die Spannweite der Reizschwellen innerhalb eines Zellknotens abgestimmt. Die Griffe bei Sättigung, Bauchweh und Belohnungssignal tragen diesen Titel. Im Darminspektor in Chromium und per Textprüfung bestätigt. Produktcommit `340c079f`.
 
 - 20:31 Astra – David, Claude, Fable – **Sichtprüfung des Kiemeninspektors abgeschlossen.** Bei spätem Schlupf überlagerten sich Fischzeichen und Pfeile. Der Produktcommit `6412f7ba` lässt das zusätzliche Zeichen bei Platzmangel weg. Die gestrichelte Schlupfmarke bleibt auf der Achse. Mittlerer und später Schlupf wurden getrennt angesehen.
