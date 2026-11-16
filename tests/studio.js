@@ -4304,6 +4304,14 @@ sight_scene={'side':0,'bearing':-45,'distance':3,'radius':.5,'hue':20}
 sighted=run({'operation':'design','plan':plan,'sight':sight_scene})
 quick_sight=run({'operation':'design','plan':plan,'sight':sight_scene,'probeOnly':True})
 assert quick_sight=={'probeOnly':True,'sight':sighted['sight']}
+prepared=run({'operation':'design','plan':plan,'rememberPlan':True})
+probe={'operation':'design','planKey':prepared['planKey'],'sight':sight_scene,
+       'probeOnly':True,'compactSight':True}
+compact=run(probe)['sight']
+assert compact['bands']==sighted['sight']['bands']
+assert compact['samples']==[[s[0],s[3]] for s in sighted['sight']['samples']]
+run({'operation':'design','plan':plan,'rememberPlan':True})
+assert run(probe)=={'planExpired':True}
 for kind in ('smell','gut'):
     sense_scene={'kind':kind,'bearing':-60,'distance':3,'strength':.5,'scent':0,'nutrient':.2}
     probed=run({'operation':'design','plan':plan,'sight':None,

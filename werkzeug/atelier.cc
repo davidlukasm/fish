@@ -413,7 +413,7 @@ void sense_report(const field::Substrate &t,
 void sight_report(const field::Substrate &t,
                   const std::shared_ptr<const fishsim::BrainInterface> &interface,
                   const std::vector<Group> &groups, const SightScene &scene,
-                  const fishsim::Field &water) {
+                  const fishsim::Field &water, bool compact) {
   fishsim::Body body;
   body.x = body.y = fishsim::SIZE / 2;
   body.organ_mass = interface->organ_mass;
@@ -436,6 +436,16 @@ void sight_report(const field::Substrate &t,
   std::cout << ",\"sight\":{";
   fishsim::write_sight(std::cout, state);
   std::cout << ",\"samples\":[";
+  if (compact) {
+    // The Atelier needs only the response column. The other readings feed the aquarium.
+    bool first = true;
+    for (const auto &sample : state.visual_samples) {
+      std::cout << (first ? "" : ",") << '[' << sample.neuron << ',' << sample.response << ']';
+      first = false;
+    }
+    std::cout << "]}";
+    return;
+  }
   fishsim::write_visual_samples(std::cout, state);
   std::vector<int> owners;
   std::cout << "],\"receptors\":[";
@@ -681,11 +691,65 @@ void gill_food_report(fishsim::Body body, const fishsim::BrainInterface &plan,
             << ",\"plankton\":[" << plankton << ',' << kept_plankton << ']'
             << ",\"sediment\":[" << sediment << ',' << kept_sediment << "]}";
 }
+std::array<double, 2> spine_heights(const fishsim::BrainInterface &a,
+                                    const fishsim::PhysiologyParameters &physiology) {
+  const double rest =
+      fishsim::resting_spine_height(a.capacities[fishsim::organ_port::defense],
+                                    physiology.resting_spines, physiology.resting_spines_half);
+  return {rest, std::max(rest, raised_spine_height(a, physiology))};
+}
+
+double spine_direction(int k) {
+  return -fishsim::PI + (k + .5) * 2 * fishsim::PI / SPINE_DIRECTIONS;
+}
+
+void attack_probe_report(const fishsim::BrainInterface &a, const field::Substrate &t,
+                         const SenseScene &attack) {
+  const fishsim::PhysiologyParameters physiology{};
+  const auto [rest, raised] = spine_heights(a, physiology);
+  const auto density = fishsim::spine_density(a, t);
+  // The mouth aperture is in units of the prey's collision radius. Absolute cost also
+  // requires the unblocked damage of the bite, which this probe leaves unspecified.
+  const double bearing = fishsim::radians(attack.bearing), gape = attack.distance;
+  const float command = float(std::clamp(attack.strength, 0., 1.));
+  const double active = command <= 0 ? rest
+                        : command >= 1
+                            ? raised
+                            : std::max(rest, raised_spine_height(a, physiology, command));
+  const auto report = [&](const char *name, double height) {
+    const double held = fishsim::local_defense(height, density, bearing);
+    const double cost = physiology.spine_block_cost * fishsim::BODY_TISSUE * held;
+    std::cout << '"' << name << "\":{\"held\":" << held << ",\"height\":" << height
+              << ",\"reservePerDamage\":" << cost
+              << ",\"fits\":" << (gape >= 1 + height ? "true" : "false") << '}';
+  };
+  std::cout << ",\"attackProbe\":{";
+  report("rest", rest);
+  std::cout << ',';
+  report("raised", raised);
+  std::cout << ',';
+  report("active", active);
+  std::cout << ",\"spines\":[";
+  for (int k = 0; k < SPINE_DIRECTIONS; ++k)
+    std::cout << (k ? "," : "") << fishsim::local_defense(active, density, spine_direction(k));
+  std::cout << ']';
+  std::cout << '}';
+}
+
+fishsim::Body design_adult(const fishsim::BrainInterface &a) {
+  fishsim::Body adult;
+  adult.organ_mass = a.organ_mass;
+  adult.tissue = fishsim::BODY_TISSUE;
+  adult.gut_strength = a.capacities[fishsim::organ_port::gut];
+  adult.gut_length = a.gut_length;
+  adult.gill_strength = a.capacities[fishsim::organ_port::gills];
+  adult.jaw_length = a.jaw_length;
+  return adult;
+}
+
 std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &groups, bool developed,
-                                const SenseScene *attack = nullptr,
                                 const LearningContext *learning = nullptr,
-                                const Receptor *body_growth = nullptr,
-                                const GillScene *gills = nullptr) {
+                                const Receptor *body_growth = nullptr) {
   const auto &t = *g.blueprint;
   const auto &a = *g.interface;
   std::cout << ",\"hormoneTimes\":[";
@@ -952,51 +1016,18 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
     }
     std::cout << ']';
     const fishsim::PhysiologyParameters physiology{};
-    const double rest = fishsim::resting_spine_height(a.capacities[fishsim::organ_port::defense],
-                                                      physiology.resting_spines,
-                                                      physiology.resting_spines_half),
-                 raised = std::max(rest, raised_spine_height(a, physiology));
+    const auto [rest, raised] = spine_heights(a, physiology);
     std::cout << ",\"spineHeights\":[" << rest << ',' << raised << ']';
-    const auto direction = [](int k) {
-      return -fishsim::PI + (k + .5) * 2 * fishsim::PI / SPINE_DIRECTIONS;
-    };
-    if (attack) {
-      // The mouth aperture is in units of the prey's collision radius. Absolute cost also
-      // requires the unblocked damage of the bite, which this probe leaves unspecified.
-      const double bearing = fishsim::radians(attack->bearing), gape = attack->distance;
-      const float command = float(std::clamp(attack->strength, 0., 1.));
-      const double active = command <= 0   ? rest
-                            : command >= 1 ? raised
-                                           : std::max(rest, raised_spine_height(a, physiology, command));
-      const auto report = [&](const char *name, double height) {
-        const double held = fishsim::local_defense(height, density, bearing);
-        const double cost = physiology.spine_block_cost * fishsim::BODY_TISSUE * held;
-        std::cout << '"' << name << "\":{\"held\":" << held << ",\"height\":" << height
-                  << ",\"reservePerDamage\":" << cost
-                  << ",\"fits\":" << (gape >= 1 + height ? "true" : "false") << '}';
-      };
-      std::cout << ",\"attackProbe\":{";
-      report("rest", rest);
-      std::cout << ',';
-      report("raised", raised);
-      std::cout << ',';
-      report("active", active);
-      std::cout << ",\"spines\":[";
-      for (int k = 0; k < SPINE_DIRECTIONS; ++k)
-        std::cout << (k ? "," : "") << fishsim::local_defense(active, density, direction(k));
-      std::cout << ']';
-      std::cout << '}';
-    }
     for (const auto &[name, defense] : {std::pair{"spinesRest", rest}, {"spinesRaised", raised}}) {
       std::cout << ",\"" << name << "\":[";
       for (int k = 0; k < SPINE_DIRECTIONS; ++k)
-        std::cout << (k ? "," : "") << fishsim::local_defense(defense, density, direction(k));
+        std::cout << (k ? "," : "") << fishsim::local_defense(defense, density, spine_direction(k));
       std::cout << ']';
     }
     std::cout << ",\"spineGroups\":[";
     for (int k = 0; k < SPINE_DIRECTIONS; ++k) {
       const int sector =
-          int(std::lround(fishsim::sector_position(direction(k)))) % fishsim::SECTOR_COUNT;
+          int(std::lround(fishsim::sector_position(spine_direction(k)))) % fishsim::SECTOR_COUNT;
       int owner = -1;
       for (std::size_t i = 0; i < groups.size(); ++i)
         if (spread[i][sector] > 0 && (owner < 0 || spread[i][sector] > spread[owner][sector]))
@@ -1155,13 +1186,7 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
   // The design as a young adult: how fast its gut muscle moves the gut's content, and what the
   // body costs at rest, weighs and can store as yolk, each split into what it comes from. The
   // nerve cells count as planned; their contacts exist only once the fish has developed.
-  fishsim::Body adult;
-  adult.organ_mass = a.organ_mass;
-  adult.tissue = fishsim::BODY_TISSUE;
-  adult.gut_strength = a.capacities[fishsim::organ_port::gut];
-  adult.gut_length = a.gut_length;
-  adult.gill_strength = a.capacities[fishsim::organ_port::gills];
-  adult.jaw_length = a.jaw_length;
+  auto adult = design_adult(a);
   fishsim::Body hatchling;
   hatchling.organ_mass = a.organ_mass;
   hatchling.tissue = fishsim::HATCH_TISSUE;
@@ -1216,8 +1241,6 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
             << (a.stroke_capacity[fishsim::StrokeSuction] >= physiology.stroke_threshold ? "true"
                                                                                         : "false")
             << '}';
-  if (gills)
-    gill_food_report(adult, a, *gills, physiology);
   std::cout << ",\"gonads\":{\"eggs\":{\"fillDrive\":" << a.egg_parts[0]
             << ",\"releaseDrive\":" << a.egg_parts[1]
             << "},\"sperm\":{\"fillDrive\":" << a.sperm_parts[0]
@@ -1384,28 +1407,59 @@ void readiness_report(const fishsim::BrainInterface &a, const field::Substrate &
     std::cout << ",\"connections\":" << (!t.edges.empty() ? "true" : "false");
   std::cout << ",\"resources\":" << (!t.resource_limited ? "true" : "false") << '}';
 }
-void design_report(const Plan &plan, const std::optional<SightScene> &sight,
-                   const std::optional<SenseScene> &sense, bool light_spread,
-                   const LearningContext &learning, bool probe_only) {
+struct PreparedDesign {
+  Plan plan;
+  Genome g;
+
+  explicit PreparedDesign(Plan source) : plan(std::move(source)) {
+    g.blueprint = std::make_shared<const field::Substrate>(planned_substrate(plan.groups));
+    g.interface = fishsim::body_interface(*g.blueprint);
+  }
+};
+
+struct DesignQuery {
+  std::optional<SightScene> sight;
+  std::optional<SenseScene> sense;
+  LearningContext learning;
+  bool light_spread;
+};
+
+DesignQuery read_design_query(std::istream &in) {
+  auto flag = [&](const char *error) {
+    int value = 0;
+    ensure(bool(in >> value) && (value == 0 || value == 1), error);
+    return value != 0;
+  };
+  const bool spread = flag("invalid light spread flag");
+  std::optional<SightScene> sight;
+  if (flag("invalid sight flag"))
+    sight = read_sight(in);
+  std::optional<SenseScene> sense;
+  if (flag("invalid sense flag"))
+    sense = read_sense_scene(in);
+  return {sight, sense, read_learning_context(in), spread};
+}
+
+void design_report(const PreparedDesign &design, const DesignQuery &query, bool probe_only,
+                   bool compact = false) {
+  const auto &[sight, sense, learning, light_spread] = query;
+  const auto &[plan, g] = design;
   const auto &groups = plan.groups;
   ensure(!learning.probe || std::size_t(learning.probe->group) < groups.size(),
          "unknown learning probe group");
-  Genome g;
-  g.blueprint = std::make_shared<const field::Substrate>(planned_substrate(groups));
   const auto &t = *g.blueprint;
-  g.interface = fishsim::body_interface(t);
   std::cout << std::setprecision(REPORT_DIGITS) << '{';
   const auto *attack = sense && sense->kind == sense_scene::attack ? &*sense : nullptr;
   const auto *mouth = sense && sense->kind == sense_scene::mouth ? &*sense : nullptr;
   const auto *gills = sense && sense->kind == sense_scene::gills ? &sense->gills : nullptr;
   if (probe_only) {
-    ensure(!attack && !gills && !light_spread, "probe requires an anatomy report");
+    ensure(!light_spread, "spread requires an anatomy report");
     std::cout << "\"probeOnly\":true";
   } else {
     std::cout << "\"neurons\":" << t.neurons.size()
               << ",\"limited\":" << (t.resource_limited ? "true" : "false");
     readiness_report(*g.interface, t, false);
-    anatomy_report(g, groups, false, attack, &learning, &plan.growth, gills);
+    anatomy_report(g, groups, false, &learning, &plan.growth);
   }
   if (light_spread) {
     const auto sample = light_example(plan);
@@ -1417,13 +1471,53 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
     // The illuminated probe sits in open water, beyond the range of the tank's boundaries.
     fishsim::Field water(SIGHT_TANK_SEED, 0);
     water.initialize_aquarium(fishsim::tank::standard_width, fishsim::tank::standard_height);
-    sight_report(t, g.interface, groups, *sight, water);
+    sight_report(t, g.interface, groups, *sight, water, compact);
   }
   if (mouth)
     mouth_course_report(g, *mouth);
-  else if (sense && !attack && !gills)
+  else if (attack)
+    attack_probe_report(*g.interface, t, *attack);
+  else if (gills)
+    gill_food_report(design_adult(*g.interface), *g.interface, *gills, {});
+  else if (sense)
     sense_report(t, g.interface, groups, *sense);
   std::cout << '}';
+}
+
+void serve_designs() {
+  std::unique_ptr<PreparedDesign> design;
+  std::string prepared_key, header;
+  while (std::getline(std::cin, header)) {
+    std::istringstream frame(header);
+    std::string key, mode;
+    std::streamsize bytes = 0;
+    ensure(bool(frame >> mode >> key >> bytes) && bytes > 0, "invalid design frame");
+    std::string body(std::size_t(bytes), '\0');
+    ensure(bool(std::cin.read(body.data(), bytes)), "incomplete design request");
+    std::istringstream in(std::move(body));
+    std::ostringstream report;
+    auto *output = std::cout.rdbuf(report.rdbuf());
+    try {
+      if (mode == "prepare") {
+        const auto query = read_design_query(in);
+        std::string name;
+        auto next = std::make_unique<PreparedDesign>(read_plan(in, name, true));
+        design_report(*next, query, false);
+        prepared_key = std::move(key);
+        design = std::move(next);
+      } else if (!design || key != prepared_key) {
+        std::cout << "{\"planExpired\":true}";
+      } else {
+        ensure(mode == "probe" || mode == "sight" || mode == "report", "invalid design mode");
+        design_report(*design, read_design_query(in), mode != "report", mode == "sight");
+      }
+      std::cout.rdbuf(output);
+      std::cout << report.str() << '\n' << std::flush;
+    } catch (const std::exception &error) {
+      std::cout.rdbuf(output);
+      std::cout << "{\"designError\":" << json(error.what()) << "}\n" << std::flush;
+    }
+  }
 }
 void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan,
             const AddressFit &fit, bool check_incubation) {
@@ -1650,6 +1744,11 @@ std::string diet_report() {
 
 int main(int argc, char **argv) {
   try {
+    if (argc == 2 && std::string(argv[1]) == "design-server") {
+      std::ios::sync_with_stdio(false);
+      serve_designs();
+      return 0;
+    }
     if (argc == 2 && std::string(argv[1]) == "sites") {
       std::cout << "{\"sites\":[";
       for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
@@ -1732,22 +1831,9 @@ int main(int argc, char **argv) {
     }
     const bool probe_only = argc == 3 && std::string(argv[2]) == "--probe-only";
     if ((argc == 2 || probe_only) && std::string(argv[1]) == "design") {
-      int light_spread = 0;
-      ensure(bool(std::cin >> light_spread) && (light_spread == 0 || light_spread == 1),
-             "invalid light spread flag");
-      int seen = 0;
-      ensure(bool(std::cin >> seen) && (seen == 0 || seen == 1), "invalid sight flag");
-      std::optional<SightScene> sight;
-      if (seen)
-        sight = read_sight(std::cin);
-      ensure(bool(std::cin >> seen) && (seen == 0 || seen == 1), "invalid sense flag");
-      std::optional<SenseScene> sense;
-      if (seen)
-        sense = read_sense_scene(std::cin);
-      const auto learning = read_learning_context(std::cin);
+      const auto query = read_design_query(std::cin);
       std::string name;
-      design_report(read_plan(std::cin, name, true), sight, sense, light_spread, learning,
-                    probe_only);
+      design_report(PreparedDesign(read_plan(std::cin, name, true)), query, probe_only);
       std::cout << '\n';
       return 0;
     }

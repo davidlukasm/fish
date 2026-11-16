@@ -1,5 +1,8 @@
+import atexit
 import json
 import math
+import os
+import selectors
 import subprocess
 import tempfile
 import threading
@@ -20,6 +23,83 @@ COMPILE_JOB_RESULTS = 4
 COMPILE_TIMEOUT_SECONDS = 35
 COMPILE_POLL_SECONDS = .1
 DETAIL_CHARACTERS = 500
+
+
+class DesignWorker:
+    """One prepared plan for this viewer. An expired key lets the browser resend its plan."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.process = None
+        self.tool = None
+
+    def _stop(self):
+        if self.process is None:
+            return
+        self.process.kill()
+        self.process.wait()
+        self.process.stdin.close()
+        self.process.stdout.close()
+        self.process = None
+
+    def close(self):
+        with self.lock:
+            self._stop()
+
+    def _exchange(self, payload):
+        deadline = time.monotonic() + QUICK_SECONDS
+        answer = bytearray()
+        with selectors.DefaultSelector() as ready:
+            def wait():
+                if not ready.select(max(0, deadline - time.monotonic())):
+                    raise TimeoutError
+
+            source, output = self.process.stdin, self.process.stdout
+            ready.register(source, selectors.EVENT_WRITE)
+            while payload:
+                wait()
+                payload = payload[os.write(source.fileno(), payload):]
+            ready.unregister(source)
+            ready.register(output, selectors.EVENT_READ)
+            while not answer.endswith(b"\n"):
+                wait()
+                part = os.read(output.fileno(), 65536)
+                if not part:
+                    raise BrokenPipeError
+                answer.extend(part)
+        return json.loads(answer)
+
+    def request(self, tool, mode, key, body):
+        source = body.encode()
+        payload = memoryview(f"{mode} {key} {len(source)}\n".encode() + source)
+        with self.lock:
+            if self.process is None or self.process.poll() is not None or tool != self.tool:
+                self._stop()
+                if mode != "prepare":
+                    return {"planExpired": True}
+                self.process = subprocess.Popen([str(tool), "design-server"], cwd=ROOT,
+                                                stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                stderr=subprocess.DEVNULL)
+                self.tool = tool
+                os.set_blocking(self.process.stdin.fileno(), False)
+                os.set_blocking(self.process.stdout.fileno(), False)
+            try:
+                report = self._exchange(payload)
+            except (OSError, ValueError) as error:
+                self._stop()
+                if mode != "prepare":
+                    return {"planExpired": True}
+                if isinstance(error, TimeoutError):
+                    raise Refusal("studio.errors.timeout") from error
+                raise Refusal("studio.errors.developmentFailed") from error
+        if "designError" in report:
+            raise ValueError(report["designError"][:DETAIL_CHARACTERS])
+        return report
+
+
+design_worker = DesignWorker()
+atexit.register(design_worker.close)
+
 # Genome seeds travel as decimal strings so JavaScript cannot round their 64-bit values.
 
 
@@ -293,8 +373,17 @@ def run(data, data_dir=None, progress=None, cancel=None, *, check_incubation=Fal
             raise Refusal("studio.errors.invalidRequest")
         body = (str(int(spread)) + "\n" + sight_line(data.get("sight")) +
                 sense_line(data.get("sense")) +
-                learning_context_line(data.get("blood"), data.get("learning")) +
-                encode_plan(data.get("plan")))
+                learning_context_line(data.get("blood"), data.get("learning")))
+        key = data.get("planKey")
+        if key is not None:
+            if not isinstance(key, str) or len(key) != 24 or any(c not in "0123456789abcdef" for c in key):
+                raise Refusal("studio.errors.invalidRequest")
+            mode = ("sight" if data.get("compactSight") is True else "probe") if probe_only else "report"
+            return design_worker.request(tool, mode, key, body)
+        body += encode_plan(data.get("plan"))
+        if data.get("rememberPlan") is True and not probe_only:
+            key = secrets.token_hex(12)
+            return {**design_worker.request(tool, "prepare", key, body), "planKey": key}
         try:
             args = [str(tool), "design"]
             if probe_only:
