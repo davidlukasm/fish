@@ -132,7 +132,7 @@ const RAY_FAINTEST = .15;
 const rayOpacity = answer => fixed(RAY_FAINTEST + (1 - RAY_FAINTEST) * answer);
 export function organCells(state, organ) {
   const sight = state.anatomy?.sight;
-  if (!sight?.receptors)
+  if (!sight?.receptors || (state.sightDocument && state.sightDocument !== state.document))
     return [];
   const centers = allCenters(state.document), near = organ.type === 'proximity' ? 1 : 0;
   const answers = new Map(sight.samples.map(s => [s[VISUAL_SAMPLE.neuron], s]));
@@ -147,14 +147,18 @@ export function organCells(state, organ) {
     } ];
   });
 }
+const sightRasters = new WeakMap();
 function seenLight(state, organ, g) {
   const sight = state.anatomy?.sight;
   if (!sight?.bands || !g.world)
     return '';
-  const raster = retinalRaster(sight)[sideIndex(organ.side)], step = FULL_TURN / VISION.pixels;
+  if (!sightRasters.has(sight))
+    sightRasters.set(sight, retinalRaster(sight));
+  const raster = sightRasters.get(sight)[sideIndex(organ.side)], step = FULL_TURN / VISION.pixels;
   let html = '';
   raster.forEach((pixel, k) => {
-    if (!pixel[PIXEL.width] || pixel[PIXEL.distance] <= 0)
+    if (!pixel[PIXEL.width] || pixel[PIXEL.distance] <= 0 ||
+        (organ.type === 'eye' && pixel[PIXEL.distance] >= sight.range))
       return;
     const depth = Math.min(g.radius, Math.min(sight.range, pixel[PIXEL.distance]) * g.world);
     const colour = [ PIXEL.red, PIXEL.green, PIXEL.blue ].map(
@@ -265,6 +269,8 @@ function nearField(organ, g, near, [ lo, hi ]) {
 }
 function cellRays(state, organ, g, profile, rays, chosenNode, reach) {
   const cells = organCells(state, organ);
+  const colors = new Map(organ.field.profiles.map(p => [p.id, profileColor(p)]));
+  const fallback = colors.get(profile.id);
   let html = '';
   for (const cell of cells.filter(c => c.center.id === chosenNode)) {
     const [from, to] =
@@ -278,14 +284,13 @@ function cellRays(state, organ, g, profile, rays, chosenNode, reach) {
         `<path d="M${pointText(g.origin)} L${pointText(reach.end(angle))}" data-vision-neuron="${
             cell.receptor[RECEPTOR.neuron]}" class="aid-vision-ray${
             cell.center.id === chosenNode ? ' chosen' : ''}" style="stroke:${
-            profileColor(
-                organ.field.profiles.find(p => p.id === cell.center.profile) ??
-                profile)};opacity:${rayOpacity(cell.answer)}"/>`;
+            colors.get(cell.center.profile) ?? fallback};opacity:${rayOpacity(cell.answer)}"/>`;
   }
   if (!cells.length)
     for (const ray of rays)
       html += `<path d="M${pointText(g.origin)} L${
-          pointText(reach.end(ray.angle))}" class="aid-vision-ray pending"/>`;
+          pointText(reach.end(ray.angle))}" class="aid-vision-ray pending" style="stroke:${
+          colors.get(ray.profile) ?? fallback}"/>`;
   return html;
 }
 function fieldHandles(state, organ, g, near, middle) {
@@ -320,9 +325,10 @@ export function visionFan(state, organ) {
                    isChosen(state.selected, organ.pair && findOrgan(state.document, organ.pair));
   const profile =
       organ.field.profiles.find(p => p.id === state.visionProfile) ?? organ.field.profiles[0];
-  const rays = retinalRays(organ, state.sites).filter(r => r.profile === profile.id);
+  const rays = retinalRays(organ, state.sites);
   if (!rays.length)
     return '';
+  const profileRays = rays.filter(r => r.profile === profile.id);
   const near = organ.type === 'proximity' ? nearScale(state, profile, g) : null;
   const deep = selected && !near,
         hint = Math.max(g.cut, Math.min(g.radius, g.handle * HANDLE.hint));
@@ -343,10 +349,9 @@ export function visionFan(state, organ) {
                           selected ? '' : ` data-select-organ="${escapeText(organ.id)}"`}/>`;
   if (!selected)
     return open + field + '</g></g></g>';
-  const middle = rays[Math.floor(rays.length / 2)];
-  const seen = organ.type === 'proximity'
-                   ? '<g class="aid-vision-seen">' + seenLight(state, organ, g) + '</g>'
-                   : '';
+  const middleRays = profileRays.length ? profileRays : rays;
+  const middle = middleRays[Math.floor(middleRays.length / 2)];
+  const seen = '<g class="aid-vision-seen">' + seenLight(state, organ, g) + '</g>';
   return open + field + seen +
          `<path d="${reach.outline(middle.left, middle.right)}" class="aid-vision-resolution"/>` +
          cellRays(state, organ, g, profile, rays, chosenNode, reach) + '</g></g>' +
@@ -448,12 +453,11 @@ const sightEyes = () => `<div class="aid-sight-eyes">${
 // The cell types of an eye's picture: each row's coloured mark with its colour's name.
 export const sightLegend = types => {
   const names = tList('organ_graphics.hues'), marks = tList('organ_graphics.hueMarks');
-  return `<span>${escapeText(label('answers'))}</span>` +
-         types
-             .map(type => `<span><b style="background:${type.colour}">${
-                              escapeText(marks[type.name] ?? '')}` +
-                          `</b>${escapeText(names[type.name] ?? '')}</span>`)
-             .join('');
+  return types
+      .map(type =>
+               `<span><b style="background:${type.colour}">${escapeText(marks[type.name] ?? '')}` +
+               `</b>${escapeText(names[type.name] ?? '')}</span>`)
+      .join('');
 };
 const section = body => `<section class="aid-eye-section">${body}</section>`;
 const CONTRAST_CHOICES = Object.freeze([ 'bright', 'dark', 'both' ]);
@@ -469,14 +473,11 @@ const SCENE = Object.freeze({
   words : 4,
   left : 92,
   right : 292,
-  things : [ .3, .7 ],
-  radius : 10,
-  rows : [ 4, 40 ],
-  row : 30,
-  ramp : {top : 88, height : 22, spots : 7, radius : 6, ends : 122, mark : 82},
-  height : 128,
+  ramp : {top : 14, height : 22, spots : 7, radius : 6, ends : 48},
+  height : 54,
   handle : 7
 });
+const CONTRAST_ICON = Object.freeze({width : 48, height : 27, left : 15, right : 33, radius : 4});
 // The scene's ground, as the spots of the keenness row are measured against it.
 const GROUND = Object.freeze([ 127, 138, 134 ]);
 const sceneX = share => SCENE.left + (SCENE.right - SCENE.left) * share;
@@ -486,10 +487,20 @@ function keennessRow(tone, faint) {
   const S = SCENE, R = S.ramp, mid = R.top + R.height / 2, edge = sceneX(faint.share);
   const spot = k => {
     const share = (k + .5) / R.spots, contrast = stimulusOfShare(share, faint.least);
-    const sign = tone === 'dark' ? -1 : 1;
-    const rgb = GROUND.map(v => Math.round(Math.min(CHANNEL_MAX, v * (1 + sign * contrast))));
-    return `<circle cx="${fixed(sceneX(share))}" cy="${fixed(mid)}" r="${R.radius}" fill="rgb(${
-        rgb.join(' ')})"/>`;
+    const shade = sign =>
+        'rgb(' +
+        GROUND.map(v => Math.round(Math.min(CHANNEL_MAX, v * (1 + sign * contrast)))).join(' ') +
+        ')';
+    const x = fixed(sceneX(share)), y = fixed(mid), radius = R.radius;
+    if (tone === 'both') {
+      const edge = 'M' + x + ' ' + fixed(mid - radius) + ' a' + radius + ' ' + radius + ' 0 0 ';
+      const half = sign => '<path d="' + edge + (sign > 0 ? 0 : 1) + ' 0 ' + 2 * radius +
+                           ' Z" fill="' + shade(sign) + '"/>';
+      return half(1) + half(-1);
+    }
+    return '<circle cx="' + x + '" cy="' + y + '" r="' + radius + '" fill="' +
+           shade(tone === 'dark' ? -1 : 1) + '"/>';
+
   };
   return `<text class="aid-scene-word" x="${S.words}" y="${fixed(mid)}" ` +
          `dominant-baseline="central">${escapeText(label('sensitivity'))}</text>` +
@@ -505,56 +516,65 @@ function keennessRow(tone, faint) {
          `<text class="aid-scene-word" x="${S.right}" y="${R.ends}" text-anchor="end">${
              escapeText(label('keenTo.' + tone))}</text>` +
          `<circle class="aid-spectrum-handle sensitivity" data-spectrum-handle=` +
-         `"sensitivity" cx="${fixed(edge)}" cy="${fixed(mid)}" r="${S.handle}"><title>${
-             escapeText(label('keenHandle'))}</title></circle>`;
+         `"sensitivity" cx="${fixed(edge)}" cy="${fixed(mid)}" r="${S.handle}" aria-label="${
+             escapeText(label('sensitivity'))}"/>`;
 }
+export function contrastFocus(scope) {
+  const button = scope.ownerDocument?.activeElement;
+  if (!button?.matches('[data-vision-polarity]') || !scope.contains(button))
+    return null;
+  const selector = '[data-vision-polarity="' + CSS.escape(button.dataset.visionPolarity) + '"]';
+  return root => root?.querySelector(selector)?.focus({preventScroll : true});
+}
+
 function contrastScene(profile, faint, target, spread) {
-  const S = SCENE;
-  const k =
-      Math.max(0, CONTRAST_CHOICES.findIndex(key => CONTRAST_POLARITY[key] === profile.polarity));
-  const key = CONTRAST_CHOICES[k];
-  const xs = S.things.map(sceneX), middle = top => top + S.row / 2;
-  const word = (text, top) => `<text class="aid-scene-word" x="${S.words}" y="${
-      fixed(top)}" dominant-baseline="central">${escapeText(text)}</text>`;
-  const thing = (cls, x, top, style = '') => `<circle class="${cls}" cx="${fixed(x)}" cy="${
-      fixed(middle(top))}" r="${S.radius}"${style}/>`;
-  const reported = tone => key === 'both' || key === tone;
-  const seen = (tone, x) => reported(tone)
-                                ? thing('aid-scene-report' + (key === 'both' ? ' half' : ''), x,
-                                        S.rows[1], ` style="fill:${profileColor(profile)}"`)
-                                : thing('aid-scene-missed', x, S.rows[1]);
-  const attributes =
-      Object.entries(target).map(([ name, value ]) => ` data-${name}="${idSafe(value)}"`).join('');
-  const band = (cls, top) => `<rect class="${cls}" x="${S.left}" y="${top}" width="${
-      S.right - S.left}" height="${S.row}" rx="6"/>`;
+  const S = SCENE, I = CONTRAST_ICON;
+  const color = profileColor(profile);
+  const circle = (position, y, style) =>
+      '<circle cx="' + position + '" cy="' + y + '" r="' + I.radius + '" ' + style + '/>';
+  const sample = (mode, tone, x) => {
+    const answers = mode === tone || mode === 'both';
+    return circle(x, 7, 'class="aid-scene-thing ' + tone + '"') +
+           circle(x, 20,
+                  answers ? 'class="aid-scene-report' + (mode === 'both' ? ' half' : '') +
+                                '" fill="' + color + '"'
+                          : 'class="aid-scene-missed"');
+  };
+  const choices =
+      CONTRAST_CHOICES
+          .map(mode => '<button type="button" data-vision-polarity="' + CONTRAST_POLARITY[mode] +
+                       '" aria-pressed="' + (CONTRAST_POLARITY[mode] === profile.polarity) + '">' +
+                       '<svg viewBox="0 0 ' + I.width + ' ' + I.height + '" aria-hidden="true">' +
+                       '<rect class="aid-scene-ground" width="' + I.width +
+                       '" height="13" rx="3"/>' + sample(mode, 'bright', I.left) +
+                       sample(mode, 'dark', I.right) + '</svg>' +
+                       escapeText(label('contrastChoice.' + mode)) + '</button>')
+          .join('');
+  const modes = '<div class="aid-contrast-modes" role="group" aria-label="' +
+                escapeText(label('contrast')) + '">' + choices + '</div>';
+  if (!faint)
+    return modes;
+  const mode =
+      CONTRAST_CHOICES.find(key => CONTRAST_POLARITY[key] === profile.polarity) ?? 'bright';
+  const attributes = Object.entries(target)
+                         .map(([ name, value ]) => ' data-' + name + '="' + idSafe(value) + '"')
+                         .join('');
   let variation = '';
   // How far the cells' half contrasts lie apart: shown only where they do.
   if (faint && spread?.count > 0 && spread.half.max > spread.half.min) {
     const y = S.height + 14;
     const at = key => fixed(sceneX(stimulusShare(spread.half[key], faint.least)));
     const low = at('min'), high = at('max'), mean = at('mean');
-    variation = word(label('cellRange'), y) +
+    variation = '<text class="aid-scene-word" x="' + S.words + '" y="' + y + '">' +
+                escapeText(label('cellRange')) + '</text>' +
                 `<path class="aid-spectrum-mean" d="M${low} ${y}H${high}M${low} ${y - 3}v6` +
                 `M${high} ${y - 3}v6M${mean} ${y - 6}v12"/>`;
   }
-  const choices = CONTRAST_CHOICES
-                      .map(mode => '<button type="button" data-vision-polarity="' +
-                                   CONTRAST_POLARITY[mode] + '" aria-pressed="' + (mode === key) +
-                                   '">' + escapeText(label('contrastChoice.' + mode)) + '</button>')
-                      .join('');
-  return '<div class="aid-contrast-modes" role="group" aria-label="' +
-         escapeText(label('contrast')) + '">' + choices +
-         '</div><p class="aid-hint aid-contrast-summary">' +
-         escapeText(label('contrastTitle.' + key)) + '</p>' +
-         `<svg class="aid-contrast-scene" data-spectrum="scene"${attributes} viewBox="0 0 ${
-             S.width} ${S.height + 28}" role="img" aria-label="${label('contrast')}">` +
-         word(label('scene'), middle(S.rows[0])) + band('aid-scene-ground', S.rows[0]) +
-         thing('aid-scene-thing bright', xs[0], S.rows[0]) +
-         thing('aid-scene-thing dark', xs[1], S.rows[0]) +
-         word(label('contrast'), middle(S.rows[1])) + band('aid-scene-seen', S.rows[1]) +
-         seen('bright', xs[0]) + seen('dark', xs[1]) + (faint ? keennessRow(key, faint) : '') +
-         variation + '</svg>';
+  return modes + '<svg class="aid-contrast-scene" data-spectrum="scene"' + attributes +
+         ' viewBox="0 0 ' + S.width + ' ' + (S.height + 24) + '" role="img" aria-label="' +
+         escapeText(label('sensitivity')) + '">' + keennessRow(mode, faint) + variation + '</svg>';
 }
+
 export function visionInspector(state, organ) {
   const profiles = organ.field.profiles;
   const p = profiles.find(p => p.id === state.visionProfile) ?? profiles[0];

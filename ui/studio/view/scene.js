@@ -210,12 +210,17 @@ const transparent = ' style="display:contents"';
 function fieldLayers(state) {
   const chosen = organOf(state.document, state.selected?.id);
   const ownField = o => !!chosen && (o.id === chosen.id || o.id === chosen.pair);
-  const fading = detailMix(state).fields > 0 && fieldsShown(state);
   const fans = state.document.organs.filter(o => o.field);
-  const other = fading ? fans.filter(o => !ownField(o)).map(o => visionFan(state, o)).join('') +
-                             tectumBands(state)
-                       : '';
-  return [ other, fans.filter(ownField).map(o => visionFan(state, o)).join('') ];
+  const passive = fans.filter(o => !ownField(o));
+  const eyes = passive.filter(o => o.type === 'eye').map(o => visionFan(state, o)).join('');
+  const opacity = detailMix(state).fields;
+  const other =
+      opacity > 0 && fieldsShown(state)
+          ? '<g opacity="' + fixed(opacity) + '">' +
+                passive.filter(o => o.type !== 'eye').map(o => visionFan(state, o)).join('') +
+                tectumBands(state) + '</g>'
+          : '';
+  return [ eyes + other, fans.filter(ownField).map(o => visionFan(state, o)).join('') ];
 }
 
 function wireLayers(state) {
@@ -240,9 +245,7 @@ function sceneLayers(state) {
     [ 'centers', centersSvg(state), ' class="aid-centers"' ],
     [ 'handles', anatomyHandlesSvg(state) + generatedCenters(state) ],
     [ 'assemblies', assembliesSvg(state), ' class="aid-assemblies"' ],
-    [
-      'fields', fields, ' class="aid-fov-fields" opacity="' + fixed(detailMix(state).fields) + '"'
-    ],
+    [ 'fields', fields, ' class="aid-fov-fields"' ],
     [ 'chosen-fields', selectedFields, ' class="aid-fov-fields"' ]
   ];
 }
@@ -346,10 +349,6 @@ export function paintFishScene(target, state, scope, animateWater = true) {
   for (const layer of sceneLayers(state))
     if (draw(layer) && layer[0] !== 'fields' && layer[0] !== 'chosen-fields')
       marksChanged = true;
-  const fields = svg.querySelector('[data-fish-layer="fields"]'),
-        opacity = fixed(detailMix(state).fields);
-  if (fields.getAttribute('opacity') !== opacity)
-    fields.setAttribute('opacity', opacity);
   setMarkup(target.querySelector('[data-fish-stimulus]'), stimulusKind(state));
   if (lifeDirty) {
     painted.delete(life);

@@ -1,6 +1,7 @@
 import {
   beyondHandles,
   clearOfFish,
+  contrastFocus,
   nearAnswers,
   nearObject,
   refreshVisionAnswers,
@@ -356,6 +357,7 @@ export const designMethods = {
       this.state.senseSpread = {document : this.state.document, report : anatomy.senseSpread};
     this.state.outlinePreview = null;
     this.state.anatomy = anatomy;
+    this.state.sightDocument = anatomy.sight ? this.state.document : null;
     if (this.state.station === 'hub')
       this.refreshHubDraft();
     this.bringProbes();
@@ -472,9 +474,8 @@ export const designMethods = {
         figure.hidden = !receptors.length;
       if (!receptors.length)
         continue;
-      const responses = eyeSight(null, sight.samples, receptors, side);
-      drawOrganGraphic(canvas, {...responses, responsesOnly : true}, null,
-                       {key : SENSE_TISSUE.light});
+      const responses = eyeSight(sight.bands, sight.samples, receptors, side);
+      drawOrganGraphic(canvas, {...responses, atelierEye : true}, null, {key : SENSE_TISSUE.light});
       // Each row's mark names its cell type below the picture.
       const legend = figure.querySelector('[data-sight-legend]');
       if (legend && legend._sightRows !== receptors) {
@@ -487,8 +488,11 @@ export const designMethods = {
     const block = this.root.querySelector('[data-spectrum-block]');
     const editor = block?.querySelector('[data-spectrum]');
     const target = editor && this.spectrumTarget(editor.dataset);
-    if (target)
+    if (target) {
+      const parent = block.parentElement, restoreFocus = contrastFocus(block);
       block.outerHTML = spectrumEditor(this.state, target.organ, target.tuning);
+      restoreFocus?.(parent);
+    }
   },
   redrawBlocks(key, find, render, within = '') {
     const selector = `[${dataAttribute(key)}]`;

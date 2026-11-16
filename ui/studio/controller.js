@@ -39,6 +39,7 @@ const DOUBLE_CLICK = 450;
 import {BODY_MAP, paintFishScene} from './view/scene.js';
 import {nodeLocation} from './view/places.js';
 import {inspector, organSettingsBlock} from './view/panels.js';
+import {contrastFocus} from './view/vision.js';
 import {mountLive} from './view/live/kit.js';
 import {cppnGraph, cppnInspector} from './view/graph.js';
 import {settleRegions} from './model/regions.js';
@@ -99,6 +100,7 @@ export class OrganStudio {
       focusSubstance : 0,
       previewContext : DEFAULT_PREVIEW_CONTEXT,
       sightProbe : null,
+      sightDocument : null,
       senseProbe : null,
       armed : null,
       placementSide : 'both',
@@ -426,6 +428,7 @@ export class OrganStudio {
     if (!element)
       return;
     const scroll = reset ? 0 : element.scrollTop;
+    const restoreFocus = reset ? null : contrastFocus(element);
     // A redrawn inspector keeps open what the user opened.
     const opened =
         new Set([...element.querySelectorAll('details[open] > summary') ].map(s => s.textContent));
@@ -442,6 +445,7 @@ export class OrganStudio {
       if (opened.has(summary.textContent))
         summary.parentElement.open = true;
     element.scrollTop = scroll;
+    restoreFocus?.(element);
     mountLive(this.root, this);
     if (!keepEyes || this.shownDesign === this.state.document)
       this.drawSight();

@@ -4650,7 +4650,10 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   assert.match(svg, /data-vision-handle="density"/);
   assert.match(svg, /data-vision-handle="resolution"/);
   assert.match(svg, /data-vision-handle="probe"/);
-  assert.doesNotMatch(vision.visionFan(rendered, currentEye), /class="aid-vision-seen"/);
+  assert.match(vision.visionFan(rendered, currentEye), /class="aid-vision-seen"/);
+  assert.match(
+      views.fishScene({...rendered, selected : null, camera : {...rendered.camera, zoom : 1}}),
+      /class="aid-vision-union" data-select-organ=/, 'Eye fields stay visible at the initial zoom');
   assert.match(svg, /class="aid-retina-node/, 'The chosen eye shows its cells as nodes');
   assert.doesNotMatch(svg, /NaN|Infinity|undefined/);
   for (const c of model.allCenters(doc)) {

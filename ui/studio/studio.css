@@ -349,12 +349,11 @@
 .aid-spectrum-strip{stroke:none}
 .aid-contrast-scene{display:block;width:100%;height:auto;margin:6px 0 4px;border-radius:9px;background:var(--aid-graphic);touch-action:none}
 .aid-contrast-modes{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
-.aid-contrast-modes button{flex:1;border:1px solid var(--aid-control-edge);border-radius:7px;padding:6px;background:var(--aid-control);color:var(--aid-control-text);cursor:pointer}
+.aid-contrast-modes button{display:grid;justify-items:center;gap:3px;flex:1;border:1px solid var(--aid-control-edge);border-radius:7px;padding:6px;background:var(--aid-control);color:var(--aid-control-text);cursor:pointer}
+.aid-contrast-modes svg{width:52px;height:30px}
 .aid-contrast-modes button[aria-pressed="true"]{border-color:var(--aid-chosen);background:#35504a;color:var(--aid-name-text);font-weight:700}
-.aid-contrast-summary{margin:6px 0}
 .aid-scene-word{fill:var(--aid-axis-text);font:10.5px system-ui}
 .aid-scene-ground{fill:#7f8a86}
-.aid-scene-seen{fill:#071a1f}
 .aid-scene-thing.bright{fill:#f4f1e4}
 .aid-scene-thing.dark{fill:#1d2422}
 .aid-scene-report.half{fill-opacity:.5}

@@ -360,6 +360,8 @@ export const FISH_CLICKS = Object.freeze([
       if (!chosen)
         return PASS;
       const polarity = Number(e.dataset.visionPolarity);
+      if (polarity === chosen.profile.polarity)
+        return;
       studio.editField(chosen.organ.id, {profile : {id : chosen.profile.id, polarity}});
     }
   ],

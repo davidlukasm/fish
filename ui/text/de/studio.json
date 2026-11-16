@@ -829,13 +829,8 @@
       "dark": "Dunkleres",
       "both": "Beides"
     },
-    "contrastTitle": {
-      "bright": "Die Zellen reagieren auf zusätzliches Licht in ihrer Farbe.",
-      "dark": "Die Zellen reagieren, wenn Licht in ihrer Farbe fehlt, etwa hinter einem Gegenstand.",
-      "both": "Zusätzliches und fehlendes Licht in der Zellfarbe gehen mit je halbem Gewicht in den Reiz ein."
-    },
     "sensitivity": "Empfindlichkeit",
-    "sight": "Sehbild der Zellen",
+    "sight": "Sehbild",
     "left": "linkes Auge",
     "right": "rechtes Auge",
     "probe": "Testlicht",
@@ -847,8 +842,6 @@
     "nearAnswer": "Antwort auf das Testobjekt",
     "ahead": "vorn",
     "aside": "seitlich",
-    "scene": "Umgebung",
-    "answers": "Antwort der Zellen:",
     "keenFrom": {
       "bright": "kaum heller",
       "both": "kleiner Unterschied",
@@ -859,8 +852,7 @@
       "both": "starker Kontrast",
       "dark": "schwarz"
     },
-    "keenHalf": "halbe Meldung bei {p} Unterschied",
-    "keenHandle": "Ziehen: wie schwach ein Unterschied zur Umgebung sein darf, damit die Zellen ihn melden"
+    "keenHalf": "halbe Meldung bei {p} Unterschied"
   },
   "workflow": {
     "select": "Platzieren: Organe und Hirnregionen aus der Bibliothek auf den Fisch ziehen und anklicken, um sie einzustellen; mit Umschalt-Klick mehrere wählen und zu einer Baugruppe zusammenfassen.",
