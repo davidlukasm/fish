@@ -29,46 +29,68 @@ export const livePlace = (kind, organ) => '<div class="aid-live" data-live="' + 
                                           '" data-live-organ="' + escapeText(organ.id) + '"></div>';
 
 const KINDS = new Map(), open = new Map();
-// make(studio, organId) returns {root, show(state), tick(dt)}: its element, a repaint from the
-// present state, and what moves.
+// Only diagrams that animate supply tick(dt).
 export const liveKind = (kind, make) => KINDS.set(kind, make);
 
 let last = 0, running = 0;
+const animated = new WeakMap();
+const observer = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
+  for (const entry of entries) {
+    const live = animated.get(entry.target);
+    if (live)
+      live.visible = entry.isIntersecting;
+  }
+  startFrames();
+})
+                                                            : null;
+
+function discardClosed() {
+  for (const [key, live] of open) {
+    if (!live.root.isConnected) {
+      observer?.unobserve(live.root);
+      open.delete(key);
+    }
+  }
+}
+
+function startFrames() {
+  if (!running && Array.from(open.values()).some(live => live.tick && live.visible))
+    running = requestAnimationFrame(frame);
+  if (!running)
+    last = 0;
+}
+
 function frame(now) {
   running = 0;
   const dt = last ? Math.min(50, now - last) : 16;
   last = now;
-  let seen = false;
-  for (const [key, live] of open) {
-    if (!live.root.isConnected) {
-      open.delete(key);
-      continue;
-    }
-    seen = true;
-    live.tick(dt);
-  }
-  if (seen)
-    running = requestAnimationFrame(frame);
-  else
-    last = 0;
+  discardClosed();
+  for (const live of open.values())
+    if (live.visible)
+      live.tick?.(dt);
+  startFrames();
 }
 // Hangs every live inspector into its place under `root` and repaints it from the state.
 export function mountLive(root, studio) {
-  let shown = false;
   for (const host of root.querySelectorAll('[data-live]')) {
     const key = host.dataset.live + ':' + host.dataset.liveOrgan, make = KINDS.get(host.dataset.live);
     if (!make)
       continue;
     let live = open.get(key);
-    if (!live)
+    if (!live) {
       open.set(key, live = make(studio, host.dataset.liveOrgan));
+      live.visible = !observer;
+      if (live.tick && observer) {
+        animated.set(live.root, live);
+        observer.observe(live.root);
+      }
+    }
     if (live.root.parentNode !== host)
       host.replaceChildren(live.root);
     live.show(studio.state);
-    shown = true;
   }
-  if (shown && !running)
-    running = requestAnimationFrame(frame);
+  discardClosed();
+  startFrames();
 }
 
 // A picture: what never changes (built once) between a layer under it and one over it; only those

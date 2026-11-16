@@ -13,9 +13,7 @@ export const detailMix = state => Object.fromEntries(
     Object.entries(REVEAL).map(([ name, interval ]) => [name, fade(zoomOf(state), interval)]));
 export function nodeOpacity(state, chosen = false) {
   const mode = layerMode(state, 'nodes');
-  return mode === true    ? 1
-         : mode === false ? (chosen ? detailMix(state).cells : 0)
-                          : detailMix(state).cells;
+  return mode === true ? 1 : mode === false && !chosen ? 0 : fade(zoomOf(state), REVEAL.cells);
 }
 const HORMONE_TOOLS = Object.freeze([ 'hormone', 'learn' ]);
 const STORE = 'aid.atelier.layer-modes';

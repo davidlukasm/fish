@@ -226,5 +226,5 @@ liveKind('learn', (studio, centerId) => {
     ask();
     draw(cell);
   }
-  return {root, show, tick() {}};
+  return {root, show};
 });

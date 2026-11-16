@@ -232,10 +232,8 @@ export const gestureMethods = {
       drag.moved = true;
     if (!drag.moved)
       return;
-    const point = cameraCoordinates(event, drag.svg, this.state.camera);
     if (drag.pan) {
-      const rect = this.bodyMap()?.getBoundingClientRect() || drag.svg.getBoundingClientRect();
-      const scale = cameraScale(rect, this.state.camera);
+      const scale = cameraScale(drag.svg.getBoundingClientRect(), this.state.camera);
       if (!(scale > 0))
         return;
       this.state.camera.x = drag.pan.x - (event.clientX - drag.x) / scale;
@@ -244,23 +242,32 @@ export const gestureMethods = {
       return;
     }
     if (drag.wireFrom) {
+      const point = cameraCoordinates(event, drag.svg, this.state.camera);
       this.drawConnectingLine(this.wirePoint(drag.wireFrom) ?? drag.origin, point);
       return;
     }
     if (MOVED_ITEMS.includes(drag.kind)) {
-      this.showTrash(true);
-      const preview = this.root.querySelector(LAYER.preview);
-      if (this.overTrash(event))
-        return preview?.replaceChildren();
-      const organ = drag.kind === 'organ' ? findOrgan(this.state.document, drag.id) : null;
-      if (organ)
-        this.showHints('organ', organ.type, drag.id, organ.id);
-      const type = organ?.type ?? (drag.kind === 'assembly'
-                                       ? 'brain'
-                                       : findCenter(this.state.document, drag.id)?.organ.type);
-      if (preview)
+      this.queuePlacement(() => {
+        if (this.pointer !== drag)
+          return;
+        this.showTrash(true);
+        const preview = this.root.querySelector(LAYER.preview);
+        if (!preview)
+          return;
+        if (this.overTrash(event)) {
+          preview.replaceChildren();
+          return;
+        }
+        const organ = drag.kind === 'organ' ? findOrgan(this.state.document, drag.id) : null;
+        if (organ)
+          this.showHints('organ', organ.type, drag.id, organ.id);
+        const type = organ?.type ?? (drag.kind === 'assembly'
+                                         ? 'brain'
+                                         : findCenter(this.state.document, drag.id)?.organ.type);
+        const point = cameraCoordinates(event, drag.svg, this.state.camera);
         preview.innerHTML =
             nearFish(point, this.state.sites) ? placementPreview(this.state, {type}, point) : '';
+      });
     }
   },
   // A pointer that is cancelled ends what it held. A tile dragged from the library is not held by

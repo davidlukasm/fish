@@ -134,27 +134,50 @@ export function eyeTypes(receptors) {
   }
   return [...types.values()];
 }
+const eyeRows = new WeakMap();
 export function eyeTypeAnswers(info, count = EYE_IMAGE.samples) {
-  const half = radians(TUNING.visual_width_max);
-  return eyeTypes(info.receptors).map(
-      type => ({
-        colour : type.colour,
-        name : type.name,
-        values : Array.from({length : count},
-                            (_, i) => {
-                              const angle = -half + 2 * half * (i + .5) / count;
-                              let total = 0, sum = 0;
-                              for (const r of type.cells) {
-                                const weight = organVisualWeight(r, angle);
-                                if (!weight)
-                                  continue;
-                                const sample = info.samples?.get(r[RECEPTOR.neuron]);
-                                total += weight;
-                                sum += weight * (sample?.[VISUAL_SAMPLE.response] ?? 0);
-                              }
-                              return total > 0 ? brainClamp(sum / total) : null;
-                            })
-      }));
+  const receptors = info.receptors;
+  if (!receptors?.length)
+    return [];
+  let stored = eyeRows.get(receptors);
+  if (stored?.count !== count) {
+    const half = radians(TUNING.visual_width_max);
+    const rows = eyeTypes(receptors).map(
+        ({cells, colour, name}) => ({
+          cells,
+          colour,
+          name,
+          pixels : Array.from({length : count},
+                              (_, i) => {
+                                const angle = -half + 2 * half * (i + .5) / count;
+                                let total = 0;
+                                const weights = [];
+                                for (const [index, cell] of cells.entries()) {
+                                  const weight = organVisualWeight(cell, angle);
+                                  if (weight) {
+                                    weights.push([ index, weight ]);
+                                    total += weight;
+                                  }
+                                }
+                                return {total, weights};
+                              })
+        }));
+    stored = {count, rows};
+    eyeRows.set(receptors, stored);
+  }
+  return stored.rows.map(({cells, colour, name, pixels}) => {
+    const responses =
+        cells.map(cell => info.samples?.get(cell[RECEPTOR.neuron])?.[VISUAL_SAMPLE.response] ?? 0);
+    const values = pixels.map(({total, weights}) => {
+      if (!total)
+        return null;
+      let sum = 0;
+      for (const [index, weight] of weights)
+        sum += weight * responses[index];
+      return brainClamp(sum / total);
+    });
+    return {colour, name, values};
+  });
 }
 const EYE_IMAGE = Object.freeze({samples : 120});
 export function eyeImage(info, count = EYE_IMAGE.samples) {

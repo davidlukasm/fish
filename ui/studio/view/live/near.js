@@ -118,5 +118,5 @@ liveKind('near', (studio, organId) => {
       return;
     drawRings(organ, profile, least * (most / least) ** unitOfPlan(profile.q2));
   }
-  return {root, show, tick() {}};
+  return {root, show};
 });

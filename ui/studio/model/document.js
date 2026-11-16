@@ -405,15 +405,18 @@ export const findOrgan = (doc, id) => doc.organs.find(o => o.id === id) ?? null;
 export const findAssembly = (doc, id) => doc.assemblies.find(a => a.id === id) ?? null;
 // A center's place among all the design's centers (-1 for none): its group's in the compiled
 // plan, so in every per-group list of the design view's and the developed fish's reports.
+const groupIndexes = new WeakMap();
 export function centerIndex(doc, id) {
-  let index = 0;
-  for (const organ of doc.organs)
-    for (const center of organ.centers) {
-      if (center.id === id)
-        return index;
-      ++index;
-    }
-  return -1;
+  let indexes = groupIndexes.get(doc);
+  if (!indexes) {
+    indexes = new Map();
+    let index = 0;
+    for (const organ of doc.organs)
+      for (const center of organ.centers)
+        indexes.set(center.id, index++);
+    groupIndexes.set(doc, indexes);
+  }
+  return indexes.get(id) ?? -1;
 }
 export const groupReport = (doc, report, key, id) => report?.[key]?.[centerIndex(doc, id)] ?? null;
 // The thresholds a sense group's cells drew in the design run's example (atelier.cc,

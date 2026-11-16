@@ -36,7 +36,7 @@ import {CAMERA_HOME, cameraCoordinates} from './view/frame.js';
 import {bendsWith, CONTACT_LIMITS} from './view/wires.js';
 import {DEFAULT_PREVIEW_CONTEXT} from './view/development.js';
 const DOUBLE_CLICK = 450;
-import {BODY_MAP, fishScene} from './view/scene.js';
+import {BODY_MAP, paintFishScene} from './view/scene.js';
 import {nodeLocation} from './view/places.js';
 import {inspector, organSettingsBlock} from './view/panels.js';
 import {mountLive} from './view/live/kit.js';
@@ -47,7 +47,8 @@ import {
   developAction,
   GENOME_FILE_ID,
   headerStatus,
-  layerSwitches,
+  syncLayerSwitches,
+  sceneOptions,
   stationShell
 } from './view/shell.js';
 import {libraryOf, toolPalette} from './view/library.js';
@@ -297,10 +298,17 @@ export class OrganStudio {
     this.refreshHeader();
     this.refreshViews();
   }
-  refreshSwitches() {
-    const switches = this.root.querySelector('.aid-layer-switches');
-    if (switches)
-      switches.innerHTML = layerSwitches(this.state);
+  refreshSwitches() { syncLayerSwitches(this.root, this.state); }
+  refreshSceneOptions(scope) {
+    const options = this.root.querySelector('.aid-view-options');
+    if (options) {
+      const controls = 'button, select';
+      const focused = [...options.querySelectorAll(controls) ].indexOf(document.activeElement);
+      options.innerHTML = sceneOptions(this.state);
+      if (focused >= 0)
+        options.querySelectorAll(controls)[focused]?.focus({preventScroll : true});
+    }
+    this.refreshScene(scope);
   }
   refreshLibrary(changed = false) {
     const scroll = this.root.querySelector('.aid-library-scroll');
@@ -358,22 +366,33 @@ export class OrganStudio {
     }
     this.drawSight();
   }
-  refreshScene() {
+  refreshScene(scope) {
     if (this.state.station !== 'studio')
       return;
     const target = this.root.querySelector(this.state.mode === 'fish' ? '.aid-scene-frame'
                                                                       : '#' + CPPN_SCENE_ID);
-    const zoom = this.state.camera.zoom;
+    const {x, y, zoom} = this.state.camera;
     this.frameField();
-    if (zoom !== this.state.camera.zoom)
+    const camera = this.state.camera;
+    if (zoom !== camera.zoom)
       this.showZoom();
-    if (target)
-      target.innerHTML = this.state.mode === 'fish' ? fishScene(this.state) : cppnGraph(this.state);
+    if (zoom !== camera.zoom || x !== camera.x || y !== camera.y)
+      scope = undefined;
+    let marksChanged = false;
+    if (target && this.state.mode === 'fish')
+      marksChanged = paintFishScene(target, this.state, scope);
+    else if (target)
+      target.innerHTML = cppnGraph(this.state);
     const svg = this.bodyMap();
-    if (svg)
+    if (marksChanged) {
+      this.stimulusIndex = null;
+      this.wireIndex = null;
+    }
+    if (svg && marksChanged) {
       this.pulsePlayer?.attach(svg);
-    this.markStimulus();
-    this.markFocus();
+      this.markStimulus();
+    }
+    this.markFocus(marksChanged);
     this.restorePlacement();
   }
   bodyMap() { return this.root.querySelector(BODY_MAP); }

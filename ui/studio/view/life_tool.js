@@ -129,6 +129,7 @@ export function syncLifeBar(root, state) {
   const bar = root.querySelector('.aid-life-bar svg');
   if (!bar)
     return;
+  bar.closest('[data-fish-life]')?.setAttribute('data-life-dirty', '');
   const B = BAR, context = previewContextOf(state), now = bar.querySelector('[data-life-now]'),
         top = Number(now?.dataset.lifeNow), x = fixed(lifeX(context.maturity)),
         knob = bar.querySelector('[data-preview-handle="maturity"]');

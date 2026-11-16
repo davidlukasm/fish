@@ -139,5 +139,5 @@ liveKind('touch', (studio, organId) => {
     if (cell)
       drawCut(cell);
   }
-  return {root, show, tick() {}};
+  return {root, show};
 });

@@ -97,6 +97,21 @@ export const dropMethods = {
     event.preventDefault();
     if (event.dataTransfer)
       event.dataTransfer.dropEffect = 'copy';
+    this.queuePlacement(() => {
+      if (svg.isConnected && carried === (this.dragging ?? this.state.armed))
+        this.drawDropPreview(event, svg, carried);
+    });
+  },
+  queuePlacement(draw) {
+    this.placementDraw = draw;
+    this.placementFrame ??= requestAnimationFrame(() => {
+      this.placementFrame = null;
+      const paint = this.placementDraw;
+      this.placementDraw = null;
+      paint?.();
+    });
+  },
+  drawDropPreview(event, svg, carried) {
     const position = cameraCoordinates(event, svg, this.state.camera);
     if (carried.kind === 'wiring') {
       this.aimWire(carried.value, event);
@@ -125,9 +140,13 @@ export const dropMethods = {
   },
   showHints(kind, value, key, moving = null) {
     const hints = this.root.querySelector(LAYER.hints);
-    if (!hints || hints.dataset.active === key)
+    const plan = this.state.document, zoom = this.state.camera.zoom;
+    if (!hints ||
+        (hints.dataset.active === key && this.hintPlan === plan && this.hintZoom === zoom))
       return;
     const displayed = placementHints(this.state, kind, value, moving);
+    this.hintPlan = plan;
+    this.hintZoom = zoom;
     hints.innerHTML = displayed.svg;
     hints.dataset.active = key;
     const legend = this.root.querySelector('[data-hint-legend]');
@@ -424,6 +443,11 @@ export const dropMethods = {
     this.notice(label('status.placed'));
   },
   clearPreview() {
+    if (this.placementFrame != null) {
+      cancelAnimationFrame(this.placementFrame);
+      this.placementFrame = null;
+    }
+    this.placementDraw = null;
     for (const element of this.root.querySelectorAll('.aid-drop-target,.aid-drop-hover'))
       element.classList.remove('aid-drop-target', 'aid-drop-hover');
     this.bodyMap()?.classList.remove('aid-dropping');

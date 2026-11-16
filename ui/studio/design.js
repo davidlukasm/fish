@@ -9,21 +9,12 @@ import {
 } from './view/vision.js';
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
-import {
-  groundOptions,
-  gutProbeControls,
-  probeFlow,
-  probeGround,
-  probeHandle,
-  probeScents,
-  probeWater,
-  senseProbeSvg
-} from './view/probes.js';
+import {gutProbeControls, probeFlow, probeHandle} from './view/probes.js';
 import {eyeSight, eyeTypes} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
 import {SENSE_TISSUE} from '../tissue.js';
 import {PRESSURE_OF} from './model/organs.js';
-import {RECEPTOR} from '../schema.js';
+import {RECEPTOR, VISUAL_SAMPLE} from '../schema.js';
 import {
   allCenters,
   centerIndex,
@@ -41,7 +32,7 @@ import {label} from './view/kit.js';
 import {previewContextOf} from './view/development.js';
 import {hormoneTime} from './view/substances.js';
 import {requestBody} from './requests.js';
-import {BODY_MAP, PROBE_LAYER} from './view/scene.js';
+import {BODY_MAP, invalidateFishLayer, paintFishProbes} from './view/scene.js';
 import {outlineSizes, paintMouthStep} from './view/body.js';
 import {newFishDocument} from './canvas_placement.js';
 
@@ -179,9 +170,8 @@ export const designMethods = {
   },
   // The mouth's inspector tries one beat of the mouth: the closer begins `delay` steps after the
   // opener, the gills pump along or not (anatomy.mouthCourse).
-  setMouthCommand(organId, delay, gills) {
-    this.tryCommand(organId, {kind : 'mouth', delay, gills});
-  },
+  setMouthCommand(organId, delay,
+                  gills) { this.tryCommand(organId, {kind : 'mouth', delay, gills});},
   // A command an inspector tries on its organ: asked of the engine once, not again for its own
   // answer.
   tryCommand(organId, scene) {
@@ -221,9 +211,9 @@ export const designMethods = {
           learningDraft = draft?.key === 'learning', bladderDraft = draft?.key === 'bladder',
           gillDraft = draft?.key === 'gills';
     const keepSight = samePlan && probe === previous.probe;
-    const probeOnly = !draft && samePlan && previous.blood === blood &&
-                      previous.learnProbe === learnProbe && sense?.kind !== 'attack' &&
-                      sense?.kind !== 'gills';
+    const probeOnly =
+        !draft && samePlan && previous.blood === blood && previous.learnProbe === learnProbe;
+    const planKey = !draft && samePlan ? previous.planKey : null;
     const scene = draft ? {sense : spineDraft || gillDraft ? this.senseScene() : null} : {
       lightSpread : !probeOnly && this.state.lightSpread?.document !== document,
       sight : keepSight ? null : sightScene(probe),
@@ -241,26 +231,51 @@ export const designMethods = {
             prediction : learnProbe.prediction,
             interval : learnProbe.interval
           };
-    this.api(requestBody('design', {
+    const context = {...scene, blood, ...(learning ? {learning} : {})};
+    const body = requestBody('design', {
+      ...context,
+      ...(probeOnly ? {probeOnly : true} : {}),
+      ...(planKey ? {
+        planKey,
+        ...(probeOnly && this.state.anatomy?.sight?.receptors ? {compactSight : true} : {})
+      }
+                  : {plan, ...(!probeOnly && !draft ? {rememberPlan : true} : {})})
+    });
+    this.api(body)
+        .then(report => report.planExpired && planKey ? this.api(requestBody('design', {
+          ...context,
           plan,
-          ...scene,
-          blood,
-          ...(probeOnly ? {probeOnly : true} : {}),
-          ...(learning ? {learning} : {})
+          rememberPlan : true,
+          sight : sightScene(probe),
+          lightSpread : this.state.lightSpread?.document !== document
         }))
+                                                      : report)
         // An answer for the design shown is shown even when a test stimulus has moved on since:
         // the eyes and senses follow a dragged one step by step instead of waiting for it to
         // rest.
-        .then(report => {
+        .then(({planKey : preparedKey, ...report}) => {
           const before = this.state.anatomy;
-          const anatomy = {...(probeOnly ? before : null), ...report,
-                           learnProbe : learning ? learnProbe : null,
-                           gillProbeKey : scene.sense?.kind === 'gills' ? sense?.key : null};
-          if (probeOnly) {
+          const partial = probeOnly && !preparedKey;
+          const anatomy = {
+            ...(partial ? before : null),
+            ...report,
+            learnProbe : learning ? learnProbe : null,
+            gillProbeKey : scene.sense?.kind === 'gills' ? sense?.key : null
+          };
+          if (partial) {
             delete anatomy.probeOnly;
             for (const key of TRANSIENT_REPORTS)
               if (!(key in report))
                 delete anatomy[key];
+          }
+          if (report.sight?.samples && !report.sight.receptors && before?.sight?.receptors) {
+            const samples = report.sight.samples.map(([ neuron, response ]) => {
+              const sample = [];
+              sample[VISUAL_SAMPLE.neuron] = neuron;
+              sample[VISUAL_SAMPLE.response] = response;
+              return sample;
+            });
+            anatomy.sight = {...before.sight, ...report.sight, samples};
           }
           if (!draft && keepSight && before?.sight)
             anatomy.sight = before.sight;
@@ -298,7 +313,8 @@ export const designMethods = {
               }
             }
           } else if (this.state.document === document) {
-            this.designContext = {document, sites, plan, probe, blood, learnProbe};
+            this.designContext =
+                {document, sites, plan, probe, blood, learnProbe, planKey : preparedKey ?? planKey};
             this.showAnatomy(anatomy, request);
           }
         })
@@ -340,13 +356,14 @@ export const designMethods = {
     const traced = this.traceAnswered(request);
     if (probesOnly) {
       if (!traced) {
-        if (spineChange || lifeChange)
+        const redraw = spineChange || lifeChange;
+        if (redraw)
           this.refreshScene();
-        if (sightChange) {
-          this.drawSight();
+        if (sightChange && !redraw)
           this.refreshVision();
-        }
-        this.refreshProbeGraphics();
+        if (sightChange)
+          this.drawSight();
+        this.refreshProbeGraphics(!redraw && !!this.state.senseProbe);
         if ((answerChange && this.state.tool === 'hormone') ||
             ((answerChange || learningChange) && this.state.tool === 'learn')) {
           this.refreshInspector();
@@ -393,10 +410,12 @@ export const designMethods = {
     }
   },
   refreshVision() {
-    for (const fan of this.root.querySelectorAll(BODY_MAP + ' [data-vision-organ]')) {
+    for (const fan of this.root.querySelectorAll(BODY_MAP + ' [data-vision-organ].selected')) {
       const organ = findOrgan(this.state.document, fan.dataset.visionOrgan);
-      if (organ)
+      if (organ) {
+        invalidateFishLayer(fan);
         refreshVisionAnswers(this.state, organ, fan);
+      }
     }
   },
   refreshGraphics() {
@@ -416,23 +435,9 @@ export const designMethods = {
     this.refreshProbeGraphics();
     this.refreshLive();
   },
-  refreshProbeGraphics() {
-    const map = this.bodyMap(), layer = map?.querySelector('#' + PROBE_LAYER),
-          ground = map?.querySelector('[data-probe-ground]');
-    if (ground)
-      ground.innerHTML = probeGround(this.state);
-    if (layer) {
-      const controls = layer.querySelector('[data-probe-controls]'),
-            water = layer.querySelector('[data-probe-water]'), current = probeWater(this.state);
-      controls.innerHTML = senseProbeSvg(this.state);
-      if (water.dataset.probeWater !== (current?.key ?? '')) {
-        water.dataset.probeWater = current?.key ?? '';
-        water.innerHTML = current?.svg() ?? '';
-      }
-    }
-    const scents = this.root.querySelector('[data-probe-scents-layer]');
-    if (scents)
-      scents.innerHTML = probeScents(this.state) + groundOptions(this.state);
+  refreshProbeGraphics(paint = true) {
+    if (paint)
+      paintFishProbes(this.root, this.state);
     this.refreshProbeControls();
   },
   refreshProbeControls() {
@@ -441,20 +446,30 @@ export const designMethods = {
   },
   drawSight() {
     const sight = this.state.anatomy?.sight;
+    const source = sight?.receptors;
+    if (!this.sightRows || this.sightRows.source !== source) {
+      const sides = [ [], [] ];
+      for (const receptor of source ?? [])
+        if (!receptor[RECEPTOR.proximity])
+          sides[receptor[RECEPTOR.lateral] < 0 ? 0 : 1].push(receptor);
+      this.sightRows = {source, sides, legends : sides.map(rows => sightLegend(eyeTypes(rows)))};
+    }
+    const {sides, legends} = this.sightRows;
     for (const canvas of this.root.querySelectorAll('[data-sight-eye]')) {
       const side = Number(canvas.dataset.sightEye);
-      const receptors =
-          (sight?.receptors ??
-           []).filter(r => !r[RECEPTOR.proximity] && (r[RECEPTOR.lateral] < 0 ? 0 : 1) === side);
-      canvas.closest('figure').hidden = !receptors.length;
+      const receptors = sides[side], figure = canvas.closest('figure');
+      if (figure.hidden !== !receptors.length)
+        figure.hidden = !receptors.length;
       if (!receptors.length)
         continue;
       const seen = eyeSight(sight.bands, sight.samples, receptors, side);
       drawOrganGraphic(canvas, seen, null, {key : SENSE_TISSUE.light});
       // Each row's mark names its cell type below the picture.
-      const legend = canvas.closest('figure').querySelector('[data-sight-legend]');
-      if (legend)
-        legend.innerHTML = sightLegend(eyeTypes(receptors));
+      const legend = figure.querySelector('[data-sight-legend]');
+      if (legend && legend._sightRows !== receptors) {
+        legend.innerHTML = legends[side];
+        legend._sightRows = receptors;
+      }
     }
   },
   refreshSpectrum() {

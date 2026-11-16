@@ -136,14 +136,14 @@ export const STUDIO_CLICKS = Object.freeze([
       if (e.dataset.contacts === 'actual' && (state.stale || !state.report))
         return;
       state.contactView = e.dataset.contacts;
-      studio.renderShell();
+      studio.refreshSceneOptions();
     }
   ],
   [
     '[data-network]',
     (studio, e) => {
       studio.state.wireScope = e.dataset.network;
-      studio.renderShell();
+      studio.refreshSceneOptions('wires');
     }
   ],
   [
@@ -151,7 +151,8 @@ export const STUDIO_CLICKS = Object.freeze([
     (studio, e) => {
       studio.state.layers = switchLayer(studio.state, e.dataset.layer);
       keepLayers(studio.state.layers);
-      studio.renderShell();
+      studio.refreshSwitches();
+      studio.refreshScene(e.dataset.layer);
     }
   ]
 ]);

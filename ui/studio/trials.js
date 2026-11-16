@@ -36,17 +36,28 @@ export const trialMethods = {
     this.refreshSwitches();
     this.refreshViews();
   },
-  markFocus() {
-    const svg = this.bodyMap(), {selected, document : doc} = this.state;
-    if (!svg || this.state.stimulus || !['organ', 'center'].includes(selected?.kind))
+  markFocus(marksChanged) {
+    const svg = this.bodyMap(), {selected, document : doc, sites, multi, stimulus} = this.state;
+    const active = svg && !stimulus && [ 'organ', 'center' ].includes(selected?.kind);
+    const key = active ? [ selected.kind, selected.id, ...multi ].join(' ') : '';
+    const previous = this.focusMarks;
+    if (!marksChanged && previous && previous.svg === svg && previous.doc === doc &&
+        previous.sites === sites && previous.key === key)
+      return;
+    for (const element of previous?.elements ?? [])
+      element.classList.remove('aid-focus-near');
+    svg?.classList.toggle('aid-focus-view', Boolean(active));
+    const elements = new Set();
+    this.focusMarks = {svg, doc, sites, key, elements};
+    if (!active)
       return;
     const owner = id => {
       const found = findCenter(doc, id);
       return found && found.organ.type === 'brain' ? id : found ? found.organ.id : id;
     };
-    const chosen = new Set([ selected.id, ...this.state.multi ].map(owner));
+    const chosen = new Set([ selected.id, ...multi ].map(owner));
     const near = new Set(chosen), wires = new Set();
-    for (const link of routedLinks(doc, this.state.sites)) {
+    for (const link of routedLinks(doc, sites)) {
       const from = owner(link.from), to = owner(link.to);
       if (!chosen.has(from) && !chosen.has(to))
         continue;
@@ -55,19 +66,20 @@ export const trialMethods = {
       if (!link.wire.inner)
         wires.add(link.wire.id);
     }
-    svg.classList.add('aid-focus-view');
     for (const key of near)
       for (const element of this.stimulusMarks(key))
-        element.classList.add('aid-focus-near');
+        elements.add(element);
     for (const key of near) {
       const organ = findOrgan(doc, key);
       for (const center of organ?.centers ?? [])
         for (const element of this.stimulusMarks(center.id))
-          element.classList.add('aid-focus-near');
+          elements.add(element);
     }
     for (const id of wires)
       for (const element of this.wireMarks(id))
-        element.classList.add('aid-focus-near');
+        elements.add(element);
+    for (const element of elements)
+      element.classList.add('aid-focus-near');
   },
   markStimulus() {
     const svg = this.bodyMap(), stimulus = this.state.stimulus;
@@ -118,6 +130,7 @@ export const trialMethods = {
     return elements.get(key) ?? elements.get(owners.get(key)) ?? [];
   },
   resetPulseMarks(svg) {
+    this.focusMarks = null;
     svg.classList.remove('aid-stimulus-view');
     svg.classList.remove('aid-focus-view');
     for (const element of svg.querySelectorAll(
@@ -153,7 +166,7 @@ export const trialMethods = {
     };
     this.state.stimulus = stimulus;
     if (previous && !freshAnatomy && contactView === this.state.contactView) {
-      this.resetPulseMarks(previous);
+      this.markFocus();
       this.markStimulus();
     } else
       this.refreshViews();
@@ -332,6 +345,9 @@ export const trialMethods = {
     if (!this.state.stimulus)
       return;
     this.state.stimulus = null;
+    const svg = this.bodyMap();
+    if (svg)
+      this.resetPulseMarks(svg);
     if (redraw)
       this.refreshScene();
   },

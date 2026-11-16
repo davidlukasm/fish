@@ -359,5 +359,5 @@ liveKind('gland', (studio, organId) => {
     own.chosen = Math.min(own.chosen, cells.length - 1);
     drawBlood(cells, cells[own.chosen]);
   }
-  return {root, show, tick() {}};
+  return {root, show};
 });

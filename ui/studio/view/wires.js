@@ -1,4 +1,4 @@
-import {nodeOpacity} from './layers.js';
+import {layerMode, nodeOpacity} from './layers.js';
 import {nerveRoute, organDock, passable} from './wire_route.js';
 import {nerveBundling, polylineWay} from './nerves.js';
 import {regionDock} from './region_layout.js';
@@ -349,8 +349,14 @@ const signalPairs = (doc, link) =>
     endpointCenters(doc, link.from)
         .flatMap(source =>
                      endpointCenters(doc, link.to).map(target => source.id + '>' + target.id));
+const drawnByPlan = new WeakMap();
 function wireBundles(state, centers) {
   const {document : doc, sites, selected, wireScope} = state;
+  const key =
+      [ sites, wireScope, selected?.kind, selected?.id, zoomOf(state), layerMode(state, 'nodes') ];
+  const previous = drawnByPlan.get(doc);
+  if (previous?.key.every((value, i) => value === key[i]))
+    return previous.drawn;
   const members = wireScope === 'focus' ? networkMemberSet(doc, selected) : null;
   const bundles = new Map(), inside = [];
   for (const link of routedLinks(doc, sites)) {
@@ -463,7 +469,9 @@ function wireBundles(state, centers) {
   const nerves = joined.flatMap(
       (line, index) => line.nerves.map(
           nerve => ({...nerve, members : nerve.members.map(k => drawn[k]), owner : drawn[index]})));
-  return {bundles : drawn, nerves, inside};
+  const result = {bundles : drawn, nerves, inside};
+  drawnByPlan.set(doc, {key, drawn : result});
+  return result;
 }
 const signalKind = center => isModulator(center) ? 'modulate'
                              : center.sign < 0   ? 'inhibit'
@@ -737,7 +745,11 @@ export function bendsWith(state, wireIds, point, mirrored) {
   bends.splice(best, 0, point);
   return bends.map(p => mirrored ? {x : p.x, y : 2 * BODY_FRAME.middle - p.y} : p);
 }
+const endpointIndexes = new WeakMap();
 export function endpointIndex(doc) {
+  const existing = endpointIndexes.get(doc);
+  if (existing)
+    return existing;
   const centers = new Map();
   for (const organ of doc.organs) {
     for (const center of organ.centers)
@@ -745,6 +757,7 @@ export function endpointIndex(doc) {
     if (organ.type !== 'brain' && organ.centers.length)
       centers.set(organ.id, {organ, center : organ.centers[0]});
   }
+  endpointIndexes.set(doc, centers);
   return centers;
 }
 const CONTACTS = Object.freeze({

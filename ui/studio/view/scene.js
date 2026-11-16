@@ -1,7 +1,7 @@
 import {anatomyHandlesSvg} from './anatomy_handles.js';
 import {clamp} from '../../units.js';
 import {tectumBands, visionFan} from './vision.js';
-import {bodySvg, organHitsSvg} from './body.js';
+import {bodySvg, organDrawings, organHitsSvg} from './body.js';
 import {nodeLocation, organLocation, regionGeometry, showsNodes} from './places.js';
 import {centerTitle} from './names.js';
 import {TOOL_ICON} from './icons.js';
@@ -205,44 +205,158 @@ function generatedCenters(state) {
              .join('') +
          '</g>';
 }
-export function fishScene(state) {
-  const camera = cameraBox(state.camera);
-  const centers = endpointIndex(state.document);
-  const anatomy = bodySvg(state), wires = wiresShown(state, centers);
-  // Fields fade in from a closer zoom on; the field of the chosen eye (and its twin) always shows.
+const transparent = ' style="display:contents"';
+
+function fieldLayers(state) {
   const chosen = organOf(state.document, state.selected?.id);
   const ownField = o => !!chosen && (o.id === chosen.id || o.id === chosen.pair);
   const fading = detailMix(state).fields > 0 && fieldsShown(state);
   const fans = state.document.organs.filter(o => o.field);
-  const cones = (fading ? fans.filter(o => !ownField(o)).map(o => visionFan(state, o)).join('') +
-                              tectumBands(state)
-                        : '');
-  const own = fans.filter(ownField).map(o => visionFan(state, o)).join('');
-  const water = probeWater(state);
+  const other = fading ? fans.filter(o => !ownField(o)).map(o => visionFan(state, o)).join('') +
+                             tectumBands(state)
+                       : '';
+  return [ other, fans.filter(ownField).map(o => visionFan(state, o)).join('') ];
+}
+
+function wireLayers(state) {
+  const centers = endpointIndex(state.document), wires = wiresShown(state, centers);
+  return [
+    [ 'wires', wires.lines, ' class="aid-wires"' ],
+    [
+      'wire-ends',
+      wires.branches + (layerShown(state, 'wires') ? regionContactsSvg(state, centers) : '')
+    ]
+  ];
+}
+
+function sceneLayers(state) {
+  const [wires, wireEnds] = wireLayers(state);
+  const [fields, selectedFields] = fieldLayers(state);
+  const drawings = organDrawings(state);
+  return [
+    [ 'anatomy', bodySvg(state, drawings), ' class="aid-anatomy"' ],
+    [ 'hormones', hormoneOverlay(state) ], wires,
+    [ 'organ-hits', reachSvg(state) + organHitsSvg(state, drawings) ], wireEnds,
+    [ 'centers', centersSvg(state), ' class="aid-centers"' ],
+    [ 'handles', anatomyHandlesSvg(state) + generatedCenters(state) ],
+    [ 'assemblies', assembliesSvg(state), ' class="aid-assemblies"' ],
+    [
+      'fields', fields, ' class="aid-fov-fields" opacity="' + fixed(detailMix(state).fields) + '"'
+    ],
+    [ 'chosen-fields', selectedFields, ' class="aid-fov-fields"' ]
+  ];
+}
+
+// A probe can also be repainted independently of the fish. The moving water keeps its SVG
+// elements and animation until its direction, strength or scale changes.
+export function paintFishProbes(target, state) {
+  const water = target?.querySelector('[data-probe-water]'), current = water && probeWater(state);
+  setMarkup(target?.querySelector('[data-probe-ground]'), probeGround(state));
+  setMarkup(target?.querySelector('[data-probe-controls]'), senseProbeSvg(state));
+  setMarkup(target?.querySelector('[data-probe-scents-layer]'),
+            probeScents(state) + groundOptions(state));
+  if (water && water.dataset.probeWater !== (current?.key ?? '')) {
+    water.dataset.probeWater = current?.key ?? '';
+    water.innerHTML = current?.svg() ?? '';
+  }
+}
+
+const painted = new WeakMap();
+const sceneInputs = new WeakMap();
+function setMarkup(element, markup) {
+  if (!element || painted.get(element) === markup)
+    return false;
+  painted.set(element, markup);
+  element.innerHTML = markup;
+  return true;
+}
+
+export function invalidateFishLayer(element) {
+  painted.delete(element.closest('[data-fish-layer]'));
+  sceneInputs.delete(element.closest(BODY_MAP));
+}
+
+const cameraAttributes = camera =>
+    Object.fromEntries([ 'x', 'y', 'width', 'height' ].map(key => [key, fixed(camera[key])]));
+
+export function fishScene(state) {
+  const camera = cameraBox(state.camera), water = probeWater(state);
+  const layers = sceneLayers(state)
+                     .map(([ key, markup, attrs = '' ]) =>
+                              '<g data-fish-layer="' + key + '"' + attrs + '>' + markup + '</g>')
+                     .join('');
+  const frame = Object.entries(cameraAttributes(camera))
+                    .map(([ key, value ]) => ' ' + key + '="' + value + '"')
+                    .join('');
   return '<svg id="' + BODY_MAP_ID + '" viewBox="' + viewBoxOf(state.camera) +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +
          escapeText(t('studio.app.empty')) + '">' +
-         '<defs>' + wireMarkers(camera.zoom) + '</defs><rect x="' + fixed(camera.x) + '" y="' +
-         fixed(camera.y) + '" width="' + fixed(camera.width) + '" height="' + fixed(camera.height) +
-         '" class="aid-canvas-ground"/>' +
-         '<g data-probe-ground>' + probeGround(state) + '</g>' +
-         '<g class="aid-anatomy">' + anatomy + '</g>' +
-         '' + hormoneOverlay(state) + '<g class="aid-wires">' + wires.lines + '</g>' +
-         reachSvg(state) + organHitsSvg(state) + wires.branches +
-         (layerShown(state, 'wires') ? regionContactsSvg(state, centers) : '') +
-         '<g class="aid-centers">' + centersSvg(state) + '</g>' + anatomyHandlesSvg(state) +
-         generatedCenters(state) + '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
-         '<g class="aid-fov-fields" opacity="' + fixed(detailMix(state).fields) + '">' + cones +
-         '</g><g class="aid-fov-fields">' + own + '</g>' +
-         '<g id="' + PROBE_LAYER + '"><g data-probe-water="' + (water?.key ?? '') + '">' +
-         (water?.svg() ?? '') + '</g><g data-probe-controls>' + senseProbeSvg(state) + '</g></g>' +
+         '<defs data-fish-defs>' + wireMarkers(camera.zoom) + '</defs><rect' + frame +
+         ' class="aid-canvas-ground"/>' +
+         '<g data-probe-ground>' + probeGround(state) + '</g>' + layers + '<g id="' + PROBE_LAYER +
+         '"><g data-probe-water="' + (water?.key ?? '') + '">' + (water?.svg() ?? '') +
+         '</g><g data-probe-controls>' + senseProbeSvg(state) + '</g></g>' +
          '<g id="' + LAYER_ID.hints + '"></g>' +
          '<g id="' + LAYER_ID.preview + '" pointer-events="none"></g>' +
          '<path id="' + LAYER_ID.line +
          '" d="" class="aid-connecting-line" pointer-events="none"/>' +
-         '</svg>' + trashZone() + stimulusKind(state) + '<div data-probe-scents-layer>' +
-         probeScents(state) + groundOptions(state) + '</div>' + lifeBar(state) +
-         '<div class="aid-hint-legend" data-hint-legend hidden></div>';
+         '</svg>' + trashZone() + '<div data-fish-stimulus' + transparent + '>' +
+         stimulusKind(state) + '</div><div data-probe-scents-layer>' + probeScents(state) +
+         groundOptions(state) + '</div><div data-fish-life' + transparent + '>' + lifeBar(state) +
+         '</div><div class="aid-hint-legend" data-hint-legend hidden></div>';
+}
+
+export function paintFishScene(target, state, scope) {
+  const svg = target.querySelector(BODY_MAP);
+  if (!svg) {
+    target.innerHTML = fishScene(state);
+    return true;
+  }
+  const draw = ([ key, markup ]) =>
+      setMarkup(svg.querySelector('[data-fish-layer="' + key + '"]'), markup);
+  if (scope === 'wires') {
+    sceneInputs.delete(svg);
+    return wireLayers(state).map(draw).includes(true);
+  }
+  if (scope === 'hormones') {
+    sceneInputs.delete(svg);
+    return draw([ 'hormones', hormoneOverlay(state) ]);
+  }
+  // Camera and multiple selection change in place. The other scene inputs are replaced.
+  const {x, y, zoom} = state.camera;
+  const inputs = [...Object.values(state), x, y, zoom, ...(state.multi ?? []) ];
+  const previous = sceneInputs.get(svg);
+  const life = target.querySelector('[data-fish-life]');
+  const lifeDirty = life?.hasAttribute('data-life-dirty');
+  if (!lifeDirty && previous?.length === inputs.length &&
+      previous.every((value, i) => value === inputs[i]))
+    return false;
+  sceneInputs.set(svg, inputs);
+  const camera = cameraBox(state.camera);
+  const viewBox = viewBoxOf(state.camera);
+  if (svg.getAttribute('viewBox') !== viewBox)
+    svg.setAttribute('viewBox', viewBox);
+  const ground = svg.querySelector('.aid-canvas-ground');
+  for (const [key, value] of Object.entries(cameraAttributes(camera)))
+    if (ground.getAttribute(key) !== value)
+      ground.setAttribute(key, value);
+  setMarkup(svg.querySelector('[data-fish-defs]'), wireMarkers(camera.zoom));
+  let marksChanged = false;
+  for (const layer of sceneLayers(state))
+    if (draw(layer) && layer[0] !== 'fields' && layer[0] !== 'chosen-fields')
+      marksChanged = true;
+  const fields = svg.querySelector('[data-fish-layer="fields"]'),
+        opacity = fixed(detailMix(state).fields);
+  if (fields.getAttribute('opacity') !== opacity)
+    fields.setAttribute('opacity', opacity);
+  setMarkup(target.querySelector('[data-fish-stimulus]'), stimulusKind(state));
+  if (lifeDirty) {
+    painted.delete(life);
+    life.removeAttribute('data-life-dirty');
+  }
+  setMarkup(life, lifeBar(state));
+  paintFishProbes(target, state);
+  return marksChanged;
 }
 function trashZone() {
   return '<div class="aid-trash" data-trash hidden title="' + escapeText(t('studio.tools.trash')) +

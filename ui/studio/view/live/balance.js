@@ -151,5 +151,5 @@ liveKind('balance', (studio, organId) => {
     if (own?.centers[0])
       drawTilt(own, findOrgan(studio.state.document, own.pair));
   }
-  return {root, show, tick() {}};
+  return {root, show};
 });

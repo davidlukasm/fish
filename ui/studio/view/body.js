@@ -770,15 +770,19 @@ export const fishOutline = state => fishPath(outlineSizes(state));
 // Where organs take clicks: above the wires, so a visible organ is chosen where it is seen, and
 // over the whole of a fine or hollow glyph (a lateral line, a near sense's pits).
 const SKIN_FIRST = (a, b) => (b.type === 'pigment') - (a.type === 'pigment');
-export function organHitsSvg(state) {
+export function organDrawings(state) {
   const drawnEyes = new Set();
+  return [...state.document.organs ]
+      .sort(SKIN_FIRST)
+      .filter(organ => !isRegion(organ))
+      .map(organ => [organ, organGlyph(state, organ, drawnEyes) + organNodes(state, organ)]);
+}
+export function organHitsSvg(state, drawings) {
   let html = '';
-  for (const organ of [...state.document.organs].sort(SKIN_FIRST)) {
-    if (organ.type === 'brain' || isRegion(organ))
+  for (const [organ, drawn] of drawings) {
+    if (organ.type === 'brain')
       continue;
-    const glyph = organ.type === 'gut'
-                      ? gutHit(state)
-                      : organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
+    const glyph = organ.type === 'gut' ? gutHit(state) : drawn;
     if (glyph)
       html +=
           '<g class="aid-organ-hit" data-organ="' + escapeText(organ.id) + '">' + glyph + '</g>';
@@ -813,20 +817,17 @@ function organPresence(state, organ) {
   return there.length / organ.centers.length;
 }
 const BODY_SHADE = Object.freeze({reach : 150, flank : .08, back : .12});
-export function bodySvg(state) {
+export function bodySvg(state, drawings) {
   // A chosen pigment organ shows the fish in its colour, as a chosen skin sense shows its skin.
   const fill = fishBodyColour(
       state.document, state.outlinePreview ?? state.anatomy,
       state.document.organs.some(organ => organ.type === 'pigment' && organChosen(state, organ)));
-  const drawnEyes = new Set(), sizes = outlineSizes(state);
+  const sizes = outlineSizes(state);
   let organs = '', gut = '', felt = '', ducts = '';
-  for (const organ of [...state.document.organs].sort(SKIN_FIRST)) {
-    if (isRegion(organ))
-      continue;
+  for (const [organ, glyph] of drawings) {
     felt += feltSvg(state, organ);
     if (organ.type === 'eggs' || organ.type === 'sperm')
       ducts += gonadDuct(organLocation(organ, state.sites, state.document), organ.type);
-    const glyph = organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
     if (!glyph)
       continue;
     const presence = organPresence(state, organ);

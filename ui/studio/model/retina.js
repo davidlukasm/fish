@@ -192,9 +192,13 @@ export function generateRetina(organ, sites, used, create) {
   }
   return profiles.every(p => centers.some(c => c.profile === p.id)) ? centers : null;
 }
+const raysByOrgan = new WeakMap();
 export function retinalRays(organ, sites) {
+  const previous = raysByOrgan.get(organ);
+  if (previous?.sites === sites)
+    return previous.rays;
   const {bins, byAngle} = retinalLayout(sites);
-  return organ.centers.flatMap(center => {
+  const rays = organ.centers.flatMap(center => {
     const site = findSite(sites, center.site);
     if (!site)
       return [];
@@ -214,6 +218,8 @@ export function retinalRays(organ, sites) {
       };
     });
   });
+  raysByOrgan.set(organ, {sites, rays});
+  return rays;
 }
 // Whether an eye's field reaches across the midline into the other side's space (body_plan.cc: a
 // cell sees from angle − width to angle + width), and which of its centers have such a cell.

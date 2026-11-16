@@ -269,5 +269,5 @@ liveKind('blood', (studio, organId) => {
     drawRing(wheel, cells, levels, takes);
     drawRows(cells, levels, takes);
   }
-  return {root, show, tick() {}};
+  return {root, show};
 });

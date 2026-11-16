@@ -92,7 +92,21 @@ function layerSwitch(s, key) {
                     '" title="' + label('layers.mode.' + mode) + '"',
                 label('layers.' + key), {active : shown});
 }
-export const layerSwitches = s => LAYER_KEYS.map(key => layerSwitch(s, key)).join('');
+const layerSwitches = s => LAYER_KEYS.map(key => layerSwitch(s, key)).join('');
+export function syncLayerSwitches(root, state) {
+  for (const button of root.querySelectorAll('[data-layer]')) {
+    const key = button.dataset.layer, mode = String(layerMode(state, key));
+    const shown = String(layerShown(state, key));
+    if (button.dataset.layerMode !== mode) {
+      button.dataset.layerMode = mode;
+      button.title = label('layers.mode.' + mode);
+    }
+    if (button.getAttribute('aria-pressed') !== shown) {
+      button.setAttribute('aria-pressed', shown);
+      button.classList.toggle('active', shown === 'true');
+    }
+  }
+}
 // How many of the developed contacts the view draws, the strongest first; only that view has them.
 const contactLimit = s =>
     '<label class="aid-contact-limit">' + label('tools.contactLimit') +
@@ -103,14 +117,8 @@ const contactLimit = s =>
                   (n || label('tools.allContacts')) + '</option>')
         .join('') +
     '</select></label>';
-function stationStage(s, cppn) {
-  if (cppn)
-    return '<div class="aid-scene-top"><span>' + label('cppn.graph') + '</span></div>' +
-           '<div id="' + CPPN_SCENE_ID + '" class="aid-scene-body">' + cppnGraph(s) + '</div>';
-  return '<div class="aid-scene-top"><span>' + label('app.empty') +
-         '</span><details class="aid-scene-options"><summary>' + label('layers.title') +
-         '</summary><div class="aid-view-options">' +
-         group(button('data-contacts="design"', label('tools.drawnContacts'),
+export function sceneOptions(s) {
+  return group(button('data-contacts="design"', label('tools.drawnContacts'),
                       {active : s.contactView === 'design'}) +
                button('data-contacts="actual"', label('tools.developedContacts'), {
                  active : s.contactView === 'actual',
@@ -121,7 +129,16 @@ function stationStage(s, cppn) {
                button('data-network="focus"', label('tools.focusedNetwork'),
                       {active : s.wireScope === 'focus'})) +
          group(layerSwitches(s), label('layers.title'), 'aid-layer-switches') +
-         (s.contactView === 'actual' ? contactLimit(s) : '') +
+         (s.contactView === 'actual' ? contactLimit(s) : '');
+}
+
+function stationStage(s, cppn) {
+  if (cppn)
+    return '<div class="aid-scene-top"><span>' + label('cppn.graph') + '</span></div>' +
+           '<div id="' + CPPN_SCENE_ID + '" class="aid-scene-body">' + cppnGraph(s) + '</div>';
+  return '<div class="aid-scene-top"><span>' + label('app.empty') +
+         '</span><details class="aid-scene-options"><summary>' + label('layers.title') +
+         '</summary><div class="aid-view-options">' + sceneOptions(s) +
          '</div></details></div><div class="aid-scene-body"><div class="aid-scene-frame">' +
          fishScene(s) + '</div>' + toolPalette(s) + '<span class="aid-canvas-toolbar">' +
          zoomStamp(s.camera) + '</span></div>';

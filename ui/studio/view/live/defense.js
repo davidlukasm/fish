@@ -102,5 +102,5 @@ liveKind('defense', (studio, organId) => {
            'defenseup', 'knob');
     }
   }
-  return {root, show : draw, tick() {}};
+  return {root, show : draw};
 });

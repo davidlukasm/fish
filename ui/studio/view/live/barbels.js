@@ -287,5 +287,5 @@ liveKind('barbels', (studio, organId) => {
       redraw : again
     });
   }
-  return {root, show, tick() {}};
+  return {root, show};
 });
