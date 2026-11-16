@@ -1,6 +1,6 @@
 import {anatomyHandles, anatomyPatch} from './view/anatomy_handles.js';
 import {invalidateFishLayer} from './view/scene.js';
-import {sensitivityShare, testLightMarkup, visionDragPatch} from './view/vision.js';
+import {paintTestLight, sensitivityShare, visionDragPatch} from './view/vision.js';
 import {stimulusOfShare} from './view/sensitivity.js';
 import {planOfUnit, thresholdQualityShift} from '../tuning.js';
 import {spectrumPatch} from './view/spectrum.js';
@@ -618,9 +618,9 @@ export const handleMethods = {
         return;
       this.state.sightProbe = {...this.state.sightProbe, ...patch};
       const light = this.bodyMap()?.querySelector('.aid-sight-light');
-      if (light) {
-        invalidateFishLayer(light);
-        light.outerHTML = testLightMarkup(this.state, organ);
+      if (paintTestLight(this.state, organ, light)) {
+        if (light)
+          invalidateFishLayer(light);
       } else
         this.refreshScene();
       this.requestDesign();

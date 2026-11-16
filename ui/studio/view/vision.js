@@ -184,6 +184,23 @@ function testLight(state, organ, g) {
              fixed(c.x + r)}" cy="${fixed(c.y)}" r="${LIGHT_KNOB}" aria-label="${
              label(near ? 'objectSize' : 'size')}"/></g>`;
 }
+export function paintTestLight(state, organ, current, geometry = visionGeometry(state, organ)) {
+  const at = lightAt(state, organ, geometry);
+  if (!at)
+    return !current;
+  if (!current)
+    return false;
+  const radius = state.sightProbe.radius * geometry.world;
+  const [probe, size] = current.children;
+  const place = (circle, x, attrs = {}) => {
+    for (const [key, value] of Object.entries({cx : fixed(x), cy : fixed(at.y), ...attrs}))
+      if (circle.getAttribute(key) !== value)
+        circle.setAttribute(key, value);
+  };
+  place(probe, at.x, {r : fixed(radius), fill : lightColor(state.sightProbe.hue)});
+  place(size, at.x + radius);
+  return true;
+}
 // The points a chosen field organ needs in view: its eye, the handles on its field with their
 // labels, and the test light once its place is known, for the organ and its twin.
 const EXTENT = Object.freeze({steps : 8, label : 1.15});
@@ -225,10 +242,6 @@ export function tectumBands(state) {
     }
   }
   return html ? `<g class="aid-tectum-bands">${html}</g>` : '';
-}
-export function testLightMarkup(state, organ) {
-  const g = visionGeometry(state, organ);
-  return g ? testLight(state, organ, g) : '';
 }
 function nearField(organ, g, near, [ lo, hi ]) {
   const id = `aid-near-${idSafe(organ.id)}`;
@@ -343,9 +356,11 @@ export function refreshVisionAnswers(state, organ, fan) {
     return;
   const geometry = visionGeometry(state, organ), seen = fan.querySelector('.aid-vision-seen');
   const cells = organCells(state, organ), rays = fan.querySelectorAll('.aid-vision-ray');
-  const light = fan.querySelector('.aid-sight-light'), markup = testLightMarkup(state, organ);
-  if (!geometry || !seen || !!light !== !!markup || cells.length !== rays.length ||
-      cells.some(({receptor}, i) => Number(rays[i].dataset.visionNeuron) !== receptor[RECEPTOR.neuron])) {
+  const light = fan.querySelector('.aid-sight-light');
+  if (!geometry || !seen || cells.length !== rays.length ||
+      cells.some(({receptor}, i) =>
+                     Number(rays[i].dataset.visionNeuron) !== receptor[RECEPTOR.neuron]) ||
+      !paintTestLight(state, organ, light, geometry)) {
     fan.outerHTML = visionFan(state, organ);
     return;
   }
@@ -355,8 +370,6 @@ export function refreshVisionAnswers(state, organ, fan) {
     if (rays[i].style.opacity !== opacity)
       rays[i].style.opacity = opacity;
   });
-  if (light)
-    light.outerHTML = markup;
 }
 // The other colour types of the eye, to sit faintly in the same wheel; a click on one chooses it.
 function otherTypes(organ, chosen, definition) {
