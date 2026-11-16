@@ -368,6 +368,7 @@ public:
     index(bodies, false);
   }
   explicit Field(std::uint64_t seed, int count = 150);
+  Field(std::uint64_t seed, int count, const EnvironmentParameters &);
   void add(int count);
   void add(int count, const FoodSupply &);
   void supply_food(Point, double spread, int count, const FoodSupply &);

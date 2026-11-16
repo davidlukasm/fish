@@ -1503,7 +1503,10 @@ void design_report(const PreparedDesign &design, const DesignQuery &query, bool 
   }
   if (sight) {
     // The illuminated probe sits in open water, beyond the range of the tank's boundaries.
-    fishsim::Field water(SIGHT_TANK_SEED, 0);
+    // This report describes the eyes separately. The aquarium can combine their frontal signals.
+    fishsim::EnvironmentParameters optics;
+    optics.vision_binocular_angle = 0;
+    fishsim::Field water(SIGHT_TANK_SEED, 0, optics);
     water.initialize_aquarium(fishsim::tank::standard_width, fishsim::tank::standard_height);
     sight_report(t, g.interface, groups, *sight, water, detail);
   }

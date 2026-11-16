@@ -80,7 +80,10 @@ Point Field::food_cloud(int index) const {
   const auto &p = feeding_.clouds[patch].position;
   return {p.x * geometry_.width, p.y * geometry_.height};
 }
-Field::Field(std::uint64_t seed, int count) : rng(seed) {
+Field::Field(std::uint64_t seed, int count) : Field(seed, count, {}) {
+}
+Field::Field(std::uint64_t seed, int count, const EnvironmentParameters &env)
+    : rng(seed), env_(env) {
   refresh_niche_limits();
   feeding_.density = count;
   set_energy_headroom(energy_limit());
