@@ -62,7 +62,7 @@ liveKind('lateral', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-lateral aid-live-sense-flow';
   const band = addPicture(root);
-  let step = 0, bubble = null;
+  let step = 0, bubble = null, shown = null;
   const drawnOf = lastDrawn();
   const current = () => studio.state.senseProbe?.kind === 'flow' ? studio.state.senseProbe : null;
   const organ = () => findOrgan(studio.state.document, organId);
@@ -227,6 +227,10 @@ liveKind('lateral', (studio, organId) => {
     const cell = organ()?.centers[0];
     if (!cell)
       return;
+    const keys = [ cell, current(), studio.state.anatomy?.lateral, studio.state.senseSpread ];
+    if (shown?.every((value, i) => value === keys[i]))
+      return;
+    shown = keys;
     draw(cell);
     tick(0);
   }

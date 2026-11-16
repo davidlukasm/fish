@@ -5,6 +5,8 @@
 #include "../src/receptor_tuning.hh"
 #include "../src/eye_geometry.hh"
 #include "../src/observations.hh"
+#include "../src/json_numbers.hh"
+#include "../src/protocol_schema.hh"
 #include "../src/body_plan.hh"
 #include "../src/movement.hh"
 #include "../src/simulation_types.hh"
@@ -410,10 +412,37 @@ void sense_report(const field::Substrate &t,
   }
   std::cout << ']';
 }
+enum class SightDetail { full, studio, answers };
+
+void write_studio_receptor(const fishsim::BrainInterface::Receptor &r, const field::Neuron &n) {
+  namespace R = fishsim::receptor_column;
+  std::size_t next = 0;
+  const auto column = [&](std::size_t index) -> std::ostream & {
+    for (; next < index; ++next)
+      std::cout << (next ? "," : "") << "null";
+    if (next++)
+      std::cout << ',';
+    return std::cout;
+  };
+  std::cout << '[';
+  column(R::neuron) << r.neuron;
+  column(R::angle) << r.angle;
+  column(R::hue) << r.hue;
+  column(R::view_left) << r.view_left;
+  column(R::view_right) << r.view_right;
+  column(R::response_threshold) << r.response_threshold;
+  column(R::quality2) << n.parameters.quality2;
+  column(R::spectrum) << '[';
+  fishsim::write_values(std::cout, r.spectrum);
+  std::cout << ']';
+  column(R::lateral) << r.lateral;
+  column(R::proximity) << (r.proximity ? 1 : 0) << ']';
+}
+
 void sight_report(const field::Substrate &t,
                   const std::shared_ptr<const fishsim::BrainInterface> &interface,
                   const std::vector<Group> &groups, const SightScene &scene,
-                  const fishsim::Field &water, bool compact) {
+                  const fishsim::Field &water, SightDetail detail) {
   fishsim::Body body;
   body.x = body.y = fishsim::SIZE / 2;
   body.organ_mass = interface->organ_mass;
@@ -436,17 +465,19 @@ void sight_report(const field::Substrate &t,
   std::cout << ",\"sight\":{";
   fishsim::write_sight(std::cout, state);
   std::cout << ",\"samples\":[";
-  if (compact) {
+  if (detail != SightDetail::full) {
     // The Atelier needs only the response column. The other readings feed the aquarium.
     bool first = true;
     for (const auto &sample : state.visual_samples) {
       std::cout << (first ? "" : ",") << '[' << sample.neuron << ',' << sample.response << ']';
       first = false;
     }
-    std::cout << "]}";
-    return;
-  }
-  fishsim::write_visual_samples(std::cout, state);
+    if (detail == SightDetail::answers) {
+      std::cout << "]}";
+      return;
+    }
+  } else
+    fishsim::write_visual_samples(std::cout, state);
   std::vector<int> owners;
   std::cout << "],\"receptors\":[";
   for (std::size_t i = 0; i < interface->sensory.size(); ++i) {
@@ -454,7 +485,10 @@ void sight_report(const field::Substrate &t,
     if (!r.visual())
       continue;
     std::cout << (owners.empty() ? "" : ",");
-    fishsim::write_receptor(std::cout, r, t.neurons[r.neuron], state.sensor_buffer[i]);
+    if (detail == SightDetail::studio)
+      write_studio_receptor(r, t.neurons[r.neuron]);
+    else
+      fishsim::write_receptor(std::cout, r, t.neurons[r.neuron], state.sensor_buffer[i]);
     const auto &location = t.neurons[r.neuron].location;
     const auto owner = std::find_if(groups.begin(), groups.end(),
                                     [&](const Group &g) { return g.contains(location); });
@@ -1441,7 +1475,7 @@ DesignQuery read_design_query(std::istream &in) {
 }
 
 void design_report(const PreparedDesign &design, const DesignQuery &query, bool probe_only,
-                   bool compact = false) {
+                   SightDetail detail = SightDetail::full) {
   const auto &[sight, sense, learning, light_spread] = query;
   const auto &[plan, g] = design;
   const auto &groups = plan.groups;
@@ -1471,7 +1505,7 @@ void design_report(const PreparedDesign &design, const DesignQuery &query, bool 
     // The illuminated probe sits in open water, beyond the range of the tank's boundaries.
     fishsim::Field water(SIGHT_TANK_SEED, 0);
     water.initialize_aquarium(fishsim::tank::standard_width, fishsim::tank::standard_height);
-    sight_report(t, g.interface, groups, *sight, water, compact);
+    sight_report(t, g.interface, groups, *sight, water, detail);
   }
   if (mouth)
     mouth_course_report(g, *mouth);
@@ -1502,14 +1536,17 @@ void serve_designs() {
         const auto query = read_design_query(in);
         std::string name;
         auto next = std::make_unique<PreparedDesign>(read_plan(in, name, true));
-        design_report(*next, query, false);
+        design_report(*next, query, false, SightDetail::studio);
         prepared_key = std::move(key);
         design = std::move(next);
       } else if (!design || key != prepared_key) {
         std::cout << "{\"planExpired\":true}";
       } else {
         ensure(mode == "probe" || mode == "sight" || mode == "report", "invalid design mode");
-        design_report(*design, read_design_query(in), mode != "report", mode == "sight");
+        const auto detail = mode == "sight"    ? SightDetail::answers
+                            : mode == "report" ? SightDetail::studio
+                                               : SightDetail::full;
+        design_report(*design, read_design_query(in), mode != "report", detail);
       }
       std::cout.rdbuf(output);
       std::cout << report.str() << '\n' << std::flush;

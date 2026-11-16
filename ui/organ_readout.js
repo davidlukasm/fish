@@ -141,27 +141,23 @@ export function eyeTypeAnswers(info, count = EYE_IMAGE.samples) {
     return [];
   let stored = eyeRows.get(receptors);
   if (stored?.count !== count) {
-    const half = radians(TUNING.visual_width_max);
-    const rows = eyeTypes(receptors).map(
-        ({cells, colour, name}) => ({
-          cells,
-          colour,
-          name,
-          pixels : Array.from({length : count},
-                              (_, i) => {
-                                const angle = -half + 2 * half * (i + .5) / count;
-                                let total = 0;
-                                const weights = [];
-                                for (const [index, cell] of cells.entries()) {
-                                  const weight = organVisualWeight(cell, angle);
-                                  if (weight) {
-                                    weights.push([ index, weight ]);
-                                    total += weight;
-                                  }
-                                }
-                                return {total, weights};
-                              })
-        }));
+    const half = radians(TUNING.visual_width_max), scale = count / (2 * half);
+    const rows = eyeTypes(receptors).map(({cells, colour, name}) => {
+      const pixels = Array.from({length : count}, () => ({total : 0, weights : []}));
+      for (const [index, cell] of cells.entries()) {
+        const first = Math.max(0, Math.floor((cell[RECEPTOR.view_left] + half) * scale - .5));
+        const last =
+            Math.min(count - 1, Math.ceil((cell[RECEPTOR.view_right] + half) * scale - .5));
+        for (let i = first; i <= last; ++i) {
+          const weight = organVisualWeight(cell, -half + 2 * half * (i + .5) / count);
+          if (weight) {
+            pixels[i].weights.push([ index, weight ]);
+            pixels[i].total += weight;
+          }
+        }
+      }
+      return {cells, colour, name, pixels};
+    });
     stored = {count, rows};
     eyeRows.set(receptors, stored);
   }

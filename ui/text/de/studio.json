@@ -825,17 +825,17 @@
     "opponent": "Gegenfarbe hemmt",
     "contrast": "Meldet",
     "contrastChoice": {
-      "bright": "hell",
-      "dark": "dunkel",
-      "both": "beides"
+      "bright": "Helleres",
+      "dark": "Dunkleres",
+      "both": "Beides"
     },
     "contrastTitle": {
-      "bright": "Zellen melden, was heller ist als die Umgebung",
-      "dark": "Zellen melden, was dunkler ist als die Umgebung, etwa eine Krabbe auf Schlamm",
-      "both": "Je die Hälfte der Antwort für Helleres und für Dunkleres"
+      "bright": "Die Zellen reagieren auf zusätzliches Licht in ihrer Farbe.",
+      "dark": "Die Zellen reagieren, wenn Licht in ihrer Farbe fehlt, etwa hinter einem Gegenstand.",
+      "both": "Zusätzliches und fehlendes Licht in der Zellfarbe gehen mit je halbem Gewicht in den Reiz ein."
     },
     "sensitivity": "Empfindlichkeit",
-    "sight": "Sehbild",
+    "sight": "Sehbild der Zellen",
     "left": "linkes Auge",
     "right": "rechtes Auge",
     "probe": "Testlicht",
@@ -851,10 +851,12 @@
     "answers": "Antwort der Zellen:",
     "keenFrom": {
       "bright": "kaum heller",
+      "both": "kleiner Unterschied",
       "dark": "kaum dunkler"
     },
     "keenTo": {
       "bright": "doppelt so hell",
+      "both": "starker Kontrast",
       "dark": "schwarz"
     },
     "keenHalf": "halbe Meldung bei {p} Unterschied",

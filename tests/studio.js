@@ -644,8 +644,8 @@ async function checkEyeControls(model, capabilities, root) {
   const option = pattern => picture().match(pattern)?.[1];
   for (const polarity
            of [CONTRAST_POLARITY.dark, CONTRAST_POLARITY.both, CONTRAST_POLARITY.bright]) {
-    const next = option(/data-vision-polarity="([^"]+)"/);
-    const scene = {dataset : {spectrum : 'scene'}}, choice = {dataset : {visionPolarity : next}};
+    const scene = {dataset : {spectrum : 'scene'}};
+    const choice = {dataset : {visionPolarity : String(polarity)}};
     studio.click({
       detail : 1,
       target : {
@@ -655,6 +655,7 @@ async function checkEyeControls(model, capabilities, root) {
       }
     });
     assert.equal(organ().field.profiles[0].polarity, polarity);
+    assert.ok(picture().includes('data-vision-polarity="' + polarity + '" aria-pressed="true"'));
   }
   studio.draftDesign = (doc, batch, draw) => {
     assert.equal(draw, 'refreshSpectrum');
@@ -4304,7 +4305,14 @@ sight_scene={'side':0,'bearing':-45,'distance':3,'radius':.5,'hue':20}
 sighted=run({'operation':'design','plan':plan,'sight':sight_scene})
 quick_sight=run({'operation':'design','plan':plan,'sight':sight_scene,'probeOnly':True})
 assert quick_sight=={'probeOnly':True,'sight':sighted['sight']}
-prepared=run({'operation':'design','plan':plan,'rememberPlan':True})
+prepared=run({'operation':'design','plan':plan,'rememberPlan':True,'sight':sight_scene})
+studio_sight=prepared['sight']
+assert studio_sight['groups']==sighted['sight']['groups']
+assert studio_sight['bands']==sighted['sight']['bands']
+assert studio_sight['samples']==[[s[0],s[3]] for s in sighted['sight']['samples']]
+assert len(studio_sight['receptors'])==len(sighted['sight']['receptors'])
+for studio_receptor,full_receptor in zip(studio_sight['receptors'],sighted['sight']['receptors']):
+    assert all(studio_receptor[i]==full_receptor[i] for i in (0,2,8,11,12,13,15,17,19,24))
 probe={'operation':'design','planKey':prepared['planKey'],'sight':sight_scene,
        'probeOnly':True,'compactSight':True}
 compact=run(probe)['sight']
@@ -4642,7 +4650,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   assert.match(svg, /data-vision-handle="density"/);
   assert.match(svg, /data-vision-handle="resolution"/);
   assert.match(svg, /data-vision-handle="probe"/);
-  assert.match(svg, /class="aid-vision-seen"/);
+  assert.doesNotMatch(vision.visionFan(rendered, currentEye), /class="aid-vision-seen"/);
   assert.match(svg, /class="aid-retina-node/, 'The chosen eye shows its cells as nodes');
   assert.doesNotMatch(svg, /NaN|Infinity|undefined/);
   for (const c of model.allCenters(doc)) {

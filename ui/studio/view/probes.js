@@ -22,7 +22,9 @@ const PROBE_SCENE = Object.freeze({
   // the labels do not overlap.
   ringGap : 28,
   gap : 14,
-  gravity : 68,
+  gravity : 144,
+  gravityHead : 28,
+  gravityGrip : 20,
   attack : 88,
   teeth : {step : 18, size : 12},
   far : 150,
@@ -184,10 +186,14 @@ function stimulusSvg(probe, zoom) {
   if (probe.kind === 'flow' || probe.kind === 'taste')
     return '';
   if (probe.kind === 'balance')
-    return '<path class="aid-probe-arrow balance" d="' + arrowPath(onto, at) + '"/>' +
-           '<text class="aid-probe-distance"' + steadyAt(at, zoom) + ' y="' + (P.handle + 13) +
+    return draggableArrow(arrowPath(onto, at, P.gravityHead), 'balance') +
+           '<text class="aid-probe-distance"' + steadyAt(at, zoom) + ' y="' + (P.gravityGrip + 13) +
            '" text-anchor="middle">' + escapeText(t('studio.live.balance.down')) + '</text>';
   return '<path class="aid-probe-arrow ' + probe.kind + '" d="' + arrowPath(at, onto) + '"/>';
+}
+function draggableArrow(d, kind) {
+  return '<path class="aid-probe-arrow ' + kind + '" d="' + d + '"/>' +
+         '<path class="aid-probe-arrow-hit" d="' + d + '"/>';
 }
 function flowArrows(angle, at, P) {
   const d = bodyDirection(angle), across = {x : -d.y, y : d.x};
@@ -197,8 +203,7 @@ function flowArrows(angle, at, P) {
       .from({length : P.streams},
             (_, k) => {
               const shift = (k - (P.streams - 1) / 2) * P.across;
-              return '<path class="aid-probe-arrow flow" d="' +
-                     arrowPath(move(at, shift), move(onto, shift)) + '"/>';
+              return draggableArrow(arrowPath(move(at, shift), move(onto, shift)), 'flow');
             })
       .join('');
 }
@@ -235,12 +240,14 @@ function waterSvg(probe, zoom) {
       points.push(p);
     }
     const d = 'M' + points.map(q => fixed(q.x) + ' ' + fixed(q.y)).join(' L');
-    lines += '<path class="aid-probe-stream" d="' + d + '"/>';
+    const laneId = 'aid-water-lane-' + lane;
+    lines += '<path id="' + laneId + '" class="aid-probe-stream" d="' + d + '"/>';
     for (let k = 0; k < W.per; ++k)
       particles += '<circle class="aid-probe-particle" r="' + fixed(W.size / zoom) +
-                   '"><animateMotion path="' + d + '" dur="' + fixed(seconds) + 's" begin="-' +
+                   '"><animateMotion dur="' + fixed(seconds) + 's" begin="-' +
                    fixed(seconds * (k + (lane % W.per) / W.per) / W.per) +
-                   's" repeatCount="indefinite"/></circle>';
+                   's" repeatCount="indefinite"><mpath href="#' + laneId +
+                   '"/></animateMotion></circle>';
   }
   return '<g class="aid-probe-water" style="--lines:' + W.lines + '">' + lines + particles + '</g>';
 }
@@ -379,15 +386,19 @@ function visibleProbe(state) {
              : null;
 }
 function probeGrip(organ, probe, zoom, bodyRadius, control = probe.kind,
-                   at = probeHandle(probe, control)) {
+                   at = probeHandle(probe, control), arrows = '') {
   const taste = probe.kind === 'taste';
-  const radius = taste && bodyRadius > 0  ? SENSORY_PROBE.radius * BODY_RADIUS / bodyRadius * zoom
-                 : probe.kind === 'smell' ? PROBE_SCENE.source
-                                          : PROBE_SCENE.handle;
-  return '<g class="aid-probe-handle ' + probe.kind + '" data-sense-control="' + control +
-         '" data-sense-handle="' + escapeText(organ.id) + '"' + steadyAt(at, zoom) + '><title>' +
-         escapeText(t('studio.probe.handle.' + control)) + '</title><circle r="' +
-         fixed(radius) + '"/>' + (taste ? probeObject(probe.scent) : '') + '</g>';
+  const radius = taste && bodyRadius > 0    ? SENSORY_PROBE.radius * BODY_RADIUS / bodyRadius * zoom
+                 : probe.kind === 'smell'   ? PROBE_SCENE.source
+                 : probe.kind === 'balance' ? PROBE_SCENE.gravityGrip
+                                            : PROBE_SCENE.handle;
+  const open = '<g class="aid-probe-handle ' + probe.kind + '" data-sense-control="' + control +
+               '" data-sense-handle="' + escapeText(organ.id) + '"';
+  const title = '<title>' + escapeText(t('studio.probe.handle.' + control)) + '</title>';
+  const grip = '<circle r="' + fixed(radius) + '"/>' + (taste ? probeObject(probe.scent) : '');
+  const placement = steadyAt(at, zoom);
+  return arrows ? open + '>' + title + arrows + '<g' + placement + '>' + grip + '</g></g>'
+                : open + placement + '>' + title + grip + '</g>';
 }
 function attackSvg(state, organ, probe, zoom) {
   const {rim, contact, hinge, tip, other} = attackMouth(probe, state),
@@ -520,12 +531,15 @@ export function senseProbeSvg(state) {
   const arrows = flow?.strength > 0
                      ? flowArrows(radians(flow.bearing), probeHandle(flow), PROBE_SCENE)
                      : '';
-  return '<g class="aid-sense-probe">' + arrows + stimulusSvg(probe, zoom) +
+  const stimulus = stimulusSvg(probe, zoom), balance = probe.kind === 'balance';
+  return '<g class="aid-sense-probe">' + (balance ? '' : stimulus) +
          (probe.kind === 'taste' ? barbelProbeSvg(state) : '') + answerSvg(state, organ, zoom) +
          (probe.kind === 'flow'
               ? ''
-              : probeGrip(organ, probe, zoom, state.anatomy.bodyRadius)) +
-         (flow ? probeGrip(organ, flow, zoom) : '') + '</g>';
+              : probeGrip(organ, probe, zoom, state.anatomy.bodyRadius, probe.kind,
+                          probeHandle(probe), balance ? stimulus : '')) +
+         (flow ? probeGrip(organ, flow, zoom, null, 'flow', probeHandle(flow), arrows) : '') +
+         '</g>';
 }
 export function probeWater(state) {
   const config = visibleProbe(state), flow = config && probeFlow(config.probe);

@@ -380,7 +380,7 @@ export class OrganStudio {
       scope = undefined;
     let marksChanged = false;
     if (target && this.state.mode === 'fish')
-      marksChanged = paintFishScene(target, this.state, scope);
+      marksChanged = paintFishScene(target, this.state, scope, this.handleDrag?.control !== 'flow');
     else if (target)
       target.innerHTML = cppnGraph(this.state);
     const svg = this.bodyMap();
@@ -429,14 +429,22 @@ export class OrganStudio {
     // A redrawn inspector keeps open what the user opened.
     const opened =
         new Set([...element.querySelectorAll('details[open] > summary') ].map(s => s.textContent));
+    const eyes = element.querySelector('.aid-sight-eyes');
+    const eye = eyes?.closest('[data-organ-settings]')?.dataset.organSettings;
     element.innerHTML = this.state.mode === 'fish' ? inspector(this.state, this.shownDesign)
                                                    : cppnInspector(this.state);
+    const nextEyes = eyes && element.querySelector('.aid-sight-eyes');
+    const keepEyes =
+        eye && nextEyes?.closest('[data-organ-settings]')?.dataset.organSettings === eye;
+    if (keepEyes)
+      nextEyes.replaceWith(eyes);
     for (const summary of element.querySelectorAll('details > summary'))
       if (opened.has(summary.textContent))
         summary.parentElement.open = true;
     element.scrollTop = scroll;
     mountLive(this.root, this);
-    this.drawSight();
+    if (!keepEyes || this.shownDesign === this.state.document)
+      this.drawSight();
   }
   // During a drag the surrounding inspector waits for the drop. Rebuilding just the containing
   // settings block also avoids recalculating contact plans and life cycles for each frame.
@@ -900,8 +908,7 @@ export class OrganStudio {
       return;
     if (this.clickArmed(event) || this.doubleClick(event))
       return;
-    // Clicks on the colour strip and the contrast scene are drags, except on the scene itself,
-    // which turns the contrast, and on the other colour types, which choose one.
+    // Graphic handles drag. The sampled curves of other colour types instead choose one.
     if (event.target.closest?.('[data-vision-handle],[data-spectrum]') &&
         !event.target.closest?.('[data-vision-polarity],[data-vision-profile]'))
       return;

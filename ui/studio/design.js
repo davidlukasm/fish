@@ -115,17 +115,21 @@ export const designMethods = {
     }
     const anatomy = this.shownDesign === doc ? this.state.anatomy : null;
     const sense = probeFor(organ, this.state.senseProbe, anatomy, doc);
+    if (sense && this.fieldFrame && !organ.field) {
+      this.frameField();
+      this.showZoom();
+    }
     if (!sense || sense.kind === 'gut' || (sense.kind === 'ground' && sense.buried))
       this.framedProbe = null;
     else if ((sense.kind === 'ground' || this.state.anatomy?.bodyRadius > 0) && sense !== this.framedProbe &&
              !this.handleDrag) {
       const flow = probeFlow(sense);
       this.framedProbe = sense;
-      this.keepInView(probeHandle(sense, sense.kind, this.state));
+      this.keepInView(probeHandle(sense, sense.kind, this.state), true);
       if (sense.kind === 'attack')
         this.keepInView(probeHandle(sense, 'attack-gape', this.state));
       if (flow && flow !== sense)
-        this.keepInView(probeHandle(flow));
+        this.keepInView(probeHandle(flow), true);
     }
     if (sense && sense !== this.state.senseProbe) {
       this.state.senseProbe = sense;
@@ -268,14 +272,17 @@ export const designMethods = {
               if (!(key in report))
                 delete anatomy[key];
           }
-          if (report.sight?.samples && !report.sight.receptors && before?.sight?.receptors) {
+          const sight = report.sight;
+          if (sight?.samples[0]?.length === 2) {
             const samples = report.sight.samples.map(([ neuron, response ]) => {
               const sample = [];
               sample[VISUAL_SAMPLE.neuron] = neuron;
               sample[VISUAL_SAMPLE.response] = response;
               return sample;
             });
-            anatomy.sight = {...before.sight, ...report.sight, samples};
+            anatomy.sight = {...(sight.receptors ? null : before?.sight), ...sight, samples};
+          } else if (sight && !sight.receptors && before?.sight?.receptors) {
+            anatomy.sight = {...before.sight, ...sight};
           }
           if (!draft && keepSight && before?.sight)
             anatomy.sight = before.sight;
@@ -373,6 +380,8 @@ export const designMethods = {
       }
       return;
     }
+    if (!traced)
+      this.drawSight();
     this.refreshHeader();
     if (!traced) {
       this.refreshScene();
@@ -421,14 +430,15 @@ export const designMethods = {
   refreshGraphics() {
     this.redrawBlocks('hormoneTime', (doc, id) => ({index : Number(id)}),
                       item => hormoneTime(this.state, item.index));
-    if (!this.handleDrag)
+    if (this.root.querySelector('[data-sight-eye]'))
+      this.refreshSpectrum();
+    else if (!this.handleDrag)
       this.redrawBlocks('organSettings', findOrgan, organ => organSettingsBlock(this.state, organ));
     else {
       this.refreshSpectrum();
       this.refreshProbeControls();
     }
     this.refreshLive();
-    this.drawSight();
     // The scene and organSettings already include their probe graphics and controls.
   },
   refreshProbes() {
@@ -437,7 +447,7 @@ export const designMethods = {
   },
   refreshProbeGraphics(paint = true) {
     if (paint)
-      paintFishProbes(this.root, this.state);
+      paintFishProbes(this.root, this.state, this.handleDrag?.control !== 'flow');
     this.refreshProbeControls();
   },
   refreshProbeControls() {
@@ -462,8 +472,9 @@ export const designMethods = {
         figure.hidden = !receptors.length;
       if (!receptors.length)
         continue;
-      const seen = eyeSight(sight.bands, sight.samples, receptors, side);
-      drawOrganGraphic(canvas, seen, null, {key : SENSE_TISSUE.light});
+      const responses = eyeSight(null, sight.samples, receptors, side);
+      drawOrganGraphic(canvas, {...responses, responsesOnly : true}, null,
+                       {key : SENSE_TISSUE.light});
       // Each row's mark names its cell type below the picture.
       const legend = figure.querySelector('[data-sight-legend]');
       if (legend && legend._sightRows !== receptors) {

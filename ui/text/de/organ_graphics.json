@@ -7,6 +7,7 @@
   "duftreizUndErblicheVorliebe": "Duftreiz und erbliche Vorliebe je Geruchskanal",
   "lichtAmAuge": "Licht am Auge",
   "obenLichtNachVerdeckung": "Oben: Licht nach Verdeckung und Wasserdämpfung. Darunter je Farbtyp eine Zeile: seine Zellen nach lokaler Adaptation, Farbgegensatz, lateraler Hemmung und Schwelle, von schwarz (keine Antwort) bis weiß (volle).",
+  "zellantwortNachKontrast": "Antwort je Farbtyp von schwarz bis weiß. Bei Dunkelkontrast reagieren die Zellen auch, wenn ein Gegenstand Licht in ihrer Farbe verdeckt.",
   "nochKeinSehbild": "Noch kein Sehbild",
   "schwanz": "Schwanz",
   "kopf": "Kopf",

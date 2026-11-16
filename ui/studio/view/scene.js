@@ -249,8 +249,9 @@ function sceneLayers(state) {
 
 // A probe can also be repainted independently of the fish. The moving water keeps its SVG
 // elements and animation until its direction, strength or scale changes.
-export function paintFishProbes(target, state) {
-  const water = target?.querySelector('[data-probe-water]'), current = water && probeWater(state);
+export function paintFishProbes(target, state, animateWater = true) {
+  const water = target?.querySelector('[data-probe-water]');
+  const current = water && animateWater ? probeWater(state) : null;
   setMarkup(target?.querySelector('[data-probe-ground]'), probeGround(state));
   setMarkup(target?.querySelector('[data-probe-controls]'), senseProbeSvg(state));
   setMarkup(target?.querySelector('[data-probe-scents-layer]'),
@@ -306,7 +307,7 @@ export function fishScene(state) {
          '</div><div class="aid-hint-legend" data-hint-legend hidden></div>';
 }
 
-export function paintFishScene(target, state, scope) {
+export function paintFishScene(target, state, scope, animateWater = true) {
   const svg = target.querySelector(BODY_MAP);
   if (!svg) {
     target.innerHTML = fishScene(state);
@@ -355,7 +356,7 @@ export function paintFishScene(target, state, scope) {
     life.removeAttribute('data-life-dirty');
   }
   setMarkup(life, lifeBar(state));
-  paintFishProbes(target, state);
+  paintFishProbes(target, state, animateWater);
   return marksChanged;
 }
 function trashZone() {

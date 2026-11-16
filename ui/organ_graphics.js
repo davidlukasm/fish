@@ -391,20 +391,22 @@ export function eyeGraphicAngle(e, canvas) {
 }
 function drawEyeGraphic({g, canvas, info, label}) {
   const E = EYE_GRAPHIC, step = E.width / E.samples;
-  label(t('organ_graphics.lichtAmAuge'), E.left, E.light_row - E.caption_gap);
-  g.fillStyle = E.back;
-  g.fillRect(E.left, E.light_row, E.width, E.light_height);
-  eyeImage(info, E.samples).forEach((colour, i) => {
-    g.fillStyle = rgb(colour.map(v => Math.sqrt(v)));
-    g.fillRect(E.left + i * step, E.light_row, step + 1, E.light_height);
-  });
+  const responsesOnly = info.responsesOnly, firstRow = responsesOnly ? E.light_row : E.types_top;
+  if (!responsesOnly) {
+    label(t('organ_graphics.lichtAmAuge'), E.left, E.light_row - E.caption_gap);
+    g.fillStyle = E.back;
+    g.fillRect(E.left, E.light_row, E.width, E.light_height);
+    eyeImage(info, E.samples).forEach((colour, i) => {
+      g.fillStyle = rgb(colour.map(v => Math.sqrt(v)));
+      g.fillRect(E.left + i * step, E.light_row, step + 1, E.light_height);
+    });
+  }
   const types = eyeTypeAnswers(info, E.samples);
   const names = tList('organ_graphics.hues'), marks = tList('organ_graphics.hueMarks');
-  const height =
-      Math.min(E.type_height,
-               (E.types_bottom - E.types_top - (types.length - 1) * E.type_gap) / types.length);
+  const height = Math.min(
+      E.type_height, (E.types_bottom - firstRow - (types.length - 1) * E.type_gap) / types.length);
   types.forEach((type, k) => {
-    const y = E.types_top + k * (height + E.type_gap);
+    const y = firstRow + k * (height + E.type_gap);
     g.fillStyle = type.colour;
     const box = Math.min(E.mark_box, height), top = y + Math.max(0, (height - box) / 2);
     g.fillRect(E.mark_x, top, box, box);
@@ -426,9 +428,10 @@ function drawEyeGraphic({g, canvas, info, label}) {
   label(t('organ_graphics.left'), E.left, E.axis_y);
   label(t('organ_graphics.front'), E.front_x, E.axis_y);
   label(t('organ_graphics.right'), E.right_x, E.axis_y);
-  canvas.title = t('organ_graphics.obenLichtNachVerdeckung') + ' ' +
-                 types.map(type => marks[type.name] + ': ' + names[type.name]).join(' · ');
-  if (!info.image?.length)
+  canvas.title = t(responsesOnly ? 'organ_graphics.zellantwortNachKontrast'
+                                 : 'organ_graphics.obenLichtNachVerdeckung') +
+                 ' ' + types.map(type => marks[type.name] + ': ' + names[type.name]).join(' · ');
+  if (!info.image?.length && !responsesOnly)
     label(t('organ_graphics.nochKeinSehbild'), E.empty_x, E.empty_y);
 }
 

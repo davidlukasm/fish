@@ -594,6 +594,9 @@ export const handleMethods = {
     const patch = probePatch(drag.control, position, probe);
     const smellFlow = drag.control === 'flow' && probe.kind === 'smell';
     const manual = probe.manual || drag.control !== 'attack-gape';
+    const was = smellFlow ? probe.flow : probe;
+    if (Object.entries(patch).every(([ key, value ]) => was?.[key] === value))
+      return;
     this.state.senseProbe =
         smellFlow ? {...probe, flow : patch} : {...probe, ...patch, manual};
     this.keepInView(probeHandle(
@@ -705,7 +708,7 @@ export const handleMethods = {
   },
   heldHandle(held) { return this.handleDrag?.held === held ? this.handleDrag : null;},
   releaseHandle(event) {
-    const how = HANDLES[this.handleDrag.held], last = this.handleDrag.last;
+    const drag = this.handleDrag, how = HANDLES[drag.held], last = drag.last;
     let drafted;
     try {
       // Letting go where the pointer already was adds nothing, and must not bring back a value
@@ -727,6 +730,8 @@ export const handleMethods = {
     }
     if (!drafted && how.done)
       this[how.done]();
+    if (drag.held === 'probe' && drag.control === 'flow')
+      this.refreshProbes();
   },
   keepPanels() {
     try {
