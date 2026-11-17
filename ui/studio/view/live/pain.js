@@ -17,7 +17,19 @@
 import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {findOrgan} from '../../model/document.js';
-import {addPicture, clamp, drag, el, liveKind, path, picture, reportBubble, txt} from './kit.js';
+import {
+  addPicture,
+  clamp,
+  drag,
+  el,
+  GRIP,
+  liveKind,
+  path,
+  picture,
+  reportBubble,
+  squareGrip,
+  txt
+} from './kit.js';
 import {
   bandOf,
   between,
@@ -133,8 +145,8 @@ liveKind('pain', (studio, organId) => {
     el('path', {d : `M${S.L} ${S.skin} H${S.R}`, class : 'aid-live-skinline'}, live);
     // A full bite's depth, to read the wound against.
     const by = D(SKIN_RESPONSE.bite_wound);
-    el('path', {d : `M${S.L - 6} ${by} h6`, class : 'aid-live-axis'}, live);
-    txt(live, S.L - 8, by + 3, word('bite'), {'text-anchor' : 'end', class : 'aid-live-small'});
+    el('path', {d : `M${S.L} ${by} h6`, class : 'aid-live-axis'}, live);
+    txt(live, S.L + 8, by + 3, word('bite'), {class : 'aid-live-small'});
     // How small a wound the cells still feel here: below this depth they send nothing. Each cell
     // has its own depth, drawn by the engine within the plan's threshold and its spread either
     // way, within the thresholds a cell can have (distribution.hh, draw_traits; the way from the
@@ -165,30 +177,12 @@ liveKind('pain', (studio, organId) => {
     el('path', {d : `M${S.L} ${gy} H${S.R}`, class : 'aid-live-keyline k0'}, live);
     txt(live, S.R, gy + 11, word('felt'), {'text-anchor' : 'end', class : 'aid-live-small'});
     if (c.part > 0)
-      drag(svg,
-           el('rect', {
-             x : S.L - 5,
-             y : gy - 5,
-             width : 10,
-             height : 10,
-             rx : 2.5,
-             class : 'aid-live-keygrip k0 on'
-           },
-              live),
+      drag(svg, squareGrip(live, S.L - GRIP / 2 - 1, gy, {class : 'aid-live-keygrip k0 on'}),
            p => draft(setGate(studio.state.document, c.key,
                               clamp((p.y - S.skin) / S.deep, S.least, 1) * S.deepest * c.part)),
            'paingate', 'grip', settle);
     if (c.part > 0)
-      drag(svg,
-           el('rect', {
-             x : S.R - 5,
-             y : edge - 4,
-             width : 10,
-             height : 8,
-             rx : 2.5,
-             class : 'aid-live-keygrip k0 on'
-           },
-              live),
+      drag(svg, squareGrip(live, S.R + GRIP / 2 + 1, edge, {class : 'aid-live-keygrip k0 on'}),
            p => draft(setSpread(
                studio.state.document, c.key,
                2 * Math.max(0, clamp((p.y - S.skin) / S.deep) * S.deepest * c.part - c.key.gate))),
@@ -215,8 +209,8 @@ liveKind('pain', (studio, organId) => {
           class : 'aid-live-track-line'
         },
            live);
-        txt(live, sx + 9, top - S.loud + 3, word('used'), {class : 'aid-live-small'});
-        drag(svg, el('circle', {cx : sx, cy : top - S.loud, r : 5}, live),
+        txt(live, sx + GRIP / 2 + 4, top - S.loud + 3, word('used'), {class : 'aid-live-small'});
+        drag(svg, squareGrip(live, sx, top - S.loud),
              p => draft(setUsed(studio.state.document, c.key, usedFor(c.key, c.met, stOf(p.x)))),
              'painused', 'grip', settle);
       }
