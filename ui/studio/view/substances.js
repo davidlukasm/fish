@@ -42,8 +42,8 @@ import {EFFECT_ORDER, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
 // What the cell's substances do, only where it binds or learns from one: the substance chips with
 // what they change, and buttons to the hormone and learning tools. Release and birth stand in the
-// gland's and the life picture already.
-export function chemistry(state, organ, center) {
+// gland's and the life picture already. `tools`: the tools the buttons lead to.
+export function chemistry(state, organ, center, tools = [ 'hormone', 'learn' ]) {
   const wheel = state.capabilities, doc = state.document;
   if (!wheel || !center || isRegion(organ) && state.selected?.kind !== 'center')
     return '';
@@ -75,8 +75,10 @@ export function chemistry(state, organ, center) {
                                glyph(TOOL_ICON[tool], ICON.tool, {line : true}) + label(text) +
                                '</button>';
   return '<section class="aid-eye-section aid-chemistry">' + (rows ? '<dl>' + rows + '</dl>' : '') +
-         '<div class="aid-button-group">' + open('hormone', 'inspector.editHormones') +
-         (center.role === 'nerve' ? open('learn', 'inspector.editLearning') : '') +
+         '<div class="aid-button-group">' +
+         (tools.includes('hormone') ? open('hormone', 'inspector.editHormones') : '') +
+         (tools.includes('learn') && center.role === 'nerve' ? open('learn', 'inspector.editLearning')
+                                                             : '') +
          '</div></section>';
 }
 const EFFECT_SCALE = Object.freeze({
