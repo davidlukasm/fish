@@ -182,7 +182,7 @@ liveKind('learn', (studio, centerId) => {
     for (const {d, cause} of [...still.jumps, ...learnt.jumps])
       el('path', {d, class : cause === 'cue' ? 'aid-live-cue jump k0' : 'aid-live-teach jump'},
          live);
-    txt(live, S.R, quiet.at(-1)[1] + 11, word('quiet'),
+    txt(live, quiet.at(-1)[0] - GRIP / 2 - 4, quiet.at(-1)[1] + 11, word('quiet'),
         {'text-anchor' : 'end', class : 'aid-live-small'});
     // How fast the cell learns: the grip on the first step's top. Up makes it learn faster.
     const [wx, wy] = weight[Math.min(weight.length - 1, Math.ceil((probe.teach + 12) / 2))];
@@ -192,10 +192,10 @@ liveKind('learn', (studio, centerId) => {
              studio.state.document, centerId,
              {qwidth : clamp(cell.qwidth + (from.y - p.y) / PORT_LIMIT_DRAG, S.least, 1)})),
          'learnrate', 'grip', settle);
-    // How the cell treats what does not fire with it: the grip on the still input just after
-    // the sender has fired. Down, the cell pushes the still input out; up, it leaves it and
+    // How the cell treats what does not fire with it: the grip at the end of the still input's
+    // line, out of the way of the grip above, which goes with the teacher. Down, the cell pushes the still input out; up, it leaves it and
     // cancels what fires with it instead.
-    const [qx, qy] = quiet[Math.ceil((S.round - 3 * GRIP) / 2)];
+    const [qx, qy] = quiet[quiet.length - 1];
     drag(svg,
          squareGrip(live, qx, qy, {class : 'aid-live-keygrip k0 on'}),
          (p, from) => draft(updateCenter(
