@@ -220,7 +220,7 @@ liveKind('pain', (studio, organId) => {
     // The report as the fish panel shows it, the engine's own number, at the bite it belongs to.
     const said = groupReport(studio.state.document, studio.state.anatomy, 'senseProbe', cell.id);
     if (Number.isFinite(said))
-      reportBubble(live, S.bubble)(X(BITE_STEP), top - S.loud - S.bubble - 4, said);
+      reportBubble(live, S.bubble)(X(BITE_STEP), top - S.loud - S.bubble - GRIP / 2 - 1, said);
   }
   function show() {
     const cell = organ()?.centers[0];
