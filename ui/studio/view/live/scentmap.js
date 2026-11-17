@@ -129,9 +129,10 @@ export function scentMap(svg, {
     txt(live, STONE[0], STONE[1] + 22, words.stone,
         {'text-anchor' : 'middle', class : 'aid-live-small'});
   }
-  // The types' grips: at their place; the chosen one's width on its patch's edge, and its (×).
-  cells.forEach((cell, i) => {
-    const on = i === own.chosen, [ x, y ] = pointOf(vector(cell));
+  // The types' grips: at their place, the chosen one's last, so that it lies on top where two
+  // types share a place; its width on its patch's edge, and its (×).
+  cells.map((cell, i) => i).sort((a, b) => (a === own.chosen) - (b === own.chosen)).forEach(i => {
+    const cell = cells[i], on = i === own.chosen, [ x, y ] = pointOf(vector(cell));
     drag(svg,
          squareGrip(live, x, y, {class : keyGrip(i, on)}),
          p => {
@@ -163,7 +164,16 @@ export function scentMap(svg, {
                : onScent || far <= .5
                    ? [ x, y + (y <= cy ? -clear : clear) ]
                    : [ x + (other[0] - x) * clear / far, y + (other[1] - y) * clear / far ];
-    drag(svg, squareGrip(live, edge[0], edge[1]), p => {
+    // A narrow patch's edge lies under the type's grip: the width's grip keeps clear of it, on the
+    // same line.
+    const near = Math.hypot(edge[0] - x, edge[1] - y),
+          grip = near >= GRIP + 2 ? edge
+                 : near < .5      ? [ x, y + (y <= cy ? GRIP + 2 : -GRIP - 2) ]
+                                  : [
+                                      x + (edge[0] - x) * (GRIP + 2) / near,
+                                      y + (edge[1] - y) * (GRIP + 2) / near
+                                    ];
+    drag(svg, squareGrip(live, grip[0], grip[1]), p => {
       // The width whose half angle is the pointer's angle from the type's place.
       const wanted = between(vector(cell), vector(tuningAt(p)));
       let lo = 0, hi = MAP.widest;
