@@ -28,7 +28,6 @@ const PROBE_SCENE = Object.freeze({
   attack : 88,
   teeth : {step : 18, size : 12},
   far : 150,
-  heard : 16,
   heardWide : 12,
   reach : 300,
   // The lower end of the grip's logarithmic scale, in the units of the probe.
@@ -560,16 +559,17 @@ function foodSvg(state) {
   return '<g class="aid-sense-probe" pointer-events="none">' + pieces.join('') + words.join('') +
          '</g>';
 }
-// Round the fish, where the current's knob runs: how much the chosen lateral line's cells meet of
-// the current from each side (the engine's, anatomy.lateral, probe), as thick as it is of the most
+// Round the fish, on the way the current's knob runs at its strength: how much the chosen lateral
+// line's cells meet of the current from each side (the engine's, anatomy.lateral, probe), as thick as it is of the most
 // they meet from anywhere. Nothing where they meet nothing.
-function flowHeard(state, organ) {
+function flowHeard(state, organ, flow) {
   const heard = groupReport(state.document, state.anatomy, 'lateral', organ.centers[0]?.id)?.probe,
-        most = heard ? Math.max(...heard) : 0, P = PROBE_SCENE;
+        most = heard ? Math.max(...heard) : 0, P = PROBE_SCENE,
+        beyond = handleRadius(flow) - skinDistance(radians(flow.bearing));
   if (!(most > 0))
     return '';
   const turn = 2 * Math.PI / heard.length, at = angle => {
-    const p = pointAt(angle, skinDistance(angle) + P.far - P.heard);
+    const p = pointAt(angle, skinDistance(angle) + beyond);
     return fixed(p.x) + ' ' + fixed(p.y);
   };
   return heard
@@ -599,7 +599,7 @@ export function senseProbeSvg(state) {
   const stimulus = stimulusSvg(probe, zoom), balance = probe.kind === 'balance';
   return '<g class="aid-sense-probe">' + (balance ? '' : stimulus) +
          (probe.kind === 'flow'
-              ? flowHeard(state, organ)
+              ? flowHeard(state, organ, flow)
               : probeGrip(organ, probe, zoom, state.anatomy.bodyRadius, probe.kind,
                           probeHandle(probe), balance ? stimulus : '')) +
          (flow ? probeGrip(organ, flow, zoom, null, 'flow', probeHandle(flow), arrows) : '') +
