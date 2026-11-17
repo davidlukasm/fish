@@ -79,7 +79,8 @@ export function silentOf(sent) {
 // (atelier.cc, sense_report). It asks the engine once for each new set
 // of tries (design.js, trySenseCourses) and gives for each try what its cells send (`sent`, a
 // share of what they can), what they are used to (`used`, in the stimulus's units), their
-// thresholds (`cells`) and when the last falls silent (`silent`), or null where the key has no
+// thresholds (`cells`), when the last falls silent (`silent`) and when their report has faded to
+// half (`faded`, where the grip for getting used sits), or null where the key has no
 // cells. Until the engine answers new tries the last answer stands, `stale`; before the first
 // there is none.
 export const lastCourses = owner => {
@@ -95,22 +96,44 @@ export const lastCourses = owner => {
     studio.trySenseCourses(key, asked);
     const report = studio.state.outlinePreview ?? studio.state.anatomy;
     if (report?.senseCourseKey === key && report.senseCourses?.length === tries.length)
-      last = report.senseCourses.map(c => c && {...c, silent : silentOf(c.sent)});
+      last = report.senseCourses.map(
+          c => c && {...c, silent : silentOf(c.sent), faded : fadedAt(c.sent)});
     else if (last?.length !== tries.length)
       return null;
     const stale = report?.senseCourseKey !== key;
     return last.map(c => c && {...c, stale});
   };
 };
-// The pace of getting used that makes a key's cells fall silent at a step, from the engine's
-// steps of silence over the paces (`silence` of its course): between the two paces round that
-// step, on the same logarithmic scale as the plan's pace; the slowest if they never fall silent
-// so late.
+// The step at which a report has faded to half its height after it: past the report if it never
+// does, 0 if it never sends (atelier.cc, half_faded).
+export function fadedAt(sent) {
+  const height = Math.max(0, ...sent), peak = sent.indexOf(height);
+  if (height <= 0)
+    return 0;
+  const faded = sent.findIndex((v, st) => st > peak && v <= height / 2);
+  return faded < 0 ? sent.length : faded;
+}
+// Whether the pace of getting used moves where a key's report fades within a picture of `span`
+// steps, by at least a share of it: where it does not (an input too short or too faint), a grip
+// for it would not move under the pointer, and there is none.
+export const paceMatters = (run, span) => {
+  const steps = run?.fading?.map(([, faded ]) => Math.min(faded, span)) ?? [];
+  return steps.length > 1 && Math.max(...steps) - Math.min(...steps) >= PACE_MATTERS * span;
+};
+const PACE_MATTERS = .04;
+// From where to where the pace can move the step at which a key's report fades, within `span`.
+export const fadingWay = (run, span) => {
+  const steps = run?.fading?.map(([, faded ]) => Math.min(faded, span)) ?? [ 0 ];
+  return [ Math.min(...steps), Math.max(...steps) ];
+};
+// The pace of getting used that makes a key's report fade to half at a step, from the engine's
+// steps of fading over the paces (`fading` of its course): between the two paces round that step,
+// on the same logarithmic scale as the plan's pace; the slowest if it never fades so late.
 export function usedFor(run, step) {
-  const paces = run?.silence;
+  const paces = run?.fading;
   if (!paces?.length)
     return null;
-  const after = paces.findIndex(([, silent ]) => silent >= step);
+  const after = paces.findIndex(([, faded ]) => faded >= step);
   if (after < 1)
     return clamp(paces[Math.max(0, after < 0 ? paces.length - 1 : 0)][0], USED[0], USED[1]);
   const [[ slow, early ], [ slower, late ]] = [ paces[after - 1], paces[after] ];
@@ -239,7 +262,7 @@ export function senseCourse(svg, {
             own.chosen = i;
             redraw();
           });
-      if (tires && on)
+      if (tires && on && gripX(i) !== null)
         drag(svg,
              el('rect', {
                x : gripX(i) - 5,
@@ -299,7 +322,7 @@ export function senseCourse(svg, {
           stOf = x => clamp(Math.round((x - L) / (R - L) * STEPS), 0, STEPS);
     play.sent = runs.map(r => r?.sent ?? []);
     // Where a key's cells send nothing more, and the grips' way of moving it.
-    const ends = runs.map(r => r?.silent ?? 0);
+    const ends = runs.map(r => r?.silent ?? 0), fades = runs.map(r => r?.faded ?? 0);
     const tire = (k, i, p) => {
       own.chosen = i;
       const used = usedFor(runs[i], stOf(p.x));
@@ -311,7 +334,9 @@ export function senseCourse(svg, {
       redraw();
     };
     const newGate = () => clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95);
-    nerves(live, keys, i => X(clamp(ends[i], 0, STEPS)), tire);
+    // The grip at the cells for how fast they get used, where it moves anything.
+    nerves(live, keys, i => paceMatters(runs[i], STEPS) ? X(clamp(fades[i], 0, STEPS)) : null,
+           tire);
     // The same pair twice: at the cells and at the keys (under their holder).
     // A sense with one type of cells only has no pair.
     if (most > 1) {
@@ -403,8 +428,9 @@ export function senseCourse(svg, {
     const now = el('path', {class : 'aid-live-now'}, live);
     play.line = step => now.setAttribute('d', `M${X(step).toFixed(1)} ${I0} V${I1}`);
     // Where each key's cells send nothing more: a thin mark for each on the step axis (not for
-    // cells that never send); the chosen one's is a grip. It is called got used to only where the
-    // input alone would still make the cells send.
+    // cells that never send); the chosen one's is a line, called got used to only where the input
+    // alone would still make the cells send. Its grip sits where their report has faded to half:
+    // that moves with the pace even where the input's end silences them.
     if (tires)
       keys.map((k, i) => i).sort((a, b) => (a === own.chosen) - (b === own.chosen)).forEach(i => {
         const k = keys[i], at = ends[i], x = X(Math.min(at, STEPS)), left = x > (L + R) / 2;
@@ -422,11 +448,19 @@ export function senseCourse(svg, {
         if (at <= STEPS && met[i][at] > Math.min(...runs[i].cells))
           txt(live, x + (left ? -7 : 7), I0 + 11, words.used,
               {'text-anchor' : left ? 'end' : 'start', class : 'aid-live-onground'});
-        drag(svg,
-             el('rect',
-                {x : x - 4, y : I1 - 13, width : 8, height : 10, rx : 2, class : keyGrip(i, true)},
-                live),
-             p => tire(k, i, p), name + 'used', 'grip', settle);
+        const fx = X(Math.min(fades[i], STEPS));
+        if (paceMatters(runs[i], STEPS))
+          drag(svg,
+               el('rect', {
+                 x : fx - 4,
+                 y : I1 - 13,
+                 width : 8,
+                 height : 10,
+                 rx : 2,
+                 class : keyGrip(i, true)
+               },
+                  live),
+               p => tire(k, i, p), name + 'used', 'grip', settle);
       });
     // The grips, above everything they could be hidden by: every key and its spread, the input's
     // two knobs (when it is fully there and how strong, and when it stops).

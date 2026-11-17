@@ -614,6 +614,15 @@ void light_spread_report(const field::Substrate &t, const fishsim::BrainInterfac
   }
   std::cout << "]}";
 }
+// The cells as the plan draws them for one fish (light_example) and what they sense: what the
+// light spread and the sense courses read, drawn once for a prepared plan.
+struct DrawnExample {
+  field::Substrate sample;
+  std::shared_ptr<const fishsim::BrainInterface> binding;
+
+  explicit DrawnExample(const Plan &plan)
+      : sample(light_example(plan)), binding(fishsim::body_interface(sample)) {}
+};
 // A course an inspector tries on a sense's cells: the group they belong to and the stimulus they
 // meet, step by step, in the sense's own units; with `probe`, step by step as a share of what they
 // meet of the fish panel's probe.
@@ -623,7 +632,17 @@ struct SenseCourse {
   std::vector<double> stimulus;
 };
 constexpr int MOST_SENSE_COURSES = 12, LONGEST_SENSE_COURSE = 4000, SENSE_COURSE_DIGITS = 4,
-              SILENCE_PACES = 33;
+              FADING_PACES = 33;
+// The step at which a report has faded to half its height after it: past the report if it never
+// does, 0 if it never sends (sense.js, fadedAt).
+std::size_t half_faded(const std::vector<double> &sent) {
+  const auto peak = std::max_element(sent.begin(), sent.end());
+  if (peak == sent.end() || *peak <= 0)
+    return 0;
+  const double half = *peak / 2;
+  return std::size_t(std::find_if(peak, sent.end(), [half](double v) { return v <= half; }) -
+                     sent.begin());
+}
 std::vector<SenseCourse> read_sense_courses(std::istream &in) {
   int count = 0;
   ensure(bool(in >> count) && count >= 0 && count <= MOST_SENSE_COURSES, "invalid sense courses");
@@ -648,18 +667,16 @@ std::vector<SenseCourse> read_sense_courses(std::istream &in) {
 // what it sees with visual_response. The eye's cells have no course. `sent`: the cells' mean
 // answer as a share of what they can send (as `senses`); `used`: what they are used to on
 // average, in the stimulus's units; `probe`: for a course given as shares of the probe, what the
-// cells meet of it; `cells`: their thresholds; `silence`: for cells that get
-// used, [pace, step at which they fall silent] over the paces a cell can have. The cells are
+// cells meet of it; `cells`: their thresholds; `fading`: for cells that get used, [pace, step at
+// which their report has faded to half] over the paces a cell can have. The cells are
 // those that sense what the group's planned cell senses (the nominal plan, as in the sense
 // report): a site's copies share the sense its centre drew, so a whole group can turn into
 // another sense; then it has no course (null), never the other sense's.
-void sense_course_report(const Plan &plan, const field::Substrate &planned,
-                         const fishsim::BrainInterface &nominal,
+void sense_course_report(const std::vector<Group> &groups, const field::Substrate &planned,
+                         const fishsim::BrainInterface &nominal, const DrawnExample &example,
                          const std::vector<SenseCourse> &courses,
                          const std::vector<double> &probed) {
-  const auto &groups = plan.groups;
-  const auto sample = light_example(plan);
-  const auto binding = fishsim::body_interface(sample);
+  const auto &[sample, binding] = example;
   const auto precision = std::cout.precision(SENSE_COURSE_DIGITS);
   const auto list = [](const std::vector<double> &values) {
     for (std::size_t k = 0; k < values.size(); ++k)
@@ -731,26 +748,23 @@ void sense_course_report(const Plan &plan, const field::Substrate &planned,
                 << (cells[c]->intensity() ? cells[c]->response_threshold : cells[c]->threshold);
     std::cout.precision(SENSE_COURSE_DIGITS);
     std::cout << ']';
-    // For cells that get used: at which step the last falls silent (past the course if never, 0
-    // if none ever sends), for paces of getting used from the quickest to the slowest a cell can
-    // have. A pace is the cells' steps of getting used on the geometric mean; moving the plan's
-    // pace moves every drawn cell's by the same factor (substrate.hh, adaptation_steps).
+    // For cells that get used: at which step their report has faded to half its height (past the
+    // course if never, 0 if they never send), for paces of getting used from the quickest to the
+    // slowest a cell can have. A pace is the cells' steps of getting used on the geometric mean;
+    // moving the plan's pace moves every drawn cell's by the same factor (substrate.hh,
+    // adaptation_steps).
     double drawn = 0;
     for (const auto *r : cells)
       drawn += r->adaptation_rate > 0 ? std::log(1 / r->adaptation_rate) : 0;
     if (tiring && std::all_of(cells.begin(), cells.end(),
                               [](const auto *r) { return r->adaptation_rate > 0; })) {
       drawn = std::exp(drawn / count);
-      std::cout << ",\"silence\":[";
-      for (int k = 0; k < SILENCE_PACES; ++k) {
+      std::cout << ",\"fading\":[";
+      for (int k = 0; k < FADING_PACES; ++k) {
         const double steps =
-            field::ADAPTATION_MIN * std::pow(field::ADAPTATION_SPAN, k / (SILENCE_PACES - 1.));
+            field::ADAPTATION_MIN * std::pow(field::ADAPTATION_SPAN, k / (FADING_PACES - 1.));
         run(steps / drawn, sent, nullptr);
-        const auto first = std::find_if(sent.begin(), sent.end(), [](double v) { return v > 0; });
-        const auto quiet = first == sent.end()
-                               ? sent.begin()
-                               : std::find_if(first, sent.end(), [](double v) { return v <= 0; });
-        std::cout << (k ? "," : "") << '[' << steps << ',' << quiet - sent.begin() << ']';
+        std::cout << (k ? "," : "") << '[' << steps << ',' << half_faded(sent) << ']';
       }
       std::cout << ']';
     }
@@ -1568,6 +1582,15 @@ struct PreparedDesign {
     g.blueprint = std::make_shared<const field::Substrate>(planned_substrate(plan.groups));
     g.interface = fishsim::body_interface(*g.blueprint);
   }
+  // The drawn example, made the first time a report asks for it.
+  const DrawnExample &example() const {
+    if (!drawn)
+      drawn = std::make_unique<const DrawnExample>(plan);
+    return *drawn;
+  }
+
+private:
+  mutable std::unique_ptr<const DrawnExample> drawn;
 };
 
 struct DesignQuery {
@@ -1598,7 +1621,8 @@ DesignQuery read_design_query(std::istream &in) {
 void design_report(const PreparedDesign &design, const DesignQuery &query, bool probe_only,
                    SightDetail detail = SightDetail::full) {
   const auto &[sight, sense, learning, light_spread, courses] = query;
-  const auto &[plan, g] = design;
+  const auto &plan = design.plan;
+  const auto &g = design.g;
   const auto &groups = plan.groups;
   ensure(!learning.probe || std::size_t(learning.probe->group) < groups.size(),
          "unknown learning probe group");
@@ -1616,11 +1640,8 @@ void design_report(const PreparedDesign &design, const DesignQuery &query, bool 
     readiness_report(*g.interface, t, false);
     anatomy_report(g, groups, false, &learning, &plan.growth);
   }
-  if (light_spread) {
-    const auto sample = light_example(plan);
-    const auto binding = fishsim::body_interface(sample);
-    light_spread_report(sample, *binding, groups, true);
-  }
+  if (light_spread)
+    light_spread_report(design.example().sample, *design.example().binding, groups, true);
   if (sight) {
     // The illuminated probe sits in open water, beyond the range of the tank's boundaries.
     // This report describes the eyes separately. The aquarium can combine their frontal signals.
@@ -1640,7 +1661,7 @@ void design_report(const PreparedDesign &design, const DesignQuery &query, bool 
   else if (sense)
     probed = sense_report(t, g.interface, groups, *sense);
   if (!courses.empty())
-    sense_course_report(plan, t, *g.interface, courses, probed);
+    sense_course_report(groups, t, *g.interface, design.example(), courses, probed);
   std::cout << '}';
 }
 

@@ -35,7 +35,9 @@ import {
   BOUNDED,
   closingWound,
   keysOf,
+  fadingWay,
   lastCourses,
+  paceMatters,
   setGate,
   setSpread,
   setUsed,
@@ -111,6 +113,7 @@ liveKind('pain', (studio, organId) => {
       met,
       sent,
       silent,
+      faded : run?.faded ?? 0,
       run,
       gates,
       stale : !run || run.stale,
@@ -166,12 +169,14 @@ liveKind('pain', (studio, organId) => {
     el('path', {d : `M${S.L} ${gy} H${S.R}`, class : 'aid-live-keyline k0'}, live);
     txt(live, S.R, gy + 11, word('felt'), {'text-anchor' : 'end', class : 'aid-live-small'});
     if (c.part > 0)
-      drag(svg, squareGrip(live, S.L - GRIP / 2 - 1, gy, {class : 'aid-live-keygrip k0 on'}),
+      drag(svg,
+           squareGrip(live, S.L - GRIP / 2 - 1, gy, {class : 'aid-live-keygrip k0 on'}),
            p => draft(setGate(studio.state.document, c.key,
                               clamp((p.y - S.skin) / S.deep, S.least, 1) * S.deepest * c.part)),
            'paingate', 'grip', settle);
     if (c.part > 0)
-      drag(svg, squareGrip(live, S.R + GRIP / 2 + 1, edge, {class : 'aid-live-keygrip k0 on'}),
+      drag(svg,
+           squareGrip(live, S.R + GRIP / 2 + 1, edge, {class : 'aid-live-keygrip k0 on'}),
            p => draft(setSpread(
                studio.state.document, c.key,
                2 * Math.max(0, clamp((p.y - S.skin) / S.deep) * S.deepest * c.part - c.key.gate))),
@@ -186,29 +191,28 @@ liveKind('pain', (studio, organId) => {
       },
          live);
     // Where they fall silent. If they have got used to the wound, the wound is still open under
-    // the mark, and the grip there sets how fast they get used.
+    // the mark.
     if (c.silent > 0 && c.silent < SPAN) {
       const sx = X(c.silent);
       el('path',
          {d : `M${sx} ${top - S.loud} V${D(c.depth[c.silent])}`, class : 'aid-live-keymark k0'},
          live);
-      if (c.used) {
-        // The way the grip can go: up to where the wound closes below what the cells feel.
-        el('path', {
-          d : `M${S.L} ${top - S.loud} H${X(c.closed < 0 ? SPAN : c.closed)}`,
-          class : 'aid-live-track-line'
-        },
-           live);
-        txt(live, sx + GRIP / 2 + 4, top - S.loud + 3, word('used'), {class : 'aid-live-small'});
-        // Its way ends before the wound closes: there the cells fall silent anyway, and the grip
-        // would leave the picture under the pointer.
-        drag(svg, squareGrip(live, sx, top - S.loud), p => {
-          const used =
-              usedFor(c.run, Math.min(stOf(p.x), (c.closed < 0 ? SPAN : c.closed) - UNSURE - 1));
-          if (used)
-            draft(setUsed(studio.state.document, c.key, used));
-        }, 'painused', 'grip', settle);
-      }
+      if (c.used)
+        txt(live, sx + 9, top - S.loud + 3, word('used'), {class : 'aid-live-small'});
+    }
+    // How fast they get used: the grip where their report has faded to half (sense.js, fadedAt),
+    // as long as they report at all. That moves with the pace even where the closing wound
+    // silences the cells, so it stays under the pointer as far as the wound lets it go.
+    if (c.faded > 0 && paceMatters(c.run, SPAN)) {
+      const [early, late] = fadingWay(c.run, SPAN);
+      el('path', {d : `M${X(early)} ${top - S.loud} H${X(late)}`, class : 'aid-live-track-line'},
+         live);
+      drag(svg,
+           squareGrip(live, X(Math.min(c.faded, SPAN)), top - S.loud), p => {
+             const used = usedFor(c.run, stOf(p.x));
+             if (used)
+               draft(setUsed(studio.state.document, c.key, used));
+           }, 'painused', 'grip', settle);
     }
     for (let st = SPAN > 400 ? 200 : 100; st <= SPAN; st += SPAN > 400 ? 200 : 100)
       txt(live, X(st), S.height - 4, String(st), {'text-anchor' : 'end', class : 'aid-live-small'});
