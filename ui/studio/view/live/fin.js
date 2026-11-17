@@ -35,7 +35,7 @@ import {isPelvicMuscle} from '../../model/organs.js';
 import {outlineSizes} from '../body.js';
 import {fishPath, sideFins} from '../frame.js';
 import {label} from '../kit.js';
-import {addPicture, chip, clamp, el, liveKind, path, picture} from './kit.js';
+import {addPicture, chip, clamp, el, GRIP, liveKind, path, picture} from './kit.js';
 
 // The water: `box` wide and high; the fish in its middle, `fish` pixels to a body radius, and
 // `large` where the turn is at most `small` degrees, so that the fish itself shows it, and
@@ -149,9 +149,9 @@ liveKind('fin', (studio, organId) => {
       el('circle', {cx, cy, r : near, class : 'aid-live-turn missing'}, live);
     // The muscle strokes backward or forward: the button turns its stroke round. A muscle
     // without its antagonist can get one.
-    const turn = el('g', {class : 'aid-live-chip aid-live-flip'}, live), tx = 8, ty = S.box[1] - 21;
-    el('rect', {x : tx, y : ty, width : 14, height : 14, rx : 3}, turn);
-    el('path', {d : `M${tx + 3} ${ty + 5} h8 l-2.5 -2.5 M${tx + 11} ${ty + 9} h-8 l2.5 2.5`}, turn);
+    const turn = el('g', {class : 'aid-live-chip aid-live-flip'}, live), tx = 6, ty = S.box[1] - GRIP - 4;
+    el('rect', {x : tx, y : ty, width : GRIP, height : GRIP, rx : 5}, turn);
+    el('path', {d : `M${tx + 5} ${ty + 8} h12 l-3.5 -3.5 M${tx + 17} ${ty + 14} h-12 l3.5 3.5`}, turn);
     turn.addEventListener('click', e => {
       e.stopPropagation();
       draft(
@@ -161,12 +161,12 @@ liveKind('fin', (studio, organId) => {
       studio.drafted && studio.settleGraphic();
     });
     if (!antagonistOf(studio.state.document, muscle, studio.state.sites))
-      chip(live, 34, S.box[1] - 14, '+', () => {
+      chip(live, tx + 2 * GRIP, ty + GRIP / 2, '+', () => {
         const added = addAntagonist(studio.state.document, organId, studio.state.sites);
         if (!added)
           return studio.notice(label('status.noRoom'));
         studio.changeDocument(added.document, {kind : 'organ', id : added.organId});
-      }, true, 7);
+      }, true, GRIP / 2);
     // The film: the fish rests, turns evenly while the muscle pulls, then the turn runs out.
     film = share => {
       if (!twitch)
