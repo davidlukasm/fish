@@ -30,7 +30,19 @@ import {TOOL_ICON} from '../icons.js';
 import {ICON, label} from '../kit.js';
 import {glyph} from '../markup.js';
 import {substanceName} from '../substances.js';
-import {addPicture, chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {
+  addPicture,
+  chip,
+  clamp,
+  drag,
+  el,
+  GRIP,
+  liveKind,
+  path,
+  picture,
+  squareGrip,
+  txt
+} from './kit.js';
 import {BOUNDED, IRRITANT, keyGrip, lastCourses, setGate} from './sense.js';
 
 const word = (key, values) => t('studio.live.blood.' + key, values);
@@ -45,7 +57,7 @@ const RING = Object.freeze({
   arc : .4,
   listed : .08,
   snap : .14,
-  reach : [ 16, 44 ]
+  reach : [ 28, 56 ]
 });
 const ROWS = Object.freeze({L : 84, R : 280, top : 8, row : 26});
 const NEW = Object.freeze({q1 : 0, q2 : 0, qwidth : .1});
@@ -139,18 +151,16 @@ liveKind('blood', (studio, organId) => {
         const arm = RING.reach[0] + (RING.reach[1] - RING.reach[0]) * cell.qwidth,
               ux = x >= cx ? -1 : 1;
         el('path', {d : `M${x} ${y} h${ux * arm}`, class : 'aid-live-keyline k' + i}, live);
-        drag(svg, el('circle', {cx : x + ux * arm, cy : y, r : 4.5}, live),
+        drag(svg, squareGrip(live, x + ux * arm, y),
              p => draft(updateCenter(studio.state.document, cell.id, {
                qwidth : clamp((Math.abs(p.x - x) - RING.reach[0]) / (RING.reach[1] - RING.reach[0]))
              })),
              'bloodwidth', 'grip', settle);
         if (cells.length > 1)
-          chip(live, x, y + (y <= cy ? 17 : -17), '×', () => remove(i), true, 6);
+          chip(live, x, y + (y <= cy ? GRIP + 4 : -GRIP - 4), '×', () => remove(i), true, GRIP / 2);
       }
       drag(svg,
-           el('rect',
-              {x : x - 5, y : y - 5, width : 10, height : 10, rx : 2.5, class : keyGrip(i, chosen)},
-              live),
+           squareGrip(live, x, y, {class : keyGrip(i, chosen)}),
            p => {
              // A place dragged close to a substance is that substance; none lies outside the wheel.
              let nx = (p.x - cx) / plane, ny = (cy - p.y) / plane;
@@ -170,7 +180,8 @@ liveKind('blood', (studio, organId) => {
            },
            'bloodtype' + i, 'grip', settle);
     });
-    chip(live, 288, RING.height - 10, '+', add, cells.length < wheel.bloodSubstances - 1, 7);
+    chip(live, 288, RING.height - GRIP / 2 - 2, '+', add, cells.length < wheel.bloodSubstances - 1,
+         GRIP / 2);
   }
   // For each type a row: what its cells get of the blood now, each substance's part in its
   // colour, ending at all; the threshold as a dashed mark with its grip; before the row the
@@ -220,7 +231,7 @@ liveKind('blood', (studio, organId) => {
         class : 'aid-live-nerve-fibre k' + i
       },
          live);
-      el('circle', {cx : L - 16, cy, r : 6, class : 'aid-live-soma k' + i + (chosen ? ' on' : '')},
+      el('circle', {cx : L - 16, cy, r : 9, class : 'aid-live-soma k' + i + (chosen ? ' on' : '')},
          live)
           .addEventListener('pointerdown', pick);
       if (report > 0)
@@ -234,15 +245,7 @@ liveKind('blood', (studio, organId) => {
          live);
       if (chosen)
         drag(svg,
-             el('rect', {
-               x : X(gate) - 4,
-               y : y + row - 12,
-               width : 8,
-               height : 10,
-               rx : 2,
-               class : keyGrip(i, true)
-             },
-                live),
+             squareGrip(live, X(gate), y + (row - 8) / 2, {class : keyGrip(i, true)}),
              p => draft(setGate(studio.state.document, {id : cell.id}, clamp((p.x - L) / (R - L)))),
              'bloodgate', 'grip', settle);
     });
