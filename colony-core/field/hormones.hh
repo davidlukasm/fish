@@ -47,13 +47,25 @@ inline double substance_angle(int k) {
   return 2 * M_PI * SUBSTANCE_TURNS[std::size_t(k)];
 }
 constexpr int GROWTH_RECEPTOR = HORMONE_EFFECTS, RECEPTOR_QUERIES = HORMONE_EFFECTS + 1;
+// What a cell takes of one blood substance `k`: its weight times the substance's level, a body
+// signal's from the body.
+template <class Weights, class Levels>
+double blood_part(const Weights &weights, const Levels &levels, double maturity, double reserve,
+                  double fatigue, int k) {
+  const double level = k == MATURITY_SUBSTANCE  ? maturity
+                       : k == RESERVE_SUBSTANCE ? reserve
+                       : k == FATIGUE_SUBSTANCE ? fatigue
+                                                : levels[k];
+  return weights[k] * level;
+}
 template <class Weights, class Levels>
 double blood_stimulus(const Weights &weights, const Levels &levels, double maturity, double reserve,
                       double fatigue) {
-  double stimulus = weights[MATURITY_SUBSTANCE] * maturity + weights[RESERVE_SUBSTANCE] * reserve +
-                    weights[FATIGUE_SUBSTANCE] * fatigue;
+  const auto part = [&](int k) { return blood_part(weights, levels, maturity, reserve, fatigue, k); };
+  // The body's signals first, then the hormones: the order the sum has always been taken in.
+  double stimulus = part(MATURITY_SUBSTANCE) + part(RESERVE_SUBSTANCE) + part(FATIGUE_SUBSTANCE);
   for (int k = 0; k < HORMONES; ++k)
-    stimulus += weights[k] * levels[k];
+    stimulus += part(k);
   return stimulus;
 }
 inline float receptor_effect_code(int query) {

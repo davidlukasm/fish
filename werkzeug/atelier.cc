@@ -709,18 +709,17 @@ void sense_course_report(const std::vector<Group> &groups, const field::Substrat
     }
     // What the cells meet of the probe: of the blood of the life band for blood cells, each
     // substance by what they take of it (body_plan.cc, the blood stimulus); else of the fish panel's
-    // probe, nothing without one or where it does not stir them.
+    // probe, nothing without one or where it does not stir them. ASSUMED: the probe's stimulus is
+    // the mean over the plan's cells (sense_report), the course runs over the drawn example's;
+    // that holds as far as drawing spreads the cells' thresholds and paces, not where they lie or
+    // how they weigh the probe.
     std::array<double, field::BLOOD_SUBSTANCES> parts{};
     if (probe && sense == field::Blood)
       for (const auto *r : cells)
         for (int k = 0; k < field::BLOOD_SUBSTANCES; ++k)
-          parts[std::size_t(k)] +=
-              r->hormones[std::size_t(k)] *
-              (k == field::MATURITY_SUBSTANCE  ? blood.maturity
-               : k == field::RESERVE_SUBSTANCE ? blood.reserve
-               : k == field::FATIGUE_SUBSTANCE ? blood.fatigue
-                                               : blood.levels[std::size_t(k)]) /
-              double(cells.size());
+          parts[std::size_t(k)] += field::blood_part(r->hormones, blood.levels, blood.maturity,
+                                                     blood.reserve, blood.fatigue, k) /
+                                   double(cells.size());
     const double met = !probe                 ? 1
                        : sense == field::Blood ? std::accumulate(parts.begin(), parts.end(), 0.)
                        : std::size_t(group) < probed.size() && std::isfinite(probed[group])
@@ -731,9 +730,15 @@ void sense_course_report(const std::vector<Group> &groups, const field::Substrat
                    [met](double share) { return share * met; });
     const bool tiring = fishsim::adapting_sense(sense);
     const double count = double(cells.size());
-    // The course with every cell getting used `slower` times as slowly as it was drawn to.
+    // The course with every cell getting used `slower` times as slowly as it was drawn to, within
+    // the paces a cell can have (substrate.hh, adaptation_steps clamps them alike).
     const auto run = [&](double slower, std::vector<double> &sent, std::vector<double> *used) {
-      std::vector<double> mean(cells.size());
+      std::vector<double> mean(cells.size()), rate(cells.size());
+      for (std::size_t c = 0; c < cells.size(); ++c)
+        rate[c] = cells[c]->adaptation_rate > 0
+                      ? 1 / std::clamp(slower / cells[c]->adaptation_rate, field::ADAPTATION_MIN,
+                                       field::ADAPTATION_MIN * field::ADAPTATION_SPAN)
+                      : 0;
       sent.clear();
       for (const double s : stimulus) {
         double answer = 0, accustomed = 0;
@@ -743,7 +748,7 @@ void sense_course_report(const std::vector<Group> &groups, const field::Substrat
                                : fishsim::receptor_response(r, s, mean[c]) / r.senses[sense];
           accustomed += mean[c];
           if (tiring)
-            mean[c] = fishsim::adapted_level(mean[c], s, r.adaptation_rate / slower);
+            mean[c] = fishsim::adapted_level(mean[c], s, rate[c]);
         }
         sent.push_back(answer / count);
         if (used)
