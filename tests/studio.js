@@ -1177,8 +1177,6 @@ async function checkBloodReceptors(model, capabilities) {
     }
     const learning = learningInspector(state);
     assert.doesNotMatch(learning, /NaN|Infinity|undefined/);
-    for (const index of [B.reserve, B.fatigue])
-      assert.match(learning, new RegExp('data-learn-substance="' + index + '"'));
     const teachers = model.teachersOf(doc, center, wheel);
     assert.equal(teachers.some(t => t.substance.index === index && t.glands.length === 0),
                  index !== B.cell_maturity);
@@ -1230,11 +1228,8 @@ async function checkBloodReceptors(model, capabilities) {
       selected : {kind : 'organ', id : region.organId}
     };
     const picture = regionSettings(state, regionOrgan);
-    const learning =
-        learningInspector({...state, selected : {kind : 'center', id : region.centerId}});
     for (const index of Object.values(B)) {
       assert.equal(picture.includes('data-teacher-value="' + index + '"'), index < regulators);
-      assert.equal(learning.includes('data-learn-substance="' + index + '"'), index < regulators);
     }
   }
   for (let index = 0; index < wheel.hormones; ++index)
@@ -4195,9 +4190,6 @@ async function checkHormoneSystems(model, capabilities) {
     effect : E.learning
   });
   assert.match(learner, /data-live="learn"/);
-  for (const effect of [E.teaching, E.learning, E.competition, E.eligibility])
-    assert.match(learner,
-                 new RegExp('data-learn-substance="off"[^>]*data-learn-effect="' + effect + '"'));
   const learnShelf = panels.libraryOf({...state, tool : 'learn'});
   assert.equal(learnShelf.kind, 'learn');
   for (const key of ['learn', 'modulate', 'pacemaker'])
@@ -5178,12 +5170,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         model.addOrgan(model.newDocument('Region'), 'olfaction', sites, {x : 380, y : 325});
     const regionCenter = automatic.centerId;
     const {FISH_CLICKS} = await import('../ui/studio/events.js');
-    const chooseSubstance =
-        FISH_CLICKS.find(([ selector ]) => selector === '[data-learn-substance]')[1];
-    const control = {
-      state : {document : automatic.document},
-      changeDocument(document) { this.state.document = document; }
-    };
+    const control = {state : {document : automatic.document}};
     const learningState = () => ({
       document : control.state.document,
       sites,
@@ -5194,10 +5181,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                         'Constant local learning creates no substance binding');
     for (const effect of [HORMONE_EFFECT.learning, HORMONE_EFFECT.competition]) {
       const cell = () => model.findCenter(control.state.document, regionCenter).center;
-      const select = value => chooseSubstance(control, {
-        dataset : {centerId : regionCenter, learnEffect : String(effect), learnSubstance : value}
-      });
-      select('0');
+      control.state.document = model.bindReceptor(control.state.document, regionCenter, effect, 0);
       assert.equal(model.effectDirection(effect, cell().receptors[effect]), 1,
                    'Binding a substance to a new region changes the effective learning factor');
       control.state.document =
@@ -5206,7 +5190,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                 'A saturated response creates no hormone connection');
       control.state.document =
           model.updateReceptor(control.state.document, regionCenter, effect, {baseline : .25});
-      select('off');
+      control.state.document = model.unbindReceptor(control.state.document, regionCenter, effect);
       assert.equal(cell().receptors[effect].baseline, .25);
       assert.equal(model.receptorResponse(sitesResult, cell().receptors[effect]), .25,
                    'Removing the substance preserves the constant local gain');
@@ -5232,11 +5216,17 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       capabilities : sitesResult,
       selected : {kind : 'center', id : learnNode.centerId}
     });
-    assert.match(taughtPanel,
-                 new RegExp('<button class="active" data-learn-substance="0" ' +
-                            'data-center-id="' + learnNode.centerId + '" data-learn-effect="' +
-                            HORMONE_EFFECT.teaching + '"'),
-                 'The bound teaching substance is selected in the learning tool');
+    const target = /data-open-tool="hormone" data-center-id="([^"]+)"/.exec(taughtPanel);
+    assert.equal(target?.[1], learnNode.centerId,
+                 'Learning opens the receptors of the cell whose response is shown');
+    const opened = [], navigation = {
+      state : {selected : null},
+      setTool(tool) { opened.push([tool, this.state.selected]); }
+    };
+    FISH_CLICKS.find(([ selector ]) => selector === '[data-open-tool]')[1](
+        navigation,
+        {dataset : {openTool : 'hormone', centerId : target[1]}});
+    assert.deepEqual(opened, [ [ 'hormone', {kind : 'center', id : learnNode.centerId} ] ]);
     const probesView = await import('../ui/studio/view/probes.js');
     const {probeFor} = await import('../ui/studio/model/probe.js');
     for (const [type, at] of [[ 'nose', {x : 200, y : 330} ], [ 'touch', {x : 400, y : 265} ]]) {
