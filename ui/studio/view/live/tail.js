@@ -27,7 +27,7 @@ import {
   updateCenter
 } from '../../model/document.js';
 import {label} from '../kit.js';
-import {addPicture, chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, chip, clamp, drag, el, fishIcon, GRIP, hatchOf, liveKind, path, picture, roundGrip, squareGrip, txt} from './kit.js';
 
 const word = (key, values) => t('studio.live.tail.' + key, values);
 const TAIL = Object.freeze({
@@ -222,7 +222,7 @@ liveKind('tail', (studio, organId) => {
                                                         })));
     // How much of the body wriggles: the grip sits on the spine where the body swings a quarter
     // as far as the tail's tip.
-    drag(svg, el('circle', {cx : wriggleFrom(wriggle), cy : fishY, r : 4.5}, live),
+    drag(svg, squareGrip(live, wriggleFrom(wriggle), fishY),
          p => draft(setMuscleTrait(studio.state.document, MOTOR_KIND.forward, 'undulation', wriggleAt(p.x), studio.state.sites)),
          'wriggle', 'grip', settle);
     // The bundles across the width: colour = fibres, height = strength. The chosen one is framed
@@ -243,22 +243,22 @@ liveKind('tail', (studio, organId) => {
                                     show(studio.state);
                                   }));
     el('rect', {x : x0 - 1, y : MB - h - 2, width : width + 2, height : h + 4, rx : 4, class : 'aid-live-chosen'}, live);
-    drag(svg, el('rect', {x : x0 + width / 2 - 6, y : MB - h - 8, width : 12, height : 12, rx : 2}, live),
+    drag(svg, squareGrip(live, x0 + width / 2, MB - h - 2),
          p => draft(edit(cb, {copies : clamp(Math.round((MB - p.y - 4) / cell), 1, most)})), 'bundle', 'grip', settle);
-    chip(live, x0 + width - 4, MB - h - 3, '×', () => {
+    chip(live, x0 + width / 2 + GRIP + 2, MB - h - 2, '×', () => {
       const from = settled(), doc = removeOrganType(from, organId, findCenter(from, cb.id).center.profile ?? '');
       chosen = Math.min(chosen, bundles.length - 2);
       change(doc);
-    }, bundles.length > 1, 6.5);
+    }, bundles.length > 1, GRIP / 2);
     chip(live, M1 + 22, MB - 10, '+', () => {
       const added = addOrganType(settled(), organId, studio.state.sites);
       if (!added)
         return studio.notice(label('status.noRoom'));
       chosen = bundles.length;
       change(added.document);
-    }, bundles.length < TAIL.bundles, 8);
+    }, bundles.length < TAIL.bundles, GRIP / 2);
     // The chosen bundle's fibres.
-    drag(svg, el('circle', {cx : fx0 + (fx1 - fx0) * cb.fast, cy : FY, r : 7}, live),
+    drag(svg, squareGrip(live, fx0 + (fx1 - fx0) * cb.fast, FY),
          p => draft(edit(cb, {tau : fibreTau(clamp((p.x - fx0) / (fx1 - fx0)))})), 'fibre', 'grip', settle);
   }
   function drawForce() {
@@ -304,17 +304,12 @@ liveKind('tail', (studio, organId) => {
     // The grips: each bundle's threshold on the holder, the chosen bundle's strength on its band.
     bundles.forEach((b, i) => {
         const on = i === chosen;
-        drag(svg, el('rect', {
-               x : holder - 9,
-               y : CY(b.gate) - 4,
-               width : 18,
-               height : 8,
-               rx : 2,
-               // The grip's class would paint over an attribute.
+        drag(svg, // The grip's class would paint over an attribute. The chosen bundle's grip sits on
+             // the holder, the others beside it, so that none hides another.
+             squareGrip(live, on ? holder : holder - GRIP - 1, CY(b.gate), {
                style : 'fill:' + fibreHex(b.fast),
                class : on ? 'aid-live-key on' : 'aid-live-key'
-             },
-                      live),
+             }),
              p => {
                chosen = i;
                draft(edit(b, {threshold : clamp(vOf(p.y))}));
@@ -324,7 +319,7 @@ liveKind('tail', (studio, organId) => {
     if (chosenBand) {
       const st = Math.min(20, Math.max(1, input.stop - 2)), y = Y(chosenBand.b.over[st]);
       // Pulled by its own measure, not read off the scale, which follows.
-      drag(svg, el('rect', {x : X(st) - 6, y : y - 6, width : 12, height : 12, rx : 2}, live), p => {
+      drag(svg, squareGrip(live, X(st), y), p => {
         pulled ??= {y : p.y, copies : cb.copies};
         draft(edit(cb, {copies : clamp(pulled.copies + Math.round((pulled.y - p.y) / TAIL.pull), 1, most)}));
       }, 'strength', 'grip', () => {
@@ -332,7 +327,7 @@ liveKind('tail', (studio, organId) => {
         settle();
       });
     }
-    drag(svg, el('circle', {cx : X(input.stop), cy : CY(input.height), r : 5.5}, live), p => {
+    drag(svg, roundGrip(live, X(input.stop), CY(input.height)), p => {
       input.stop = clamp(Math.round((p.x - L) / (R - L) * steps), 20, steps - 20);
       input.height = vOf(p.y);
       show(studio.state);
@@ -430,7 +425,7 @@ liveKind('tail', (studio, organId) => {
     order.forEach((i, place) => {
       const b = bundles[i], on = i === chosen, until = Math.min(1, b.until), beside = base - 7 - LIFE.apart * place;
       const phase = change => setLifePhase(settled(), b.id, change, caps.sensitivitySpan, caps.steepnessSpan);
-      const grip = (x, y, name, move) => drag(svg, el('rect', {x : x - 4, y : y - 5.5, width : 8, height : 11, rx : 2, style : 'fill:' + fibreHex(b.fast), class : on ? 'aid-live-key on' : 'aid-live-key'}, live), p => {
+      const grip = (x, y, name, move) => drag(svg, squareGrip(live, x, y, {style : 'fill:' + fibreHex(b.fast), class : on ? 'aid-live-key on' : 'aid-live-key'}), p => {
         chosen = i;
         draft(move(rOf(p.x)));
       }, name + i, 'grip', settle);
@@ -443,7 +438,7 @@ liveKind('tail', (studio, organId) => {
       grip(until < 1 ? X(until) : R + LIFE.beside, until < 1 && until > b.from ? middle(until - 2 * edge) : beside, 'until',
            to => phase({end : to > 1 - LIFE.whole ? null : Math.max(to, b.from + LIFE.least)}));
     });
-    drag(svg, el('circle', {cx : X(r), cy : Y(pushAt(r)), r : 5.5}, live), p => {
+    drag(svg, squareGrip(live, X(r), Y(pushAt(r))), p => {
       input.maturity = rOf(p.x);
       show(studio.state);
     }, 'maturity', 'knob');
