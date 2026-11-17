@@ -1,32 +1,31 @@
 // A sac's pressure cells in a live inspector: the nerve cell, and under it over the steps of the
 // organ's trial how full the sac is (the fine line) and what the cells report to the brain. The
 // threshold is the dashed line, with its grip at the left and the cells' spread at the right.
-// The cells answer as the engine's bounded senses do: nothing below their threshold, the more
-// the further above it.
+// What the cells report of the fullness is the engine's: the cells it draws for the plan (sense.js,
+// lastCourses); nothing before its answer.
 import {activationLevel, activationQuality, planOfUnit, unitOfPlan} from '../../../tuning.js';
 import {updateCellDistribution, updateCenter} from '../../model/document.js';
-import {boundedAnswer} from '../sensitivity.js';
 import {clamp, drag, el, path, txt} from './kit.js';
+import {lastCourses} from './sense.js';
 
-const BOX = Object.freeze(
-    {left : 44, right : 290, top : 88, base : 185, height : 209, cells : 7, stride : 5});
+const BOX = Object.freeze({left : 44, right : 290, top : 88, base : 185, height : 209, stride : 5});
+// One sac's picture at a time is open (eggs.js, sperm.js).
+const coursesOf = lastCourses('pressure');
 const SPAN = activationLevel(1) - activationLevel(0);
 // `filling`: the sac's fullness step by step; `reads`: whether the cells read it at all (in the
 // egg the sperm cells' store stays empty); `words`: signal, full, empty, steps; `trace`: the
 // class of the fullness line. Returns what the clock moves.
 export function pressurePicture(svg, picture,
                                 {studio, center, filling, reads, words, trace, draft, settle}) {
-  const {live} = picture(svg, BOX.height), {left, right, top, base, cells, stride} = BOX,
+  const {live} = picture(svg, BOX.height), {left, right, top, base, stride} = BOX,
         steps = filling.length - 1;
   const x = step => left + (right - left) * step / steps, y = v => base - (base - top) * clamp(v),
         levelAt = py => clamp((base - py) / (base - top));
   const gate = activationLevel(unitOfPlan(center.threshold)),
         spread = SPAN * center.distribution.spread_physiology,
-        low = Math.max(activationLevel(0), gate - spread),
-        high = Math.min(activationLevel(1), gate + spread),
-        gates = Array.from({length : cells}, (_, cell) => low + (high - low) * (cell + .5) / cells);
-  const sent = filling.map(
-      level => reads ? gates.reduce((sum, at) => sum + boundedAnswer(level, at), 0) / cells : 0);
+        high = Math.min(activationLevel(1), gate + spread);
+  const sent = reads ? coursesOf(studio, [ {id : center.id, stimulus : filling} ])?.[0]?.sent ?? []
+                     : filling.map(() => 0);
   const curve = samples =>
       path(samples.flatMap((sample, step) => step % stride ? [] : [ [ x(step), y(sample) ] ]));
   txt(live, left, top - 8, words.signal);
@@ -44,10 +43,12 @@ export function pressurePicture(svg, picture,
   el('circle', {cx, cy, r : 5.5, class : 'aid-live-soma on'}, cell);
   const pulse = el('circle', {cx : cx + 6, cy : cy - 10, r : 0, class : 'aid-live-pulse'}, cell);
   const plot = el('g', {class : 'k0 on'}, live);
-  el('path',
-     {d : curve(sent) + ` L${right} ${base} H${left} Z`, class : 'aid-bladder-response-fill'},
-     plot);
-  el('path', {d : curve(sent), class : 'aid-bladder-response on'}, plot);
+  if (sent.length) {
+    el('path',
+       {d : curve(sent) + ` L${right} ${base} H${left} Z`, class : 'aid-bladder-response-fill'},
+       plot);
+    el('path', {d : curve(sent), class : 'aid-bladder-response on'}, plot);
+  }
   el('path', {d : `M${left} ${y(gate)} H${right}`, class : 'aid-live-keyline on'}, plot);
   el('path', {d : curve(filling), class : trace}, live);
   el('path', {d : `M${left} ${top} V${base} H${right}`, class : 'aid-live-axis'}, live);

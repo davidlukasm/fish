@@ -15,7 +15,7 @@ import {
 import {nodeLimit, ORGAN_BY_KEY} from '../../model/organs.js';
 import {label} from '../kit.js';
 import {previewContextOf} from '../development.js';
-import {boundedAnswer} from '../sensitivity.js';
+import {lastCourses} from './sense.js';
 import {
   chip,
   clamp,
@@ -136,6 +136,7 @@ liveKind('bladder', (studio, organId) => {
   const estimate = () => (studio.state.outlinePreview ?? studio.state.anatomy)?.bladderEstimate;
   const root = document.createElement('div');
   root.className = 'aid-live-bladder';
+  const coursesOf = lastCourses('bladder');
   const kind = document.createElement('strong');
   kind.className = 'aid-bladder-kind';
   root.appendChild(kind);
@@ -360,28 +361,32 @@ liveKind('bladder', (studio, organId) => {
        {x : left, y : top, width : right - left, height : base - top, class : 'aid-live-ground'},
        live);
     el('path', {d : 'M150 46 C154 19 179 42 184 10', class : 'aid-live-nerve-bundle'}, live);
+    // What the cells report of the depth is the engine's (sense.js, lastCourses), for the keys
+    // whose cells read it; nothing before its answer.
+    const reading = keys.map(key => model.capacity > 0 && key.readsDepth);
+    const runs = coursesOf(
+        studio,
+        keys.filter((_, i) => reading[i]).map(key => ({id : key.id, stimulus : model.depth})));
+    let next = 0;
     keys.forEach((key, i) => {
-      const selected = key.type === chosenKey, cls = groupClass(i, selected),
-            [ low, high ] = bounds(key);
-      const cells = Array.from({length : 7}, (_, cell) => low + (high - low) * (cell + .5) / 7);
-      const sent = model.depth.map(
-          d => !model.capacity || !key.readsDepth
-                   ? 0
-                   : cells.reduce((sum, gate) => sum + boundedAnswer(d, gate), 0) / cells.length);
+      const selected = key.type === chosenKey, cls = groupClass(i, selected);
+      const sent = (reading[i] ? runs?.[next++]?.sent : model.depth.map(() => 0)) ?? [];
       const [cx, cy] = [ [ 150, 46 ], [ 124, 38 ], [ 176, 54 ] ][i];
       const chooseKey = () => {
         choose('pressure', key.type);
         repaint();
       };
-      const trace = curve(sent, x, y);
-      if (selected)
-        el('path', {
-          d : trace + ` L${right} ${base} H${left} Z`,
-          class : 'aid-bladder-response-fill ' + cls
-        },
-           live);
-      el('path', {d : trace, class : 'aid-bladder-response ' + cls}, live)
-          .addEventListener('click', chooseKey);
+      if (sent.length) {
+        const trace = curve(sent, x, y);
+        if (selected)
+          el('path', {
+            d : trace + ` L${right} ${base} H${left} Z`,
+            class : 'aid-bladder-response-fill ' + cls
+          },
+             live);
+        el('path', {d : trace, class : 'aid-bladder-response ' + cls}, live)
+            .addEventListener('click', chooseKey);
+      }
       el('path', {d : `M${left} ${y(key.gate)} H${right}`, class : 'aid-live-keyline ' + cls},
          live);
       el('path', {
@@ -411,7 +416,7 @@ liveKind('bladder', (studio, organId) => {
     const maturityAt = px => clamp((px - left) / (right - left));
     const hover = maturity => hoverOf(estimateAt(estimate(), maturity));
     const samples = estimate()?.life ?? [];
-    const cuts = [HATCH];
+    const cuts = [ HATCH ];
     for (let i = 1; i < samples.length; ++i) {
       const at = (i - .5) / (samples.length - 1);
       if (at > HATCH && samples[i].hover !== samples[i - 1].hover)
@@ -586,7 +591,7 @@ liveKind('bladder', (studio, organId) => {
     for (const {line, key} of film.thresholds)
       line.setAttribute('opacity', depth >= key.gate && model.capacity && key.readsDepth ? 1 : .5);
     for (const {sent, pulse} of film.nerves)
-      pulse.setAttribute('r', (2.6 * sent[at]).toFixed(1));
+      pulse.setAttribute('r', (2.6 * (sent[at] ?? 0)).toFixed(1));
   }
   return {root, show, tick};
 });

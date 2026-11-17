@@ -233,12 +233,6 @@ module.exports = async function checkCanvas(model, capabilities, root) {
                        (anchor[axis] - zoomed.state.camera[axis]) * zoomed.state.camera.zoom) <
                   1e-8,
               'The point under the pointer remains fixed while zooming');
-  // A bounded cell reports nothing up to its threshold and everything at full stimulus.
-  {
-    const {boundedAnswer} = await import('../ui/studio/view/sensitivity.js');
-    assert.equal(boundedAnswer(.3, .3), 0);
-    assert.equal(boundedAnswer(1, .3), 1);
-  }
   // Two bundles that run alongside each other become one nerve: side by side across it, as far
   // apart as their strands are wide, and each bends into the nerve without a corner.
   const {nerveBundling, polylineWay, NERVE_SNAP} = await import('../ui/studio/view/nerves.js');
