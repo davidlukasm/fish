@@ -13,7 +13,18 @@
 import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
-import {addPicture, clamp, drag, el, liveKind, path, picture, txt, reportBubble} from './kit.js';
+import {
+  addPicture,
+  clamp,
+  drag,
+  el,
+  liveKind,
+  path,
+  picture,
+  reportBubble,
+  squareGrip,
+  txt
+} from './kit.js';
 import {BOUNDED} from './sense.js';
 import {sectorAngle, sectorOf, skinSectors, turnTo} from './skin.js';
 
@@ -120,15 +131,7 @@ liveKind('touch', (studio, organId) => {
     txt(live, gx + away * 10, gy - 7, word('reports'),
         {'text-anchor' : away > 0 ? 'start' : 'end', class : 'aid-live-small aid-live-inflesh'});
     drag(svg,
-         el('rect', {
-           x : gx - 5,
-           y : gy - 5,
-           width : 10,
-           height : 10,
-           rx : 2.5,
-           class : 'aid-live-keygrip k0 on'
-         },
-            live),
+         squareGrip(live, gx, gy, {class : 'aid-live-keygrip k0 on'}),
          p => draft(updateCenter(
              studio.state.document, cell.id,
              {threshold : BOUNDED.threshold(most * clamp((p.y - skin) / deep, CUT.least, 1))})),
