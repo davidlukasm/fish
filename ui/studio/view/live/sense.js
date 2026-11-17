@@ -256,7 +256,7 @@ export function senseCourse(svg, {
             Array.from({length : NERVE.pulses},
                        () => ({t : 1, e : el('circle', {r : 0, class : 'aid-live-pulse'}, tilted)}))
       });
-      el('circle', {cx, cy, r : 6, class : 'aid-live-soma k' + i + (on ? ' on' : '')}, tilted)
+      el('circle', {cx, cy, r : 9, class : 'aid-live-soma k' + i + (on ? ' on' : '')}, tilted)
           .addEventListener('pointerdown', () => {
             own.chosen = i;
             redraw();
@@ -327,8 +327,10 @@ export function senseCourse(svg, {
     // The same pair twice: at the cells and at the keys (under their holder).
     // A sense with one type of cells only has no pair.
     if (most > 1) {
-      chip(live, R - 22, I0 - 54, '−', () => fewer(keys[own.chosen]), keys.length > 1, 6);
-      chip(live, R - 6, I0 - 54, '+', () => more(newGate()), keys.length < most, 6);
+      chip(live, R - 1.5 * GRIP - 3, I0 - 54, '−', () => fewer(keys[own.chosen]),
+           keys.length > 1, GRIP / 2);
+      chip(live, R - GRIP / 2 - 1, I0 - 54, '+', () => more(newGate()), keys.length < most,
+           GRIP / 2);
     }
     txt(live, L, I0 - 9, words.course);
     // What holds the thresholds, filling with the input.

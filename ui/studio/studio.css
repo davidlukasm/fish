@@ -1183,7 +1183,6 @@
 .aid-live-keymark{fill:none;stroke:var(--key);stroke-width:2.5}
 .aid-live-keygrip{fill:var(--key);stroke:var(--aid-ink);stroke-width:1}
 .aid-live-keygrip.on{stroke:var(--aid-handle);stroke-width:2.5}
-.aid-live-tire{stroke:var(--key)}
 .aid-live-sense-ache{color:#ef8f8f}
 .aid-live-sense-fill{fill:currentColor}
 .aid-live-sense-input{fill:currentColor;fill-opacity:.35;stroke:currentColor;stroke-width:1.6}
