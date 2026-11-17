@@ -608,37 +608,95 @@ void light_spread_report(const field::Substrate &t, const fishsim::BrainInterfac
   }
   std::cout << "]}";
 }
-// The thresholds the cells of each sense group actually drew, from the same example as the
-// light spread, in the measure of "begins" in the sense report: every drawn cell of the group that
-// senses what its planned cell senses (the nominal plan, as in the sense report; the site, not the
-// plan's function code, decides the sense of a pressure cell). A site's copies share the sense its
-// centre drew, so a whole group can turn into another sense; then its list is empty, never the
-// other sense's thresholds. A group whose plan senses nothing non-visual has none (null).
-void sense_spread_report(const field::Substrate &planned, const fishsim::BrainInterface &nominal,
-                         const field::Substrate &t, const fishsim::BrainInterface &binding,
-                         const std::vector<Group> &groups) {
-  std::cout << ",\"senseSpread\":[";
-  for (std::size_t i = 0; i < groups.size(); ++i) {
+// A course an inspector tries on a sense's cells: the group they belong to and the stimulus they
+// meet, step by step, in the sense's own units.
+struct SenseCourse {
+  int group = 0;
+  std::vector<double> stimulus;
+};
+constexpr int MOST_SENSE_COURSES = 12, LONGEST_SENSE_COURSE = 4000, SENSE_COURSE_DIGITS = 4;
+std::vector<SenseCourse> read_sense_courses(std::istream &in) {
+  int count = 0;
+  ensure(bool(in >> count) && count >= 0 && count <= MOST_SENSE_COURSES, "invalid sense courses");
+  std::vector<SenseCourse> courses(static_cast<std::size_t>(count));
+  for (auto &course : courses) {
+    int steps = 0;
+    ensure(bool(in >> course.group >> steps) && steps > 0 && steps <= LONGEST_SENSE_COURSE,
+           "invalid sense course");
+    course.stimulus.resize(static_cast<std::size_t>(steps));
+    for (auto &value : course.stimulus)
+      ensure(bool(in >> value) && std::isfinite(value) && value >= 0,
+             "invalid sense course stimulus");
+  }
+  return courses;
+}
+// What a group's sense cells send over a course of their stimulus, as the cells of the drawn
+// example have them (light_example, as lightSpread): each cell answers with receptor_response
+// against what it is used to, and a cell of a tiring sense then gets used to the stimulus by
+// adapted_level, as the fish does each step (cppn_brain.cc, adapted_response); a near cell answers
+// what it sees with visual_response. The eye's cells have no course. `sent`: the cells'
+// mean answer as a share of what they can send (as `senses`); `used`: what they are used to on
+// average, in the stimulus's units; `cells`: their thresholds. The cells are those that sense what
+// the group's planned cell senses (the nominal plan, as in the sense report): a site's copies
+// share the sense its centre drew, so a whole group can turn into another sense; then it has no
+// course (null), never the other sense's.
+void sense_course_report(const Plan &plan, const field::Substrate &planned,
+                         const fishsim::BrainInterface &nominal,
+                         const std::vector<SenseCourse> &courses) {
+  const auto &groups = plan.groups;
+  const auto sample = light_example(plan);
+  const auto binding = fishsim::body_interface(sample);
+  const auto precision = std::cout.precision(SENSE_COURSE_DIGITS);
+  std::cout << ",\"senseCourses\":[";
+  for (std::size_t i = 0; i < courses.size(); ++i) {
+    const auto &[group, stimulus] = courses[i];
+    ensure(std::size_t(group) < groups.size(), "unknown sense course group");
     std::cout << (i ? "," : "");
     int sense = -1;
     for (const auto &r : nominal.sensory)
-      if (!r.visual() && groups[i].contains(planned.neurons[r.neuron].location)) {
+      if (r.channel != field::Light && groups[group].contains(planned.neurons[r.neuron].location)) {
         sense = r.dominant_sense();
         break;
       }
-    if (sense < 0) {
+    std::vector<const fishsim::BrainInterface::Receptor *> cells;
+    if (sense >= 0)
+      for (const auto &r : binding->sensory)
+        if (r.dominant_sense() == sense && r.senses[sense] > 0 &&
+            groups[group].contains(sample.neurons[r.neuron].location))
+          cells.push_back(&r);
+    if (cells.empty()) {
       std::cout << "null";
       continue;
     }
-    std::size_t count = 0;
-    std::cout << '[';
-    for (const auto &r : binding.sensory)
-      if (!r.visual() && r.dominant_sense() == sense &&
-          groups[i].contains(t.neurons[r.neuron].location))
-        std::cout << (count++ ? "," : "") << (r.intensity() ? r.response_threshold : r.threshold);
-    std::cout << ']';
+    const bool tiring = fishsim::adapting_sense(sense);
+    std::vector<double> mean(cells.size()), used;
+    std::cout << "{\"sent\":[";
+    for (std::size_t st = 0; st < stimulus.size(); ++st) {
+      double answer = 0, accustomed = 0;
+      for (std::size_t c = 0; c < cells.size(); ++c) {
+        const auto &r = *cells[c];
+        answer += r.visual() ? fishsim::visual_response(r, stimulus[st])
+                             : fishsim::receptor_response(r, stimulus[st], mean[c]) / r.senses[sense];
+        accustomed += mean[c];
+        if (tiring)
+          mean[c] = fishsim::adapted_level(mean[c], stimulus[st], r.adaptation_rate);
+      }
+      std::cout << (st ? "," : "") << answer / double(cells.size());
+      used.push_back(accustomed / double(cells.size()));
+    }
+    std::cout << "],\"used\":[";
+    for (std::size_t st = 0; st < used.size(); ++st)
+      std::cout << (st ? "," : "") << used[st];
+    std::cout << "],\"cells\":[";
+    std::cout.precision(REPORT_DIGITS);
+    for (std::size_t c = 0; c < cells.size(); ++c)
+      std::cout << (c ? "," : "")
+                << (cells[c]->intensity() ? cells[c]->response_threshold : cells[c]->threshold);
+    std::cout.precision(SENSE_COURSE_DIGITS);
+    std::cout << "]}";
   }
   std::cout << ']';
+  std::cout.precision(precision);
 }
 // The swim bladder as the atelier estimates it, over the fish's maturity with the rest of the
 // blood from the life band: its capacity from the cells that are there (group_life), the lift of a
@@ -1456,6 +1514,7 @@ struct DesignQuery {
   std::optional<SenseScene> sense;
   LearningContext learning;
   bool light_spread;
+  std::vector<SenseCourse> courses;
 };
 
 DesignQuery read_design_query(std::istream &in) {
@@ -1471,12 +1530,13 @@ DesignQuery read_design_query(std::istream &in) {
   std::optional<SenseScene> sense;
   if (flag("invalid sense flag"))
     sense = read_sense_scene(in);
-  return {sight, sense, read_learning_context(in), spread};
+  auto learning = read_learning_context(in);
+  return {sight, sense, std::move(learning), spread, read_sense_courses(in)};
 }
 
 void design_report(const PreparedDesign &design, const DesignQuery &query, bool probe_only,
                    SightDetail detail = SightDetail::full) {
-  const auto &[sight, sense, learning, light_spread] = query;
+  const auto &[sight, sense, learning, light_spread, courses] = query;
   const auto &[plan, g] = design;
   const auto &groups = plan.groups;
   ensure(!learning.probe || std::size_t(learning.probe->group) < groups.size(),
@@ -1499,7 +1559,6 @@ void design_report(const PreparedDesign &design, const DesignQuery &query, bool 
     const auto sample = light_example(plan);
     const auto binding = fishsim::body_interface(sample);
     light_spread_report(sample, *binding, groups, true);
-    sense_spread_report(t, *g.interface, sample, *binding, groups);
   }
   if (sight) {
     // The illuminated probe sits in open water, beyond the range of the tank's boundaries.
@@ -1518,6 +1577,8 @@ void design_report(const PreparedDesign &design, const DesignQuery &query, bool 
     gill_food_report(design_adult(*g.interface), *g.interface, *gills, {});
   else if (sense)
     sense_report(t, g.interface, groups, *sense);
+  if (!courses.empty())
+    sense_course_report(plan, t, *g.interface, courses);
   std::cout << '}';
 }
 

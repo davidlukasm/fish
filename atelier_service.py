@@ -350,6 +350,25 @@ def learning_context_line(blood, learning):
     return " ".join(number(value) for value in [*flags, *values]) + "\n"
 
 
+def sense_courses_line(courses):
+    """The courses an inspector tries on sense cells (atelier.cc, read_sense_courses): how many,
+    then for each the group of its cells, how many steps and the stimulus at each step."""
+    if courses is None:
+        return "0\n"
+    if not isinstance(courses, list) or len(courses) > 12:
+        raise Refusal("studio.errors.invalidProbe")
+    parts = [str(len(courses))]
+    for course in courses:
+        if not isinstance(course, dict) or type(course.get("group")) is not int:
+            raise Refusal("studio.errors.invalidProbe")
+        stimulus = course.get("stimulus")
+        if not isinstance(stimulus, list) or not 0 < len(stimulus) <= 4000:
+            raise Refusal("studio.errors.invalidProbe")
+        parts.append(f"{course['group']} {len(stimulus)}")
+        parts.append(" ".join(number(v) for v in stimulus))
+    return " ".join(parts) + "\n"
+
+
 def run(data, data_dir=None, progress=None, cancel=None, *, check_incubation=False):
     if not isinstance(data, dict):
         raise Refusal("studio.errors.invalidRequest")
@@ -373,7 +392,8 @@ def run(data, data_dir=None, progress=None, cancel=None, *, check_incubation=Fal
             raise Refusal("studio.errors.invalidRequest")
         body = (str(int(spread)) + "\n" + sight_line(data.get("sight")) +
                 sense_line(data.get("sense")) +
-                learning_context_line(data.get("blood"), data.get("learning")))
+                learning_context_line(data.get("blood"), data.get("learning")) +
+                sense_courses_line(data.get("senseCourses")))
         key = data.get("planKey")
         if key is not None:
             if not isinstance(key, str) or len(key) != 24 or any(c not in "0123456789abcdef" for c in key):

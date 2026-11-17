@@ -22,7 +22,7 @@ import {
 import {label} from '../kit.js';
 import {addPicture, el, hatchOf, liveKind} from './kit.js';
 import {sampleColour, scentMap} from './scentmap.js';
-import {INTENSITY, keysOf, lastDrawn, senseCourse, steady, STEPS, typeLife} from './sense.js';
+import {INTENSITY, keysOf, senseCourse, steady, STEPS, typeLife} from './sense.js';
 
 const word = (key, values) => t('studio.live.nose.' + key, values);
 const ROUND_MS = 12000, MOST = 4, NEW_WIDTH = .25;
@@ -65,15 +65,15 @@ liveKind('nose', (studio, organId) => {
     own.chosen = types().length;
     change(added.document);
   }
-  const drawnOf = lastDrawn();
   const course = senseCourse(smell, {
+    studio,
     name : 'smell',
     own,
     tires : true,
     most : MOST,
     words : {course : word('course'), used : word('used'), steps : word('steps')},
     scale : INTENSITY,
-    keys : () => keysOf(types(), INTENSITY).map(k => drawnOf(studio.state, k, INTENSITY)),
+    keys : () => keysOf(types(), INTENSITY),
     input : () => steady(total),
     share : ({cell}) => {
       const affinity = scentAffinities(cell.q1, cell.q2, cell.qwidth);
@@ -91,7 +91,9 @@ liveKind('nose', (studio, organId) => {
     const nose = organ();
     if (!nose)
       return;
-    const {senseProbe, anatomy, senseSpread, capabilities : caps} = studio.state;
+    const {senseProbe, anatomy, outlinePreview, capabilities : caps} = studio.state;
+    // The engine's answer to the course tried on the cells (sense.js, lastCourses).
+    const answered = (outlinePreview ?? anatomy)?.senseCourses;
     const kinds = organTypes(nose), cells = kinds.map(type => type.centers[0]);
     own.chosen = Math.min(own.chosen, cells.length - 1);
     const scent = senseProbe?.kind === 'smell' ? senseProbe.scent : 0, hatch = hatchOf(studio);
@@ -115,7 +117,7 @@ liveKind('nose', (studio, organId) => {
         settle,
         redraw : again
       });
-    if (scentChanged || drawn.senseSpread !== senseSpread ||
+    if (scentChanged || drawn.answered !== answered ||
         drawn.concentrations.length !== concentrations.length ||
         concentrations.some((value, i) => value !== drawn.concentrations[i])) {
       course.draw();
@@ -135,7 +137,7 @@ liveKind('nose', (studio, organId) => {
         settle,
         redraw : again
       });
-    drawn = {nose, chosen : own.chosen, scent, concentrations, senseSpread, hatch};
+    drawn = {nose, chosen : own.chosen, scent, concentrations, answered, hatch};
   }
   function tick(dt) {
     step = (step + dt * STEPS / ROUND_MS) % STEPS;

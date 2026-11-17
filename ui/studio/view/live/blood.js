@@ -7,7 +7,7 @@
 // wheel's plane and a width; it takes of each substance exp(-distance^2 / (2 sigma^2)), not
 // brought to a sum of one. Its stimulus is the sum of what it takes x the level in the blood;
 // the answer is bounded, the cells do not get used to it, and they read the blood in the egg as
-// outside.
+// outside. What each type's cells report of it is the engine's (sense.js, lastCourses).
 // The levels are the preview's blood (trials.js, setPreviewContext): the same the other pictures
 // of the Atelier read.
 // STOPGAP: the levels are dragged here, on the wheel. They are the fish's state, not this organ's,
@@ -31,7 +31,7 @@ import {previewContextOf} from '../development.js';
 import {label} from '../kit.js';
 import {substanceName} from '../substances.js';
 import {addPicture, chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
-import {answer, BOUNDED, IRRITANT, keyGrip, setGate} from './sense.js';
+import {BOUNDED, IRRITANT, keyGrip, lastCourses, setGate} from './sense.js';
 
 const word = (key, values) => t('studio.live.blood.' + key, values);
 const RING = Object.freeze({
@@ -71,6 +71,7 @@ liveKind('blood', (studio, organId) => {
   heading(word('report'));
   const rows = addPicture(root);
   const own = {chosen : 0};
+  const coursesOf = lastCourses('blood');
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -176,13 +177,15 @@ liveKind('blood', (studio, organId) => {
   function drawRows(cells, levels, takes) {
     const {L, R, top, row} = ROWS, {svg, live} = picture(rows, top + row * cells.length + 20),
                       X = v => L + (R - L) * clamp(v);
+    const sums = takes.map(take => take.reduce((sum, a, j) => sum + a * levels[j], 0)),
+          reports =
+              coursesOf(studio, cells.map((cell, i) => ({id : cell.id, stimulus : [ sums[i] ]})));
     txt(live, L, top + row * cells.length + 8, word('nothing'), {class : 'aid-live-small'});
     txt(live, R, top + row * cells.length + 8, word('whole'),
         {'text-anchor' : 'end', class : 'aid-live-small'});
     cells.forEach((cell, i) => {
       const chosen = i === own.chosen, y = top + row * i,
-            parts = takes[i].map((a, j) => a * levels[j]), sum = parts.reduce((a, b) => a + b, 0),
-            gate = BOUNDED.gate(cell), pick = () => {
+            parts = takes[i].map((a, j) => a * levels[j]), gate = BOUNDED.gate(cell), pick = () => {
               own.chosen = i;
               again();
             };
@@ -211,7 +214,7 @@ liveKind('blood', (studio, organId) => {
            live);
         at += v;
       });
-      const cy = y + row / 2 - 4, report = answer(Math.min(1, sum), gate, 0);
+      const cy = y + row / 2 - 4, report = reports?.[i]?.sent[0] ?? 0;
       el('path', {
         d : `M${L - 16} ${cy} q-10 -2 -16 -10 M${L - 16} ${cy} l8 0`,
         class : 'aid-live-nerve-fibre k' + i

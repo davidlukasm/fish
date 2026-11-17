@@ -40,8 +40,8 @@ import {newFishDocument} from './canvas_placement.js';
 const PRESSURE_TRIES = 12, PRESSURE_BATCH = 'pressure';
 const nativeProbe = probe => probe?.kind === 'ground' ? null : probe;
 const TRANSIENT_REPORTS = [
-  'lightSpread', 'senseSpread', 'sight', 'senseProbe', 'noseProbe', 'barbelProbe', 'mouthCourse',
-  'attackProbe', 'gillFood'
+  'lightSpread', 'sight', 'senseProbe', 'noseProbe', 'barbelProbe', 'mouthCourse',
+  'attackProbe', 'gillFood', 'senseCourses'
 ];
 export const designMethods = {
   async newFish(initial = false) {
@@ -190,6 +190,21 @@ export const designMethods = {
     if (organOf(this.state.document, this.state.selected?.id)?.id === organId)
       paintMouthStep(this.bodyMap(), sample);
   },
+  // The courses a sense's inspector tries on its cells (sense.js, lastCourses): asked of the
+  // engine once, not again for its own answer, and only while their organ is chosen.
+  trySenseCourses(key, courses) {
+    if (this.state.courseProbe?.key === key)
+      return;
+    this.state.courseProbe =
+        {key, courses, organ : organOf(this.state.document, this.state.selected?.id)?.id ?? null};
+    this.requestDesign();
+  },
+  liveCourses() {
+    const probe = this.state.courseProbe;
+    return probe && probe.organ === organOf(this.state.document, this.state.selected?.id)?.id
+               ? probe
+               : null;
+  },
   setAttackCommand(command) {
     const probe = this.state.senseProbe;
     if (probe?.kind === 'attack' && probe.strength !== command) {
@@ -236,7 +251,13 @@ export const designMethods = {
             prediction : learnProbe.prediction,
             interval : learnProbe.interval
           };
-    const context = {...scene, blood, ...(learning ? {learning} : {})};
+    const courses = this.liveCourses();
+    const context = {
+      ...scene,
+      blood,
+      ...(learning ? {learning} : {}),
+      ...(courses ? {senseCourses : courses.courses} : {})
+    };
     const body = requestBody('design', {
       ...context,
       ...(probeOnly ? {probeOnly : true} : {}),
@@ -265,6 +286,7 @@ export const designMethods = {
             ...(partial ? before : null),
             ...report,
             learnProbe : learning ? learnProbe : null,
+            senseCourseKey : courses?.key ?? null,
             gillProbeKey : scene.sense?.kind === 'gills' ? sense?.key : null
           };
           if (partial) {
@@ -307,13 +329,15 @@ export const designMethods = {
                                        ],
                                        bladderDraft && report?.bladderEstimate,
                                        gillDraft && [report?.gills, report?.gillFood,
-                                                     report?.gillProbeKey]]);
+                                                     report?.gillProbeKey],
+                                       courses && report?.senseCourses]);
               };
               const previous = shape();
               this.state.outlinePreview = anatomy;
               if (shape() !== previous) {
                 this.refreshScene();
-                if (colourDraft || fieldDraft || learningDraft || bladderDraft || gillDraft)
+                if (colourDraft || fieldDraft || learningDraft || bladderDraft || gillDraft ||
+                    courses)
                   this.refreshLive();
                 // A receptor's curve is the engine's: the inspector follows each answer.
                 if (draft.key === 'receptor')
@@ -353,8 +377,6 @@ export const designMethods = {
     this.shownDesign = this.state.document;
     if (anatomy.lightSpread)
       this.state.lightSpread = {document : this.state.document, report : anatomy.lightSpread};
-    if (anatomy.senseSpread)
-      this.state.senseSpread = {document : this.state.document, report : anatomy.senseSpread};
     this.state.outlinePreview = null;
     this.state.anatomy = anatomy;
     this.state.sightDocument = anatomy.sight ? this.state.document : null;

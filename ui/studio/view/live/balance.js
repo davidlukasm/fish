@@ -6,8 +6,8 @@
 // so a posture holds its report for as long as it lasts: no time axis.
 // The posture is the stimulus: the fish panel's gravity probe (probes.js; the direction of
 // "down" round the fish), and what the cells report of it is the engine's (anatomy.senseProbe).
-// The rose round the fish is what the fish panel cannot show: the report for every posture. It
-// is reckoned here with the engine's rule for a bounded answer (sense.js, answer). The report
+// The rose round the fish is what the fish panel cannot show: the report for every posture, the
+// engine's, as a course over the postures round the fish (sense.js, lastCourses). The report
 // rights the fish only through the motor region's "feel" input (organs.js, motor slots;
 // motor_region.js, flee to turn and escape); that connection is made and shown in the
 // inspector's list of ports (circuit.js, portsSection).
@@ -16,7 +16,7 @@ import {degrees, radians} from '../../../units.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
 import {sideOf} from '../../model/layout.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, txt, reportBubble} from './kit.js';
-import {answer, BOUNDED, IRRITANT} from './sense.js';
+import {BOUNDED, IRRITANT, lastCourses} from './sense.js';
 import {fishLeft, turnTo} from './skin.js';
 
 const word = (key, values) => t('studio.live.balance.' + key, values);
@@ -39,17 +39,20 @@ const hairOf = q1 => 90 * (1 + (q1 ?? 0)), qualityOf = hair => clamp(hair / 90 -
 const at =
     (angle, r) => [TILT.cx - r * Math.cos(radians(angle)), TILT.cy + r * Math.sin(radians(angle))];
 const down = (snout, s) => Math.max(0, Math.sin(radians(snout + s.side * s.hair)));
+// The postures the rose is drawn at: where the snout points, every 3 degrees round.
+const ROSE = Array.from({length : 121}, (_, n) => 3 * n);
 
 function drawRoses(group, sides) {
   const {cx, cy, ring, petal} = TILT;
   el('circle', {cx, cy, r : ring, class : 'aid-live-rim'}, group);
   for (const s of sides) {
+    if (!s.rose)
+      continue;
     const outline = [], inner = [];
-    for (let angle = 0; angle <= 360; angle += 3) {
-      const response = answer(down(angle, s), s.gate, 0);
-      outline.push(at(angle, ring + (s.k ? -.7 : 1) * petal * response));
+    ROSE.forEach((angle, n) => {
+      outline.push(at(angle, ring + (s.k ? -.7 : 1) * petal * s.rose[n]));
       inner.push(at(angle, ring));
-    }
+    });
     el('path', {
       d : path(outline) + ' L' + path(inner.reverse()).slice(1) + 'Z',
       class : 'aid-live-petal k' + s.k,
@@ -68,6 +71,7 @@ liveKind('balance', (studio, organId) => {
   // probe: its bearing is where "down" lies round the fish, 90 for a level fish.
   const LEVEL = 90;
   let tiltNow = 0, shown;
+  const coursesOf = lastCourses('balance');
   const heard = cell =>
       groupReport(studio.state.document, studio.state.anatomy, 'senseProbe', cell.id);
   const organ = () => findOrgan(studio.state.document, organId);
@@ -81,7 +85,7 @@ liveKind('balance', (studio, organId) => {
   // the tip the glow of what the engine reports for its cells.
   function drawTilt(sides) {
     const [{cell, side : face}] = sides, {cx, cy, ring, petal} = TILT;
-    const stamp = sides.map(s => [s.side, s.hair, s.gate].join(':')).join('|');
+    const stamp = sides.map(s => [s.side, s.hair, s.gate, s.rose?.join(',')].join(':')).join('|');
     const {svg, live} = picture(tilt, TILT.height, fixed => {
       el('path', {d : `M278 172 v26 m-5 -7 l5 7 l5 -7`, class : 'aid-live-arrow'}, fixed);
       txt(fixed, 278, 210, word('down'), {'text-anchor' : 'middle', class : 'aid-live-small'});
@@ -147,7 +151,11 @@ liveKind('balance', (studio, organId) => {
     const nextTilt = LEVEL - (probe?.kind === 'balance' ? probe.bearing : LEVEL);
     const face = sideOf(own) || 1, twin = findOrgan(studio.state.document, own.pair)?.centers[0];
     const ownResponse = heard(cell), twinResponse = twin ? heard(twin) : null;
-    const inputs = [ cell, face, twin, nextTilt, ownResponse, twinResponse ];
+    const {anatomy, outlinePreview} = studio.state;
+    const inputs = [
+      cell, face, twin, nextTilt, ownResponse, twinResponse,
+      (outlinePreview ?? anatomy)?.senseCourses
+    ];
     if (shown?.every((value, index) => value === inputs[index]))
       return;
     shown = inputs;
@@ -157,6 +165,9 @@ liveKind('balance', (studio, organId) => {
     const sides = [ side(cell, face, 0, ownResponse) ];
     if (twin)
       sides.push(side(twin, -face, 1, twinResponse));
+    const runs =
+        coursesOf(studio, sides.map(s => ({id : s.cell.id, stimulus : ROSE.map(a => down(a, s))})));
+    sides.forEach((s, i) => s.rose = runs?.[i]?.sent ?? null);
     drawTilt(sides);
   }
   return {root, show};

@@ -63,6 +63,8 @@ Point lateral_point(int k, double radius);
 double anatomical_stimulus(const Body &, const BrainInterface::Receptor &, const SensoryFrame &,
                            double sediment_contact, const PhysiologyParameters &);
 float receptor_response(const BrainInterface::Receptor &, double stimulus, double mean = 0);
+// What a cell of the eye or the near sense reports of what it sees, before its gain.
+float visual_response(const BrainInterface::Receptor &, double seen);
 float anatomical_sensor(const Body &, const BrainInterface::Receptor &, const SensoryFrame &,
                         double sediment_contact = 0,
                         std::array<float, field::SENSE_COUNT> *components = nullptr,

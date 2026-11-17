@@ -11,8 +11,8 @@
 // round it, the cells' places and the grip for the field's width are the fish panel's too
 // (body.js, feltFlow; anatomy_handles.js); here is only what it cannot show: the time the
 // current lasts. The weights are the plan's report (anatomy.lateral); what the cells send over
-// the steps is reckoned with the engine's rule for an unbounded stimulus and for getting used
-// (sense.js, INTENSITY and runOf).
+// the steps, and where their thresholds lie, is the engine's course for this current (sense.js,
+// lastCourses).
 // Not in the picture: sediment; the fish's own speed and turning apart from the water's.
 import {t} from '../../../strings.js';
 import {degrees, radians} from '../../../units.js';
@@ -21,14 +21,12 @@ import {addPicture, clamp, drag, el, liveKind, path, picture, reportBubble, txt}
 import {
   bandOf,
   between,
-  lastDrawn,
   INTENSITY,
   keysOf,
-  runOf,
+  lastCourses,
   setGate,
   setSpread,
   setUsed,
-  silentStep,
   steady,
   STEPS,
   usedFor
@@ -63,7 +61,7 @@ liveKind('lateral', (studio, organId) => {
   root.className = 'aid-live-lateral aid-live-sense-flow';
   const band = addPicture(root);
   let step = 0, bubble = null, shown = null;
-  const drawnOf = lastDrawn();
+  const coursesOf = lastCourses('lateral');
   const current = () => studio.state.senseProbe?.kind === 'flow' ? studio.state.senseProbe : null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
@@ -85,16 +83,18 @@ liveKind('lateral', (studio, organId) => {
   }
   // The current over the steps as the cells meet it, what they send, and when they have got
   // used to it and fall silent.
+  // Before the engine's first answer the hairs stand for the plan's one threshold.
   function courseOf(cell) {
-    const probe = current(),
-          key = drawnOf(studio.state, keysOf([ {id : '', centers : [ cell ]} ], INTENSITY)[0],
-                        INTENSITY);
+    const probe = current(), key = keysOf([ {id : '', centers : [ cell ]} ], INTENSITY)[0];
     const met = steady((probe?.strength ?? 0) * share(cell, probe));
+    const run = coursesOf(studio, [ {id : key.id, stimulus : met} ])?.[0] ?? null;
     return {
       key,
       met,
-      sent : runOf(key, met, true, INTENSITY).sent,
-      silent : silentStep(key, met, INTENSITY)
+      sent : run?.sent ?? [],
+      silent : run?.silent ?? 0,
+      gates : run ? run.cells : [ INTENSITY.val(key.gate) ],
+      stale : !run || run.stale
     };
   }
   function draw(cell) {
@@ -142,7 +142,7 @@ liveKind('lateral', (studio, organId) => {
               clamp(degrees(Math.atan2(p.x - x, B.skin - p.y)) / B.lean, B.least, most),
           arc = (x, from, to) =>
               path(Array.from({length : 9}, (_, n) => tip(x, from + (to - from) * n / 8))),
-          gates = INTENSITY.gates(c.key),
+          gates = c.gates,
           stand = n =>
               B.L + B.first +
               n * Math.min(B.apart, (B.R - B.L - B.first - B.hair) / Math.max(1, gates.length - 1));
@@ -154,7 +154,7 @@ liveKind('lateral', (studio, organId) => {
         d : `M${x + (B.hair - B.tick) * Math.sin(at)} ${
             B.skin - (B.hair - B.tick) * Math.cos(at)} L${x + (B.hair + B.tick) * Math.sin(at)} ${
             B.skin - (B.hair + B.tick) * Math.cos(at)}`,
-        class : 'aid-live-keytick k0' + (c.key.stale ? ' stale' : '')
+        class : 'aid-live-keytick k0' + (c.stale ? ' stale' : '')
       },
          live);
       hair(x, bend, {class : 'aid-live-hair k0'});
@@ -194,14 +194,15 @@ liveKind('lateral', (studio, organId) => {
          p => draft(setGate(studio.state.document, c.key, leanOf(p, B.L), INTENSITY)),
          'lateralgate', 'grip', settle);
     // What the cells send, under the skin, over the same steps.
-    el('path', {
-      d : path(c.sent.filter((_, st) => st % every === 0)
-                   .map((v, n) => [X(n * every), floor + B.loud * clamp(v)])) +
-              ` L${X(STEPS)} ${floor} L${B.L} ${floor} Z`,
-      class : 'aid-live-glow k0',
-      opacity : .55
-    },
-       live);
+    if (c.sent.length)
+      el('path', {
+        d : path(c.sent.filter((_, st) => st % every === 0)
+                     .map((v, n) => [X(n * every), floor + B.loud * clamp(v)])) +
+                ` L${X(STEPS)} ${floor} L${B.L} ${floor} Z`,
+        class : 'aid-live-glow k0',
+        opacity : .55
+      },
+         live);
     // Where they have got used to the current: the hairs still lean, the cells are silent. The
     // grip there sets how fast they get used.
     if (c.silent > 0 && c.silent < STEPS) {
@@ -211,8 +212,7 @@ liveKind('lateral', (studio, organId) => {
       el('path', {d : `M${sx} ${floor} V${floor + B.loud}`, class : 'aid-live-keymark k0'}, live);
       txt(live, sx + 5, floor + B.loud, word('used'), {class : 'aid-live-small'});
       drag(svg, el('circle', {cx : sx, cy : floor + B.loud, r : 5}, live),
-           p => draft(
-               setUsed(studio.state.document, c.key, usedFor(c.key, c.met, stOf(p.x), INTENSITY))),
+           p => draft(setUsed(studio.state.document, c.key, usedFor(c.key, c.silent, stOf(p.x)))),
            'lateralused', 'grip', settle);
     }
     for (const st of B.marks)
@@ -227,7 +227,8 @@ liveKind('lateral', (studio, organId) => {
     const cell = organ()?.centers[0];
     if (!cell)
       return;
-    const keys = [ cell, current(), studio.state.anatomy?.lateral, studio.state.senseSpread ];
+    const {anatomy, outlinePreview} = studio.state;
+    const keys = [ cell, current(), anatomy?.lateral, (outlinePreview ?? anatomy)?.senseCourses ];
     if (shown?.every((value, i) => value === keys[i]))
       return;
     shown = keys;

@@ -427,6 +427,7 @@ async function checkLightSnapshots(model, sites) {
     traceAnswered : () => false,
     notice : error => assert.fail(error),
     requestDesign: designMethods.requestDesign,
+    liveCourses: designMethods.liveCourses,
     showAnatomy: designMethods.showAnatomy
   };
   for (const method of ['bringProbes', 'refreshHeader', 'refreshScene', 'refreshGraphics',
