@@ -8,6 +8,7 @@ import {
   substanceBound,
   findCenter,
   isLearner,
+  LEARNING_EFFECTS,
   pairEndpoint
 } from '../model/document.js';
 import {escapeText} from './markup.js';
@@ -133,7 +134,10 @@ export function learningInspector(state) {
   return html + heading(centerTitle(chosen)) + livePlace('learn', chosen) +
          teacherList(state, chosen, teachers.modulators) +
          // Which substances change this cell's learning is set at its receptors, in the hormone
-         // tool; here stands what it answers to and the way there.
-         chemistry(state, findCenter(doc, chosen.id)?.organ, chosen, [ 'hormone' ]) +
+         // tool; here stands what it answers to and the way there, to the first learning
+         // receptor that reads a substance, else to the learning factor.
+         chemistry(state, findCenter(doc, chosen.id)?.organ, chosen, [ 'hormone' ],
+                   LEARNING_EFFECTS.find(effect => boundSubstance(state, chosen, effect)) ??
+                       HORMONE_EFFECT.learning) +
          cellDevelopment(state, chosen) + contactPlan(state, [ chosen ]);
 }

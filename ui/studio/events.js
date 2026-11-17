@@ -447,6 +447,8 @@ export const FISH_CLICKS = Object.freeze([
     '[data-open-tool]',
     (studio, e) => {
       studio.state.selected = {kind : 'center', id : e.dataset.centerId};
+      if (e.dataset.openEffect !== undefined)
+        studio.state.effect = Number(e.dataset.openEffect);
       studio.setTool(e.dataset.openTool);
     }
   ],
