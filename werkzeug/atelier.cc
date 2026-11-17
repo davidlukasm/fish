@@ -614,6 +614,15 @@ void light_spread_report(const field::Substrate &t, const fishsim::BrainInterfac
   }
   std::cout << "]}";
 }
+// The cells as the plan draws them for one fish (light_example) and what they sense: what the
+// light spread and the sense courses read, drawn once for a prepared plan.
+struct DrawnExample {
+  field::Substrate sample;
+  std::shared_ptr<const fishsim::BrainInterface> binding;
+
+  explicit DrawnExample(const Plan &plan)
+      : sample(light_example(plan)), binding(fishsim::body_interface(sample)) {}
+};
 // A course an inspector tries on a sense's cells: the group they belong to and the stimulus they
 // meet, step by step, in the sense's own units; with `probe`, step by step as a share of what they
 // meet of the fish panel's probe.
@@ -663,13 +672,11 @@ std::vector<SenseCourse> read_sense_courses(std::istream &in) {
 // those that sense what the group's planned cell senses (the nominal plan, as in the sense
 // report): a site's copies share the sense its centre drew, so a whole group can turn into
 // another sense; then it has no course (null), never the other sense's.
-void sense_course_report(const Plan &plan, const field::Substrate &planned,
-                         const fishsim::BrainInterface &nominal,
+void sense_course_report(const std::vector<Group> &groups, const field::Substrate &planned,
+                         const fishsim::BrainInterface &nominal, const DrawnExample &example,
                          const std::vector<SenseCourse> &courses,
                          const std::vector<double> &probed) {
-  const auto &groups = plan.groups;
-  const auto sample = light_example(plan);
-  const auto binding = fishsim::body_interface(sample);
+  const auto &[sample, binding] = example;
   const auto precision = std::cout.precision(SENSE_COURSE_DIGITS);
   const auto list = [](const std::vector<double> &values) {
     for (std::size_t k = 0; k < values.size(); ++k)
@@ -1575,6 +1582,15 @@ struct PreparedDesign {
     g.blueprint = std::make_shared<const field::Substrate>(planned_substrate(plan.groups));
     g.interface = fishsim::body_interface(*g.blueprint);
   }
+  // The drawn example, made the first time a report asks for it.
+  const DrawnExample &example() const {
+    if (!drawn)
+      drawn = std::make_unique<const DrawnExample>(plan);
+    return *drawn;
+  }
+
+private:
+  mutable std::unique_ptr<const DrawnExample> drawn;
 };
 
 struct DesignQuery {
@@ -1605,7 +1621,8 @@ DesignQuery read_design_query(std::istream &in) {
 void design_report(const PreparedDesign &design, const DesignQuery &query, bool probe_only,
                    SightDetail detail = SightDetail::full) {
   const auto &[sight, sense, learning, light_spread, courses] = query;
-  const auto &[plan, g] = design;
+  const auto &plan = design.plan;
+  const auto &g = design.g;
   const auto &groups = plan.groups;
   ensure(!learning.probe || std::size_t(learning.probe->group) < groups.size(),
          "unknown learning probe group");
@@ -1623,11 +1640,8 @@ void design_report(const PreparedDesign &design, const DesignQuery &query, bool 
     readiness_report(*g.interface, t, false);
     anatomy_report(g, groups, false, &learning, &plan.growth);
   }
-  if (light_spread) {
-    const auto sample = light_example(plan);
-    const auto binding = fishsim::body_interface(sample);
-    light_spread_report(sample, *binding, groups, true);
-  }
+  if (light_spread)
+    light_spread_report(design.example().sample, *design.example().binding, groups, true);
   if (sight) {
     // The illuminated probe sits in open water, beyond the range of the tank's boundaries.
     // This report describes the eyes separately. The aquarium can combine their frontal signals.
@@ -1647,7 +1661,7 @@ void design_report(const PreparedDesign &design, const DesignQuery &query, bool 
   else if (sense)
     probed = sense_report(t, g.interface, groups, *sense);
   if (!courses.empty())
-    sense_course_report(plan, t, *g.interface, courses, probed);
+    sense_course_report(groups, t, *g.interface, design.example(), courses, probed);
   std::cout << '}';
 }
 
