@@ -19,6 +19,7 @@ import {
   effectLevel,
   findCenter,
   findOrgan,
+  groupReport,
   organOf,
   growsWith,
   NOTICEABLE_AFFINITY,
@@ -26,7 +27,6 @@ import {
   regulatorySubstances,
   receptorEnds,
   receptorAffinity,
-  receptorResponse,
   SUBSTANCE_NAME_LENGTH,
   teachersOf,
   wheelAffinity,
@@ -412,8 +412,12 @@ export function receptorBody(state, center, effect) {
   return toggle + effectCurve(state, receptor, effect, target) +
          '<div class="aid-receptor-picture"><div class="aid-wheel-close">' +
          receptorWheel(state, receptor, target) + '</div>' +
-         effectScene(effect, substanceColor(receptor.substance), receptorEnds(receptor),
-                     {capabilities : state.capabilities, center}) +
+         effectScene(effect, substanceColor(receptor.substance), receptorEnds(receptor), {
+           capabilities : state.capabilities,
+           rested : groupReport(state.document, state.outlinePreview ?? state.anatomy, 'groups',
+                                center.id)
+                        ?.learning?.rested
+         }) +
          variationGraphic(receptor.spread_receptors, target, 'spread_receptors',
                           receptorVariationExamples(receptor, state.capabilities)) +
          '</div>';

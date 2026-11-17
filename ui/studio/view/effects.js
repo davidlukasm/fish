@@ -4,7 +4,6 @@ import {effectLevel, startEnds} from '../model/document.js';
 import {escapeText, fixed} from './markup.js';
 import {label} from './kit.js';
 import {t} from '../../strings.js';
-import {learningTime, retainedLearning} from '../model/learning.js';
 import {animate, RESTING_GLOW, TEACH_PULSE, travelling} from './episode.js';
 
 const PANEL = Object.freeze({
@@ -226,13 +225,14 @@ export function effectScene(effect, colour, ends = startEnds(effect), example = 
 const word = key => label('effectPicture.' + key);
 const words = (x, y, text, anchor = 'middle') => '<text x="' + x + '" y="' + y + '" text-anchor="' +
                                                  anchor + '">' + escapeText(text) + '</text>';
+// What a contact keeps after a rest without and with the substance is the engine's (anatomy.groups,
+// learning.rested); before its answer only the name.
 function consolidationScene(colour, ends, example) {
   const constants = example?.capabilities?.neural;
-  if (!constants || !example.center)
+  if (!constants || !example.rested)
     return '<svg class="aid-effect-scene" viewBox="0 0 240 24">' +
            words(120, 16, word('consolidation')) + '</svg>';
-  const time = learningTime(example.center);
-  const retained = [ ends.without, ends.with ].map(r => retainedLearning(r, time, constants));
+  const retained = example.rested.map(([ weight, protection ]) => ({weight, protection}));
   const width = 10, cellX = 98;
   const row = (y, strength, protection) =>
       '<path class="aid-effect-line ghost" d="M16 ' + y + 'H86" stroke-width="' + width + '"/>' +

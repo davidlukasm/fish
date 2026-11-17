@@ -3379,13 +3379,8 @@ async function checkHormoneSystems(model, capabilities) {
     assert.doesNotMatch(excited, /aid-effect-line teach/);
     assert.match(taught, /aid-effect-line teach/);
     assert.doesNotMatch(taught, /aid-effect-spikes/);
-    const {retainedLearning} = await import('../ui/studio/model/learning.js');
     const learner = model.defaults({key : 'relay', role : 'nerve'}, sites[0]);
     const context = {hormones : Array(HORMONES.levels).fill(0), maturity : 0};
-    const memory = [ -1, 0, 1 ].map(r => retainedLearning(r, 100, sitesResult.neural));
-    assert.ok(memory[0].weight < memory[1].weight && memory[1].weight < memory[2].weight);
-    assert.ok(memory.every(m => m.weight < 1),
-              'Consolidation preserves a learned contact; it does not strengthen it at rest');
     const eligibility = effectScene(E.eligibility, '#abcdef');
     assert.doesNotMatch(eligibility, /aid-effect-wave/,
                         'Eligibility never trades sensory credit for pacemaker credit');
