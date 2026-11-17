@@ -15,24 +15,36 @@ import {t} from '../../../strings.js';
 import {degrees, radians} from '../../../units.js';
 import {findOrgan, groupReport, updateCenter} from '../../model/document.js';
 import {sideOf} from '../../model/layout.js';
-import {addPicture, clamp, drag, el, liveKind, path, picture, txt, reportBubble} from './kit.js';
+import {
+  addPicture,
+  clamp,
+  drag,
+  el,
+  GRIP,
+  liveKind,
+  path,
+  picture,
+  reportBubble,
+  squareGrip,
+  txt
+} from './kit.js';
 import {BOUNDED, IRRITANT, lastCourses} from './sense.js';
 import {fishLeft, turnTo} from './skin.js';
 
 const word = (key, values) => t('studio.live.balance.' + key, values);
 const TILT = Object.freeze({
-  height : 218,
+  height : 256,
   cx : 150,
-  cy : 108,
-  hair : 30,
-  ring : 72,
+  cy : 128,
+  hair : 40,
+  ring : 86,
   petal : 20,
   least : .03,
   most : .95,
   fish : 1.25,
-  aside : 22,
+  aside : 34,
   bubble : 10,
-  beyond : 18
+  beyond : 24
 });
 // A hair's direction from the snout, in degrees: 0 to the snout, 90 to the flank, 180 to the tail.
 const hairOf = q1 => 90 * (1 + (q1 ?? 0)), qualityOf = hair => clamp(hair / 90 - 1, -1, 1);
@@ -104,7 +116,7 @@ liveKind('balance', (studio, organId) => {
       const direction = tiltNow + s.side * s.hair, pull = down(tiltNow, s),
             [ x, y ] = at(direction, TILT.hair),
             [ bx, by ] = at(direction, TILT.hair + TILT.beyond),
-            [ px, py ] = at(direction + TILT.aside, TILT.hair * .62);
+            [ px, py ] = at(direction + TILT.aside, TILT.hair * .5);
       if (Number.isFinite(s.response))
         reports.push([ bx, by, s.response ]);
       el('path', {d : `M${cx} ${cy} L${x} ${y}`, class : 'aid-live-hair k' + s.k}, live);
@@ -122,21 +134,13 @@ liveKind('balance', (studio, organId) => {
     const angleOf = p => degrees(Math.atan2(p.y - cy, cx - p.x)), mine = sides[0],
           [ hx, hy ] = at(tiltNow + face * mine.hair, TILT.hair);
     drag(svg,
-         el('rect', {
-           x : hx - 4.5,
-           y : hy - 4.5,
-           width : 9,
-           height : 9,
-           rx : 2.5,
-           class : 'aid-live-keygrip k0 on'
-         },
-            live),
+         squareGrip(live, hx, hy, {class : 'aid-live-keygrip k0 on'}),
          p => draft(
              updateCenter(studio.state.document, cell.id,
                           {q1 : qualityOf(clamp(face * turnTo(angleOf(p) - tiltNow), 0, 180))})),
          'balancehair', 'grip', settle);
-    const [ex, ey] = at(degrees(Math.asin(clamp(mine.gate))) - face * mine.hair, ring + 8);
-    drag(svg, el('circle', {cx : ex, cy : ey, r : 4.5}, live),
+    const [ex, ey] = at(degrees(Math.asin(clamp(mine.gate))) - face * mine.hair, ring + GRIP / 2 + 3);
+    drag(svg, squareGrip(live, ex, ey),
          p => draft(updateCenter(studio.state.document, cell.id, {
            threshold : BOUNDED.threshold(
                clamp(Math.sin(radians(clamp(turnTo(angleOf(p) + face * mine.hair), 0, 90))),
