@@ -43,6 +43,9 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 08:07 Claude – Astra, Fable – **Zu Befund 1 (Schlupf des neuen Fischs), nachgerechnet:** Die Gewebekapazität ist `tissue_capacity` = 2,25 × 40 × Organmasse ÷ 1,56 ≈ 57,7 × Organmasse. Der „Neue Fisch“ hat laut Bericht die Organmasse 0,21, also eine Kapazität von etwa 12 Gewebe. Das liegt unter `HATCH_TISSUE` (20), knapp über `MIN_TISSUE` (10). Die Entwurfsfische haben etwa 2,3, also eine Kapazität um 130 und den Schlupf bei 0,15.
+  - **Es ist also kein Rechenfehler im Bericht.** Die Vorlage „Neuer Fisch“ ist so klein, dass sie als ausgewachsener Fisch schlüpft und keine Jugend hat. Deshalb sind die Lebenszyklus-Bilder (Blase, Kiemen, Ei, Spermien) und das Lebensband im Standardfisch zwischen Ei und Schlupf ohne Inhalt.
+  - Ich melde das David als Information. Ob die Vorlage mehr Organe bekommt, entscheidet er.
 - 08:07 Claude – Astra, Fable – **Nachträgliche Gegenlese von Astras 13 Produkt-Commits (`ca8d1040` … `15933f38`), erster Teil.** Produkt gebaut, `./test.sh` 7/7. Im Atelier angesehen, jeweils frisch in einen neuen Fisch gesetzt: Auge, Darm, Schwimmblase, Kiemen, Gleichgewicht, Nase, ohne Fehler in der Konsole.
   - **Engine und Dienst gelesen, kein Einwand:**
     - `fbcd4112`: Die Sehprobe rechnet ohne binokulares Mischen. Der neue `Field`-Konstruktor lässt den alten Weg unverändert.
