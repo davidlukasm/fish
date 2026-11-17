@@ -471,7 +471,7 @@ export const designMethods = {
   },
   refreshProbeGraphics(paint = true) {
     if (paint)
-      paintFishProbes(this.root, this.state, this.handleDrag?.control !== 'flow');
+      paintFishProbes(this.root, this.state);
     this.refreshProbeControls();
   },
   refreshProbeControls() {
