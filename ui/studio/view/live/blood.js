@@ -25,7 +25,9 @@ import {
   wheelPlace
 } from '../../model/document.js';
 import {previewContextOf} from '../development.js';
-import {label} from '../kit.js';
+import {TOOL_ICON} from '../icons.js';
+import {ICON, label} from '../kit.js';
+import {glyph} from '../markup.js';
 import {substanceName} from '../substances.js';
 import {addPicture, chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
 import {answer, BOUNDED, IRRITANT, keyGrip, setGate} from './sense.js';
@@ -65,6 +67,14 @@ liveKind('blood', (studio, organId) => {
     return h;
   };
   const ring = addPicture(root);
+  // The levels are set at the life tool's band: its sign, as in the tool bar, leads there.
+  const life = document.createElement('button');
+  life.type = 'button';
+  life.className = 'aid-secondary aid-live-tool';
+  life.dataset.tool = 'life';
+  life.innerHTML =
+      glyph(TOOL_ICON.life, ICON.tool, {line : true}) + '<small>' + label('tools.life') + '</small>';
+  root.appendChild(life);
   heading(word('report'));
   const rows = addPicture(root);
   const own = {chosen : 0};
