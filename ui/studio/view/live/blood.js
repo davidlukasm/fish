@@ -9,11 +9,8 @@
 // the answer is bounded, the cells do not get used to it, and they read the blood in the egg as
 // outside.
 // The levels are the preview's blood (trials.js, setPreviewContext): the same the other pictures
-// of the Atelier read.
-// STOPGAP: the levels are dragged here, on the wheel. They are the fish's state, not this organ's,
-// and are set in two more places (development.js, the life line; substances.js, the hormone
-// tool). They belong to one tool for the fish's phase of life in the fish panel; until that
-// exists the wheel keeps its grips, or the sense could not be tried at all.
+// of the Atelier read. They are the fish's state, not this organ's, and are set in one place, the
+// life tool's band in the fish panel (life_tool.js); the wheel shows them as they are now.
 import {BLOOD_SUBSTANCE} from '../../../schema.js';
 import {bloodColour} from '../../../hormones.js';
 import {t} from '../../../strings.js';
@@ -78,11 +75,9 @@ liveKind('blood', (studio, organId) => {
   const again = () => show();
   const nameOf = index =>
       BODY_WORDS[index] ? word(BODY_WORDS[index]) : substanceName(studio.state, index);
-  // Where a level is set in the preview's blood (trials.js, setPreviewContext).
-  const levelKey = index => index === BLOOD_SUBSTANCE.maturity ? 'maturity' : String(index);
   // The wheel as the circulation: each substance a stretch of the ring, as thick as its level in
-  // the blood now; the round knob on it sets that level. A type's grip lies among them; lines run
-  // from it to the substances it takes, the stronger the more.
+  // the blood now. A type's grip lies among them; lines run from it to the substances it takes,
+  // the stronger the more.
   function drawRing(wheel, cells, levels, takes) {
     const {svg, live} = picture(ring, RING.height), {cx, cy, plane} = RING, count = levels.length,
                 turns = Array.from({length : count}, (_, j) => wheel.substanceTurns[j]),
@@ -124,12 +119,6 @@ liveKind('blood', (studio, organId) => {
         style : 'fill:' + colour,
         class : 'aid-live-scent-name'
       });
-      const [kx, ky] = on(turn, RING.ring + wide + 2);
-      drag(svg, el('circle', {cx : kx, cy : ky, r : 4.5, style : 'fill:' + colour}, live),
-           p => studio.setPreviewContext(
-               levelKey(j), clamp((Math.hypot(p.x - cx, p.y - cy) - RING.ring - RING.thin - 2) /
-                                  (RING.thick - RING.thin))),
-           'bloodlevel' + j, 'knob');
     });
     cells.forEach((cell, i) => {
       const chosen = i === own.chosen, x = cx + plane * cell.q1, y = cy - plane * cell.q2;
