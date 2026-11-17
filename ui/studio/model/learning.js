@@ -1,23 +1,5 @@
-import {HORMONE_EFFECT} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {learningTimeSteps} from '../../tuning.js';
-import {receptorResponse} from './document.js';
-import {nerveClass} from './organs.js';
-
-export function learningFactors(capabilities, center, context) {
-  const N = capabilities.neural;
-  const response = effect => receptorResponse(capabilities, center.receptors[effect], context);
-  const span = (N.learningGainMax - N.learningFloor) * (1 + response(HORMONE_EFFECT.learning)) / 2;
-  return {
-    floor : N.learningFloor,
-    span,
-    max : N.learningGainMax,
-    value : N.learningFloor + center.qwidth * span,
-    credit : (1 + response(HORMONE_EFFECT.eligibility)) / 2,
-    competition : (1 + response(HORMONE_EFFECT.competition)) / 2,
-    mode : nerveClass(center).mode
-  };
-}
 
 // The same previously half-consolidated contact learns another half of its limit, then rests.
 // Consolidation captures learning; during rest a positive response cannot add protection.
