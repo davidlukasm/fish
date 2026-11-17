@@ -1,12 +1,16 @@
 import {HORMONE_EFFECT} from '../../schema.js';
-import {receptorResponse} from '../model/document.js';
+import {groupReport} from '../model/document.js';
 import {nerveClass} from '../model/organs.js';
-import {previewContextOf} from './development.js';
 
+// What drives a cell's activity in the preview's blood. Its receptors' answers are the engine's
+// (anatomy.groups, effects: at the life band's blood); for an effect the cell does not have, and
+// before the engine's first answer, a receptor's resting answer.
 export function driveContext(state, center) {
-  const context = previewContextOf(state), wheel = state.capabilities;
-  const response = (effect, baseline = 0) =>
-      wheel ? receptorResponse(wheel, center.receptors[effect], context, baseline) : baseline;
+  const wheel = state.capabilities,
+        effects =
+            groupReport(state.document, state.outlinePreview ?? state.anatomy, 'groups', center.id)
+                ?.effects;
+  const response = (effect, baseline = 0) => effects?.[effect] ?? baseline;
   return {
     scale : wheel?.biasScale ?? 0,
     excitation : response(HORMONE_EFFECT.excitation),

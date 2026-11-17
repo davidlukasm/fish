@@ -86,6 +86,24 @@ double kept_between(const LearningContext::Probe &probe, float initial_trace, fl
   return std::pow(P::contact_retention(float(std::clamp(mean_use, 0., 1.)), time, 0.f),
                   probe.interval);
 }
+// A contact that learned half its limit, while the cell consolidated with `response`, after
+// resting the baseline steps unused: what it keeps of its weight, and how far it is protected.
+// While learning, the cell captures a share of what the contact learned (here half) into its
+// protection; at rest an answer below zero loosens it, and unused contacts fade by
+// contact_retention as far as they are not protected (substrate.cc, the contacts' update).
+// STOPGAP: the capturing and loosening of the protection is written out here a second time;
+// substrate.cc has it only inside its vector loop. One step in field::plasticity that both call
+// would end the copy (it touches substrate.cc, Astra's).
+std::pair<double, double> rested(double response, double time) {
+  namespace P = field::plasticity;
+  constexpr double LEARNED = .5;
+  double protection = LEARNED + std::max(0., response) * LEARNED * (1 - LEARNED), weight = 1;
+  for (int step = 0; step < int(P::baseline_steps); ++step) {
+    protection = std::clamp(protection - std::max(0., -response) * protection / time, 0., 1.);
+    weight *= P::contact_retention(0., time, protection);
+  }
+  return {weight, protection};
+}
 // How each receptor of the group answers its own substance from none to its span (a hormone's
 // span is what its glands reach, a body signal's all of it), with the rest of the blood as the
 // life band sets it: the curve the hormone tool draws, from the engine's response.
@@ -242,6 +260,19 @@ void learning_group_report(const Group &group, const field::Neuron *cell,
             << ",\"mode\":" << mode << ",\"level\":" << level
             << ",\"limits\":{\"electrical\":" << cell->electrical_limit
             << ",\"teaching\":" << cell->teaching_limit << '}';
+  // A contact at rest with the consolidation receptor's answer without and with its substance
+  // (its ends: the baseline, and the baseline with its full sensitivity).
+  const auto &consolidation = group.receptors[field::Consolidation];
+  const double without = consolidation.active ? std::clamp(double(consolidation.baseline), -1., 1.)
+                                              : 0,
+               with = consolidation.active
+                          ? std::clamp(double(consolidation.baseline + consolidation.sensitivity),
+                                       -1., 1.)
+                          : without;
+  const auto [kept_without, safe_without] = rested(without, steps);
+  const auto [kept_with, safe_with] = rested(with, steps);
+  std::cout << ",\"rested\":[[" << kept_without << ',' << safe_without << "],[" << kept_with
+            << ',' << safe_with << "]]";
   if (context.probe && context.probe->group == index) {
     const auto &probe = *context.probe;
     const float initial = P::trace_update(keep, 0.f, fast, probe.pre, probe.post);

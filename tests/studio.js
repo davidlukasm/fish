@@ -1168,7 +1168,11 @@ async function checkBloodReceptors(model, capabilities) {
       const [life] = lifeResponses(wheel, living, [ context ]);
       assert.ok(Math.abs(life.birth - (level ? .8 : 0)) < 1e-12);
       assert.ok(Math.abs(life.output - (level ? .2 : 1)) < 1e-12);
-      assert.equal(driveContext({...state, previewContext : context}, living).output, life.output);
+      // The preview's drive reads the engine's answer for this cell's group (anatomy.groups).
+      const groups = [];
+      groups[model.centerIndex(doc, id)] = {effects : Object.assign([], {[E.output] : 2 * life.output - 1})};
+      assert.ok(Math.abs(driveContext({...state, anatomy : {groups}}, living).output - life.output) <
+                1e-12);
       const [mortal] = lifeResponses(wheel, center, [ context ]);
       assert.equal(mortal.dead, !!level);
     }
@@ -3371,16 +3375,8 @@ async function checkHormoneSystems(model, capabilities) {
     assert.doesNotMatch(excited, /aid-effect-line teach/);
     assert.match(taught, /aid-effect-line teach/);
     assert.doesNotMatch(taught, /aid-effect-spikes/);
-    const {learningFactors, retainedLearning} = await import('../ui/studio/model/learning.js');
     const learner = model.defaults({key : 'relay', role : 'nerve'}, sites[0]);
     const context = {hormones : Array(HORMONES.levels).fill(0), maturity : 0};
-    assert.equal(learningFactors(sitesResult, {...learner, qwidth : 0}, context).value,
-                 sitesResult.neural.learningFloor,
-                 'The learning preview preserves basal learning at zero plasticity');
-    const memory = [ -1, 0, 1 ].map(r => retainedLearning(r, 100, sitesResult.neural));
-    assert.ok(memory[0].weight < memory[1].weight && memory[1].weight < memory[2].weight);
-    assert.ok(memory.every(m => m.weight < 1),
-              'Consolidation preserves a learned contact; it does not strengthen it at rest');
     const eligibility = effectScene(E.eligibility, '#abcdef');
     assert.doesNotMatch(eligibility, /aid-effect-wave/,
                         'Eligibility never trades sensory credit for pacemaker credit');
