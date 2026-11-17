@@ -4350,6 +4350,16 @@ for p,a in zip(payload['audits'],audited):
         a['courses']=dict(zip([g for g,_ in tried],run({'operation':'design','plan':p,'senseCourses':[
             {'group':g,'stimulus':[k/(len(s['response'])-1) for k in range(len(s['response']))]}
             for g,s in tried]})['senseCourses']))
+    # A course given as shares of the fish panel's probe begins where the fish's own answer to it
+    # stands: the inspector and the fish show the same number.
+    for kind in ('flow','wound'):
+        scene={'kind':kind,'bearing':90,'distance':1,'strength':.25}
+        stirred=[g for g,v in enumerate(run({'operation':'design','plan':p,'sense':scene})['senseProbe']) if v is not None][:12]
+        if stirred:
+            probed=run({'operation':'design','plan':p,'sense':scene,'senseCourses':[
+                {'group':g,'probe':True,'stimulus':[1]} for g in stirred]})
+            for g,c in zip(stirred,probed['senseCourses']):
+                assert c and abs(c['sent'][0]-probed['senseProbe'][g])<1e-3,(kind,g)
 print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'audited':audited}))`;
   const stimulusStudio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
   Object.assign(stimulusStudio.state, {document : doc, sites, capabilities : sitesResult});
