@@ -1097,6 +1097,7 @@
 .aid-live h4{margin:14px 0 4px 4px;padding-top:8px;border-top:1px solid var(--aid-panel-edge);font:600 13px/1.3 system-ui;color:#eef4ec}
 .aid-live-picture{display:block;width:100%;height:auto;touch-action:none;user-select:none;overflow:visible}
 .aid-live-picture text{fill:var(--aid-axis-text);font-size:11px}
+.aid-live-tool{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px}
 .aid-live-grip{fill:var(--aid-handle-core);stroke:var(--aid-handle);stroke-width:2.2;cursor:grab}
 .aid-live-grip:hover,.aid-live-grip.dragging{stroke:var(--aid-light);stroke-width:3}
 .aid-live-grip.dragging,.aid-live-knob.dragging{cursor:grabbing}
