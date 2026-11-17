@@ -386,7 +386,7 @@ export function gutProbeControls(state, organ) {
          C.x + '" y="' + F.top + '" text-anchor="middle">' +
          escapeText(t('studio.probe.response')) + '</text>' + cells + '</svg></section>';
 }
-function visibleProbe(state) {
+export function visibleProbe(state) {
   const probe = state.senseProbe;
   const organ = probe ? findOrgan(state.document, probe.organ) : null;
   return organ && probe.kind !== 'gut' && !isCommand(probe) && isChosen(state.selected, organ) &&

@@ -36,7 +36,8 @@ import {
   probeScents,
   probeWater,
   senseProbeAnswers,
-  senseProbeSvg
+  senseProbeSvg,
+  visibleProbe
 } from './probes.js';
 import {lifeBar} from './life_tool.js';
 import {detailMix, nodeOpacity, layerShown} from './layers.js';
@@ -219,7 +220,11 @@ function fieldLayers(state) {
   const ownField = o => !!chosen && (o.id === chosen.id || o.id === chosen.pair);
   const fans = state.document.organs.filter(o => o.field);
   const passive = fans.filter(o => !ownField(o));
-  const eyes = passive.filter(o => o.type === 'eye').map(o => visionFan(state, o)).join('');
+  // While the chosen organ is being tried with something in the water, the eyes' fans step back:
+  // the water around the fish belongs to that stimulus.
+  const tried = !!visibleProbe(state);
+  const eyes =
+      tried ? '' : passive.filter(o => o.type === 'eye').map(o => visionFan(state, o)).join('');
   const opacity = detailMix(state).fields;
   const other =
       opacity > 0 && fieldsShown(state)
