@@ -38,6 +38,15 @@ export function skinProbeBearing(document, anatomy, cellId) {
                                            felt.reduce((sum, [ aim ]) => sum + Math.cos(aim), 0)))
                       : null;
 }
+// The current first comes from where the lateral line's cells meet most of it (the engine's,
+// anatomy.lateral, probe): there they answer.
+function flowBearing(document, anatomy, cellId) {
+  const heard = document ? groupReport(document, anatomy, 'lateral', cellId)?.probe : null;
+  if (!heard?.length)
+    return null;
+  const most = heard.indexOf(Math.max(...heard));
+  return heard[most] > 0 ? -180 + (most + .5) * 360 / heard.length : null;
+}
 // A mouth first bites where the spines stand: there the guard answers.
 function spineBearing(document, anatomy, cellId) {
   const aim = document ? groupReport(document, anatomy, 'spineAims', cellId) : null;
@@ -52,9 +61,10 @@ export function probeFor(organ, probe, anatomy, document) {
   const same = prior?.organ === organ.id, tuning = organ.centers[0];
   const skin = (kind === 'touch' || kind === 'wound') && !prior?.manual;
   const aim = kind === 'attack' && !(same && prior.manual);
-  const bearing = skin ? skinProbeBearing(document, anatomy, tuning?.id)
-                       : aim ? spineBearing(document, anatomy, tuning?.id)
-                             : null;
+  const bearing = skin                                ? skinProbeBearing(document, anatomy, tuning?.id)
+                  : aim                               ? spineBearing(document, anatomy, tuning?.id)
+                  : kind === 'flow' && !prior?.manual ? flowBearing(document, anatomy, tuning?.id)
+                                                      : null;
   if (same)
     return bearing === null || bearing === prior.bearing ? prior : {...prior, bearing};
   const facing = kind === 'balance' ? 1 : prior ? prior.side === side ? 1 : -1 : side;

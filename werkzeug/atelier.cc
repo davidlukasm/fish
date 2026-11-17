@@ -262,6 +262,17 @@ void mouth_course_report(const Genome &g, const SenseScene &scene) {
   }
   std::cout << "]}";
 }
+// The water of the fish panel's flow probe, coming from `bearing` with `strength`: every sector of
+// the skin meets it as far as it faces it.
+fishsim::SensoryFrame probe_flow(double bearing, double strength) {
+  fishsim::SensoryFrame frame;
+  for (int k = 0; k < fishsim::SECTOR_COUNT; ++k) {
+    const double facing = std::max(0., std::cos(fishsim::sector_angle(k) - bearing));
+    frame.relative[k] = {strength * std::cos(bearing) * facing,
+                         strength * std::sin(bearing) * facing};
+  }
+  return frame;
+}
 // The probe's report on the senses it stirs, and what each group's stirred cells meet of it on
 // average, in their sense's units (NaN for a group with none): what the sense courses scale by.
 std::vector<double> sense_report(const field::Substrate &t,
@@ -309,12 +320,7 @@ std::vector<double> sense_report(const field::Substrate &t,
         answer(i, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
     }
   } else if (scene.kind == sense_scene::flow) {
-    fishsim::SensoryFrame frame;
-    for (int k = 0; k < fishsim::SECTOR_COUNT; ++k) {
-      const double facing = std::max(0., std::cos(fishsim::sector_angle(k) - bearing));
-      frame.relative[k] = {scene.strength * std::cos(bearing) * facing,
-                           scene.strength * std::sin(bearing) * facing};
-    }
+    const auto frame = probe_flow(bearing, scene.strength);
     for (std::size_t i = 0; i < answers.size(); ++i) {
       const auto &r = interface->sensory[i];
       if (r.dominant_sense() == field::Flow && !r.inner)
@@ -1259,7 +1265,7 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
     const fishsim::PhysiologyParameters physiology{};
     for (std::size_t i = 0; i < groups.size(); ++i) {
       fishsim::LateralSamples<double> weights{};
-      std::array<double, LATERAL_DIRECTIONS> tuning{};
+      std::array<double, LATERAL_DIRECTIONS> tuning{}, probed{};
       int count = 0;
       for (const auto &r : a.sensory) {
         if (r.dominant_sense() != field::Flow || r.inner ||
@@ -1275,6 +1281,10 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
           for (auto &flow : frame.relative)
             flow = {std::cos(from), std::sin(from)};
           stirred[d] = fishsim::anatomical_stimulus(still, r, frame, 0, physiology);
+          // What the cell meets of the fish panel's flow probe coming from there at full strength
+          // (sense_report, the same water).
+          probed[d] +=
+              fishsim::anatomical_stimulus(still, r, probe_flow(from, 1), 0, physiology);
         }
         const double most = *std::max_element(stirred.begin(), stirred.end());
         for (int d = 0; d < LATERAL_DIRECTIONS; ++d)
@@ -1291,6 +1301,9 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
       std::cout << "],\"tuning\":[";
       for (int d = 0; d < LATERAL_DIRECTIONS; ++d)
         std::cout << (d ? "," : "") << tuning[d] / count;
+      std::cout << "],\"probe\":[";
+      for (int d = 0; d < LATERAL_DIRECTIONS; ++d)
+        std::cout << (d ? "," : "") << probed[d] / count;
       std::cout << "]}";
     }
   }
