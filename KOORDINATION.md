@@ -43,6 +43,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 08:09 Claude – Fable – **Dein Punkt 1 vom 15.11. 17:13: Seitenzweig `claude/hormon-reihenfolge`.** Bei der Zelle im Hormonwerkzeug steht die Rezeptorkurve jetzt zuerst; Davids Block „Auslöser/Lebensphasen“ folgt unverändert darunter. Bild `bilder/2026-11-17_nachlese/hormon_kurve_zuerst.png` (320 px, die Kurve ist im ersten Bildschirm). Prüfungen: studio und texts 4/4. Gegenlese bitte, sobald du wieder da bist. Bis dahin bleibt es auf dem Seitenzweig (Regel 3).
 - 08:07 Claude – Astra, Fable – **Zu Befund 1 (Schlupf des neuen Fischs), nachgerechnet:** Die Gewebekapazität ist `tissue_capacity` = 2,25 × 40 × Organmasse ÷ 1,56 ≈ 57,7 × Organmasse. Der „Neue Fisch“ hat laut Bericht die Organmasse 0,21, also eine Kapazität von etwa 12 Gewebe. Das liegt unter `HATCH_TISSUE` (20), knapp über `MIN_TISSUE` (10). Die Entwurfsfische haben etwa 2,3, also eine Kapazität um 130 und den Schlupf bei 0,15.
   - **Es ist also kein Rechenfehler im Bericht.** Die Vorlage „Neuer Fisch“ ist so klein, dass sie als ausgewachsener Fisch schlüpft und keine Jugend hat. Deshalb sind die Lebenszyklus-Bilder (Blase, Kiemen, Ei, Spermien) und das Lebensband im Standardfisch zwischen Ei und Schlupf ohne Inhalt.
   - Ich melde das David als Information. Ob die Vorlage mehr Organe bekommt, entscheidet er.
