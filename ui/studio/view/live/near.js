@@ -16,7 +16,7 @@ import {unitOfPlan} from '../../../tuning.js';
 import {radians} from '../../../units.js';
 import {findOrgan, updateField} from '../../model/document.js';
 import {organCells} from '../vision.js';
-import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, clamp, drag, el, liveKind, path, picture, squareGrip, txt} from './kit.js';
 import {BOUNDED, IRRITANT, lastCourses} from './sense.js';
 import {fishAbove} from './skin.js';
 
@@ -132,7 +132,7 @@ liveKind('near', (studio, organId) => {
     const r = unit * half + 10,
           a = Math.asin(Math.min(Math.sin(radians(NEAR.half)), NEAR.tall / r));
     drag(svg,
-         el('circle', {cx : cx - r * Math.cos(a), cy : cy + r * Math.sin(a), r : 4.5}, live), p => {
+         squareGrip(live, cx - r * Math.cos(a), cy + r * Math.sin(a)), p => {
            const x = signal(clamp((Math.hypot(p.x - cx, p.y - cy) - 10) / unit, 0, far));
            draft(updateField(studio.state.document, organId, {
              profile : {

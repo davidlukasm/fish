@@ -21,23 +21,35 @@
 import {t} from '../../../strings.js';
 import {findCenter, groupReport, updateCenter} from '../../model/document.js';
 import {PORT_LIMIT_DRAG} from '../circuit.js';
-import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {
+  addPicture,
+  clamp,
+  drag,
+  el,
+  GRIP,
+  liveKind,
+  path,
+  picture,
+  roundGrip,
+  squareGrip,
+  txt
+} from './kit.js';
 
 const word = key => t('studio.live.learn.' + key);
 // The strip: two rounds from L to R, `round` steps each; four rows, each `row` high with its
 // base line at the given height.
 const STRIP = Object.freeze({
-  height : 258,
+  height : 290,
   L : 40,
   R : 292,
   round : 200,
   row : 22,
   cue : 44,
   trace : 80,
-  teach : 118,
-  cell : 146,
-  expect : 14,
-  weight : 218,
+  teach : 126,
+  cell : 176,
+  expect : 36,
+  weight : 250,
   rise : 56,
   least : .02
 });
@@ -91,12 +103,12 @@ liveKind('learn', (studio, centerId) => {
       txt(live, X(st), S.height - 8, String(st), {'text-anchor' : 'end', class : 'aid-live-small'});
     txt(live, S.L, S.height - 8, word('steps'), {class : 'aid-live-small'});
     // The example's knobs: when the teacher comes, how far it is expected.
-    drag(svg, el('circle', {cx : X(probe.teach), cy : S.teach - (S.row - 6), r : 5}, live), p => {
+    drag(svg, roundGrip(live, X(probe.teach), S.teach - (S.row - 6) - GRIP / 2), p => {
       probe.teach = clamp(stOf(p.x), probe.cue + 1, S.round - 10);
       ask();
       show();
     }, 'learnteach', 'knob');
-    drag(svg, el('circle', {cx : S.R - 6, cy : ey, r : 5}, live), p => {
+    drag(svg, roundGrip(live, S.R - 6, ey), p => {
       probe.expected = clamp((S.cell - p.y) / S.expect);
       ask();
       show();
@@ -120,15 +132,7 @@ liveKind('learn', (studio, centerId) => {
     // How long the trace lasts: the grip where it has fallen to 1/e. Right makes it last longer.
     const tx = X(Math.min(S.round - 4, probe.cue + L.traceSteps));
     drag(svg,
-         el('rect', {
-           x : tx - 5,
-           y : S.trace - S.row / Math.E - 4,
-           width : 10,
-           height : 8,
-           rx : 2.5,
-           class : 'aid-live-keygrip k0 on'
-         },
-            live),
+         squareGrip(live, tx, S.trace - S.row / Math.E, {class : 'aid-live-keygrip k0 on'}),
          (p, from) => draft(updateCenter(
              studio.state.document, centerId,
              {learning_tau : clamp(cell.learning_tau + (p.x - from.x) / (2 * PORT_LIMIT_DRAG))})),
@@ -178,38 +182,22 @@ liveKind('learn', (studio, centerId) => {
     for (const {d, cause} of [...still.jumps, ...learnt.jumps])
       el('path', {d, class : cause === 'cue' ? 'aid-live-cue jump k0' : 'aid-live-teach jump'},
          live);
-    txt(live, S.R, quiet.at(-1)[1] + 11, word('quiet'),
+    txt(live, quiet.at(-1)[0] - GRIP / 2 - 4, quiet.at(-1)[1] + 11, word('quiet'),
         {'text-anchor' : 'end', class : 'aid-live-small'});
     // How fast the cell learns: the grip on the first step's top. Up makes it learn faster.
     const [wx, wy] = weight[Math.min(weight.length - 1, Math.ceil((probe.teach + 12) / 2))];
     drag(svg,
-         el('rect', {
-           x : wx - 5,
-           y : wy - 4,
-           width : 10,
-           height : 8,
-           rx : 2.5,
-           class : 'aid-live-keygrip k0 on'
-         },
-            live),
+         squareGrip(live, wx, wy, {class : 'aid-live-keygrip k0 on'}),
          (p, from) => draft(updateCenter(
              studio.state.document, centerId,
              {qwidth : clamp(cell.qwidth + (from.y - p.y) / PORT_LIMIT_DRAG, S.least, 1)})),
          'learnrate', 'grip', settle);
-    // How the cell treats what does not fire with it: the grip on the still input just after
-    // the sender has fired. Down, the cell pushes the still input out; up, it leaves it and
+    // How the cell treats what does not fire with it: the grip at the end of the still input's
+    // line, out of the way of the grip above, which goes with the teacher. Down, the cell pushes the still input out; up, it leaves it and
     // cancels what fires with it instead.
-    const [qx, qy] = quiet[Math.ceil((probe.cue + 14) / 2)];
+    const [qx, qy] = quiet[quiet.length - 1];
     drag(svg,
-         el('rect', {
-           x : qx - 5,
-           y : qy - 4,
-           width : 10,
-           height : 8,
-           rx : 2.5,
-           class : 'aid-live-keygrip k0 on'
-         },
-            live),
+         squareGrip(live, qx, qy, {class : 'aid-live-keygrip k0 on'}),
          (p, from) => draft(updateCenter(
              studio.state.document, centerId,
              {mode : clamp((cell.mode ?? 0) + 2 * (p.y - from.y) / PORT_LIMIT_DRAG, -1, 1)})),

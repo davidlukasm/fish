@@ -23,7 +23,18 @@ import {
   updateCenter
 } from '../../model/document.js';
 import {label} from '../kit.js';
-import {addPicture, clamp, drag, el, hatchOf, liveKind, picture, txt} from './kit.js';
+import {
+  addPicture,
+  clamp,
+  drag,
+  el,
+  GRIP,
+  hatchOf,
+  liveKind,
+  picture,
+  squareGrip,
+  txt
+} from './kit.js';
 import {sideIndex} from '../../model/layout.js';
 import {STONE} from '../../model/probe.js';
 import {sampleColour, scentMap} from './scentmap.js';
@@ -35,7 +46,7 @@ const MOST = 4, NEW_WIDTH = .25, NEW_TOUCH = .3, NEW_GATE = .3;
 // how far each barbel's root lies from the middle.
 const HEAD =
     Object.freeze({height : 150, mouthX : 150, mouthY : 78, radius : 150, reach : 9, root : 10});
-const ROWS = Object.freeze({L : 84, R : 280, top : 14, row : 26});
+const ROWS = Object.freeze({L : 84, R : 280, top : 26, row : 26});
 const lengthOf = cells => {
   const g = Math.sqrt(Math.max(0, cells));
   return HEAD.radius * (BARBEL.length + BARBEL.length_per_size * g / (g + BARBEL.organ_half));
@@ -139,7 +150,7 @@ liveKind('barbels', (studio, organId) => {
       }
     }
     const [gx, gy] = tipOf(organ.side, all);
-    drag(svg, el('rect', {x : gx - 4, y : gy - 5.5, width : 8, height : 11, rx : 2}, live), p => {
+    drag(svg, squareGrip(live, gx, gy), p => {
       let best = chosen.copies;
       for (let c = 1; c <= ATELIER_LIMITS.max_copies; c++)
         if (Math.abs(tipOf(organ.side, others + c)[0] - p.x) <
@@ -154,7 +165,7 @@ liveKind('barbels', (studio, organId) => {
   // mark; before the row the type's nerve cell with what it reports of that. The round grip
   // sets taste against touch, the square one the threshold.
   function drawRows(cells, contact, anatomy) {
-    const {L, R, top, row} = ROWS, {svg, live} = picture(rows, top + row * cells.length + 22),
+    const {L, R, top, row} = ROWS, {svg, live} = picture(rows, top + row * cells.length + GRIP + 18),
                       X = v => L + (R - L) * clamp(v), vOf = x => clamp((x - L) / (R - L)),
                       colour = sampleColour(own.probe), foot = top + row * cells.length + 10;
     txt(live, L, foot, word('nothing'), {class : 'aid-live-small'});
@@ -212,7 +223,7 @@ liveKind('barbels', (studio, organId) => {
         class : 'aid-live-nerve-fibre k' + i
       },
          live);
-      el('circle', {cx : L - 16, cy, r : 6, class : 'aid-live-soma k' + i + (on ? ' on' : '')},
+      el('circle', {cx : L - 16, cy, r : 9, class : 'aid-live-soma k' + i + (on ? ' on' : '')},
          live)
           .addEventListener('pointerdown', pick);
       if (report > 0)
@@ -228,19 +239,11 @@ liveKind('barbels', (studio, organId) => {
       if (!on)
         return;
       drag(svg,
-           el('rect', {
-             x : X(gate) - 4,
-             y : y + row - 12,
-             width : 8,
-             height : 10,
-             rx : 2,
-             class : keyGrip(i, true)
-           },
-              live),
+           squareGrip(live, X(gate), y + row - 8 + GRIP / 2 - 2, {class : keyGrip(i, true)}),
            p => draft(setGate(studio.state.document, {id : cell.id}, vOf(p.x))), 'tastegate',
            'grip', settle);
       // Taste against touch: the grip on the row's upper edge, from all taste to all touch.
-      drag(svg, el('circle', {cx : X(cell.field), cy : y, r : 4.5}, live),
+      drag(svg, squareGrip(live, X(cell.field), y - GRIP / 2 + 2),
            p => draft(updateCenter(studio.state.document, cell.id, {field : vOf(p.x)})),
            'tastefeel', 'grip', settle);
     });

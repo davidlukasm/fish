@@ -23,6 +23,14 @@ export const txt = (parent, x, y, words, attrs = {}) => {
   e.textContent = words;
   return e;
 };
+// A grip is drawn this large, edge or diameter, in every picture: nothing to grab is smaller.
+// Square sets the plan, round is what comes from outside.
+export const GRIP = 22;
+export const squareGrip = (parent, x, y, attrs = {}) => el(
+    'rect', {x : x - GRIP / 2, y : y - GRIP / 2, width : GRIP, height : GRIP, rx : 5, ...attrs},
+    parent);
+export const roundGrip = (parent, x, y, attrs = {}) =>
+    el('circle', {cx : x, cy : y, r : GRIP / 2, ...attrs}, parent);
 export const path = pts => 'M' + pts.map(([ x, y ]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(' L');
 // The place a live inspector takes in the inspector's text.
 export const livePlace = (kind, organ) => '<div class="aid-live" data-live="' + kind +

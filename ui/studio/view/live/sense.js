@@ -16,7 +16,7 @@ import {
 } from '../../../tuning.js';
 import {centerIndex, updateCellDistribution, updateCenter} from '../../model/document.js';
 import {TUNING} from '../../../schema.js';
-import {chip, clamp, drag, el, fishIcon, path, picture, txt} from './kit.js';
+import {chip, clamp, drag, el, fishIcon, GRIP, path, picture, squareGrip, txt} from './kit.js';
 
 export const STEPS = 900, LEVELS = [ activationLevel(0), activationLevel(1) ],
              LEVEL_SPAN = LEVELS[1] - LEVELS[0];
@@ -256,23 +256,11 @@ export function senseCourse(svg, {
             Array.from({length : NERVE.pulses},
                        () => ({t : 1, e : el('circle', {r : 0, class : 'aid-live-pulse'}, tilted)}))
       });
-      el('circle', {cx, cy, r : 6, class : 'aid-live-soma k' + i + (on ? ' on' : '')}, tilted)
+      el('circle', {cx, cy, r : 9, class : 'aid-live-soma k' + i + (on ? ' on' : '')}, tilted)
           .addEventListener('pointerdown', () => {
             own.chosen = i;
             redraw();
           });
-      if (tires && on && gripX(i) !== null)
-        drag(svg,
-             el('rect', {
-               x : gripX(i) - 5,
-               y : SENSE_BOX.I0 - 33,
-               width : 10,
-               height : 10,
-               rx : 3,
-               class : 'aid-live-tire k' + i
-             },
-                parent),
-             p => tire(k, i, p), name + 'tire', 'grip', settle);
     });
     const merged = Array.from(
         {length : 6},
@@ -299,7 +287,7 @@ export function senseCourse(svg, {
   }
   function draw() {
     const keys = keysNow(), {L, R, LX, I0, I1} = SENSE_BOX;
-    const {live} = picture(svg, I1 + 22);
+    const {live} = picture(svg, I1 + GRIP + 12);
     Object.assign(play,
                   {stim : null, sent : [], line : null, level : null, glow : [], nerves : null});
     if (!keys.length)
@@ -339,8 +327,10 @@ export function senseCourse(svg, {
     // The same pair twice: at the cells and at the keys (under their holder).
     // A sense with one type of cells only has no pair.
     if (most > 1) {
-      chip(live, R - 22, I0 - 54, '−', () => fewer(keys[own.chosen]), keys.length > 1, 6);
-      chip(live, R - 6, I0 - 54, '+', () => more(newGate()), keys.length < most, 6);
+      chip(live, R - 1.5 * GRIP - 3, I0 - 54, '−', () => fewer(keys[own.chosen]),
+           keys.length > 1, GRIP / 2);
+      chip(live, R - GRIP / 2 - 1, I0 - 54, '+', () => more(newGate()), keys.length < most,
+           GRIP / 2);
     }
     txt(live, L, I0 - 9, words.course);
     // What holds the thresholds, filling with the input.
@@ -450,15 +440,7 @@ export function senseCourse(svg, {
         const fx = X(Math.min(fades[i], STEPS));
         if (paceMatters(runs[i], STEPS))
           drag(svg,
-               el('rect', {
-                 x : fx - 4,
-                 y : I1 - 13,
-                 width : 8,
-                 height : 10,
-                 rx : 2,
-                 class : keyGrip(i, true)
-               },
-                  live),
+               squareGrip(live, fx, I1 - GRIP / 2 - 1, {class : keyGrip(i, true)}),
                p => tire(k, i, p), name + 'used', 'grip', settle);
       });
     // The grips, above everything they could be hidden by: every key and its spread, the input's
@@ -466,15 +448,9 @@ export function senseCourse(svg, {
     keys.forEach((k, i) => {
       const on = i === own.chosen;
       drag(svg,
-           el('rect', {
-             x : LX - 9,
-             y : IY(k.gate) - 4,
-             width : 18,
-             height : 8,
-             rx : 2,
-             class : keyGrip(i, on)
-           },
-              live),
+           // The chosen key's grip sits on the bar, the others beside it, so that none hides another
+           // where thresholds lie close.
+           squareGrip(live, on ? LX : LX - GRIP - 1, IY(k.gate), {class : keyGrip(i, on)}),
            p => {
              own.chosen = i;
              draft(setGate(doc(), k, vOf(p.y), scale));
@@ -482,11 +458,9 @@ export function senseCourse(svg, {
            name + 'key' + i, 'grip', settle);
       // How far the cells' thresholds may spread: the grip in the middle of the band's upper
       // edge; away from the threshold either way widens the band.
-      const sx = (L + R) / 2 + 13 * i, top = IY(bandOf(k, scale)[1]);
+      const sx = (L + R) / 2 + (GRIP + 2) * i, top = IY(bandOf(k, scale)[1]);
       drag(svg,
-           el('rect',
-              {x : sx - 5, y : top - 4, width : 10, height : 8, rx : 2.5, class : keyGrip(i, on)},
-              live),
+           squareGrip(live, sx, top, {class : keyGrip(i, on)}),
            p => {
              own.chosen = i;
              draft(setSpread(doc(), k, clamp(2 * Math.abs(vOf(p.y) - k.gate), 0, .8), scale));
@@ -494,8 +468,10 @@ export function senseCourse(svg, {
            name + 'spread' + i, 'grip', settle);
     });
     if (most > 1) {
-      chip(live, LX - 9, I1 + 10, '−', () => fewer(keys[own.chosen]), keys.length > 1, 6);
-      chip(live, LX + 9, I1 + 10, '+', () => more(newGate()), keys.length < most, 6);
+      chip(live, LX - GRIP / 2 - 1, I1 + GRIP / 2 + 6, '−', () => fewer(keys[own.chosen]),
+           keys.length > 1, GRIP / 2);
+      chip(live, LX + GRIP / 2 + 1, I1 + GRIP / 2 + 6, '+', () => more(newGate()),
+           keys.length < most, GRIP / 2);
     }
   }
   // The present moment: the line, what the holder holds, the keys the input has passed.
@@ -639,15 +615,7 @@ export function typeLife(
       return;
     const grip = (x, part, move) =>
         drag(svg,
-             el('rect', {
-               x : x - 4,
-               y : y + high / 2 - 5.5,
-               width : 8,
-               height : 11,
-               rx : 2,
-               class : keyGrip(i, true)
-             },
-                live),
+             squareGrip(live, x, y + high / 2, {class : keyGrip(i, true)}),
              p => draft(set(i, move(rOf(p.x)))), name + part, 'grip', settle);
     grip(from > 0 ? X(from) : L - beside, 'from',
          to => ({start : to < whole ? null : Math.min(to, until - least)}));

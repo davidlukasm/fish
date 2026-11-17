@@ -10,11 +10,8 @@
 // outside. What each type's cells meet of the blood, substance by substance, and what they report
 // of it is the engine's, for the blood of the life band (sense.js, lastCourses).
 // The levels are the preview's blood (trials.js, setPreviewContext): the same the other pictures
-// of the Atelier read.
-// STOPGAP: the levels are dragged here, on the wheel. They are the fish's state, not this organ's,
-// and are set in two more places (development.js, the life line; substances.js, the hormone
-// tool). They belong to one tool for the fish's phase of life in the fish panel; until that
-// exists the wheel keeps its grips, or the sense could not be tried at all.
+// of the Atelier read. They are the fish's state, not this organ's, and are set in one place, the
+// life tool's band in the fish panel (life_tool.js); the wheel shows them as they are now.
 import {BLOOD_SUBSTANCE} from '../../../schema.js';
 import {bloodColour} from '../../../hormones.js';
 import {t} from '../../../strings.js';
@@ -29,9 +26,23 @@ import {
   wheelPlace
 } from '../../model/document.js';
 import {previewContextOf} from '../development.js';
-import {label} from '../kit.js';
+import {TOOL_ICON} from '../icons.js';
+import {ICON, label} from '../kit.js';
+import {glyph} from '../markup.js';
 import {substanceName} from '../substances.js';
-import {addPicture, chip, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
+import {
+  addPicture,
+  chip,
+  clamp,
+  drag,
+  el,
+  GRIP,
+  liveKind,
+  path,
+  picture,
+  squareGrip,
+  txt
+} from './kit.js';
 import {BOUNDED, IRRITANT, keyGrip, lastCourses, setGate} from './sense.js';
 
 const word = (key, values) => t('studio.live.blood.' + key, values);
@@ -46,7 +57,7 @@ const RING = Object.freeze({
   arc : .4,
   listed : .08,
   snap : .14,
-  reach : [ 16, 44 ]
+  reach : [ 28, 56 ]
 });
 const ROWS = Object.freeze({L : 84, R : 280, top : 8, row : 26});
 const NEW = Object.freeze({q1 : 0, q2 : 0, qwidth : .1});
@@ -69,6 +80,14 @@ liveKind('blood', (studio, organId) => {
     return h;
   };
   const ring = addPicture(root);
+  // The levels are set at the life tool's band: its sign, as in the tool bar, leads there.
+  const life = document.createElement('button');
+  life.type = 'button';
+  life.className = 'aid-secondary aid-live-tool';
+  life.dataset.tool = 'life';
+  life.innerHTML =
+      glyph(TOOL_ICON.life, ICON.tool, {line : true}) + '<small>' + label('tools.life') + '</small>';
+  root.appendChild(life);
   heading(word('report'));
   const rows = addPicture(root);
   const own = {chosen : 0};
@@ -81,11 +100,9 @@ liveKind('blood', (studio, organId) => {
   const again = () => show();
   const nameOf = index =>
       BODY_WORDS[index] ? word(BODY_WORDS[index]) : substanceName(studio.state, index);
-  // Where a level is set in the preview's blood (trials.js, setPreviewContext).
-  const levelKey = index => index === BLOOD_SUBSTANCE.maturity ? 'maturity' : String(index);
   // The wheel as the circulation: each substance a stretch of the ring, as thick as its level in
-  // the blood now; the round knob on it sets that level. A type's grip lies among them; lines run
-  // from it to the substances it takes, the stronger the more.
+  // the blood now. A type's grip lies among them; lines run from it to the substances it takes,
+  // the stronger the more.
   function drawRing(wheel, cells, levels, takes) {
     const {svg, live} = picture(ring, RING.height), {cx, cy, plane} = RING, count = levels.length,
                 turns = Array.from({length : count}, (_, j) => wheel.substanceTurns[j]),
@@ -127,12 +144,6 @@ liveKind('blood', (studio, organId) => {
         style : 'fill:' + colour,
         class : 'aid-live-scent-name'
       });
-      const [kx, ky] = on(turn, RING.ring + wide + 2);
-      drag(svg, el('circle', {cx : kx, cy : ky, r : 4.5, style : 'fill:' + colour}, live),
-           p => studio.setPreviewContext(
-               levelKey(j), clamp((Math.hypot(p.x - cx, p.y - cy) - RING.ring - RING.thin - 2) /
-                                  (RING.thick - RING.thin))),
-           'bloodlevel' + j, 'knob');
     });
     cells.forEach((cell, i) => {
       const chosen = i === own.chosen, x = cx + plane * cell.q1, y = cy - plane * cell.q2;
@@ -140,18 +151,16 @@ liveKind('blood', (studio, organId) => {
         const arm = RING.reach[0] + (RING.reach[1] - RING.reach[0]) * cell.qwidth,
               ux = x >= cx ? -1 : 1;
         el('path', {d : `M${x} ${y} h${ux * arm}`, class : 'aid-live-keyline k' + i}, live);
-        drag(svg, el('circle', {cx : x + ux * arm, cy : y, r : 4.5}, live),
+        drag(svg, squareGrip(live, x + ux * arm, y),
              p => draft(updateCenter(studio.state.document, cell.id, {
                qwidth : clamp((Math.abs(p.x - x) - RING.reach[0]) / (RING.reach[1] - RING.reach[0]))
              })),
              'bloodwidth', 'grip', settle);
         if (cells.length > 1)
-          chip(live, x, y + (y <= cy ? 17 : -17), '×', () => remove(i), true, 6);
+          chip(live, x, y + (y <= cy ? GRIP + 4 : -GRIP - 4), '×', () => remove(i), true, GRIP / 2);
       }
       drag(svg,
-           el('rect',
-              {x : x - 5, y : y - 5, width : 10, height : 10, rx : 2.5, class : keyGrip(i, chosen)},
-              live),
+           squareGrip(live, x, y, {class : keyGrip(i, chosen)}),
            p => {
              // A place dragged close to a substance is that substance; none lies outside the wheel.
              let nx = (p.x - cx) / plane, ny = (cy - p.y) / plane;
@@ -171,7 +180,8 @@ liveKind('blood', (studio, organId) => {
            },
            'bloodtype' + i, 'grip', settle);
     });
-    chip(live, 288, RING.height - 10, '+', add, cells.length < wheel.bloodSubstances - 1, 7);
+    chip(live, 288, RING.height - GRIP / 2 - 2, '+', add, cells.length < wheel.bloodSubstances - 1,
+         GRIP / 2);
   }
   // For each type a row: what its cells get of the blood now, each substance's part in its
   // colour, ending at all; the threshold as a dashed mark with its grip; before the row the
@@ -221,7 +231,7 @@ liveKind('blood', (studio, organId) => {
         class : 'aid-live-nerve-fibre k' + i
       },
          live);
-      el('circle', {cx : L - 16, cy, r : 6, class : 'aid-live-soma k' + i + (chosen ? ' on' : '')},
+      el('circle', {cx : L - 16, cy, r : 9, class : 'aid-live-soma k' + i + (chosen ? ' on' : '')},
          live)
           .addEventListener('pointerdown', pick);
       if (report > 0)
@@ -235,15 +245,7 @@ liveKind('blood', (studio, organId) => {
          live);
       if (chosen)
         drag(svg,
-             el('rect', {
-               x : X(gate) - 4,
-               y : y + row - 12,
-               width : 8,
-               height : 10,
-               rx : 2,
-               class : keyGrip(i, true)
-             },
-                live),
+             squareGrip(live, X(gate), y + (row - 8) / 2, {class : keyGrip(i, true)}),
              p => draft(setGate(studio.state.document, {id : cell.id}, clamp((p.x - L) / (R - L)))),
              'bloodgate', 'grip', settle);
     });
