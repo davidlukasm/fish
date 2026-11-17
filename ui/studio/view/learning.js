@@ -126,9 +126,9 @@ export function learningInspector(state) {
   const chosen = chosenCenter(doc, selected, state.visionProfile);
   let html = '<header class="aid-inspector-head"><span>' + label('sections.brain') + '</span>' +
              heading(label('tools.learn')) + '</header>';
+  // Without a chosen nerve cell: the cells that learn, to choose from.
   if (!chosen || chosen.role !== 'nerve')
-    return html + learnersOverview(state) + '<div class="aid-empty-centre">' +
-           label('inspector.selectLearning') + '</div>';
+    return html + learnersOverview(state);
   html += nodeChoice(state, chosen);
   const teachers = sendersOf(state, chosen);
   return html + heading(centerTitle(chosen)) + livePlace('learn', chosen) +
