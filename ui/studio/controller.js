@@ -382,7 +382,7 @@ export class OrganStudio {
       scope = undefined;
     let marksChanged = false;
     if (target && this.state.mode === 'fish')
-      marksChanged = paintFishScene(target, this.state, scope, this.handleDrag?.control !== 'flow');
+      marksChanged = paintFishScene(target, this.state, scope);
     else if (target)
       target.innerHTML = cppnGraph(this.state);
     const svg = this.bodyMap();

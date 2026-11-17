@@ -227,13 +227,11 @@ function waterVelocity(p, flow) {
   const vx = c * wx - s * wy, vy = s * wx + c * wy;
   return {x : vx * E.along, y : vy * E.across, inside : r2 < 1};
 }
-function waterSvg(probe, zoom) {
-  const W = PROBE_SCENE.water, angle = radians(probe.bearing);
+function waterPaths(bearing) {
+  const W = PROBE_SCENE.water, angle = radians(bearing);
   const toward = bodyDirection(angle), flow = {x : -toward.x, y : -toward.y};
   const across = {x : -flow.y, y : flow.x}, step = 2 * W.upstream / W.steps;
-  const share = strengthShare(probe.strength, probe.kind);
-  const seconds = W.slow + (W.fast - W.slow) * share;
-  let lines = '', particles = '';
+  const paths = [];
   for (let lane = 0; lane < W.lanes; ++lane) {
     const shift = (lane - (W.lanes - 1) / 2) * W.spacing;
     let p = {
@@ -248,7 +246,18 @@ function waterSvg(probe, zoom) {
       p = {x : p.x + v.x / speed * step, y : p.y + v.y / speed * step};
       points.push(p);
     }
-    const d = 'M' + points.map(q => fixed(q.x) + ' ' + fixed(q.y)).join(' L');
+    paths.push('M' + points.map(q => fixed(q.x) + ' ' + fixed(q.y)).join(' L'));
+  }
+  return paths;
+}
+const waterSeconds = probe => {
+  const W = PROBE_SCENE.water;
+  return W.slow + (W.fast - W.slow) * strengthShare(probe.strength, probe.kind);
+};
+function waterSvg(probe, zoom) {
+  const W = PROBE_SCENE.water, seconds = waterSeconds(probe);
+  let lines = '', particles = '';
+  for (const [lane, d] of waterPaths(probe.bearing).entries()) {
     const laneId = 'aid-water-lane-' + lane;
     lines += '<path id="' + laneId + '" class="aid-probe-stream" d="' + d + '"/>';
     for (let k = 0; k < W.per; ++k)
@@ -259,6 +268,28 @@ function waterSvg(probe, zoom) {
                    '"/></animateMotion></circle>';
   }
   return '<g class="aid-probe-water" style="--lines:' + W.lines + '">' + lines + particles + '</g>';
+}
+const waterInputs = new WeakMap();
+function paintWater(target, probe, zoom) {
+  const before = waterInputs.get(target);
+  if (!target.querySelector('.aid-probe-water')) {
+    target.innerHTML = waterSvg(probe, zoom);
+  } else {
+    if (before?.bearing !== probe.bearing) {
+      const paths = waterPaths(probe.bearing);
+      target.querySelectorAll('.aid-probe-stream')
+          .forEach((path, i) => path.setAttribute('d', paths[i]));
+    }
+    if (before?.strength !== probe.strength) {
+      const duration = fixed(waterSeconds(probe)) + 's';
+      target.querySelectorAll('animateMotion')
+          .forEach(motion => motion.setAttribute('dur', duration));
+    }
+    if (before?.zoom !== zoom)
+      target.querySelectorAll('.aid-probe-particle')
+          .forEach(dot => dot.setAttribute('r', fixed(PROBE_SCENE.water.size / zoom)));
+  }
+  waterInputs.set(target, {bearing : probe.bearing, strength : probe.strength, zoom});
 }
 function answers(state, organ) {
   const twin = organ.pair ? findOrgan(state.document, organ.pair) : null;
@@ -563,7 +594,8 @@ export function probeWater(state) {
   const {zoom} = config;
   return {
     key : [ flow.bearing, flow.strength, zoom ].join(':'),
-    svg : () => waterSvg(flow, zoom)
+    svg : () => waterSvg(flow, zoom),
+    paint : target => paintWater(target, flow, zoom)
   };
 }
 export function probeScents(state) {

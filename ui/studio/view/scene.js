@@ -263,10 +263,10 @@ function sceneLayers(state) {
 }
 
 // A probe can also be repainted independently of the fish. The moving water keeps its SVG
-// elements and animation until its direction, strength or scale changes.
-export function paintFishProbes(target, state, animateWater = true) {
+// elements and animation while its direction, strength or scale changes.
+export function paintFishProbes(target, state) {
   const water = target?.querySelector('[data-probe-water]');
-  const current = water && animateWater ? probeWater(state) : null;
+  const current = water && probeWater(state);
   const controls = target?.querySelector('[data-probe-controls]');
   if (controls) {
     const {document, sites, selected, senseProbe, anatomy, outlinePreview} = state;
@@ -285,7 +285,10 @@ export function paintFishProbes(target, state, animateWater = true) {
   setMarkup(target?.querySelector('[data-probe-answers]'), senseProbeAnswers(state));
   if (water && water.dataset.probeWater !== (current?.key ?? '')) {
     water.dataset.probeWater = current?.key ?? '';
-    water.innerHTML = current?.svg() ?? '';
+    if (current)
+      current.paint(water);
+    else
+      water.replaceChildren();
   }
 }
 
@@ -338,7 +341,7 @@ export function fishScene(state) {
          '</div><div class="aid-hint-legend" data-hint-legend hidden></div>';
 }
 
-export function paintFishScene(target, state, scope, animateWater = true) {
+export function paintFishScene(target, state, scope) {
   const svg = target.querySelector(BODY_MAP);
   if (!svg) {
     target.innerHTML = fishScene(state);
@@ -382,7 +385,7 @@ export function paintFishScene(target, state, scope, animateWater = true) {
     life.removeAttribute('data-life-dirty');
   }
   setMarkup(life, lifeBar(state));
-  paintFishProbes(target, state, animateWater);
+  paintFishProbes(target, state);
   return marksChanged;
 }
 function trashZone() {
