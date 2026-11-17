@@ -27,7 +27,7 @@ import {
 import {kindLimit} from '../../model/organs.js';
 import {label} from '../kit.js';
 import {addPicture, chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
-import {between, cubic, IRRITANT, lastCourses, LEVEL_SPAN, LEVELS, NERVE, SENSE_BOX, stimulusOf, USED, usedFor} from './sense.js';
+import {between, cubic, IRRITANT, lastCourses, LEVEL_SPAN, LEVELS, NERVE, paceMatters, SENSE_BOX, stimulusOf, USED, usedFor} from './sense.js';
 
 const word = (key, values) => t('studio.live.gut.' + key, values);
 // The foods, in the pictures' order, by their names in the engine's report.
@@ -515,7 +515,7 @@ liveKind('gut', (studio) => {
         tried[id].chosen = i;
         show(studio.state);
       });
-      if (SENSES[id].tires && on)
+      if (SENSES[id].tires && on && gripX(i) !== null)
         drag(svg, el('rect', {x : gripX(i) - 5, y : SENSE_BOX.I0 - 33, width : 10, height : 10, rx : 3, class : 'aid-live-tire k' + i % 3}, parent), p => tire(k, i, p), id + 'tire', 'grip', settle);
     });
     const merged = Array.from({length : 6}, () => ({t : 1, n : 0, e : el('circle', {r : 0, class : 'aid-live-pulse'}, tilted)}));
@@ -549,7 +549,7 @@ liveKind('gut', (studio) => {
     const X = st => L + (R - L) * st / STEPS, stOf = x => clamp(Math.round((x - L) / (R - L) * STEPS), 0, STEPS);
     play.sent[id] = runs.map(r => r?.sent ?? []);
     // Where a key's cells send nothing more, and the grips' way of moving it.
-    const ends = runs.map(r => r?.silent ?? 0);
+    const ends = runs.map(r => r?.silent ?? 0), fades = runs.map(r => r?.faded ?? 0);
     const tire = (k, i, p) => {
       own.chosen = i;
       const used = usedFor(runs[i], stOf(p.x));
@@ -561,7 +561,7 @@ liveKind('gut', (studio) => {
       show(studio.state);
     };
     const newGate = () => clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95);
-    nerves(svg, live, id, keys, i => X(clamp(ends[i], 0, STEPS)), tire);
+    nerves(svg, live, id, keys, i => paceMatters(runs[i], STEPS) ? X(clamp(fades[i], 0, STEPS)) : null, tire);
     // The same pair twice: at the cells and at the keys (under their holder).
     chip(live, R - 22, I0 - 54, '−', () => fewer(id, keys[own.chosen]), keys.length > 1, 6);
     chip(live, R - 6, I0 - 54, '+', () => more(id, newGate()), keys.length < 3, 6);
@@ -615,7 +615,10 @@ liveKind('gut', (studio) => {
         el('path', {d : `M${x} ${I0 - 23} V${I0 - 21} M${x} ${I0} V${I1}`, class : 'aid-live-keyline k' + i % 3}, live);
         if (at <= STEPS && stim[at] > Math.min(...runs[i].cells))
           txt(live, x + (left ? -7 : 7), I0 + 11, word('used'), {'text-anchor' : left ? 'end' : 'start', class : 'aid-live-onground'});
-        drag(svg, el('rect', {x : x - 4, y : I1 - 13, width : 8, height : 10, rx : 2, class : keyGrip(i, true)}, live), p => tire(k, i, p), id + 'used', 'grip', settle);
+        // The grip where the report has faded to half (sense.js, fadedAt).
+        const fx = X(Math.min(fades[i], STEPS));
+        if (paceMatters(runs[i], STEPS))
+          drag(svg, el('rect', {x : fx - 4, y : I1 - 13, width : 8, height : 10, rx : 2, class : keyGrip(i, true)}, live), p => tire(k, i, p), id + 'used', 'grip', settle);
       });
     // The grips, above everything they could be hidden by: every key and its spread, the input's
     // two knobs (when it is fully there and how strong, and when it stops).

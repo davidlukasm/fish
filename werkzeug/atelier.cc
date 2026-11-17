@@ -623,7 +623,17 @@ struct SenseCourse {
   std::vector<double> stimulus;
 };
 constexpr int MOST_SENSE_COURSES = 12, LONGEST_SENSE_COURSE = 4000, SENSE_COURSE_DIGITS = 4,
-              SILENCE_PACES = 33;
+              FADING_PACES = 33;
+// The step at which a report has faded to half its height after it: past the report if it never
+// does, 0 if it never sends (sense.js, fadedAt).
+std::size_t half_faded(const std::vector<double> &sent) {
+  const auto peak = std::max_element(sent.begin(), sent.end());
+  if (peak == sent.end() || *peak <= 0)
+    return 0;
+  const double half = *peak / 2;
+  return std::size_t(std::find_if(peak, sent.end(), [half](double v) { return v <= half; }) -
+                     sent.begin());
+}
 std::vector<SenseCourse> read_sense_courses(std::istream &in) {
   int count = 0;
   ensure(bool(in >> count) && count >= 0 && count <= MOST_SENSE_COURSES, "invalid sense courses");
@@ -648,8 +658,8 @@ std::vector<SenseCourse> read_sense_courses(std::istream &in) {
 // what it sees with visual_response. The eye's cells have no course. `sent`: the cells' mean
 // answer as a share of what they can send (as `senses`); `used`: what they are used to on
 // average, in the stimulus's units; `probe`: for a course given as shares of the probe, what the
-// cells meet of it; `cells`: their thresholds; `silence`: for cells that get
-// used, [pace, step at which they fall silent] over the paces a cell can have. The cells are
+// cells meet of it; `cells`: their thresholds; `fading`: for cells that get used, [pace, step at
+// which their report has faded to half] over the paces a cell can have. The cells are
 // those that sense what the group's planned cell senses (the nominal plan, as in the sense
 // report): a site's copies share the sense its centre drew, so a whole group can turn into
 // another sense; then it has no course (null), never the other sense's.
@@ -731,26 +741,23 @@ void sense_course_report(const Plan &plan, const field::Substrate &planned,
                 << (cells[c]->intensity() ? cells[c]->response_threshold : cells[c]->threshold);
     std::cout.precision(SENSE_COURSE_DIGITS);
     std::cout << ']';
-    // For cells that get used: at which step the last falls silent (past the course if never, 0
-    // if none ever sends), for paces of getting used from the quickest to the slowest a cell can
-    // have. A pace is the cells' steps of getting used on the geometric mean; moving the plan's
-    // pace moves every drawn cell's by the same factor (substrate.hh, adaptation_steps).
+    // For cells that get used: at which step their report has faded to half its height (past the
+    // course if never, 0 if they never send), for paces of getting used from the quickest to the
+    // slowest a cell can have. A pace is the cells' steps of getting used on the geometric mean;
+    // moving the plan's pace moves every drawn cell's by the same factor (substrate.hh,
+    // adaptation_steps).
     double drawn = 0;
     for (const auto *r : cells)
       drawn += r->adaptation_rate > 0 ? std::log(1 / r->adaptation_rate) : 0;
     if (tiring && std::all_of(cells.begin(), cells.end(),
                               [](const auto *r) { return r->adaptation_rate > 0; })) {
       drawn = std::exp(drawn / count);
-      std::cout << ",\"silence\":[";
-      for (int k = 0; k < SILENCE_PACES; ++k) {
+      std::cout << ",\"fading\":[";
+      for (int k = 0; k < FADING_PACES; ++k) {
         const double steps =
-            field::ADAPTATION_MIN * std::pow(field::ADAPTATION_SPAN, k / (SILENCE_PACES - 1.));
+            field::ADAPTATION_MIN * std::pow(field::ADAPTATION_SPAN, k / (FADING_PACES - 1.));
         run(steps / drawn, sent, nullptr);
-        const auto first = std::find_if(sent.begin(), sent.end(), [](double v) { return v > 0; });
-        const auto quiet = first == sent.end()
-                               ? sent.begin()
-                               : std::find_if(first, sent.end(), [](double v) { return v <= 0; });
-        std::cout << (k ? "," : "") << '[' << steps << ',' << quiet - sent.begin() << ']';
+        std::cout << (k ? "," : "") << '[' << steps << ',' << half_faded(sent) << ']';
       }
       std::cout << ']';
     }

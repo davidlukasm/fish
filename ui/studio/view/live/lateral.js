@@ -22,7 +22,9 @@ import {
   between,
   INTENSITY,
   keysOf,
+  fadingWay,
   lastCourses,
+  paceMatters,
   setGate,
   setSpread,
   setUsed,
@@ -79,6 +81,7 @@ liveKind('lateral', (studio, organId) => {
       sent : run?.sent ?? [],
       run,
       silent : run?.silent ?? 0,
+      faded : run?.faded ?? 0,
       gates : run ? run.cells : [ INTENSITY.val(key.gate) ],
       stale : !run || run.stale
     };
@@ -189,19 +192,25 @@ liveKind('lateral', (studio, organId) => {
         opacity : .55
       },
          live);
-    // Where they have got used to the current: the hairs still lean, the cells are silent. The
-    // grip there sets how fast they get used.
+    // Where they have got used to the current: the hairs still lean, the cells are silent.
     if (c.silent > 0 && c.silent < STEPS) {
       const sx = X(c.silent);
-      // The way the grip can go.
-      el('path', {d : `M${B.L} ${floor + B.loud} H${B.R}`, class : 'aid-live-track-line'}, live);
       el('path', {d : `M${sx} ${floor} V${floor + B.loud}`, class : 'aid-live-keymark k0'}, live);
       txt(live, sx + 5, floor + B.loud, word('used'), {class : 'aid-live-small'});
-      drag(svg, el('circle', {cx : sx, cy : floor + B.loud, r : 5}, live), p => {
-        const used = usedFor(c.run, stOf(p.x));
-        if (used)
-          draft(setUsed(studio.state.document, c.key, used));
-      }, 'lateralused', 'grip', settle);
+    }
+    // How fast they get used: the grip where their report has faded to half (sense.js, fadedAt),
+    // where the pace moves it at all.
+    if (c.faded > 0 && paceMatters(c.run, STEPS)) {
+      const [early, late] = fadingWay(c.run, STEPS);
+      el('path', {d : `M${X(early)} ${floor + B.loud} H${X(late)}`, class : 'aid-live-track-line'},
+         live);
+      drag(svg, el('circle', {cx : X(Math.min(c.faded, STEPS)), cy : floor + B.loud, r : 5}, live),
+           p => {
+             const used = usedFor(c.run, stOf(p.x));
+             if (used)
+               draft(setUsed(studio.state.document, c.key, used));
+           },
+           'lateralused', 'grip', settle);
     }
     for (const st of B.marks)
       txt(live, X(st), B.height - 4, String(st), {'text-anchor' : 'end', class : 'aid-live-small'});
