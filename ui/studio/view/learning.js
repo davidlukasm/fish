@@ -9,20 +9,16 @@ import {
   findCenter,
   isLearner,
   LEARNING_EFFECTS,
-  pairEndpoint,
-  receptorEnds,
-  regulatorySubstances
+  pairEndpoint
 } from '../model/document.js';
-import {escapeText, glyph} from './markup.js';
+import {escapeText} from './markup.js';
 import {routedLinks} from '../model/regions.js';
 import {joinParts} from '../../strings.js';
 import {bandGlyph, heading, icon, ICON, label} from './kit.js';
-import {effectCurve, substanceName} from './substances.js';
+import {chemistry, substanceName} from './substances.js';
 import {centerTitle, organTitle, tone} from './names.js';
 import {isTeachingSource, isPacemaker, isRegion, modeLean} from '../model/organs.js';
-import {EFFECT_ICON} from './icons.js';
 import {cellDevelopment} from './development.js';
-import {effectScene} from './effects.js';
 import {centerMarker} from './scene.js';
 import {contactPlan} from './contact_plan.js';
 import {livePlace} from './live/kit.js';
@@ -48,41 +44,6 @@ const boundSubstance = (state, center, effect) => {
 
 const MODE_NAME = Object.freeze({[-1] : 'cancelling', 0 : 'neutral', 1 : 'competing'});
 export const modeName = mode => MODE_NAME[modeLean(mode)];
-function substancePart(state, center, effect) {
-  const receptor = center.receptors?.[effect];
-  if (!receptor)
-    return '';
-  const doc = state.document, bound = boundSubstance(state, center, effect);
-  const colour = bound ? substanceColor(bound.index) : null;
-  const title = label('effects.' + effect);
-  const choice = (value, text, on, swatch = '') =>
-      '<button class="' + (on ? 'active' : '') + '" data-learn-substance="' + value +
-      '" data-center-id="' + escapeText(center.id) + '" data-learn-effect="' + effect + '"' +
-      (swatch ? ' style="--substance:' + swatch + '"' : '') + ' title="' + escapeText(text) +
-      '"><span class="aid-substance-swatch' + (swatch ? '' : ' none') + '"></span>' +
-      escapeText(text) + '</button>';
-  const choices =
-      '<div class="aid-learn-substances" role="group" aria-label="' + escapeText(title) + '">' +
-      choice('off', label('learnRule.none'), !bound) +
-      regulatorySubstances(doc, state.capabilities)
-          .map(sub => choice(String(sub.index), sub.name || substanceName(state, sub.index),
-                             bound?.index === sub.index, substanceColor(sub.index)))
-          .join('') +
-      (doc.substances.length ? ''
-                             : '<button data-add-substance title="' +
-                                   label('sections.newSubstance') + '">+</button>') +
-      '</div>';
-  return '<details class="aid-learn-substance' + (bound ? ' bound' : '') + '"' +
-         (colour ? ' style="--substance:' + colour + '"' : '') + '><summary title="' +
-         escapeText(title) + '">' + glyph(EFFECT_ICON[effect], ICON.mark, {line : true}) +
-         escapeText(label('axes.effects.' + effect)) + '</summary>' + choices +
-         // An effect that reads no substance has nothing to show but the choice of one.
-         (bound ? effectScene(effect, colour, receptorEnds(receptor),
-                              {capabilities : state.capabilities, center}) +
-                      effectCurve(state, receptor, effect, center.id + ':' + effect)
-                : '') +
-         '</details>';
-}
 function teacherList(state, center, modulators) {
   const taught = boundSubstance(state, center, HORMONE_EFFECT.teaching);
   const items =
@@ -165,13 +126,18 @@ export function learningInspector(state) {
   const chosen = chosenCenter(doc, selected, state.visionProfile);
   let html = '<header class="aid-inspector-head"><span>' + label('sections.brain') + '</span>' +
              heading(label('tools.learn')) + '</header>';
+  // Without a chosen nerve cell: the cells that learn, to choose from.
   if (!chosen || chosen.role !== 'nerve')
-    return html + learnersOverview(state) + '<div class="aid-empty-centre">' +
-           label('inspector.selectLearning') + '</div>';
+    return html + learnersOverview(state);
   html += nodeChoice(state, chosen);
   const teachers = sendersOf(state, chosen);
   return html + heading(centerTitle(chosen)) + livePlace('learn', chosen) +
-         teacherList(state, chosen, teachers.modulators) + '<div class="aid-learn-effects">' +
-         LEARNING_EFFECTS.map(effect => substancePart(state, chosen, effect)).join('') + '</div>' +
+         teacherList(state, chosen, teachers.modulators) +
+         // Which substances change this cell's learning is set at its receptors, in the hormone
+         // tool; here stands what it answers to and the way there, to the first learning
+         // receptor that reads a substance, else to the learning factor.
+         chemistry(state, findCenter(doc, chosen.id)?.organ, chosen, [ 'hormone' ],
+                   LEARNING_EFFECTS.find(effect => boundSubstance(state, chosen, effect)) ??
+                       HORMONE_EFFECT.learning) +
          cellDevelopment(state, chosen) + contactPlan(state, [ chosen ]);
 }
