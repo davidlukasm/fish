@@ -30,7 +30,6 @@ import {
   setUsed,
   usedFor
 } from './sense.js';
-import {skinSectors, turnTo} from './skin.js';
 
 const word = (key, values) => t('studio.live.pain.' + key, values);
 const ROUND_MS = 9000, BITE_STEP = 12;
@@ -56,14 +55,6 @@ const STRIP = Object.freeze({
   after : .25,
   least : .02
 });
-// Match harm_body's linear split, including across the seam behind the fish.
-function woundShares(bearing, count) {
-  const position = (turnTo(bearing) + 180) * count / 360 - .5, lower = Math.floor(position),
-        upperShare = position - lower;
-  return new Map(
-      [ [ (lower + count) % count, 1 - upperShare ], [ (lower + 1) % count, upperShare ] ]);
-}
-
 liveKind('pain', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-pain aid-live-sense-ache';
@@ -79,31 +70,27 @@ liveKind('pain', (studio, organId) => {
   // The engine answers the course of the cells while a grip is dragged (sense.js, lastCourses).
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive', 'course');
   const settle = () => studio.drafted && studio.settleGraphic();
-  // What the cells meet of the wound: the sectors it is booked on, as the cells weigh them
-  // (16 x weight, at most all of it).
-  function share(cell, probe) {
-    if (!probe)
-      return 0;
-    const {weights} = skinSectors(studio.state, cell.id);
-    if (!weights.length)
-      return 0;
-    let met = 0;
-    for (const [sector, part] of woundShares(probe.bearing, weights.length))
-      met += weights.length * weights[sector] * part;
-    return met;
-  }
   // The wound over the steps, what the cells meet of it and send, and when they fall silent:
   // because they have got used to it (the wound alone would still be felt), or because it has
   // closed below what they feel.
+  // What the cells meet of the wound is the engine's for the fish panel's probe (`probe` of the
+  // course, sense.js, lastCourses), `part` of its depth; ASSUMED: as the wound closes they meet
+  // the same part of what is left of it.
   function courseOf(cell) {
-    const probe = wound(), part = share(cell, probe);
+    const probe = wound(), strength = probe?.strength ?? 0;
     // The cells' thresholds are those the engine drew; before its first answer the plan's one
     // threshold.
     const key = keysOf([ {id : '', centers : [ cell ]} ])[0];
-    const depth = closingWound(probe?.strength ?? 0, BITE_STEP, SKIN_RESPONSE.heal_rate),
-          met = depth.map(v => clamp(v * part)),
-          run = coursesOf(studio, [ {id : key.id, stimulus : met} ])?.[0] ?? null,
-          sent = run?.sent ?? [], silent = run?.silent ?? 0,
+    const depth = closingWound(strength, BITE_STEP, SKIN_RESPONSE.heal_rate),
+          run = coursesOf(studio, [ {
+                            id : key.id,
+                            probe : true,
+                            stimulus : depth.map(v => strength > 0 ? v / strength : 0)
+                          } ])
+                    ?.[0] ??
+                null,
+          part = strength > 0 ? (run?.probe ?? 0) / strength : 0,
+          met = depth.map(v => clamp(v * part)), sent = run?.sent ?? [], silent = run?.silent ?? 0,
           gates = run ? run.cells : [ BOUNDED.val(key.gate) ], last = Math.min(1, ...gates),
           closed = met.findIndex((v, st) => st > BITE_STEP && v <= last);
     return {

@@ -352,7 +352,8 @@ def learning_context_line(blood, learning):
 
 def sense_courses_line(courses):
     """The courses an inspector tries on sense cells (atelier.cc, read_sense_courses): how many,
-    then for each the group of its cells, how many steps and the stimulus at each step."""
+    then for each the group of its cells, whether the stimulus is a share of the probe's, how many
+    steps and the stimulus at each step."""
     if courses is None:
         return "0\n"
     if not isinstance(courses, list) or len(courses) > 12:
@@ -364,7 +365,10 @@ def sense_courses_line(courses):
         stimulus = course.get("stimulus")
         if not isinstance(stimulus, list) or not 0 < len(stimulus) <= 4000:
             raise Refusal("studio.errors.invalidProbe")
-        parts.append(f"{course['group']} {len(stimulus)}")
+        probe = course.get("probe", False)
+        if type(probe) is not bool:
+            raise Refusal("studio.errors.invalidProbe")
+        parts.append(f"{course['group']} {int(probe)} {len(stimulus)}")
         parts.append(" ".join(number(v) for v in stimulus))
     return " ".join(parts) + "\n"
 

@@ -8,7 +8,7 @@
 // The fish panel supplies the scent and current. The curve holds that stimulus steady to show
 // what the cells learn to ignore.
 import {t} from '../../../strings.js';
-import {scentAffinities, scentTuning} from '../../../tuning.js';
+import {scentTuning} from '../../../tuning.js';
 import {sideIndex} from '../../model/layout.js';
 import {
   addOrganType,
@@ -76,10 +76,7 @@ liveKind('nose', (studio, organId) => {
     scale : INTENSITY,
     keys : () => keysOf(types(), INTENSITY),
     input : () => steady(total),
-    share : ({cell}) => {
-      const affinity = scentAffinities(cell.q1, cell.q2, cell.qwidth);
-      return total > 0 ? concentrations.reduce((sum, v, k) => sum + v * affinity[k], 0) / total : 0;
-    },
+    probe : true,
     colour : () => sampleColour(own.probe),
     fewer : k => remove(k.type),
     more : gate => add({threshold : INTENSITY.threshold(gate)}),

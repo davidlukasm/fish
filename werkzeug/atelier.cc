@@ -261,9 +261,11 @@ void mouth_course_report(const Genome &g, const SenseScene &scene) {
   }
   std::cout << "]}";
 }
-void sense_report(const field::Substrate &t,
-                  const std::shared_ptr<const fishsim::BrainInterface> &interface,
-                  const std::vector<Group> &groups, const SenseScene &scene) {
+// The probe's report on the senses it stirs, and what each group's stirred cells meet of it on
+// average, in their sense's units (NaN for a group with none): what the sense courses scale by.
+std::vector<double> sense_report(const field::Substrate &t,
+                                 const std::shared_ptr<const fishsim::BrainInterface> &interface,
+                                 const std::vector<Group> &groups, const SenseScene &scene) {
   fishsim::Body body;
   body.x = body.y = fishsim::SIZE / 2;
   body.organ_mass = interface->organ_mass;
@@ -271,6 +273,12 @@ void sense_report(const field::Substrate &t,
   const double bearing = fishsim::radians(scene.bearing), radius = fishsim::body_radius(body);
   const fishsim::PhysiologyParameters physiology{};
   std::vector<float> answers(interface->sensory.size(), 0);
+  std::vector<double> met(interface->sensory.size(), 0);
+  // A cell's answer to what it meets of the probe.
+  const auto answer = [&](std::size_t i, double stimulus) {
+    met[i] = stimulus;
+    answers[i] = std::clamp(fishsim::receptor_response(interface->sensory[i], stimulus), 0.f, 1.f);
+  };
   const auto stirred = [&](const fishsim::BrainInterface::Receptor &r) {
     const int sense = r.dominant_sense();
     return scene.kind == sense_scene::gut ? sense == field::Intake || sense == field::InnerPressure
@@ -288,8 +296,7 @@ void sense_report(const field::Substrate &t,
     for (std::size_t i = 0; i < answers.size(); ++i) {
       const auto &r = interface->sensory[i];
       if (r.dominant_sense() == field::Intake || r.dominant_sense() == field::InnerPressure)
-        answers[i] = fishsim::receptor_response(
-            r, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
+        answer(i, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
     }
   } else if (scene.kind == sense_scene::balance) {
     // The probe gives the direction of world-down in the fish's frame.
@@ -298,8 +305,7 @@ void sense_report(const field::Substrate &t,
     for (std::size_t i = 0; i < answers.size(); ++i) {
       const auto &r = interface->sensory[i];
       if (r.dominant_sense() == field::Flow && r.inner)
-        answers[i] = fishsim::receptor_response(
-            r, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
+        answer(i, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
     }
   } else if (scene.kind == sense_scene::flow) {
     fishsim::SensoryFrame frame;
@@ -311,8 +317,7 @@ void sense_report(const field::Substrate &t,
     for (std::size_t i = 0; i < answers.size(); ++i) {
       const auto &r = interface->sensory[i];
       if (r.dominant_sense() == field::Flow && !r.inner)
-        answers[i] = fishsim::receptor_response(
-            r, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
+        answer(i, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
     }
   } else if (scene.kind == sense_scene::touch || scene.kind == sense_scene::wound) {
     if (scene.kind == sense_scene::touch)
@@ -323,8 +328,7 @@ void sense_report(const field::Substrate &t,
     for (auto i : interface->active_sensory) {
       const auto &r = interface->sensory[i];
       if (stirred(r))
-        answers[i] = std::clamp(fishsim::anatomical_sensor(body, r, frame, 0, nullptr, physiology),
-                                0.f, 1.f);
+        answer(i, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
     }
   } else if (scene.kind == sense_scene::taste) {
     const double x = body.x + scene.distance * radius * std::cos(bearing),
@@ -355,8 +359,7 @@ void sense_report(const field::Substrate &t,
       const auto &r = interface->sensory[i];
       if (stirred(r)) {
         const auto exposure = fishsim::birth_exposure(body, r.time_steps);
-        const auto input = fishsim::barbel_stimulus(r, tips[r.lateral >= 0], exposure);
-        answers[i] = std::clamp(fishsim::receptor_response(r, input), 0.f, 1.f);
+        answer(i, fishsim::barbel_stimulus(r, tips[r.lateral >= 0], exposure));
       }
     }
   } else {
@@ -388,29 +391,32 @@ void sense_report(const field::Substrate &t,
     for (auto i : interface->active_sensory) {
       const auto &r = interface->sensory[i];
       if (stirred(r)) {
-        const double concentration = sampled[r.lateral >= 0] * r.scents[scene.scent];
-        answers[i] = std::clamp(fs::receptor_response(r, concentration), 0.f, 1.f);
+        answer(i, sampled[r.lateral >= 0] * r.scents[scene.scent]);
       }
     }
   }
+  std::vector<double> stimuli(groups.size(), std::numeric_limits<double>::quiet_NaN());
   std::cout << ",\"senseProbe\":[";
   for (std::size_t i = 0; i < groups.size(); ++i) {
-    double sum = 0;
+    double sum = 0, meets = 0;
     int count = 0;
     for (std::size_t k = 0; k < answers.size(); ++k) {
       const auto &r = interface->sensory[k];
       if (!stirred(r) || !groups[i].contains(t.neurons[r.neuron].location))
         continue;
       sum += answers[k] / std::max(1e-9f, r.senses[r.dominant_sense()]);
+      meets += met[k];
       ++count;
     }
     std::cout << (i ? "," : "");
-    if (count)
+    if (count) {
       std::cout << sum / count;
-    else
+      stimuli[i] = meets / count;
+    } else
       std::cout << "null";
   }
   std::cout << ']';
+  return stimuli;
 }
 enum class SightDetail { full, studio, answers };
 
@@ -609,9 +615,11 @@ void light_spread_report(const field::Substrate &t, const fishsim::BrainInterfac
   std::cout << "]}";
 }
 // A course an inspector tries on a sense's cells: the group they belong to and the stimulus they
-// meet, step by step, in the sense's own units.
+// meet, step by step, in the sense's own units; with `probe`, step by step as a share of what they
+// meet of the fish panel's probe.
 struct SenseCourse {
   int group = 0;
+  bool probe = false;
   std::vector<double> stimulus;
 };
 constexpr int MOST_SENSE_COURSES = 12, LONGEST_SENSE_COURSE = 4000, SENSE_COURSE_DIGITS = 4,
@@ -621,9 +629,11 @@ std::vector<SenseCourse> read_sense_courses(std::istream &in) {
   ensure(bool(in >> count) && count >= 0 && count <= MOST_SENSE_COURSES, "invalid sense courses");
   std::vector<SenseCourse> courses(static_cast<std::size_t>(count));
   for (auto &course : courses) {
-    int steps = 0;
-    ensure(bool(in >> course.group >> steps) && steps > 0 && steps <= LONGEST_SENSE_COURSE,
+    int steps = 0, probe = 0;
+    ensure(bool(in >> course.group >> probe >> steps) && (probe == 0 || probe == 1) && steps > 0 &&
+               steps <= LONGEST_SENSE_COURSE,
            "invalid sense course");
+    course.probe = probe;
     course.stimulus.resize(static_cast<std::size_t>(steps));
     for (auto &value : course.stimulus)
       ensure(bool(in >> value) && std::isfinite(value) && value >= 0,
@@ -637,14 +647,16 @@ std::vector<SenseCourse> read_sense_courses(std::istream &in) {
 // adapted_level, as the fish does each step (cppn_brain.cc, adapted_response); a near cell answers
 // what it sees with visual_response. The eye's cells have no course. `sent`: the cells' mean
 // answer as a share of what they can send (as `senses`); `used`: what they are used to on
-// average, in the stimulus's units; `cells`: their thresholds; `silence`: for cells that get
+// average, in the stimulus's units; `probe`: for a course given as shares of the probe, what the
+// cells meet of it; `cells`: their thresholds; `silence`: for cells that get
 // used, [pace, step at which they fall silent] over the paces a cell can have. The cells are
 // those that sense what the group's planned cell senses (the nominal plan, as in the sense
 // report): a site's copies share the sense its centre drew, so a whole group can turn into
 // another sense; then it has no course (null), never the other sense's.
 void sense_course_report(const Plan &plan, const field::Substrate &planned,
                          const fishsim::BrainInterface &nominal,
-                         const std::vector<SenseCourse> &courses) {
+                         const std::vector<SenseCourse> &courses,
+                         const std::vector<double> &probed) {
   const auto &groups = plan.groups;
   const auto sample = light_example(plan);
   const auto binding = fishsim::body_interface(sample);
@@ -655,9 +667,17 @@ void sense_course_report(const Plan &plan, const field::Substrate &planned,
   };
   std::cout << ",\"senseCourses\":[";
   for (std::size_t i = 0; i < courses.size(); ++i) {
-    const auto &[group, stimulus] = courses[i];
+    const auto &[group, probe, shape] = courses[i];
     ensure(std::size_t(group) < groups.size(), "unknown sense course group");
     std::cout << (i ? "," : "");
+    // What the cells meet of the probe: nothing without one, or where it does not stir them.
+    const double met = !probe ? 1
+                       : std::size_t(group) < probed.size() && std::isfinite(probed[group])
+                           ? probed[group]
+                           : 0;
+    std::vector<double> stimulus(shape.size());
+    std::transform(shape.begin(), shape.end(), stimulus.begin(),
+                   [met](double share) { return share * met; });
     int sense = -1;
     for (const auto &r : nominal.sensory)
       if (r.channel != field::Light && groups[group].contains(planned.neurons[r.neuron].location)) {
@@ -697,7 +717,10 @@ void sense_course_report(const Plan &plan, const field::Substrate &planned,
     };
     std::vector<double> sent, used;
     run(1, sent, &used);
-    std::cout << "{\"sent\":[";
+    std::cout << '{';
+    if (probe)
+      std::cout << "\"probe\":" << met << ',';
+    std::cout << "\"sent\":[";
     list(sent);
     std::cout << "],\"used\":[";
     list(used);
@@ -1607,6 +1630,7 @@ void design_report(const PreparedDesign &design, const DesignQuery &query, bool 
     water.initialize_aquarium(fishsim::tank::standard_width, fishsim::tank::standard_height);
     sight_report(t, g.interface, groups, *sight, water, detail);
   }
+  std::vector<double> probed;
   if (mouth)
     mouth_course_report(g, *mouth);
   else if (attack)
@@ -1614,9 +1638,9 @@ void design_report(const PreparedDesign &design, const DesignQuery &query, bool 
   else if (gills)
     gill_food_report(design_adult(*g.interface), *g.interface, *gills, {});
   else if (sense)
-    sense_report(t, g.interface, groups, *sense);
+    probed = sense_report(t, g.interface, groups, *sense);
   if (!courses.empty())
-    sense_course_report(plan, t, *g.interface, courses);
+    sense_course_report(plan, t, *g.interface, courses, probed);
   std::cout << '}';
 }
 

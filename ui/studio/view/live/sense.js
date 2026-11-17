@@ -74,7 +74,9 @@ export function silentOf(sent) {
   return silent < 0 ? sent.length : silent;
 }
 // The engine's courses for one inspector: courses(studio, tries), with a try for each key, {id :
-// its cell, stimulus : what its cells meet step by step}. It asks the engine once for each new set
+// its cell, stimulus : what its cells meet step by step, probe}; with `probe` the stimulus is a
+// share of what the cells meet of the fish panel's probe, which the engine gives as `probe`
+// (atelier.cc, sense_report). It asks the engine once for each new set
 // of tries (design.js, trySenseCourses) and gives for each try what its cells send (`sent`, a
 // share of what they can), what they are used to (`used`, in the stimulus's units), their
 // thresholds (`cells`) and when the last falls silent (`silent`), or null where the key has no
@@ -84,8 +86,9 @@ export const lastCourses = owner => {
   let last = null;
   return (studio, tries) => {
     const doc = studio.state.document;
-    const asked = tries.map(({id, stimulus}) => ({
+    const asked = tries.map(({id, stimulus, probe = false}) => ({
                               group : centerIndex(doc, id),
+                              probe,
                               stimulus : stimulus.map(v => +Math.max(0, v).toPrecision(5))
                             })),
           key = owner + JSON.stringify(asked);
@@ -172,7 +175,8 @@ export const keyGrip = (i, on) => 'aid-live-keygrip k' + i + (on ? ' on' : '');
 // they tire and, filled, what they send.
 // `own`: which key is chosen, kept by the inspector; `keys()`: the keys now; `input()`: the
 // stimulus step by step in native units, as the fish panel's probe gives it (steady, or
-// closingWound); `share(k)`: what a key's cells meet of the input, if not all of it; `colour()`:
+// closingWound); `probe`: the keys' cells meet not the input but what the engine says they meet
+// of the fish panel's probe, over the input's course, and the input stands behind; `colour()`:
 // the input's colour, if it changes; `fewer(k)`, `more(gate)`: the keys' pair of buttons; `most`:
 // how many keys there may be; `scale`: the stimulus's scale; `mark`: a height named on the
 // input's scale; `studio`: whom the engine's courses are asked of. Returns draw(), and what the
@@ -188,7 +192,7 @@ export function senseCourse(svg, {
   words,
   keys : keysNow,
   input,
-  share = null,
+  probe = false,
   colour = null,
   fewer,
   more,
@@ -282,19 +286,17 @@ export function senseCourse(svg, {
     live.setAttribute('class', 'aid-live-sense-' + name);
     if (colour)
       live.style.color = colour();
-    const given = input(), offered = given.map(scale.pos);
-    // What each key's cells meet of the input: all of it, or the share their sense gives them.
+    const given = input(), offered = given.map(scale.pos), peak = Math.max(0, ...given);
     play.offered = offered;
-    const met = keys.map(k => {
-      const fraction = share ? share(k) : 1;
-      return given.map(v => v * fraction);
-    }),
+    // What each key's cells meet: the input, or what they meet of the probe over its course.
+    const shape = probe ? given.map(v => peak > 0 ? v / peak : 0) : given;
+    const runs = coursesOf(studio, keys.map(k => ({id : k.id, probe, stimulus : shape}))) ??
+                 keys.map(() => null);
+    const met = runs.map(r => probe ? shape.map(v => v * (r?.probe ?? 0)) : given),
           stim = play.stim = met[own.chosen].map(scale.pos);
     const IY = v => I1 - (I1 - I0) * clamp(v), vOf = y => clamp((I1 - y) / (I1 - I0));
     const X = st => L + (R - L) * st / STEPS,
           stOf = x => clamp(Math.round((x - L) / (R - L) * STEPS), 0, STEPS);
-    const runs = coursesOf(studio, keys.map((k, i) => ({id : k.id, stimulus : met[i]}))) ??
-                 keys.map(() => null);
     play.sent = runs.map(r => r?.sent ?? []);
     // Where a key's cells send nothing more, and the grips' way of moving it.
     const ends = runs.map(r => r?.silent ?? 0);
@@ -329,7 +331,7 @@ export function senseCourse(svg, {
     el('rect', {x : L, y : I0, width : R - L, height : I1 - I0, class : 'aid-live-ground'}, live);
     // Where the cells get only a share of the input, the whole input stands behind it as an
     // outline: its knobs lie on that.
-    if (share)
+    if (probe)
       el('path',
          {d : path(offered.map((v, st) => [X(st), IY(v)])), class : 'aid-live-sense-offered'},
          live);

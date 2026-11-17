@@ -234,7 +234,8 @@ export const designMethods = {
     const probeOnly =
         !draft && samePlan && previous.blood === blood && previous.learnProbe === learnProbe;
     const planKey = !draft && samePlan ? previous.planKey : null;
-    const scene = draft ? {sense : spineDraft || gillDraft ? this.senseScene() : null} : {
+    const courseDraft = draft?.key === 'course';
+    const scene = draft ? {sense : spineDraft || gillDraft || courseDraft ? this.senseScene() : null} : {
       lightSpread : !probeOnly && this.state.lightSpread?.document !== document,
       sight : keepSight ? null : sightScene(probe),
       sense : this.senseScene()
