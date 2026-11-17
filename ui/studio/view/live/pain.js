@@ -208,8 +208,11 @@ liveKind('pain', (studio, organId) => {
         },
            live);
         txt(live, sx + 9, top - S.loud + 3, word('used'), {class : 'aid-live-small'});
+        // Its way ends before the wound closes: there the cells fall silent anyway, and the grip
+        // would leave the picture under the pointer.
         drag(svg, el('circle', {cx : sx, cy : top - S.loud, r : 5}, live), p => {
-          const used = usedFor(c.run, stOf(p.x));
+          const used =
+              usedFor(c.run, Math.min(stOf(p.x), (c.closed < 0 ? SPAN : c.closed) - UNSURE - 1));
           if (used)
             draft(setUsed(studio.state.document, c.key, used));
         }, 'painused', 'grip', settle);
