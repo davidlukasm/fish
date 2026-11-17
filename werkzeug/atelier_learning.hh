@@ -91,6 +91,9 @@ double kept_between(const LearningContext::Probe &probe, float initial_trace, fl
 // While learning, the cell captures a share of what the contact learned (here half) into its
 // protection; at rest an answer below zero loosens it, and unused contacts fade by
 // contact_retention as far as they are not protected (substrate.cc, the contacts' update).
+// STOPGAP: the capturing and loosening of the protection is written out here a second time;
+// substrate.cc has it only inside its vector loop. One step in field::plasticity that both call
+// would end the copy (it touches substrate.cc, Astra's).
 std::pair<double, double> rested(double response, double time) {
   namespace P = field::plasticity;
   constexpr double LEARNED = .5;
