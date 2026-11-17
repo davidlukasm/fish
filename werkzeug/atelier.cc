@@ -632,7 +632,7 @@ struct SenseCourse {
   std::vector<double> stimulus;
 };
 constexpr int MOST_SENSE_COURSES = 12, LONGEST_SENSE_COURSE = 4000, SENSE_COURSE_DIGITS = 4,
-              FADING_PACES = 33;
+              FADING_PACES = 33, HALVING_GATES = 33, HALVING_ROUNDS = 30;
 // The step at which a report has faded to half its height after it: past the report if it never
 // does, 0 if it never sends (sense.js, fadedAt).
 std::size_t half_faded(const std::vector<double> &sent) {
@@ -668,7 +668,8 @@ std::vector<SenseCourse> read_sense_courses(std::istream &in) {
 // answer as a share of what they can send (as `senses`); `used`: what they are used to on
 // average, in the stimulus's units; `probe`: for a course given as shares of the probe, what the
 // cells meet of it; `cells`: their thresholds; `fading`: for cells that get used, [pace, step at
-// which their report has faded to half] over the paces a cell can have. The cells are
+// which their report has faded to half] over the paces a cell can have; `halving`: for near cells,
+// [the plan's threshold, signal at which they answer half] over the thresholds a cell can have. The cells are
 // those that sense what the group's planned cell senses (the nominal plan, as in the sense
 // report): a site's copies share the sense its centre drew, so a whole group can turn into
 // another sense; then it has no course (null), never the other sense's.
@@ -696,9 +697,11 @@ void sense_course_report(const std::vector<Group> &groups, const field::Substrat
     std::transform(shape.begin(), shape.end(), stimulus.begin(),
                    [met](double share) { return share * met; });
     int sense = -1;
+    double plan_gate = 0;
     for (const auto &r : nominal.sensory)
       if (r.channel != field::Light && groups[group].contains(planned.neurons[r.neuron].location)) {
         sense = r.dominant_sense();
+        plan_gate = r.threshold;
         break;
       }
     std::vector<const fishsim::BrainInterface::Receptor *> cells;
@@ -756,6 +759,27 @@ void sense_course_report(const std::vector<Group> &groups, const field::Substrat
     double drawn = 0;
     for (const auto *r : cells)
       drawn += r->adaptation_rate > 0 ? std::log(1 / r->adaptation_rate) : 0;
+    // For near cells: at which signal they answer half on average, for the plan's threshold from
+    // the lowest to the highest a cell can have; moving the plan's threshold moves every drawn
+    // cell's by as much (the way from plan to threshold is straight, receptor_tuning.hh).
+    if (cells.front()->visual()) {
+      std::cout << ",\"halving\":[";
+      for (int k = 0; k < HALVING_GATES; ++k) {
+        const double gate = fishsim::activation_level(k / (HALVING_GATES - 1.)),
+                     shift = gate - plan_gate;
+        const auto answer = [&](double seen) {
+          double sum = 0;
+          for (const auto *r : cells)
+            sum += fishsim::bounded_response(seen, r->threshold + shift);
+          return sum / count;
+        };
+        double low = 0, high = 1;
+        for (int n = 0; n < HALVING_ROUNDS; ++n)
+          (answer((low + high) / 2) < .5 ? low : high) = (low + high) / 2;
+        std::cout << (k ? "," : "") << '[' << gate << ',' << (low + high) / 2 << ']';
+      }
+      std::cout << ']';
+    }
     if (tiring && std::all_of(cells.begin(), cells.end(),
                               [](const auto *r) { return r->adaptation_rate > 0; })) {
       drawn = std::exp(drawn / count);
