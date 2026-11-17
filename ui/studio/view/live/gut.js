@@ -501,9 +501,9 @@ liveKind('gut', (studio) => {
       txt(live, 294, y + 10, Math.round(100 * r.min) === Math.round(100 * r.max) ? percent(r.max) : word('span', {from : Math.round(100 * r.min), to : percent(r.max)}), {'text-anchor' : 'end', class : 'aid-live-value'});
     });
   }
-  // The nerve cells above a sense's diagram (see NERVE). A cell is chosen by touching it; if the
-  // chosen cell tires, its grip stands above the step at which it sends nothing more.
-  function nerves(svg, parent, id, keys, gripX, tire) {
+  // The nerve cells above a sense's diagram (see NERVE). A cell is chosen by touching it; how fast
+  // it tires is set at its grip in the diagram below.
+  function nerves(parent, id, keys) {
     const {join, bundle} = NERVE, cells = [], tilted = el('g', {transform : `rotate(${NERVE.tilt} ${NERVE.about})`, class : 'aid-live-sense-' + id}, parent);
     el('path', {d : `M${bundle[0]} C${bundle[1]} ${bundle[2]} ${bundle[3]}`, class : 'aid-live-nerve-bundle'}, tilted);
     keys.forEach((k, i) => {
@@ -515,12 +515,10 @@ liveKind('gut', (studio) => {
         tried[id].chosen = i;
         show(studio.state);
       });
-      if (SENSES[id].tires && on && gripX(i) !== null)
-        drag(svg, el('rect', {x : gripX(i) - 5, y : SENSE_BOX.I0 - 33, width : 10, height : 10, rx : 3, class : 'aid-live-tire k' + i % 3}, parent), p => tire(k, i, p), id + 'tire', 'grip', settle);
     });
     const merged = Array.from({length : 6}, () => ({t : 1, n : 0, e : el('circle', {r : 0, class : 'aid-live-pulse'}, tilted)}));
     const shown = NERVE.somas.slice(0, keys.length);
-    // Under the cells, in their middle, above the strip in which a tiring cell's grip moves.
+    // Under the cells, in their middle.
     const at = [ shown.reduce((sum, s) => sum + s[0], 0) / shown.length - 4, NERVE.flash ];
     const dots = Array.from({length : NERVE.dots}, (_, n) => {
       const [cx, cy] = shown[n % shown.length], [dx, dy] = NERVE.tips[n % NERVE.tips.length];
@@ -561,7 +559,7 @@ liveKind('gut', (studio) => {
       show(studio.state);
     };
     const newGate = () => clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95);
-    nerves(svg, live, id, keys, i => paceMatters(runs[i], STEPS) ? X(clamp(fades[i], 0, STEPS)) : null, tire);
+    nerves(live, id, keys);
     // The same pair twice: at the cells and at the keys (under their holder).
     chip(live, R - 22, I0 - 54, '−', () => fewer(id, keys[own.chosen]), keys.length > 1, 6);
     chip(live, R - 6, I0 - 54, '+', () => more(id, newGate()), keys.length < 3, 6);
