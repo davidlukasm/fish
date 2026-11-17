@@ -41,7 +41,8 @@ liveKind('near', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-near';
   const rings = addPicture(root);
-  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
+  // The engine answers the course of the cells while a grip is dragged (sense.js, lastCourses).
+  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive', 'course');
   const settle = () => studio.drafted && studio.settleGraphic();
   const coursesOf = lastCourses('near');
   function drawRings(organ, profile, reach) {

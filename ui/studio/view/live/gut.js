@@ -249,7 +249,8 @@ liveKind('gut', (studio) => {
   }
   const film = {wall : null, tube : null, segs : [], bits : [], crumbs : [], way : null, share : null, stomach : null, keys : null, named : []};
   let state = studio.state, curves = null, curvesFor = null, model = null, step = 0, wave = 0;
-  const draft = doc => doc && studio.draftDesign(doc, 'live:gut', 'refreshLive');
+  // The engine answers the senses' courses while a grip is dragged (sense.js, lastCourses).
+  const draft = doc => doc && studio.draftDesign(doc, 'live:gut', 'refreshLive', 'course');
   const settle = () => studio.drafted && studio.settleGraphic();
   const muscleOf = doc => doc.organs.find(o => o.type === 'gutmuscle') ?? null;
 
@@ -551,7 +552,9 @@ liveKind('gut', (studio) => {
     const ends = runs.map(r => r?.silent ?? 0);
     const tire = (k, i, p) => {
       own.chosen = i;
-      draft(setUsed(k, usedFor(k, ends[i], stOf(p.x))));
+      const used = usedFor(runs[i], stOf(p.x));
+      if (used)
+        draft(setUsed(k, used));
     };
     const choose = i => () => {
       own.chosen = i;

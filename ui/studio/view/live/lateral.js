@@ -64,7 +64,8 @@ liveKind('lateral', (studio, organId) => {
   const coursesOf = lastCourses('lateral');
   const current = () => studio.state.senseProbe?.kind === 'flow' ? studio.state.senseProbe : null;
   const organ = () => findOrgan(studio.state.document, organId);
-  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
+  // The engine answers the course of the cells while a grip is dragged (sense.js, lastCourses).
+  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive', 'course');
   const settle = () => studio.drafted && studio.settleGraphic();
   // What the cells meet of the current: each sector as far as it faces the water, by the cells'
   // weight, and as far as the water comes against the cells' own place (where their weights
@@ -92,6 +93,7 @@ liveKind('lateral', (studio, organId) => {
       key,
       met,
       sent : run?.sent ?? [],
+      run,
       silent : run?.silent ?? 0,
       gates : run ? run.cells : [ INTENSITY.val(key.gate) ],
       stale : !run || run.stale
@@ -211,9 +213,11 @@ liveKind('lateral', (studio, organId) => {
       el('path', {d : `M${B.L} ${floor + B.loud} H${B.R}`, class : 'aid-live-track-line'}, live);
       el('path', {d : `M${sx} ${floor} V${floor + B.loud}`, class : 'aid-live-keymark k0'}, live);
       txt(live, sx + 5, floor + B.loud, word('used'), {class : 'aid-live-small'});
-      drag(svg, el('circle', {cx : sx, cy : floor + B.loud, r : 5}, live),
-           p => draft(setUsed(studio.state.document, c.key, usedFor(c.key, c.silent, stOf(p.x)))),
-           'lateralused', 'grip', settle);
+      drag(svg, el('circle', {cx : sx, cy : floor + B.loud, r : 5}, live), p => {
+        const used = usedFor(c.run, stOf(p.x));
+        if (used)
+          draft(setUsed(studio.state.document, c.key, used));
+      }, 'lateralused', 'grip', settle);
     }
     for (const st of B.marks)
       txt(live, X(st), B.height - 4, String(st), {'text-anchor' : 'end', class : 'aid-live-small'});

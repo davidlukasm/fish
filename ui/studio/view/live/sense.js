@@ -99,11 +99,21 @@ export const lastCourses = owner => {
     return last.map(c => c && {...c, stale});
   };
 };
-// The pace of tiring that puts the step at which the cells fall silent where it is wanted, from
-// the pace and that step when the grip was taken: the step moves with the pace, as it does for a
-// steady input; the engine's course then shows where it is.
-export const usedFor = (k, silent, step) =>
-    clamp(k.used * Math.max(1, step) / Math.max(1, silent), USED[0], USED[1]);
+// The pace of getting used that makes a key's cells fall silent at a step, from the engine's
+// steps of silence over the paces (`silence` of its course): between the two paces round that
+// step, on the same logarithmic scale as the plan's pace; the slowest if they never fall silent
+// so late.
+export function usedFor(run, step) {
+  const paces = run?.silence;
+  if (!paces?.length)
+    return null;
+  const after = paces.findIndex(([, silent ]) => silent >= step);
+  if (after < 1)
+    return clamp(paces[Math.max(0, after < 0 ? paces.length - 1 : 0)][0], USED[0], USED[1]);
+  const [[ slow, early ], [ slower, late ]] = [ paces[after - 1], paces[after] ];
+  return clamp(slow * (slower / slow) ** clamp((step - early) / Math.max(1, late - early)), USED[0],
+               USED[1]);
+}
 export const between = (values, at) => {
   const a = Math.floor(at), f = at - a;
   return values ? (values[a] ?? 0) * (1 - f) + (values[a + 1] ?? values[a] ?? 0) * f : 0;
@@ -290,7 +300,9 @@ export function senseCourse(svg, {
     const ends = runs.map(r => r?.silent ?? 0);
     const tire = (k, i, p) => {
       own.chosen = i;
-      draft(setUsed(doc(), k, usedFor(k, ends[i], stOf(p.x))));
+      const used = usedFor(runs[i], stOf(p.x));
+      if (used)
+        draft(setUsed(doc(), k, used));
     };
     const choose = i => () => {
       own.chosen = i;

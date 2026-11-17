@@ -75,7 +75,8 @@ liveKind('balance', (studio, organId) => {
   const heard = cell =>
       groupReport(studio.state.document, studio.state.anatomy, 'senseProbe', cell.id);
   const organ = () => findOrgan(studio.state.document, organId);
-  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
+  // The engine answers the course of the cells while a grip is dragged (sense.js, lastCourses).
+  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive', 'course');
   const settle = () => studio.drafted && studio.settleGraphic();
   // Round the fish a rose of postures: for every way the snout can point, a petal as long as the
   // cells report there; this organ's cells outside the ring, its twin's (their hair mirrored, with

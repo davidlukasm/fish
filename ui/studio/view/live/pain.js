@@ -76,7 +76,8 @@ liveKind('pain', (studio, organId) => {
   let step = 0, bubble = null, span = spanOf(SKIN_RESPONSE.bite_wound);
   const coursesOf = lastCourses('pain');
   const organ = () => findOrgan(studio.state.document, organId);
-  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
+  // The engine answers the course of the cells while a grip is dragged (sense.js, lastCourses).
+  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive', 'course');
   const settle = () => studio.drafted && studio.settleGraphic();
   // What the cells meet of the wound: the sectors it is booked on, as the cells weigh them
   // (16 x weight, at most all of it).
@@ -113,6 +114,7 @@ liveKind('pain', (studio, organId) => {
       met,
       sent,
       silent,
+      run,
       gates,
       stale : !run || run.stale,
       closed,
@@ -219,9 +221,11 @@ liveKind('pain', (studio, organId) => {
         },
            live);
         txt(live, sx + 9, top - S.loud + 3, word('used'), {class : 'aid-live-small'});
-        drag(svg, el('circle', {cx : sx, cy : top - S.loud, r : 5}, live),
-             p => draft(setUsed(studio.state.document, c.key, usedFor(c.key, c.silent, stOf(p.x)))),
-             'painused', 'grip', settle);
+        drag(svg, el('circle', {cx : sx, cy : top - S.loud, r : 5}, live), p => {
+          const used = usedFor(c.run, stOf(p.x));
+          if (used)
+            draft(setUsed(studio.state.document, c.key, used));
+        }, 'painused', 'grip', settle);
       }
     }
     for (let st = SPAN > 400 ? 200 : 100; st <= SPAN; st += SPAN > 400 ? 200 : 100)

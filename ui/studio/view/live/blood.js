@@ -73,7 +73,8 @@ liveKind('blood', (studio, organId) => {
   const own = {chosen : 0};
   const coursesOf = lastCourses('blood');
   const organ = () => findOrgan(studio.state.document, organId);
-  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
+  // The engine answers the course of the cells while a grip is dragged (sense.js, lastCourses).
+  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive', 'course');
   const settle = () => studio.drafted && studio.settleGraphic();
   const change = doc => doc && studio.changeDocument(doc, studio.state.selected);
   const again = () => show();

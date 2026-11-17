@@ -47,7 +47,8 @@ liveKind('nose', (studio, organId) => {
   let step = 0;
   const organ = () => findOrgan(studio.state.document, organId);
   const types = () => organTypes(organ());
-  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
+  // The engine answers the course of the cells while a grip is dragged (sense.js, lastCourses).
+  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive', 'course');
   const settle = () => studio.drafted && studio.settleGraphic();
   const change = doc => doc && studio.changeDocument(doc, studio.state.selected);
   const again = () => show();

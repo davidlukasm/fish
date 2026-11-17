@@ -614,7 +614,8 @@ struct SenseCourse {
   int group = 0;
   std::vector<double> stimulus;
 };
-constexpr int MOST_SENSE_COURSES = 12, LONGEST_SENSE_COURSE = 4000, SENSE_COURSE_DIGITS = 4;
+constexpr int MOST_SENSE_COURSES = 12, LONGEST_SENSE_COURSE = 4000, SENSE_COURSE_DIGITS = 4,
+              SILENCE_PACES = 33;
 std::vector<SenseCourse> read_sense_courses(std::istream &in) {
   int count = 0;
   ensure(bool(in >> count) && count >= 0 && count <= MOST_SENSE_COURSES, "invalid sense courses");
@@ -634,12 +635,13 @@ std::vector<SenseCourse> read_sense_courses(std::istream &in) {
 // example have them (light_example, as lightSpread): each cell answers with receptor_response
 // against what it is used to, and a cell of a tiring sense then gets used to the stimulus by
 // adapted_level, as the fish does each step (cppn_brain.cc, adapted_response); a near cell answers
-// what it sees with visual_response. The eye's cells have no course. `sent`: the cells'
-// mean answer as a share of what they can send (as `senses`); `used`: what they are used to on
-// average, in the stimulus's units; `cells`: their thresholds. The cells are those that sense what
-// the group's planned cell senses (the nominal plan, as in the sense report): a site's copies
-// share the sense its centre drew, so a whole group can turn into another sense; then it has no
-// course (null), never the other sense's.
+// what it sees with visual_response. The eye's cells have no course. `sent`: the cells' mean
+// answer as a share of what they can send (as `senses`); `used`: what they are used to on
+// average, in the stimulus's units; `cells`: their thresholds; `silence`: for cells that get
+// used, [pace, step at which they fall silent] over the paces a cell can have. The cells are
+// those that sense what the group's planned cell senses (the nominal plan, as in the sense
+// report): a site's copies share the sense its centre drew, so a whole group can turn into
+// another sense; then it has no course (null), never the other sense's.
 void sense_course_report(const Plan &plan, const field::Substrate &planned,
                          const fishsim::BrainInterface &nominal,
                          const std::vector<SenseCourse> &courses) {
@@ -647,6 +649,10 @@ void sense_course_report(const Plan &plan, const field::Substrate &planned,
   const auto sample = light_example(plan);
   const auto binding = fishsim::body_interface(sample);
   const auto precision = std::cout.precision(SENSE_COURSE_DIGITS);
+  const auto list = [](const std::vector<double> &values) {
+    for (std::size_t k = 0; k < values.size(); ++k)
+      std::cout << (k ? "," : "") << values[k];
+  };
   std::cout << ",\"senseCourses\":[";
   for (std::size_t i = 0; i < courses.size(); ++i) {
     const auto &[group, stimulus] = courses[i];
@@ -669,31 +675,63 @@ void sense_course_report(const Plan &plan, const field::Substrate &planned,
       continue;
     }
     const bool tiring = fishsim::adapting_sense(sense);
-    std::vector<double> mean(cells.size()), used;
-    std::cout << "{\"sent\":[";
-    for (std::size_t st = 0; st < stimulus.size(); ++st) {
-      double answer = 0, accustomed = 0;
-      for (std::size_t c = 0; c < cells.size(); ++c) {
-        const auto &r = *cells[c];
-        answer += r.visual() ? fishsim::visual_response(r, stimulus[st])
-                             : fishsim::receptor_response(r, stimulus[st], mean[c]) / r.senses[sense];
-        accustomed += mean[c];
-        if (tiring)
-          mean[c] = fishsim::adapted_level(mean[c], stimulus[st], r.adaptation_rate);
+    const double count = double(cells.size());
+    // The course with every cell getting used `slower` times as slowly as it was drawn to.
+    const auto run = [&](double slower, std::vector<double> &sent, std::vector<double> *used) {
+      std::vector<double> mean(cells.size());
+      sent.clear();
+      for (const double s : stimulus) {
+        double answer = 0, accustomed = 0;
+        for (std::size_t c = 0; c < cells.size(); ++c) {
+          const auto &r = *cells[c];
+          answer += r.visual() ? fishsim::visual_response(r, s)
+                               : fishsim::receptor_response(r, s, mean[c]) / r.senses[sense];
+          accustomed += mean[c];
+          if (tiring)
+            mean[c] = fishsim::adapted_level(mean[c], s, r.adaptation_rate / slower);
+        }
+        sent.push_back(answer / count);
+        if (used)
+          used->push_back(accustomed / count);
       }
-      std::cout << (st ? "," : "") << answer / double(cells.size());
-      used.push_back(accustomed / double(cells.size()));
-    }
+    };
+    std::vector<double> sent, used;
+    run(1, sent, &used);
+    std::cout << "{\"sent\":[";
+    list(sent);
     std::cout << "],\"used\":[";
-    for (std::size_t st = 0; st < used.size(); ++st)
-      std::cout << (st ? "," : "") << used[st];
+    list(used);
     std::cout << "],\"cells\":[";
     std::cout.precision(REPORT_DIGITS);
     for (std::size_t c = 0; c < cells.size(); ++c)
       std::cout << (c ? "," : "")
                 << (cells[c]->intensity() ? cells[c]->response_threshold : cells[c]->threshold);
     std::cout.precision(SENSE_COURSE_DIGITS);
-    std::cout << "]}";
+    std::cout << ']';
+    // For cells that get used: at which step the last falls silent (past the course if never, 0
+    // if none ever sends), for paces of getting used from the quickest to the slowest a cell can
+    // have. A pace is the cells' steps of getting used on the geometric mean; moving the plan's
+    // pace moves every drawn cell's by the same factor (substrate.hh, adaptation_steps).
+    double drawn = 0;
+    for (const auto *r : cells)
+      drawn += r->adaptation_rate > 0 ? std::log(1 / r->adaptation_rate) : 0;
+    if (tiring && std::all_of(cells.begin(), cells.end(),
+                              [](const auto *r) { return r->adaptation_rate > 0; })) {
+      drawn = std::exp(drawn / count);
+      std::cout << ",\"silence\":[";
+      for (int k = 0; k < SILENCE_PACES; ++k) {
+        const double steps =
+            field::ADAPTATION_MIN * std::pow(field::ADAPTATION_SPAN, k / (SILENCE_PACES - 1.));
+        run(steps / drawn, sent, nullptr);
+        const auto first = std::find_if(sent.begin(), sent.end(), [](double v) { return v > 0; });
+        const auto quiet = first == sent.end()
+                               ? sent.begin()
+                               : std::find_if(first, sent.end(), [](double v) { return v <= 0; });
+        std::cout << (k ? "," : "") << '[' << steps << ',' << quiet - sent.begin() << ']';
+      }
+      std::cout << ']';
+    }
+    std::cout << '}';
   }
   std::cout << ']';
   std::cout.precision(precision);
