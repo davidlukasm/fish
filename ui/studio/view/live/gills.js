@@ -36,10 +36,13 @@ import {
   drag,
   el,
   fishIcon,
+  GRIP,
   hatchOf,
   liveKind,
   path,
   picture,
+  roundGrip,
+  squareGrip,
   txt
 } from './kit.js';
 
@@ -54,8 +57,10 @@ let HATCH = .5;
 // Specks a second: of plankton for each unit of water, of flocks and of sand at the hardest suck.
 const SPECKS = Object.freeze({plankton : 1.1, flock : 2.2, sand : 3});
 const HEAD = Object.freeze({
-  height : 184,
-  mid : 84,
+  height : 222,
+  mid : 104,
+  // How far the grips of the pump muscle's size and of the pump's command travel.
+  way : 30,
   tip : 46,
   gape : 17,
   cheek : 118,
@@ -72,7 +77,7 @@ const HEAD = Object.freeze({
 });
 const RAKERS = Object.freeze({L : 44, R : 264, top : 26, base : 96, height : 118, samples : 60});
 const WATER =
-    Object.freeze({L : 44, R : 250, top : 16, base : 92, FY : 124, height : 148, speedX : 276});
+    Object.freeze({L : 44, R : 250, top : 16, base : 92, FY : 124, height : 154, speedX : 276});
 const LIFE = Object.freeze({
   L : 44,
   R : 264,
@@ -269,7 +274,7 @@ liveKind('gills', (studio, organId) => {
   }
   function drawHead() {
     const {svg, under, live} = picture(head, HEAD.height, buildHead),
-                       {mid, tip, gape, cheek, half, lid, arch, gut, height} = HEAD, n = teeth();
+                       {mid, tip, gape, cheek, half, lid, arch, gut, height, way} = HEAD, n = teeth();
     if (Number.isFinite(m.rest))
       txt(live, 4, 10, word('rest', {p : percent(m.rest, 1)}), {class : 'aid-live-small'});
     // Sand before the mouth, as far as the fish sucks at the ground.
@@ -365,13 +370,7 @@ liveKind('gills', (studio, organId) => {
          live);
     });
     drag(svg,
-         el('circle', {
-           cx : g0 + 12,
-           cy : clamp(level, top + 4, base - 4),
-           r : 5.5,
-           class : 'aid-live-gutknob'
-         },
-            live),
+         roundGrip(live, g0 + 12, clamp(level, top + 4, base - 4), {class : 'aid-live-gutknob'}),
          p => {
            input.gut = clamp((base - p.y) / (base - top));
            again();
@@ -389,26 +388,16 @@ liveKind('gills', (studio, organId) => {
           gy = mid - (arch[0][1] + (arch[1][1] - arch[0][1]) * along);
     drag(
         svg,
-        el('rect',
-           {x : gx - 4, y : gy - 5.5, width : 8, height : 11, rx : 2, class : 'aid-live-rakergrip'},
-           live),
+        squareGrip(live, gx, gy, {class : 'aid-live-rakergrip'}),
         p => draft(
             setGillRakers(studio.state.document, organId,
                           clamp(((arch[0][0] - p.x) / (arch[0][0] - arch[1][0]) - .15) / .7))),
         'rakers', 'grip', settle);
-    const my = mid - half - 17 - 12 * m.copies / FULL;
+    const my = mid - half - 17 - way * m.copies / FULL;
     drag(svg,
-         el('rect', {
-           x : cheek + 12,
-           y : my - 4,
-           width : 11,
-           height : 8,
-           rx : 2,
-           style : 'fill:' + fibreHex(m.fast)
-         },
-            live),
+         squareGrip(live, cheek + 17.5, my, {style : 'fill:' + fibreHex(m.fast)}),
          p => draft(setNodeCopies(studio.state.document, organId,
-                                  Math.round(clamp((mid - half - 17 - p.y) / 12 * FULL, 1, FULL)))),
+                                  Math.round(clamp((mid - half - 17 - p.y) / way * FULL, 1, FULL)))),
          'size', 'grip', settle);
     const pairsTo = count => {
       const doc = setOrganNodes(studio.state.document, organId, count, studio.state.sites);
@@ -416,35 +405,30 @@ liveKind('gills', (studio, organId) => {
         return studio.notice(label('status.noRoom'));
       change(doc);
     };
-    chip(live, cheek + lid - 20, mid - half - 24, '−', () => pairsTo(m.cells.length - 2),
-         m.pairs > 1, 6);
-    chip(live, cheek + lid - 4, mid - half - 24, '+', () => pairsTo(m.cells.length + 2), m.canGrow,
-         6);
+    chip(live, cheek + lid - GRIP - 4, mid - half - 24, '−', () => pairsTo(m.cells.length - 2),
+         m.pairs > 1, GRIP / 2);
+    chip(live, cheek + lid, mid - half - 24, '+', () => pairsTo(m.cells.length + 2), m.canGrow,
+         GRIP / 2);
     // What the organ is given: how wide the mouth stands open (the jaw's muscle), how hard the
     // pump is told to beat, how hard the fish sucks at the ground.
-    drag(svg, el('circle', {cx : tip, cy : mid + 3 + gape * input.open, r : 5.5}, live), p => {
+    drag(svg, roundGrip(live, tip, mid + 3 + gape * input.open), p => {
       input.open = clamp((p.y - mid - 3) / gape);
       again();
     }, 'open', 'knob');
     txt(live, tip + 8, mid + half + 13, word('open'), {class : 'aid-live-small'});
     drag(
         svg,
-        el('circle', {cx : cheek + lid - 8, cy : mid + half + 20 + 12 * input.pump, r : 5.5}, live),
+        roundGrip(live, cheek + lid - 8, mid + half + 20 + way * input.pump),
         p => {
-          input.pump = clamp((p.y - mid - half - 20) / 12);
+          input.pump = clamp((p.y - mid - half - 20) / way);
           again();
         },
         'pump', 'knob');
-    txt(live, cheek + lid, mid + half + 36, word('command'), {class : 'aid-live-small'});
+    txt(live, cheek + lid + GRIP / 2 - 4, mid + half + 24 + way / 2, word('command'),
+        {class : 'aid-live-small'});
     if (m.canSuck) {
       drag(svg,
-           el('circle', {
-             cx : 8 + (tip - 14) * input.suck,
-             cy : height - 14,
-             r : 5.5,
-             class : 'aid-live-sandknob'
-           },
-              live),
+           roundGrip(live, 8 + (tip - 14) * input.suck, height - 14, {class : 'aid-live-sandknob'}),
            p => {
              input.suck = clamp((p.x - 8) / (tip - 14));
              again();
@@ -503,15 +487,7 @@ liveKind('gills', (studio, organId) => {
       txt(live, L + 10 + 124 * i, top - 14, word(food), {class : 'aid-live-small'});
     });
     drag(svg,
-         el('rect', {
-           x : X(d) - 4,
-           y : base - 5.5,
-           width : 8,
-           height : 11,
-           rx : 2,
-           class : 'aid-live-rakergrip'
-         },
-            live),
+         squareGrip(live, X(d), base, {class : 'aid-live-rakergrip'}),
          p => draft(setGillRakers(studio.state.document, organId, clamp((p.x - L) / (R - L)))),
          'line', 'grip', settle);
   }
@@ -533,8 +509,8 @@ liveKind('gills', (studio, organId) => {
       opacity : .85
     },
        fixed);
-    txt(fixed, L, FY + 19, word('enduring'));
-    txt(fixed, R, FY + 19, word('strong'), {'text-anchor' : 'end'});
+    txt(fixed, L, FY + GRIP / 2 + 13, word('enduring'));
+    txt(fixed, R, FY + GRIP / 2 + 13, word('strong'), {'text-anchor' : 'end'});
   }
   function drawWater() {
     const {svg, under, live} = picture(water, WATER.height, buildWater),
@@ -582,15 +558,7 @@ liveKind('gills', (studio, organId) => {
        live);
     txt(live, L + 18, top + 23, word('met'), {class : 'aid-live-small'});
     drag(svg,
-         el('rect', {
-           x : X(cells) - 4,
-           y : Y(swum + pumped() * pass) - 5.5,
-           width : 8,
-           height : 11,
-           rx : 2,
-           style : 'fill:' + fibreHex(m.fast)
-         },
-            live),
+         squareGrip(live, X(cells), Y(swum + pumped() * pass), {style : 'fill:' + fibreHex(m.fast)}),
          p => {
            // Fuller cells first, then more pairs; pairs are only taken away with the button, for
            // with a cell go its wires. Where no further pair finds a place, the cells there are
@@ -605,7 +573,7 @@ liveKind('gills', (studio, organId) => {
                                Math.round(clamp(wanted / nodes * FULL, 1, FULL))));
          },
          'curve', 'grip', settle);
-    drag(svg, el('circle', {cx : L + (R - L) * m.fast, cy : FY, r : 7}, live),
+    drag(svg, squareGrip(live, L + (R - L) * m.fast, FY),
          p => draft(setMuscleFibre(studio.state.document, organId, clamp((p.x - L) / (R - L)))),
          'fibre', 'grip', settle);
     // How fast the fish swims: its own scale beside the picture.
@@ -613,7 +581,7 @@ liveKind('gills', (studio, organId) => {
     el('path', {d : `M${speedX} ${base} V${top + 16}`, class : 'aid-live-axis'}, live);
     txt(live, speedX, top + 2, word('speed'), {'text-anchor' : 'middle', class : 'aid-live-small'});
     el('path', {d : `M${L} ${Y(swum)} H${swum > 0 ? speedX : R}`, class : 'aid-live-input'}, live);
-    drag(svg, el('circle', {cx : speedX, cy : SY(input.speed), r : 5.5}, live), p => {
+    drag(svg, roundGrip(live, speedX, SY(input.speed)), p => {
       input.speed = clamp((base - p.y) / (base - top - 16)) * GILL.fastest;
       again();
     }, 'speed', 'knob');
@@ -669,15 +637,7 @@ liveKind('gills', (studio, organId) => {
     const phase = to =>
         setLifePhase(studio.state.document, first.id, to, caps.sensitivitySpan, caps.steepnessSpan);
     const grip = (inside, x, name, move) => drag(svg,
-                                                 el('rect', {
-                                                   x : x - 4,
-                                                   y : (inside ? Y(on / 2) : base - 7) - 5.5,
-                                                   width : 8,
-                                                   height : 11,
-                                                   rx : 2,
-                                                   style : 'fill:' + fibreHex(m.fast)
-                                                 },
-                                                    live),
+                                                 squareGrip(live, x, (inside ? Y(on / 2) : base - 7), {style : 'fill:' + fibreHex(m.fast)}),
                                                  p => draft(move(rOf(p.x))), name, 'grip', settle);
     grip(m.from > 0, m.from > 0 ? X(m.from) : L - beside, 'from',
          to => phase({start : to < whole ? null : Math.min(to, until - least)}));
@@ -685,7 +645,7 @@ liveKind('gills', (studio, organId) => {
          to => phase({end : to > 1 - whole ? null : Math.max(to, m.from + least)}));
     const r = input.maturity;
     el('path', {d : `M${X(r)} ${top} V${base}`, class : 'aid-live-input'}, live);
-    drag(svg, el('circle', {cx : X(r), cy : Y(level(r)), r : 5.5}, live), p => {
+    drag(svg, squareGrip(live, X(r), Y(level(r))), p => {
       const before = input.maturity >= HATCH;
       input.maturity = rOf(p.x);
       // Back in the egg nothing of the trial just shown drifts on.

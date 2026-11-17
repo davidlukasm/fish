@@ -225,7 +225,7 @@ export function senseCourse(svg, {
 }) {
   const play = {stim : null, sent : [], line : null, level : null, glow : [], nerves : null};
   const coursesOf = lastCourses(name);
-  function nerves(parent, keys, gripX, tire) {
+  function nerves(parent, keys) {
     const {join, bundle} = NERVE, cells = [],
                  tilted = el('g', {
                    transform : `rotate(${NERVE.tilt} ${NERVE.about})`,
@@ -322,8 +322,7 @@ export function senseCourse(svg, {
     };
     const newGate = () => clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95);
     // The grip at the cells for how fast they get used, where it moves anything.
-    nerves(live, keys, i => paceMatters(runs[i], STEPS) ? X(clamp(fades[i], 0, STEPS)) : null,
-           tire);
+    nerves(live, keys);
     // The same pair twice: at the cells and at the keys (under their holder).
     // A sense with one type of cells only has no pair.
     if (most > 1) {
