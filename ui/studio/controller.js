@@ -447,6 +447,8 @@ export class OrganStudio {
     element.scrollTop = scroll;
     restoreFocus?.(element);
     mountLive(this.root, this);
+    // The live pictures have their height only now: where the user had scrolled to holds again.
+    element.scrollTop = scroll;
     if (!keepEyes || this.shownDesign === this.state.document)
       this.drawSight();
   }
