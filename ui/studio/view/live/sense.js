@@ -76,13 +76,12 @@ export function silentOf(sent) {
 // The engine's courses for one inspector: courses(studio, tries), with a try for each key, {id :
 // its cell, stimulus : what its cells meet step by step, probe}; with `probe` the stimulus is a
 // share of what the cells meet of the fish panel's probe, which the engine gives as `probe`
-// (atelier.cc, sense_report). It asks the engine once for each new set
-// of tries (design.js, trySenseCourses) and gives for each try what its cells send (`sent`, a
-// share of what they can), what they are used to (`used`, in the stimulus's units), their
-// thresholds (`cells`), when the last falls silent (`silent`) and when their report has faded to
-// half (`faded`, where the grip for getting used sits), or null where the key has no
-// cells. Until the engine answers new tries the last answer stands, `stale`; before the first
-// there is none.
+// (atelier.cc, sense_report). It asks the engine once for each new set of tries (design.js,
+// trySenseCourses) and gives for each try what its cells send (`sent`, a share of what they can),
+// what they are used to (`used`, in the stimulus's units), their thresholds (`cells`), when the
+// last falls silent (`silent`) and when their report has faded to half (`faded`, where the grip
+// for getting used sits), or null where the key has no cells. Until the engine answers new tries
+// the last answer stands, `stale`; before the first there is none.
 export const lastCourses = owner => {
   let last = null;
   return (studio, tries) => {
