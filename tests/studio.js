@@ -427,6 +427,7 @@ async function checkLightSnapshots(model, sites) {
     traceAnswered : () => false,
     notice : error => assert.fail(error),
     requestDesign: designMethods.requestDesign,
+    liveCourses: designMethods.liveCourses,
     showAnatomy: designMethods.showAnatomy
   };
   for (const method of ['bringProbes', 'refreshHeader', 'refreshScene', 'refreshGraphics',
@@ -4337,6 +4338,24 @@ target=run({'operation':'design','plan':plan,'sight':scene})
 outside=run({'operation':'design','plan':plan,'sight':{**scene,'bearing':180}})
 blue=run({'operation':'design','plan':plan,'sight':{**scene,'hue':240}})
 audited=[run({'operation':'design','plan':p}) for p in payload['audits']]
+# What a group's sense cells send over their own sense curve's stimuli, step by step (the course
+# the live inspectors draw).
+for p,a in zip(payload['audits'],audited):
+    tried=[(g,s) for g,s in enumerate(a['senses']) if s][:12]
+    if tried:
+        a['courses']=dict(zip([g for g,_ in tried],run({'operation':'design','plan':p,'senseCourses':[
+            {'group':g,'stimulus':[k/(len(s['response'])-1) for k in range(len(s['response']))]}
+            for g,s in tried]})['senseCourses']))
+    # A course given as shares of the fish panel's probe begins where the fish's own answer to it
+    # stands: the inspector and the fish show the same number.
+    for kind in ('flow','wound'):
+        scene={'kind':kind,'bearing':90,'distance':1,'strength':.25}
+        stirred=[g for g,v in enumerate(run({'operation':'design','plan':p,'sense':scene})['senseProbe']) if v is not None][:12]
+        if stirred:
+            probed=run({'operation':'design','plan':p,'sense':scene,'senseCourses':[
+                {'group':g,'probe':True,'stimulus':[1]} for g in stirred]})
+            for g,c in zip(stirred,probed['senseCourses']):
+                assert c and abs(c['sent'][0]-probed['senseProbe'][g])<1e-3,(kind,g)
 print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'audited':audited}))`;
   const stimulusStudio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
   Object.assign(stimulusStudio.state, {document : doc, sites, capabilities : sitesResult});
@@ -4422,19 +4441,17 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(Math.abs(actual.half - expected.half) < 2e-6);
   }
 
-  const {boundedAnswer} = await import('../ui/studio/view/sensitivity.js');
   for (const [index, audit] of organAudits.entries()) {
     if (audit.type === 'balance')
       for (const center of model.allCenters(audit.document)) {
-        const sensed = response.audited[index].senses[model.centerIndex(audit.document, center.id)];
+        const group = model.centerIndex(audit.document, center.id),
+              sensed = response.audited[index].senses[group],
+              course = response.audited[index].courses[group];
         assert.equal(center.threshold, -1);
         assert.equal(sensed.intensity, false);
         assert.equal(sensed.adapt, null);
-        assert.ok(
-            sensed.response.every((value, step, samples) =>
-                                      Math.abs(value - boundedAnswer(step / (samples.length - 1),
-                                                                     sensed.begins)) < 1e-6),
-            'The balance cells answer tilt as the sense curves draw it');
+        assert.ok(sensed.response.every((value, step) => Math.abs(value - course.sent[step]) < 1e-3),
+                  'The balance cells answer tilt in the inspector as the sense curves draw it');
       }
     if (audit.pressure)
       assert.deepEqual(model.pressureMismatches(audit.document, response.audited[index].pressure),

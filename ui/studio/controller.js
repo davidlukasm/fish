@@ -444,9 +444,11 @@ export class OrganStudio {
     for (const summary of element.querySelectorAll('details > summary'))
       if (opened.has(summary.textContent))
         summary.parentElement.open = true;
+    // The live pictures first: before they are in, the inspector is shorter and would cut the
+    // scroll short.
+    mountLive(this.root, this);
     element.scrollTop = scroll;
     restoreFocus?.(element);
-    mountLive(this.root, this);
     if (!keepEyes || this.shownDesign === this.state.document)
       this.drawSight();
   }

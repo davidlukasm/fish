@@ -7,9 +7,3 @@ const axisFraction = (stimulus, dimmest) =>
 export const stimulusOfShare = (share, dimmest) =>
     dimmest ? Math.exp(Math.log(dimmest) * (1 - share)) : share;
 export const stimulusShare = (stimulus, dimmest) => clamp(axisFraction(stimulus, dimmest));
-// What a cell reports of a stimulus between nothing and all (body_plan.cc, bounded_response), with
-// `mean` what it is used to. Up to the threshold it reports nothing.
-export function boundedAnswer(stimulus, threshold, mean = 0) {
-  const excess = (clamp(stimulus) - mean - threshold) / (1 - threshold);
-  return excess > 0 ? excess / (excess + threshold * (1 - excess)) : 0;
-}

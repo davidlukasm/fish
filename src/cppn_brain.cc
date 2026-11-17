@@ -260,7 +260,7 @@ static float adapted_response(PerceptionState &state, std::size_t i,
   const double mean = adapting && i < state.adapted.size() ? state.adapted[i] : 0;
   const float response = receptor_response(r, concentration, mean);
   if (adapting && advance && !state.disabled_senses[sense])
-    state.adapted[i] = float(mean + (concentration - mean) * r.adaptation_rate);
+    state.adapted[i] = float(adapted_level(mean, concentration, r.adaptation_rate));
   return response;
 }
 void sense_generated(Body &b, const Genome &g, const Field &world,
@@ -407,8 +407,7 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
     float visual =
         b.perception_.disabled_senses[r.channel] || !r.visual()
             ? 0
-            : r.visual_gain() * (r.proximity ? bounded_response(vision[i], r.threshold)
-                                             : sensory_response(vision[i], r.response_threshold));
+            : r.visual_gain() * visual_response(r, vision[i]);
     if (b.perception_.inspect_vision && r.visual())
       b.perception_.sensory_components[i][r.channel] = visual;
     signals[i] = std::clamp(signals[i] + visual, 0.f, 1.f);

@@ -18,6 +18,11 @@ enum PressureSource {
 inline bool adapting_sense(int s) {
   return s == field::Odor || s == field::Flow || s == field::Intake || s == field::Damage;
 }
+// What a cell of a tiring sense is used to after one more step of a stimulus: it moves towards
+// the stimulus by the cell's rate (cppn_brain.cc, adapted_response).
+inline double adapted_level(double mean, double stimulus, double rate) {
+  return mean + (stimulus - mean) * rate;
+}
 inline bool intensity_sense(int s) {
   // Light, scent and flow have no upper bound; every other sense feels a share between nothing
   // and all.

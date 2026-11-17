@@ -10,8 +10,8 @@
 // The wound is the fish panel's probe (probes.js), where it lies and how deep it is. The fish,
 // the skin the cells feel and the grip for its width are the fish panel's too (body.js, feltSkin;
 // anatomy_handles.js); here is only what it cannot show: the time after the bite. The cells'
-// place is the plan's report (anatomy.felt); what they send over the steps is reckoned with the
-// engine's rule for a bounded answer and for getting used (sense.js, runOf).
+// place is the plan's report (anatomy.felt); what they send over the steps, and where their
+// thresholds lie, is the engine's course for this wound (sense.js, lastCourses).
 // Not in the picture: harm without a place (hunger, illness, age), which lies evenly on all
 // sectors; that a hungry fish does not heal.
 import {SKIN_RESPONSE} from '../../../schema.js';
@@ -23,16 +23,15 @@ import {
   between,
   BOUNDED,
   closingWound,
-  lastDrawn,
   keysOf,
-  runOf,
+  fadingWay,
+  lastCourses,
+  paceMatters,
   setGate,
   setSpread,
   setUsed,
-  silentStep,
   usedFor
 } from './sense.js';
-import {skinSectors, turnTo} from './skin.js';
 
 const word = (key, values) => t('studio.live.pain.' + key, values);
 const ROUND_MS = 9000, BITE_STEP = 12;
@@ -58,14 +57,6 @@ const STRIP = Object.freeze({
   after : .25,
   least : .02
 });
-// Match harm_body's linear split, including across the seam behind the fish.
-function woundShares(bearing, count) {
-  const position = (turnTo(bearing) + 180) * count / 360 - .5, lower = Math.floor(position),
-        upperShare = position - lower;
-  return new Map(
-      [ [ (lower + count) % count, 1 - upperShare ], [ (lower + 1) % count, upperShare ] ]);
-}
-
 liveKind('pain', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-pain aid-live-sense-ache';
@@ -76,34 +67,33 @@ liveKind('pain', (studio, organId) => {
     return probe?.kind === 'wound' && probe.organ === organId ? probe : null;
   };
   let step = 0, bubble = null, span = spanOf(SKIN_RESPONSE.bite_wound);
-  const drawnOf = lastDrawn();
+  const coursesOf = lastCourses('pain');
   const organ = () => findOrgan(studio.state.document, organId);
-  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
+  // The engine answers the course of the cells while a grip is dragged (sense.js, lastCourses).
+  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive', 'course');
   const settle = () => studio.drafted && studio.settleGraphic();
-  // What the cells meet of the wound: the sectors it is booked on, as the cells weigh them
-  // (16 x weight, at most all of it).
-  function share(cell, probe) {
-    if (!probe)
-      return 0;
-    const {weights} = skinSectors(studio.state, cell.id);
-    if (!weights.length)
-      return 0;
-    let met = 0;
-    for (const [sector, part] of woundShares(probe.bearing, weights.length))
-      met += weights.length * weights[sector] * part;
-    return met;
-  }
   // The wound over the steps, what the cells meet of it and send, and when they fall silent:
   // because they have got used to it (the wound alone would still be felt), or because it has
   // closed below what they feel.
+  // What the cells meet of the wound is the engine's for the fish panel's probe (`probe` of the
+  // course, sense.js, lastCourses), `part` of its depth; ASSUMED: as the wound closes they meet
+  // the same part of what is left of it.
   function courseOf(cell) {
-    const probe = wound(), part = share(cell, probe);
-    // The cells' thresholds are those the engine drew. Its run comes in after a change has
-    // settled; until then the last run's stand, and before the first the plan's one threshold.
-    const key = drawnOf(studio.state, keysOf([ {id : '', centers : [ cell ]} ])[0]);
-    const depth = closingWound(probe?.strength ?? 0, BITE_STEP, SKIN_RESPONSE.heal_rate),
-          met = depth.map(v => clamp(v * part)), sent = runOf(key, met, true).sent,
-          silent = silentStep(key, met), last = Math.min(1, ...BOUNDED.gates(key)),
+    const probe = wound(), strength = probe?.strength ?? 0;
+    // The cells' thresholds are those the engine drew; before its first answer the plan's one
+    // threshold.
+    const key = keysOf([ {id : '', centers : [ cell ]} ])[0];
+    const depth = closingWound(strength, BITE_STEP, SKIN_RESPONSE.heal_rate),
+          run = coursesOf(studio, [ {
+                            id : key.id,
+                            probe : true,
+                            stimulus : depth.map(v => strength > 0 ? v / strength : 0)
+                          } ])
+                    ?.[0] ??
+                null,
+          part = strength > 0 ? (run?.probe ?? 0) / strength : 0,
+          met = depth.map(v => clamp(v * part)), sent = run?.sent ?? [], silent = run?.silent ?? 0,
+          gates = run ? run.cells : [ BOUNDED.val(key.gate) ], last = Math.min(1, ...gates),
           closed = met.findIndex((v, st) => st > BITE_STEP && v <= last);
     return {
       span : spanOf(probe?.strength ?? SKIN_RESPONSE.bite_wound),
@@ -113,6 +103,10 @@ liveKind('pain', (studio, organId) => {
       met,
       sent,
       silent,
+      faded : run?.faded ?? 0,
+      run,
+      gates,
+      stale : !run || run.stale,
       closed,
       used : silent > 0 && (closed < 0 || silent < closed - UNSURE)
     };
@@ -155,10 +149,10 @@ liveKind('pain', (studio, organId) => {
           class : 'aid-live-keyband k0'
         },
            live);
-      for (const gate of BOUNDED.gates(c.key))
+      for (const gate of c.gates)
         el('path', {
           d : `M${S.L} ${D(gate / c.part)} H${S.R}`,
-          class : 'aid-live-keyline k0 cell' + (c.key.stale ? ' stale' : '')
+          class : 'aid-live-keyline k0 cell' + (c.stale ? ' stale' : '')
         },
            live);
     }
@@ -194,32 +188,37 @@ liveKind('pain', (studio, organId) => {
                2 * Math.max(0, clamp((p.y - S.skin) / S.deep) * S.deepest * c.part - c.key.gate))),
            'painspread', 'grip', settle);
     // What the cells send, above the skin, over the same steps.
-    el('path', {
-      d : path(shown(c.sent).map((v, n) => [X(n * every), top - S.loud * clamp(v)])) +
-              ` L${X(SPAN)} ${top} L${S.L} ${top} Z`,
-      class : 'aid-live-glow k0',
-      opacity : .55
-    },
-       live);
+    if (c.sent.length)
+      el('path', {
+        d : path(shown(c.sent).map((v, n) => [X(n * every), top - S.loud * clamp(v)])) +
+                ` L${X(SPAN)} ${top} L${S.L} ${top} Z`,
+        class : 'aid-live-glow k0',
+        opacity : .55
+      },
+         live);
     // Where they fall silent. If they have got used to the wound, the wound is still open under
-    // the mark, and the grip there sets how fast they get used.
+    // the mark.
     if (c.silent > 0 && c.silent < SPAN) {
       const sx = X(c.silent);
       el('path',
          {d : `M${sx} ${top - S.loud} V${D(c.depth[c.silent])}`, class : 'aid-live-keymark k0'},
          live);
-      if (c.used) {
-        // The way the grip can go: up to where the wound closes below what the cells feel.
-        el('path', {
-          d : `M${S.L} ${top - S.loud} H${X(c.closed < 0 ? SPAN : c.closed)}`,
-          class : 'aid-live-track-line'
-        },
-           live);
+      if (c.used)
         txt(live, sx + 9, top - S.loud + 3, word('used'), {class : 'aid-live-small'});
-        drag(svg, el('circle', {cx : sx, cy : top - S.loud, r : 5}, live),
-             p => draft(setUsed(studio.state.document, c.key, usedFor(c.key, c.met, stOf(p.x)))),
-             'painused', 'grip', settle);
-      }
+    }
+    // How fast they get used: the grip where their report has faded to half (sense.js, fadedAt),
+    // as long as they report at all. That moves with the pace even where the closing wound
+    // silences the cells, so it stays under the pointer as far as the wound lets it go.
+    if (c.faded > 0 && paceMatters(c.run, SPAN)) {
+      const [early, late] = fadingWay(c.run, SPAN);
+      el('path', {d : `M${X(early)} ${top - S.loud} H${X(late)}`, class : 'aid-live-track-line'},
+         live);
+      drag(svg,
+           el('circle', {cx : X(Math.min(c.faded, SPAN)), cy : top - S.loud, r : 5}, live), p => {
+             const used = usedFor(c.run, stOf(p.x));
+             if (used)
+               draft(setUsed(studio.state.document, c.key, used));
+           }, 'painused', 'grip', settle);
     }
     for (let st = SPAN > 400 ? 200 : 100; st <= SPAN; st += SPAN > 400 ? 200 : 100)
       txt(live, X(st), S.height - 4, String(st), {'text-anchor' : 'end', class : 'aid-live-small'});

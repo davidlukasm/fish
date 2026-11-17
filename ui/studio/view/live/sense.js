@@ -1,11 +1,10 @@
 // A sense's cells in a live inspector: what its keys (types of cells) send over the steps of an
 // input tried on them. A key's threshold is where its cells' activation starts (document.js,
 // threshold; tuning.js, activationLevel); its cells' thresholds spread around it by twice the
-// plan's spread either way (distribution.hh, draw_traits): as the engine drew them where a
-// picture asks for that, else shown as CELLS cells spread evenly.
-// Cells that tire get used to the input from the first step on: what they are used to moves
-// towards it by its share 1 / steps each step, and they answer what the input exceeds it by
-// (cppn_brain.cc, adapted_response).
+// plan's spread either way (distribution.hh, draw_traits).
+// What the cells send, what they have got used to and where their thresholds lie is the
+// engine's: it tries the input on the cells it draws for the plan, step by step as the fish does
+// (atelier.cc, sense_course_report; cppn_brain.cc, adapted_response).
 import {
   activationLevel,
   activationQuality,
@@ -15,70 +14,41 @@ import {
   planOfUnit,
   unitOfPlan
 } from '../../../tuning.js';
-import {drawnThresholds, updateCellDistribution, updateCenter} from '../../model/document.js';
+import {centerIndex, updateCellDistribution, updateCenter} from '../../model/document.js';
 import {TUNING} from '../../../schema.js';
 import {chip, clamp, drag, el, fishIcon, path, picture, txt} from './kit.js';
 
-export const STEPS = 900, CELLS = 7, LEVELS = [ activationLevel(0), activationLevel(1) ],
+export const STEPS = 900, LEVELS = [ activationLevel(0), activationLevel(1) ],
              LEVEL_SPAN = LEVELS[1] - LEVELS[0];
 export const USED = [ adaptationSteps(0), LONGEST_ADAPTATION ];
 export const SENSE_BOX = Object.freeze(
     {L : 92, R : 292, LX : 44, I0 : 150, I1 : 254, row : 34, rowL : 6, rowR : 294, rowGap : 10});
-// A key's cells' thresholds. Where the picture gives the thresholds the engine drew for the
-// cells in the design run's example (`drawn`; document.js, drawnThresholds), those: none of them
-// if no cell drew the sense. STOPGAP for the pictures that do not yet: CELLS cells spread evenly
-// over the plan's spread, a reckoning of the Atelier's own beside the engine's draw.
-export const cellGates = k =>
-    k.drawn
-        ? k.drawn.map(gate => clamp(gate, LEVELS[0], LEVELS[1]))
-        : Array.from({length : CELLS}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5),
-                                                       LEVELS[0], LEVELS[1]));
-// A cell's answer to a stimulus past its threshold and what it is used to (body_plan.cc, the
-// bounded answer of a sense cell).
-export const answer = (x, gate, used) => {
-  const over = (clamp(x) - used - gate) / (1 - gate);
-  return over > 0 ? over / (over + gate * (1 - over)) : 0;
-};
 // The two scales a sense's stimulus has (brain_interface.hh, intensity_sense). `pos`: where a
 // stimulus stands in the diagram, from nothing (0) to the strongest (1); `val`: the stimulus
 // there; `gate`, `spread`: a key's threshold and its cells' spread as places in the diagram;
-// `gates`: its cells' thresholds as stimuli; `answer`: what a cell reports; `threshold`,
-// `spreading`: the plan's values for a place in the diagram.
-// BOUNDED: a stimulus between nothing and all; a cell answers nothing up to its threshold and all
-// at the full stimulus (body_plan.cc, bounded_response).
+// `threshold`, `spreading`: the plan's values for a place in the diagram.
+// BOUNDED: a stimulus between nothing and all.
 export const BOUNDED = Object.freeze({
   pos : s => clamp(s),
   val : v => clamp(v),
   gate : cell => activationLevel(unitOfPlan(cell.threshold)),
   spread : cell => 2 * cell.distribution.spread_physiology * LEVEL_SPAN,
   span : LEVELS,
-  gates : cellGates,
-  answer,
   threshold : v => planOfUnit(activationQuality(clamp(v, LEVELS[0], LEVELS[1]))),
   spreading : spread => clamp(spread / (2 * LEVEL_SPAN), 0, 1)
 });
 // INTENSITY: a stimulus without upper bound (scent, flow), on a logarithmic scale from the
 // faintest threshold a cell can have (0) to a stimulus of one (1); a threshold is threshold_min
 // x threshold_range ^ quality (receptor_tuning.hh, response_threshold), so it lies at REACH x
-// its quality. A cell answers nothing up to its threshold and half at twice the threshold; what
-// it is used to raises the threshold by as much (body_plan.cc, excess_response).
+// its quality.
 const FAINTEST = TUNING.threshold_min,
       REACH = Math.log(TUNING.threshold_range) / -Math.log(FAINTEST);
-// A key's cells' thresholds as places: STOPGAP as in cellGates, where the picture gives none the
-// engine drew.
-const places = k => Array.from(
-    {length : CELLS}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5), 0, REACH));
 export const INTENSITY = Object.freeze({
   pos : s => s > FAINTEST ? clamp(1 - Math.log(s) / Math.log(FAINTEST)) : 0,
   val : v => v > 0 ? Math.exp(Math.log(FAINTEST) * (1 - clamp(v))) : 0,
   gate : cell => REACH * unitOfPlan(cell.threshold),
   spread : cell => 2 * cell.distribution.spread_physiology * REACH,
   span : [ 0, REACH ],
-  gates : k => k.drawn ?? places(k).map(v => Math.exp(Math.log(FAINTEST) * (1 - v))),
-  answer : (s, gate, used) => {
-    const excess = s - gate - used;
-    return excess > 0 ? excess / (excess + gate + used) : 0;
-  },
   threshold : v => planOfUnit(clamp(v / REACH)),
   spreading : spread => clamp(spread / (2 * REACH), 0, 1)
 });
@@ -94,45 +64,80 @@ export const stimulusOf = (input, after) => {
 export const steady = level => Array(STEPS + 1).fill(level);
 export const closingWound = (depth, at, heals) => Array.from(
     {length : STEPS + 1}, (_, st) => st < at ? 0 : Math.max(0, depth - (st - at) * heals));
-// What a key's cells send under an input, step by step, and what they have got used to by then.
-export function runOf(k, stim, tires, scale = BOUNDED) {
-  const gates = scale.gates(k), reply = scale.answer, pace = tires ? 1 / k.used : 0, sent = [],
-        used = [];
-  let u = 0;
-  for (const s of stim) {
-    sent.push(gates.length ? gates.reduce((sum, g) => sum + reply(s, g, u), 0) / gates.length : 0);
-    used.push(u);
-    u += (s - u) * pace;
-  }
-  return {sent, used};
+// The step at which a key's last cell falls silent: past the course's steps if it never does, 0
+// if no cell ever sends.
+export function silentOf(sent) {
+  const first = sent.findIndex(v => v > 0);
+  if (first < 0)
+    return 0;
+  const silent = sent.findIndex((v, st) => st > first && v <= 0);
+  return silent < 0 ? sent.length : silent;
 }
-// The step at which a key's last cell falls silent under this input; past the picture's steps
-// if it never does, 0 if the cell never sends at all.
-export function silentStep(k, stim, scale = BOUNDED) {
-  const last = Math.min(...scale.gates(k));
-  let used = 0, heard = false;
-  for (let st = 0; st < stim.length; st++) {
-    const hears = stim[st] - used > last;
-    if (heard && !hears)
-      return st;
-    heard ||= hears;
-    used += (stim[st] - used) / k.used;
-  }
-  return heard ? stim.length : 0;
+// The engine's courses for one inspector: courses(studio, tries), with a try for each key, {id :
+// its cell, stimulus : what its cells meet step by step, probe}; with `probe` the stimulus is a
+// share of what the cells meet of the fish panel's probe, which the engine gives as `probe`
+// (atelier.cc, sense_report). It asks the engine once for each new set of tries (design.js,
+// trySenseCourses) and gives for each try what its cells send (`sent`, a share of what they can),
+// what they are used to (`used`, in the stimulus's units), their thresholds (`cells`), when the
+// last falls silent (`silent`) and when their report has faded to half (`faded`, where the grip
+// for getting used sits), or null where the key has no cells. Until the engine answers new tries
+// the last answer stands, `stale`; before the first there is none.
+export const lastCourses = owner => {
+  let last = null;
+  return (studio, tries) => {
+    const doc = studio.state.document;
+    const asked = tries.map(({id, stimulus, probe = false}) => ({
+                              group : centerIndex(doc, id),
+                              probe,
+                              stimulus : stimulus.map(v => +Math.max(0, v).toPrecision(5))
+                            })),
+          key = owner + JSON.stringify(asked);
+    studio.trySenseCourses(key, asked);
+    const report = studio.state.outlinePreview ?? studio.state.anatomy;
+    if (report?.senseCourseKey === key && report.senseCourses?.length === tries.length)
+      last = report.senseCourses.map(
+          c => c && {...c, silent : silentOf(c.sent), faded : fadedAt(c.sent)});
+    else if (last?.length !== tries.length)
+      return null;
+    const stale = report?.senseCourseKey !== key;
+    return last.map(c => c && {...c, stale});
+  };
+};
+// The step at which a report has faded to half its height after it: past the report if it never
+// does, 0 if it never sends (atelier.cc, half_faded).
+export function fadedAt(sent) {
+  const height = Math.max(0, ...sent), peak = sent.indexOf(height);
+  if (height <= 0)
+    return 0;
+  const faded = sent.findIndex((v, st) => st > peak && v <= height / 2);
+  return faded < 0 ? sent.length : faded;
 }
-// The pace of tiring that puts that step where it is wanted (the slower, the later).
-export function usedFor(k, stim, step, scale = BOUNDED) {
-  if (!silentStep({...k, used : USED[1]}, stim, scale))
-    return k.used;
-  let [lo, hi] = USED;
-  for (let n = 0; n < 24; n++) {
-    const mid = (lo + hi) / 2;
-    if (silentStep({...k, used : mid}, stim, scale) < step)
-      lo = mid;
-    else
-      hi = mid;
-  }
-  return hi;
+// Whether the pace of getting used moves where a key's report fades within a picture of `span`
+// steps, by at least a share of it: where it does not (an input too short or too faint), a grip
+// for it would not move under the pointer, and there is none.
+export const paceMatters = (run, span) => {
+  const steps = run?.fading?.map(([, faded ]) => Math.min(faded, span)) ?? [];
+  return steps.length > 1 && Math.max(...steps) - Math.min(...steps) >= PACE_MATTERS * span;
+};
+const PACE_MATTERS = .04;
+// From where to where the pace can move the step at which a key's report fades, within `span`.
+export const fadingWay = (run, span) => {
+  const steps = run?.fading?.map(([, faded ]) => Math.min(faded, span)) ?? [ 0 ];
+  return [ Math.min(...steps), Math.max(...steps) ];
+};
+// The pace of getting used that makes a key's report fade to half at a step, from the engine's
+// steps of fading over the paces (`fading` of its course): between the two paces round that step,
+// on the same logarithmic scale as the plan's pace; the slowest if it never fades so late.
+export function usedFor(run, step) {
+  const paces = run?.fading;
+  if (!paces?.length)
+    return null;
+  const after = paces.findIndex(([, faded ]) => faded >= step);
+  if (after < 1)
+    return clamp(paces[Math.max(0, after < 0 ? paces.length - 1 : 0)][0], USED[0], USED[1]);
+  const [[ slow, early ], [ slower, late ]] = [ paces[after - 1], paces[after] ];
+  return clamp(slow * (slower / slow) ** clamp((step - early) / Math.max(1, late - early)), USED[0],
+               USED[1]);
 }
 export const between = (values, at) => {
   const a = Math.floor(at), f = at - a;
@@ -173,23 +178,6 @@ export const keysOf = (types, scale = BOUNDED) => types.map(type => {
     used : adaptationSteps(cell.tau)
   };
 });
-// Keys with the thresholds the engine drew for their cells (document.js, drawnThresholds), for
-// one inspector: drawnOf(state, key, scale). The engine's run comes in after a change has
-// settled; until then a key keeps the last run's thresholds, `stale`, and before the first run
-// it has the plan's one threshold.
-export const lastDrawn = () => {
-  const last = new Map();
-  return (state, k, scale = BOUNDED) => {
-    const fresh = drawnThresholds(state, k.id);
-    if (fresh)
-      last.set(k.id, fresh);
-    return {
-      ...k,
-      drawn : last.get(k.id) ?? scale.gates({...k, spread : 0}).slice(0, 1),
-      stale : !fresh
-    };
-  };
-};
 // Where the plan lets a key's cells' thresholds lie, as places in the diagram: its threshold and
 // half its spread either way, within the thresholds a cell can have (distribution.hh,
 // draw_traits).
@@ -209,11 +197,14 @@ export const keyGrip = (i, on) => 'aid-live-keygrip k' + i + (on ? ' on' : '');
 // they tire and, filled, what they send.
 // `own`: which key is chosen, kept by the inspector; `keys()`: the keys now; `input()`: the
 // stimulus step by step in native units, as the fish panel's probe gives it (steady, or
-// closingWound); `share(k)`: what a key's cells meet of the input, if not all of it; `colour()`:
+// closingWound); `probe`: the keys' cells meet not the input but what the engine says they meet
+// of the fish panel's probe, over the input's course, and the input stands behind; `colour()`:
 // the input's colour, if it changes; `fewer(k)`, `more(gate)`: the keys' pair of buttons; `most`:
 // how many keys there may be; `scale`: the stimulus's scale; `mark`: a height named on the
-// input's scale. Returns draw(), and what the clock moves: moment(step), pulse(dt, step).
+// input's scale; `studio`: whom the engine's courses are asked of. Returns draw(), and what the
+// clock moves: moment(step), pulse(dt, step).
 export function senseCourse(svg, {
+  studio,
   name,
   own,
   tires,
@@ -223,7 +214,7 @@ export function senseCourse(svg, {
   words,
   keys : keysNow,
   input,
-  share = null,
+  probe = false,
   colour = null,
   fewer,
   more,
@@ -233,6 +224,7 @@ export function senseCourse(svg, {
   redraw
 }) {
   const play = {stim : null, sent : [], line : null, level : null, glow : [], nerves : null};
+  const coursesOf = lastCourses(name);
   function nerves(parent, keys, gripX, tire) {
     const {join, bundle} = NERVE, cells = [],
                  tilted = el('g', {
@@ -269,7 +261,7 @@ export function senseCourse(svg, {
             own.chosen = i;
             redraw();
           });
-      if (tires && on)
+      if (tires && on && gripX(i) !== null)
         drag(svg,
              el('rect', {
                x : gripX(i) - 5,
@@ -316,34 +308,34 @@ export function senseCourse(svg, {
     live.setAttribute('class', 'aid-live-sense-' + name);
     if (colour)
       live.style.color = colour();
-    const given = input(), offered = given.map(scale.pos);
-    // What each key's cells meet of the input: all of it, or the share their sense gives them.
+    const given = input(), offered = given.map(scale.pos), peak = Math.max(0, ...given);
     play.offered = offered;
-    const met = keys.map(k => {
-      const fraction = share ? share(k) : 1;
-      return given.map(v => {
-        const stimulus = v * fraction;
-        return scale === BOUNDED ? clamp(stimulus) : stimulus;
-      });
-    }),
+    // What each key's cells meet: the input, or what they meet of the probe over its course.
+    const shape = probe ? given.map(v => peak > 0 ? v / peak : 0) : given;
+    const runs = coursesOf(studio, keys.map(k => ({id : k.id, probe, stimulus : shape}))) ??
+                 keys.map(() => null);
+    const met = runs.map(r => probe ? shape.map(v => v * (r?.probe ?? 0)) : given),
           stim = play.stim = met[own.chosen].map(scale.pos);
     const IY = v => I1 - (I1 - I0) * clamp(v), vOf = y => clamp((I1 - y) / (I1 - I0));
     const X = st => L + (R - L) * st / STEPS,
           stOf = x => clamp(Math.round((x - L) / (R - L) * STEPS), 0, STEPS);
-    const runs = keys.map((k, i) => runOf(k, met[i], tires, scale));
-    play.sent = runs.map(r => r.sent);
+    play.sent = runs.map(r => r?.sent ?? []);
     // Where a key's cells send nothing more, and the grips' way of moving it.
-    const ends = keys.map((k, i) => silentStep(k, met[i], scale));
+    const ends = runs.map(r => r?.silent ?? 0), fades = runs.map(r => r?.faded ?? 0);
     const tire = (k, i, p) => {
       own.chosen = i;
-      draft(setUsed(doc(), k, usedFor(k, met[i], stOf(p.x), scale)));
+      const used = usedFor(runs[i], stOf(p.x));
+      if (used)
+        draft(setUsed(doc(), k, used));
     };
     const choose = i => () => {
       own.chosen = i;
       redraw();
     };
     const newGate = () => clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95);
-    nerves(live, keys, i => X(clamp(ends[i], 0, STEPS)), tire);
+    // The grip at the cells for how fast they get used, where it moves anything.
+    nerves(live, keys, i => paceMatters(runs[i], STEPS) ? X(clamp(fades[i], 0, STEPS)) : null,
+           tire);
     // The same pair twice: at the cells and at the keys (under their holder).
     // A sense with one type of cells only has no pair.
     if (most > 1) {
@@ -363,7 +355,7 @@ export function senseCourse(svg, {
     el('rect', {x : L, y : I0, width : R - L, height : I1 - I0, class : 'aid-live-ground'}, live);
     // Where the cells get only a share of the input, the whole input stands behind it as an
     // outline: its knobs lie on that.
-    if (share)
+    if (probe)
       el('path',
          {d : path(offered.map((v, st) => [X(st), IY(v)])), class : 'aid-live-sense-offered'},
          live);
@@ -373,8 +365,9 @@ export function senseCourse(svg, {
     },
        live);
     keys.forEach((k, i) => {
-      const on = i === own.chosen, gates = scale.gates(k).map(scale.pos), low = Math.min(...gates),
-            felt = runs[i].used.map((u, st) => scale.pos(Math.max(0, met[i][st] - u)));
+      const run = runs[i], on = i === own.chosen,
+            gates = run ? run.cells.map(scale.pos) : [ k.gate ], low = Math.min(...gates),
+            felt = run?.used.map((u, st) => scale.pos(Math.max(0, met[i][st] - u)));
       // The key's band: where the plan lets its cells' thresholds lie. In it a line for each
       // cell's threshold as the engine drew it, pale while they are the last run's.
       const [under, over] = bandOf(k, scale), top = IY(over), bottom = IY(under),
@@ -386,7 +379,7 @@ export function senseCourse(svg, {
                       class : 'aid-live-keyband rule k' + i + (on ? ' on' : '')
                     },
                                   live) ];
-      if (on)
+      if (on && felt)
         shapes.push(el('path', {
           d : `${path(felt.map((f, st) => [X(st), IY(Math.max(f, low))]))} L${R} ${IY(low)} L${L} ${
               IY(low)} Z`,
@@ -404,14 +397,14 @@ export function senseCourse(svg, {
         el('rect',
            {x : L, y : top, width : 5, height : bottom - top, class : 'aid-live-keystrip k' + i},
            live);
-      if (k.drawn)
+      if (run)
         for (const gate of gates)
           el('path', {
             d : `M${L} ${IY(gate)} H${R}`,
-            class : 'aid-live-keyline cell k' + i + (k.stale ? ' stale' : '')
+            class : 'aid-live-keyline cell k' + i + (run.stale ? ' stale' : '')
           },
              live);
-      if (tires && on)
+      if (tires && on && felt)
         el('path', {d : path(felt.map((f, st) => [X(st), IY(f)])), class : 'aid-live-felt'}, live);
       const line = el('path', {
         d : `M${LX + 12} ${IY(k.gate)} H${R}`,
@@ -434,8 +427,9 @@ export function senseCourse(svg, {
     const now = el('path', {class : 'aid-live-now'}, live);
     play.line = step => now.setAttribute('d', `M${X(step).toFixed(1)} ${I0} V${I1}`);
     // Where each key's cells send nothing more: a thin mark for each on the step axis (not for
-    // cells that never send); the chosen one's is a grip. It is called got used to only where the
-    // input alone would still make the cells send.
+    // cells that never send); the chosen one's is a line, called got used to only where the input
+    // alone would still make the cells send. Its grip sits where their report has faded to half:
+    // that moves with the pace even where the input's end silences them.
     if (tires)
       keys.map((k, i) => i).sort((a, b) => (a === own.chosen) - (b === own.chosen)).forEach(i => {
         const k = keys[i], at = ends[i], x = X(Math.min(at, STEPS)), left = x > (L + R) / 2;
@@ -450,14 +444,22 @@ export function senseCourse(svg, {
           class : 'aid-live-keyline k' + i
         },
            live);
-        if (at <= STEPS && met[i][at] > Math.min(...scale.gates(k)))
+        if (at <= STEPS && met[i][at] > Math.min(...runs[i].cells))
           txt(live, x + (left ? -7 : 7), I0 + 11, words.used,
               {'text-anchor' : left ? 'end' : 'start', class : 'aid-live-onground'});
-        drag(svg,
-             el('rect',
-                {x : x - 4, y : I1 - 13, width : 8, height : 10, rx : 2, class : keyGrip(i, true)},
-                live),
-             p => tire(k, i, p), name + 'used', 'grip', settle);
+        const fx = X(Math.min(fades[i], STEPS));
+        if (paceMatters(runs[i], STEPS))
+          drag(svg,
+               el('rect', {
+                 x : fx - 4,
+                 y : I1 - 13,
+                 width : 8,
+                 height : 10,
+                 rx : 2,
+                 class : keyGrip(i, true)
+               },
+                  live),
+               p => tire(k, i, p), name + 'used', 'grip', settle);
       });
     // The grips, above everything they could be hidden by: every key and its spread, the input's
     // two knobs (when it is fully there and how strong, and when it stops).

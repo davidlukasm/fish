@@ -1225,6 +1225,10 @@ float receptor_response(const BrainInterface::Receptor &r, double stimulus, doub
   return r.senses[sense] * (intensity ? excess_response(stimulus, r.response_threshold, mean)
                                       : bounded_response(stimulus, r.threshold, mean));
 }
+float visual_response(const BrainInterface::Receptor &r, double seen) {
+  return r.proximity ? bounded_response(seen, r.threshold)
+                     : sensory_response(seen, r.response_threshold);
+}
 float anatomical_sensor(const Body &b, const BrainInterface::Receptor &r, const SensoryFrame &f,
                         double sediment_contact, std::array<float, field::SENSE_COUNT> *components,
                         const PhysiologyParameters &p) {

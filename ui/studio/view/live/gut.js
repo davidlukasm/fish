@@ -27,7 +27,7 @@ import {
 import {kindLimit} from '../../model/organs.js';
 import {label} from '../kit.js';
 import {addPicture, chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
-import {answer, between, cellGates, CELLS, cubic, IRRITANT, LEVEL_SPAN, LEVELS, NERVE, runOf, SENSE_BOX, silentStep, stimulusOf, USED, usedFor} from './sense.js';
+import {between, cubic, IRRITANT, lastCourses, LEVEL_SPAN, LEVELS, NERVE, paceMatters, SENSE_BOX, stimulusOf, USED, usedFor} from './sense.js';
 
 const word = (key, values) => t('studio.live.gut.' + key, values);
 // The foods, in the pictures' order, by their names in the engine's report.
@@ -163,10 +163,9 @@ function rangeIn(curve, reach) {
 // Each sense has keys: groups of cells of their own (organTypes of the gut by the sense's cells).
 // A key's threshold is its cells' own (the plan's threshold as the stimulus at which they begin,
 // tuning.js, activationLevel); its cells' thresholds spread around it by twice the plan's spread
-// either way (distribution.hh, draw_traits), shown as CELLS cells spread evenly. Cells that tire
-// get used to the input from the first step on: what they are used to moves towards it by its
-// share 1 / steps each step, and they answer what the input exceeds it by (cppn_brain.cc,
-// adapted_response); the cells of fullness do not tire (brain_interface.hh, adapting_sense).
+// either way (distribution.hh, draw_traits). What the cells send of an input, what they have got
+// used to and where their thresholds lie is the engine's course for it (sense.js, lastCourses);
+// the cells of fullness do not tire (brain_interface.hh, adapting_sense).
 const SENSES = Object.freeze({
   full : {cells : 'fullness', tires : false, after : 260, row : false},
   ache : {cells : 'ache', tires : true, after : 120, row : true},
@@ -215,6 +214,7 @@ liveKind('gut', (studio) => {
   };
   let rewarded = [];
   const play = {stim : {}, sent : {}, lines : {}, levels : [], glow : [], nerves : {}, time : 0};
+  const coursesOf = lastCourses('gut');
   const change = doc => doc && studio.changeDocument(doc, studio.state.selected);
   const gutOf = doc => doc.organs.find(o => o.type === 'gut') ?? null;
   // A sense's keys as the document has them.
@@ -249,7 +249,8 @@ liveKind('gut', (studio) => {
   }
   const film = {wall : null, tube : null, segs : [], bits : [], crumbs : [], way : null, share : null, stomach : null, keys : null, named : []};
   let state = studio.state, curves = null, curvesFor = null, model = null, step = 0, wave = 0;
-  const draft = doc => doc && studio.draftDesign(doc, 'live:gut', 'refreshLive');
+  // The engine answers the senses' courses while a grip is dragged (sense.js, lastCourses).
+  const draft = doc => doc && studio.draftDesign(doc, 'live:gut', 'refreshLive', 'course');
   const settle = () => studio.drafted && studio.settleGraphic();
   const muscleOf = doc => doc.organs.find(o => o.type === 'gutmuscle') ?? null;
 
@@ -310,9 +311,33 @@ liveKind('gut', (studio) => {
     play.levels.push({owner, sense : 'full', show : v => content.setAttribute('y', levelY(v).toFixed(1))});
     return {bands, levelY};
   }
+  // A key's cells' thresholds: the engine's, else the plan's one.
+  const gatesOf = (k, run) => run ? run.cells : [ k.gate ];
+  // What the engine answers for the gut's senses (sense.js, lastCourses), asked at once for all of
+  // them: each key of fullness and of ache under its sense's input, and each key of food under the
+  // round's bites, each bite's flow fading until the next is swallowed. For each sense its keys'
+  // courses, null for a key the engine has not answered.
+  function askCourses() {
+    const tries = [], at = {};
+    for (const id of [ 'full', 'ache' ]) {
+      const stim = play.stim[id] = stimulusOf(tried[id].input, SENSES[id].after);
+      at[id] = keysOf(id).map(k => tries.push({id : k.id, stimulus : stim}) - 1);
+    }
+    const diet = state.capabilities.diet, flows = curves.map((c, j) => diet.nutrientShare * BITE * model.ranges[j].max);
+    if (diet.nutrientShare > 0 && diet.nutrientKeep > 0 && flows.length) {
+      const felt = Array.from({length : STEPS + 1}, (_, st) => {
+        const turn = st / STEPS * flows.length, flow = flows[Math.min(flows.length - 1, Math.floor(turn))] * Math.pow(diet.nutrientKeep, turn % 1 * BITE_STEPS);
+        return flow / (flow + 1);
+      });
+      at.feed = keysOf('feed').map(k => tries.push({id : k.id, stimulus : felt}) - 1);
+    }
+    const runs = coursesOf(studio, tries);
+    return Object.fromEntries(Object.entries(at).map(([ id, places ]) => [ id, places.map(n => runs?.[n] ?? null) ]));
+  }
+  let courses = {};
   // A key's band: from its lowest to its highest cell's threshold.
-  function keyBand(parent, k, i, chosen, x, width, yOf) {
-    const gates = cellGates(k), top = yOf(Math.max(...gates)), bottom = yOf(Math.min(...gates));
+  function keyBand(parent, k, i, chosen, x, width, yOf, gates) {
+    const top = yOf(Math.max(...gates)), bottom = yOf(Math.min(...gates));
     return el('rect', {x, y : Math.min(top, yOf(k.gate) - 1.5), width, height : Math.max(bottom - top, 3), class : 'aid-live-keyband k' + i % 3 + (chosen ? ' on' : '')}, parent);
   }
   const keyGrip = (i, on) => 'aid-live-keygrip k' + i % 3 + (on ? ' on' : '');
@@ -362,7 +387,7 @@ liveKind('gut', (studio) => {
     film.stomach.bands.replaceChildren();
     play.glow = play.glow.filter(g => g.owner !== 'fish');
     full.chosen = clamp(full.chosen, 0, Math.max(0, keys.length - 1));
-    keys.forEach((k, i) => keyBand(film.stomach.bands, k, i, i === full.chosen, st.x - 1.2 * st.rx, 2.4 * st.rx, film.stomach.levelY));
+    keys.forEach((k, i) => keyBand(film.stomach.bands, k, i, i === full.chosen, st.x - 1.2 * st.rx, 2.4 * st.rx, film.stomach.levelY, gatesOf(k, courses.full?.[i])));
     keys.forEach((k, i) => {
       const y = film.stomach.levelY(k.gate), on = i === full.chosen;
       const line = el('path', {d : `M${KEY_X + 7 - right} ${y} H${st.x + st.rx * .8}`, class : 'aid-live-keyline k' + i % 3 + (on ? ' on' : '')}, film.keys);
@@ -476,9 +501,9 @@ liveKind('gut', (studio) => {
       txt(live, 294, y + 10, Math.round(100 * r.min) === Math.round(100 * r.max) ? percent(r.max) : word('span', {from : Math.round(100 * r.min), to : percent(r.max)}), {'text-anchor' : 'end', class : 'aid-live-value'});
     });
   }
-  // The nerve cells above a sense's diagram (see NERVE). A cell is chosen by touching it; if the
-  // chosen cell tires, its grip stands above the step at which it sends nothing more.
-  function nerves(svg, parent, id, keys, gripX, tire) {
+  // The nerve cells above a sense's diagram (see NERVE). A cell is chosen by touching it; how fast
+  // it tires is set at its grip in the diagram below.
+  function nerves(parent, id, keys) {
     const {join, bundle} = NERVE, cells = [], tilted = el('g', {transform : `rotate(${NERVE.tilt} ${NERVE.about})`, class : 'aid-live-sense-' + id}, parent);
     el('path', {d : `M${bundle[0]} C${bundle[1]} ${bundle[2]} ${bundle[3]}`, class : 'aid-live-nerve-bundle'}, tilted);
     keys.forEach((k, i) => {
@@ -490,12 +515,10 @@ liveKind('gut', (studio) => {
         tried[id].chosen = i;
         show(studio.state);
       });
-      if (SENSES[id].tires && on)
-        drag(svg, el('rect', {x : gripX(i) - 5, y : SENSE_BOX.I0 - 33, width : 10, height : 10, rx : 3, class : 'aid-live-tire k' + i % 3}, parent), p => tire(k, i, p), id + 'tire', 'grip', settle);
     });
     const merged = Array.from({length : 6}, () => ({t : 1, n : 0, e : el('circle', {r : 0, class : 'aid-live-pulse'}, tilted)}));
     const shown = NERVE.somas.slice(0, keys.length);
-    // Under the cells, in their middle, above the strip in which a tiring cell's grip moves.
+    // Under the cells, in their middle.
     const at = [ shown.reduce((sum, s) => sum + s[0], 0) / shown.length - 4, NERVE.flash ];
     const dots = Array.from({length : NERVE.dots}, (_, n) => {
       const [cx, cy] = shown[n % shown.length], [dx, dy] = NERVE.tips[n % NERVE.tips.length];
@@ -519,23 +542,24 @@ liveKind('gut', (studio) => {
       return;
     own.chosen = clamp(own.chosen, 0, keys.length - 1);
     live.setAttribute('class', 'aid-live-sense-' + id);
-    const stim = play.stim[id] = stimulusOf(inp, o.after);
+    const stim = play.stim[id], runs = keys.map((k, i) => courses[id]?.[i] ?? null);
     const IY = v => I1 - (I1 - I0) * clamp(v), vOf = y => clamp((I1 - y) / (I1 - I0));
     const X = st => L + (R - L) * st / STEPS, stOf = x => clamp(Math.round((x - L) / (R - L) * STEPS), 0, STEPS);
-    const runs = keys.map(k => runOf(k, stim, o.tires));
-    play.sent[id] = runs.map(r => r.sent);
+    play.sent[id] = runs.map(r => r?.sent ?? []);
     // Where a key's cells send nothing more, and the grips' way of moving it.
-    const ends = keys.map(k => silentStep(k, stim));
+    const ends = runs.map(r => r?.silent ?? 0), fades = runs.map(r => r?.faded ?? 0);
     const tire = (k, i, p) => {
       own.chosen = i;
-      draft(setUsed(k, usedFor(k, stim, stOf(p.x))));
+      const used = usedFor(runs[i], stOf(p.x));
+      if (used)
+        draft(setUsed(k, used));
     };
     const choose = i => () => {
       own.chosen = i;
       show(studio.state);
     };
     const newGate = () => clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95);
-    nerves(svg, live, id, keys, i => X(clamp(ends[i], 0, STEPS)), tire);
+    nerves(live, id, keys);
     // The same pair twice: at the cells and at the keys (under their holder).
     chip(live, R - 22, I0 - 54, '−', () => fewer(id, keys[own.chosen]), keys.length > 1, 6);
     chip(live, R - 6, I0 - 54, '+', () => more(id, newGate()), keys.length < 3, 6);
@@ -555,15 +579,15 @@ liveKind('gut', (studio) => {
     el('rect', {x : L, y : I0, width : R - L, height : I1 - I0, class : 'aid-live-ground'}, live);
     el('path', {d : path(stim.map((v, st) => [ X(st), IY(v) ])) + ` L${R} ${I1} L${L} ${I1} Z`, class : 'aid-live-sense-input'}, live);
     keys.forEach((k, i) => {
-      const on = i === own.chosen, low = Math.min(...cellGates(k)), felt = runs[i].used.map((u, st) => Math.max(0, stim[st] - u));
-      const shapes = [ keyBand(live, k, i, on, L, R - L, IY) ];
-      if (on)
+      const on = i === own.chosen, gates = gatesOf(k, runs[i]), low = Math.min(...gates), felt = runs[i]?.used.map((u, st) => Math.max(0, stim[st] - u));
+      const shapes = [ keyBand(live, k, i, on, L, R - L, IY, gates) ];
+      if (on && felt)
         shapes.push(el('path', {d : `${path(felt.map((f, st) => [ X(st), IY(Math.max(f, low)) ]))} L${R} ${IY(low)} L${L} ${IY(low)} Z`, class : 'aid-live-sense-fill', opacity : .95}, live));
       for (const shape of shapes) {
         shape.classList.add('aid-live-chip');
         shape.addEventListener('pointerdown', choose(i));
       }
-      if (o.tires && on)
+      if (o.tires && on && felt)
         el('path', {d : path(felt.map((f, st) => [ X(st), IY(f) ])), class : 'aid-live-felt'}, live);
       const line = el('path', {d : `M${LX + 12} ${IY(k.gate)} H${R}`, class : 'aid-live-keyline k' + i % 3 + (on ? ' on' : '')}, live);
       play.glow.push({owner : id, line, gate : k.gate, sense : id});
@@ -587,14 +611,17 @@ liveKind('gut', (studio) => {
           return;
         }
         el('path', {d : `M${x} ${I0 - 23} V${I0 - 21} M${x} ${I0} V${I1}`, class : 'aid-live-keyline k' + i % 3}, live);
-        if (at <= STEPS && stim[at] > Math.min(...cellGates(k)))
+        if (at <= STEPS && stim[at] > Math.min(...runs[i].cells))
           txt(live, x + (left ? -7 : 7), I0 + 11, word('used'), {'text-anchor' : left ? 'end' : 'start', class : 'aid-live-onground'});
-        drag(svg, el('rect', {x : x - 4, y : I1 - 13, width : 8, height : 10, rx : 2, class : keyGrip(i, true)}, live), p => tire(k, i, p), id + 'used', 'grip', settle);
+        // The grip where the report has faded to half (sense.js, fadedAt).
+        const fx = X(Math.min(fades[i], STEPS));
+        if (paceMatters(runs[i], STEPS))
+          drag(svg, el('rect', {x : fx - 4, y : I1 - 13, width : 8, height : 10, rx : 2, class : keyGrip(i, true)}, live), p => tire(k, i, p), id + 'used', 'grip', settle);
       });
     // The grips, above everything they could be hidden by: every key and its spread, the input's
     // two knobs (when it is fully there and how strong, and when it stops).
     keys.forEach((k, i) => {
-      const on = i === own.chosen, gates = cellGates(k);
+      const on = i === own.chosen, gates = gatesOf(k, runs[i]);
       drag(svg, el('rect', {x : LX - 9, y : IY(k.gate) - 4, width : 18, height : 8, rx : 2, class : keyGrip(i, on)}, live), p => {
         own.chosen = i;
         draft(setGate(k, vOf(p.y)));
@@ -647,10 +674,10 @@ liveKind('gut', (studio) => {
       g.line.setAttribute('opacity', now(g.sense) >= g.gate ? 1 : .45);
     // The bite swallowed now: its dot swells and settles; its star is what the cells send for
     // what is left of its flow.
-    const turn = step / STEPS * rewarded.length, since = turn % 1, keep = state.capabilities.diet.nutrientKeep;
+    const turn = step / STEPS * rewarded.length, since = turn % 1;
     rewarded.forEach((r, j) => {
-      const mine = j === Math.floor(turn), flow = r.flow * Math.pow(keep, since * BITE_STEPS), felt = flow / (flow + 1);
-      const signal = mine ? r.gates.reduce((sum, gate) => sum + answer(felt, gate, 0), 0) / r.gates.length : 0;
+      const mine = j === Math.floor(turn);
+      const signal = mine ? between(play.sent.feed, step) : 0;
       r.dot.setAttribute('r', (4.5 + (mine ? 2.5 * Math.exp(-5 * since) : 0)).toFixed(1));
       r.mark.setAttribute('transform', `translate(${r.at}) scale(${(signal > .01 ? .45 + .9 * signal : 0).toFixed(2)})`);
     });
@@ -733,10 +760,11 @@ liveKind('gut', (studio) => {
     const {L, R, top, row, star} = REWARD, base = top + row * curves.length;
     const X = v => L + (R - L) * clamp(v), vOf = x => clamp((x - L) / (R - L));
     const reward = gain => { const flow = diet.nutrientShare * BITE * gain; return flow / (flow + 1); };
-    const gates = cellGates(keys[own.chosen]);
+    const runs = keys.map((k, i) => courses.feed?.[i] ?? null);
+    play.sent.feed = runs[own.chosen]?.sent ?? [];
     el('rect', {x : L, y : top, width : R - L, height : base - top, class : 'aid-live-ground'}, live);
     keys.forEach((k, i) => {
-      const g = cellGates(k), x0 = X(Math.min(...g)), x1 = X(Math.max(...g));
+      const g = gatesOf(k, runs[i]), x0 = X(Math.min(...g)), x1 = X(Math.max(...g));
       el('rect', {x : x0, y : top, width : Math.max(x1 - x0, 3), height : base - top, class : 'aid-live-keyband k' + i % 3 + (i === own.chosen ? ' on' : '')}, live);
     });
     txt(live, star, top - 8, word('signal'), {'text-anchor' : 'middle'});
@@ -750,9 +778,7 @@ liveKind('gut', (studio) => {
       return {
         dot : el('circle', {cx : X(most), cy : y, r : 4.5, class : 'aid-live-food-fill', 'data-food' : c.name}, live),
         mark : el('path', {d : STAR, class : 'aid-live-sense-fill'}, live),
-        at : [ star, y ],
-        flow : diet.nutrientShare * BITE * model.ranges[j].max,
-        gates
+        at : [ star, y ]
       };
     });
     el('path', {d : `M${L} ${top} V${base} H${R}`, class : 'aid-live-axis'}, live);
@@ -760,7 +786,7 @@ liveKind('gut', (studio) => {
     txt(live, (L + R) / 2, base + 28, word('perBite'), {'text-anchor' : 'middle'});
     txt(live, R, base + 28, word('much'), {'text-anchor' : 'end'});
     keys.forEach((k, i) => {
-      const on = i === own.chosen, x = X(k.gate), far = Math.max(X(Math.max(...cellGates(k))), x + 4);
+      const on = i === own.chosen, x = X(k.gate), far = Math.max(X(Math.max(...gatesOf(k, runs[i]))), x + 4);
       el('path', {d : `M${x} ${top - 6} V${base}`, class : 'aid-live-keyline k' + i % 3 + (on ? ' on' : '')}, live);
       drag(svg, el('rect', {x : x - 4, y : top - 20, width : 8, height : 16, rx : 2, class : keyGrip(i, on)}, live), p => {
         own.chosen = i;
@@ -834,6 +860,7 @@ liveKind('gut', (studio) => {
       return;
     kind.textContent = word('kind.' + model.diet);
     // The senses first: the fish's stomach follows the fullness input.
+    courses = askCourses();
     drawSense('full');
     drawSense('ache');
     drawFish();

@@ -9,16 +9,28 @@
 // each half as bright as the one before. The curve is the report for a bright thing straight
 // before a cell. The thing is the fish panel's test object at its distance, the dot under it
 // what the organ's cells report of it in the engine (the strongest of them); the reach is set on
-// the fish. The grip on the dashed ring sets the threshold: there the cell answers half. ASSUMED
-// for the picture: a bright thing straight before the cell.
+// the fish. The curve is the engine's: what the cells answer of the signal at each distance
+// (sense.js, lastCourses). The grip on the dashed ring sets the threshold: there the cells answer
+// half. ASSUMED for the picture: a bright thing straight before the cell.
 import {unitOfPlan} from '../../../tuning.js';
 import {radians} from '../../../units.js';
 import {findOrgan, updateField} from '../../model/document.js';
 import {organCells} from '../vision.js';
 import {addPicture, clamp, drag, el, liveKind, path, picture, txt} from './kit.js';
-import {answer, BOUNDED, IRRITANT} from './sense.js';
+import {BOUNDED, IRRITANT, lastCourses} from './sense.js';
 import {fishAbove} from './skin.js';
 
+// The distances the curve is drawn at, as shares of the farthest.
+const SAMPLES = 80;
+// The threshold at which the cells answer half at a signal, between the two of the engine's
+// thresholds round it ([threshold, signal] rising together).
+function gateFor(halving, signal) {
+  const after = halving.findIndex(([, seen ]) => seen >= signal);
+  if (after < 1)
+    return halving[after < 0 ? halving.length - 1 : 0][0];
+  const [[ low, below ], [ high, above ]] = [ halving[after - 1], halving[after] ];
+  return low + (high - low) * (signal - below) / Math.max(1e-9, above - below);
+}
 const NEAR = Object.freeze({
   height : 206,
   cx : 214,
@@ -38,14 +50,23 @@ liveKind('near', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-near';
   const rings = addPicture(root);
-  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
+  // The engine answers the course of the cells while a grip is dragged (sense.js, lastCourses).
+  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive', 'course');
   const settle = () => studio.drafted && studio.settleGraphic();
+  const coursesOf = lastCourses('near');
   function drawRings(organ, profile, reach) {
     const {svg, live} =
         picture(rings, NEAR.height, fixed => fishAbove(fixed, NEAR.cx + 30, NEAR.cy, 1.3)),
                 {cx, cy, CT, CB} = NEAR, far = NEAR.reaches * reach,
                 unit = (cx - 10 - NEAR.left) / far, X = d => cx - 10 - unit * d,
-                gate = BOUNDED.gate(profile), signal = d => Math.pow(2, -d / reach);
+                signal = d => Math.pow(2, -d / reach),
+                run = coursesOf(studio, [ {
+                                  id : organ.centers[0].id,
+                                  stimulus : Array.from({length : SAMPLES + 1},
+                                                        (_, k) => signal(far * k / SAMPLES))
+                                } ])
+                          ?.[0],
+                answers = run?.sent;
     const arc = (d, angle) => {
       const r = unit * d + 10, a = Math.asin(Math.min(Math.sin(radians(angle)), NEAR.tall / r));
       return `M${cx - r * Math.cos(a)} ${cy - r * Math.sin(a)} A${r} ${r} 0 0 0 ${
@@ -61,15 +82,15 @@ liveKind('near', (studio, organId) => {
       },
          live);
     // The report over the distance.
-    const Y = v => CB - (CB - CT) * v, pts = [];
-    for (let k = 0; k <= 80; k++)
-      pts.push([ X(far * k / 80), Y(answer(signal(far * k / 80), gate, 0)) ]);
-    el('path', {
-      d : path(pts) + ` L${X(far)} ${CB} L${X(0)} ${CB} Z`,
-      class : 'aid-live-petal k0',
-      opacity : .55
-    },
-       live);
+    const Y = v => CB - (CB - CT) * v;
+    if (answers)
+      el('path', {
+        d : path(answers.map((v, k) => [X(far * k / SAMPLES), Y(v)])) +
+                ` L${X(far)} ${CB} L${X(0)} ${CB} Z`,
+        class : 'aid-live-petal k0',
+        opacity : .55
+      },
+         live);
     el('path', {d : `M${X(far)} ${CB} H${X(0)}`, class : 'aid-live-rim'}, live);
     txt(live, X(0), CB + 13, 0, {'text-anchor' : 'middle', class : 'aid-live-small'});
     txt(live, X(far), CB + 13, Math.round(far),
@@ -93,9 +114,20 @@ liveKind('near', (studio, organId) => {
         },
            live);
     }
-    // The ring at which the cell answers half: where the signal is 2 x gate / (1 + gate). Its grip
-    // sets the threshold.
-    const half = Math.min(far, reach * Math.log2((1 + gate) / (2 * gate)));
+    // The ring at which the cells answer half, from the engine's curve, and on it the grip for the
+    // threshold: it sets the threshold at which the cells answer half at the pointer's signal,
+    // from the engine's signal of half an answer for each threshold (`halving`). Before the
+    // engine's answer, neither.
+    if (!answers?.length || !run.halving)
+      return;
+    const crossed = answers.findIndex(v => v <= .5),
+          half =
+              crossed < 1
+                  ? (crossed ? far : 0)
+                  : far *
+                        (crossed - 1 +
+                         (answers[crossed - 1] - .5) / (answers[crossed - 1] - answers[crossed])) /
+                        SAMPLES;
     el('path', {d : arc(half, NEAR.half), class : 'aid-live-near-half'}, live);
     const r = unit * half + 10,
           a = Math.asin(Math.min(Math.sin(radians(NEAR.half)), NEAR.tall / r));
@@ -105,7 +137,7 @@ liveKind('near', (studio, organId) => {
            draft(updateField(studio.state.document, organId, {
              profile : {
                id : profile.id,
-               threshold : BOUNDED.threshold(clamp(x / (2 - x), NEAR.least, NEAR.most))
+               threshold : BOUNDED.threshold(clamp(gateFor(run.halving, x), NEAR.least, NEAR.most))
              }
            },
                              studio.state.sites));

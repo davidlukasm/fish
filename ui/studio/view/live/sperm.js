@@ -106,7 +106,8 @@ liveKind('sperm', (studio, organId) => {
   // grip was taken.
   let state = studio.state, m = null, step = 0, native = null, pull = null;
   const organ = () => findOrgan(studio.state.document, organId);
-  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
+  // The engine answers the pressure cells' course while a grip is dragged (pressure.js).
+  const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive', 'course');
   const settle = () => studio.drafted && studio.settleGraphic();
   const change = doc => doc && studio.changeDocument(doc, studio.state.selected);
   const again = () => show(studio.state);
