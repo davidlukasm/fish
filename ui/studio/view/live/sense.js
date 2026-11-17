@@ -615,15 +615,7 @@ export function typeLife(
       return;
     const grip = (x, part, move) =>
         drag(svg,
-             el('rect', {
-               x : x - 4,
-               y : y + high / 2 - 5.5,
-               width : 8,
-               height : 11,
-               rx : 2,
-               class : keyGrip(i, true)
-             },
-                live),
+             squareGrip(live, x, y + high / 2, {class : keyGrip(i, true)}),
              p => draft(set(i, move(rOf(p.x)))), name + part, 'grip', settle);
     grip(from > 0 ? X(from) : L - beside, 'from',
          to => ({start : to < whole ? null : Math.min(to, until - least)}));
