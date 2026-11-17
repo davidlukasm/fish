@@ -36,7 +36,8 @@ import {
   probeScents,
   probeWater,
   senseProbeAnswers,
-  senseProbeSvg
+  senseProbeSvg,
+  visibleProbe
 } from './probes.js';
 import {lifeBar} from './life_tool.js';
 import {detailMix, nodeOpacity, layerShown} from './layers.js';
@@ -219,7 +220,11 @@ function fieldLayers(state) {
   const ownField = o => !!chosen && (o.id === chosen.id || o.id === chosen.pair);
   const fans = state.document.organs.filter(o => o.field);
   const passive = fans.filter(o => !ownField(o));
-  const eyes = passive.filter(o => o.type === 'eye').map(o => visionFan(state, o)).join('');
+  // While the chosen organ is being tried with something in the water, the eyes' fans step back:
+  // the water around the fish belongs to that stimulus.
+  const tried = !!visibleProbe(state);
+  const eyes =
+      tried ? '' : passive.filter(o => o.type === 'eye').map(o => visionFan(state, o)).join('');
   const opacity = detailMix(state).fields;
   const other =
       opacity > 0 && fieldsShown(state)
@@ -258,10 +263,10 @@ function sceneLayers(state) {
 }
 
 // A probe can also be repainted independently of the fish. The moving water keeps its SVG
-// elements and animation until its direction, strength or scale changes.
-export function paintFishProbes(target, state, animateWater = true) {
+// elements and animation while its direction, strength or scale changes.
+export function paintFishProbes(target, state) {
   const water = target?.querySelector('[data-probe-water]');
-  const current = water && animateWater ? probeWater(state) : null;
+  const current = water && probeWater(state);
   const controls = target?.querySelector('[data-probe-controls]');
   if (controls) {
     const {document, sites, selected, senseProbe, anatomy, outlinePreview} = state;
@@ -280,7 +285,10 @@ export function paintFishProbes(target, state, animateWater = true) {
   setMarkup(target?.querySelector('[data-probe-answers]'), senseProbeAnswers(state));
   if (water && water.dataset.probeWater !== (current?.key ?? '')) {
     water.dataset.probeWater = current?.key ?? '';
-    water.innerHTML = current?.svg() ?? '';
+    if (current)
+      current.paint(water);
+    else
+      water.replaceChildren();
   }
 }
 
@@ -333,7 +341,7 @@ export function fishScene(state) {
          '</div><div class="aid-hint-legend" data-hint-legend hidden></div>';
 }
 
-export function paintFishScene(target, state, scope, animateWater = true) {
+export function paintFishScene(target, state, scope) {
   const svg = target.querySelector(BODY_MAP);
   if (!svg) {
     target.innerHTML = fishScene(state);
@@ -377,7 +385,7 @@ export function paintFishScene(target, state, scope, animateWater = true) {
     life.removeAttribute('data-life-dirty');
   }
   setMarkup(life, lifeBar(state));
-  paintFishProbes(target, state, animateWater);
+  paintFishProbes(target, state);
   return marksChanged;
 }
 function trashZone() {
