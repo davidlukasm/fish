@@ -22,6 +22,15 @@ import {fishAbove} from './skin.js';
 
 // The distances the curve is drawn at, as shares of the farthest.
 const SAMPLES = 80;
+// The threshold at which the cells answer half at a signal, between the two of the engine's
+// thresholds round it ([threshold, signal] rising together).
+function gateFor(halving, signal) {
+  const after = halving.findIndex(([, seen ]) => seen >= signal);
+  if (after < 1)
+    return halving[after < 0 ? halving.length - 1 : 0][0];
+  const [[ low, below ], [ high, above ]] = [ halving[after - 1], halving[after] ];
+  return low + (high - low) * (signal - below) / Math.max(1e-9, above - below);
+}
 const NEAR = Object.freeze({
   height : 206,
   cx : 214,
@@ -51,13 +60,13 @@ liveKind('near', (studio, organId) => {
                 {cx, cy, CT, CB} = NEAR, far = NEAR.reaches * reach,
                 unit = (cx - 10 - NEAR.left) / far, X = d => cx - 10 - unit * d,
                 signal = d => Math.pow(2, -d / reach),
-                answers = coursesOf(studio, [ {
-                                      id : organ.centers[0].id,
-                                      stimulus : Array.from({length : SAMPLES + 1},
-                                                            (_, k) => signal(far * k / SAMPLES))
-                                    } ])
-                              ?.[0]
-                              ?.sent;
+                run = coursesOf(studio, [ {
+                                  id : organ.centers[0].id,
+                                  stimulus : Array.from({length : SAMPLES + 1},
+                                                        (_, k) => signal(far * k / SAMPLES))
+                                } ])
+                          ?.[0],
+                answers = run?.sent;
     const arc = (d, angle) => {
       const r = unit * d + 10, a = Math.asin(Math.min(Math.sin(radians(angle)), NEAR.tall / r));
       return `M${cx - r * Math.cos(a)} ${cy - r * Math.sin(a)} A${r} ${r} 0 0 0 ${
@@ -105,14 +114,15 @@ liveKind('near', (studio, organId) => {
         },
            live);
     }
-    // The ring at which the cells answer half, from the engine's curve; before its answer the
-    // plan's threshold stands for it. Its grip sets the threshold. STOPGAP for the grip's way: a
-    // single cell answers half where the signal is 2 x threshold / (1 + threshold) (body_plan.cc,
-    // bounded_response), so a pointer at a signal sets the threshold signal / (2 - signal).
-    const gate = BOUNDED.gate(profile), crossed = answers?.findIndex(v => v <= .5) ?? -1,
+    // The ring at which the cells answer half, from the engine's curve, and on it the grip for the
+    // threshold: it sets the threshold at which the cells answer half at the pointer's signal,
+    // from the engine's signal of half an answer for each threshold (`halving`). Before the
+    // engine's answer, neither.
+    if (!answers?.length || !run.halving)
+      return;
+    const crossed = answers.findIndex(v => v <= .5),
           half =
-              !answers ? Math.min(far, reach * Math.log2((1 + gate) / (2 * gate)))
-              : crossed < 1
+              crossed < 1
                   ? (crossed ? far : 0)
                   : far *
                         (crossed - 1 +
@@ -127,7 +137,7 @@ liveKind('near', (studio, organId) => {
            draft(updateField(studio.state.document, organId, {
              profile : {
                id : profile.id,
-               threshold : BOUNDED.threshold(clamp(x / (2 - x), NEAR.least, NEAR.most))
+               threshold : BOUNDED.threshold(clamp(gateFor(run.halving, x), NEAR.least, NEAR.most))
              }
            },
                              studio.state.sites));

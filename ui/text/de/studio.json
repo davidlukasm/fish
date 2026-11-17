@@ -305,7 +305,6 @@
     "stimulusResponse": "Antwort auf anhaltenden Reiz",
     "bloodSensitivity": "Ziehen: ein weiterer Ring spürt schon weniger vom Stoff",
     "bladderGlands": "{n} von {most} Gasdrüsen; ziehen fügt Drüsen hinzu oder nimmt sie weg",
-    "selectLearning": "Wähle einen Nervenknoten, auch in einer Hirnregion.",
     "lift": {
       "title": "Auftrieb",
       "hovers": "schwebt bei {n} Füllung",

@@ -7,7 +7,8 @@
 // wheel's plane and a width; it takes of each substance exp(-distance^2 / (2 sigma^2)), not
 // brought to a sum of one. Its stimulus is the sum of what it takes x the level in the blood;
 // the answer is bounded, the cells do not get used to it, and they read the blood in the egg as
-// outside. What each type's cells report of it is the engine's (sense.js, lastCourses).
+// outside. What each type's cells meet of the blood, substance by substance, and what they report
+// of it is the engine's, for the blood of the life band (sense.js, lastCourses).
 // The levels are the preview's blood (trials.js, setPreviewContext): the same the other pictures
 // of the Atelier read.
 // STOPGAP: the levels are dragged here, on the wheel. They are the fish's state, not this organ's,
@@ -175,18 +176,17 @@ liveKind('blood', (studio, organId) => {
   // For each type a row: what its cells get of the blood now, each substance's part in its
   // colour, ending at all; the threshold as a dashed mark with its grip; before the row the
   // type's nerve cell with what it reports.
-  function drawRows(cells, levels, takes) {
+  function drawRows(cells) {
     const {L, R, top, row} = ROWS, {svg, live} = picture(rows, top + row * cells.length + 20),
                       X = v => L + (R - L) * clamp(v);
-    const sums = takes.map(take => take.reduce((sum, a, j) => sum + a * levels[j], 0)),
-          reports =
-              coursesOf(studio, cells.map((cell, i) => ({id : cell.id, stimulus : [ sums[i] ]})));
+    const reports =
+        coursesOf(studio, cells.map(cell => ({id : cell.id, probe : true, stimulus : [ 1 ]})));
     txt(live, L, top + row * cells.length + 8, word('nothing'), {class : 'aid-live-small'});
     txt(live, R, top + row * cells.length + 8, word('whole'),
         {'text-anchor' : 'end', class : 'aid-live-small'});
     cells.forEach((cell, i) => {
-      const chosen = i === own.chosen, y = top + row * i,
-            parts = takes[i].map((a, j) => a * levels[j]), gate = BOUNDED.gate(cell), pick = () => {
+      const chosen = i === own.chosen, y = top + row * i, parts = reports?.[i]?.parts ?? [],
+            gate = BOUNDED.gate(cell), pick = () => {
               own.chosen = i;
               again();
             };
@@ -271,7 +271,7 @@ liveKind('blood', (studio, organId) => {
               cell => levels.map((_, j) => wheelAffinity(wheel, cell.q1, cell.q2, cell.qwidth, j)));
     own.chosen = Math.min(own.chosen, cells.length - 1);
     drawRing(wheel, cells, levels, takes);
-    drawRows(cells, levels, takes);
+    drawRows(cells);
   }
   return {root, show};
 });
