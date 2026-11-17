@@ -15,11 +15,21 @@
 // Not in the picture: sediment; the fish's own speed and turning apart from the water's.
 import {t} from '../../../strings.js';
 import {degrees, radians} from '../../../units.js';
-import {findOrgan} from '../../model/document.js';
-import {addPicture, clamp, drag, el, liveKind, path, picture, reportBubble, txt} from './kit.js';
+import {findOrgan, groupReport} from '../../model/document.js';
+import {
+  addPicture,
+  clamp,
+  drag,
+  el,
+  liveKind,
+  path,
+  picture,
+  reportBubble,
+  squareGrip,
+  txt
+} from './kit.js';
 import {
   bandOf,
-  between,
   INTENSITY,
   keysOf,
   lastCourses,
@@ -32,7 +42,6 @@ import {
 } from './sense.js';
 
 const word = (key, values) => t('studio.live.lateral.' + key, values);
-const ROUND_MS = 12000;
 // The band: steps from L to R; the skin's line with the hairs on it, the water above it, `water`
 // high; under the skin the report, `loud` high when all cells send. A hair leans by up to `lean`
 // degrees, for the strongest current the scale knows.
@@ -43,12 +52,12 @@ const BAND = Object.freeze({
   skin : 112,
   water : 62,
   lines : 7,
-  hair : 36,
+  hair : 50,
   lean : 72,
   tick : 4,
   loud : 34,
   gap : 14,
-  first : 34,
+  first : 74,
   apart : 34,
   bubble : 12,
   marks : [ 300, 600, 900 ],
@@ -58,7 +67,7 @@ liveKind('lateral', (studio, organId) => {
   const root = document.createElement('div');
   root.className = 'aid-live-lateral aid-live-sense-flow';
   const band = addPicture(root);
-  let step = 0, bubble = null, shown = null;
+  let shown = null;
   const coursesOf = lastCourses('lateral');
   const current = () => studio.state.senseProbe?.kind === 'flow' ? studio.state.senseProbe : null;
   const organ = () => findOrgan(studio.state.document, organId);
@@ -148,16 +157,7 @@ liveKind('lateral', (studio, organId) => {
     // How far the marks may spread: the grip at the far end of the last hair's arc.
     if (gates.length) {
       const x = stand(gates.length - 1), [ sx, sy ] = tip(x, far);
-      drag(svg,
-           el('rect', {
-             x : sx - 5,
-             y : sy - 4,
-             width : 10,
-             height : 8,
-             rx : 2.5,
-             class : 'aid-live-keygrip k0 on'
-           },
-              live),
+      drag(svg, squareGrip(live, sx, sy, {class : 'aid-live-keygrip k0 on'}),
            p => draft(setSpread(studio.state.document, c.key,
                                 2 * Math.max(0, leanOf(p, x) - c.key.gate), INTENSITY)),
            'lateralspread', 'grip', settle);
@@ -167,16 +167,7 @@ liveKind('lateral', (studio, organId) => {
     el('path', {d : arc(B.L, B.least, most), class : 'aid-live-track-line'}, live);
     hair(B.L, c.key.gate, {class : 'aid-live-keyline k0'});
     const [gx, gy] = tip(B.L, c.key.gate);
-    drag(svg,
-         el('rect', {
-           x : gx - 5,
-           y : gy - 5,
-           width : 10,
-           height : 10,
-           rx : 2.5,
-           class : 'aid-live-keygrip k0 on'
-         },
-            live),
+    drag(svg, squareGrip(live, gx, gy, {class : 'aid-live-keygrip k0 on'}),
          p => draft(setGate(studio.state.document, c.key, leanOf(p, B.L), INTENSITY)),
          'lateralgate', 'grip', settle);
     // What the cells send, under the skin, over the same steps.
@@ -197,7 +188,7 @@ liveKind('lateral', (studio, organId) => {
       el('path', {d : `M${B.L} ${floor + B.loud} H${B.R}`, class : 'aid-live-track-line'}, live);
       el('path', {d : `M${sx} ${floor} V${floor + B.loud}`, class : 'aid-live-keymark k0'}, live);
       txt(live, sx + 5, floor + B.loud, word('used'), {class : 'aid-live-small'});
-      drag(svg, el('circle', {cx : sx, cy : floor + B.loud, r : 5}, live), p => {
+      drag(svg, squareGrip(live, sx, floor + B.loud), p => {
         const used = usedFor(c.run, stOf(p.x));
         if (used)
           draft(setUsed(studio.state.document, c.key, used));
@@ -206,26 +197,24 @@ liveKind('lateral', (studio, organId) => {
     for (const st of B.marks)
       txt(live, X(st), B.height - 4, String(st), {'text-anchor' : 'end', class : 'aid-live-small'});
     txt(live, B.L, B.height - 4, word('steps'), {class : 'aid-live-small'});
-    // The report now, as the fish panel shows it: a bubble that moves along the steps, above the
-    // water.
-    const place = reportBubble(live, B.bubble);
-    bubble = at => place(X(at), B.skin - B.water - B.bubble - 4, between(c.sent, at));
+    // The report as the fish panel shows it, the engine's own number, above the hairs.
+    const said = groupReport(studio.state.document, studio.state.anatomy, 'senseProbe', cell.id);
+    if (Number.isFinite(said))
+      reportBubble(live, B.bubble)(stand((gates.length - 1) / 2),
+                                   B.skin - B.water - B.bubble - 4, said);
   }
   function show() {
     const cell = organ()?.centers[0];
     if (!cell)
       return;
     const {anatomy, outlinePreview} = studio.state;
-    const keys = [ cell, current(), (outlinePreview ?? anatomy)?.senseCourses ];
+    const keys =
+        [ cell, current(), (outlinePreview ?? anatomy)?.senseCourses, anatomy?.senseProbe ];
     if (shown?.every((value, i) => value === keys[i]))
       return;
     shown = keys;
     draw(cell);
-    tick(0);
   }
-  function tick(dt) {
-    step = (step + dt * STEPS / ROUND_MS) % STEPS;
-    bubble?.(step);
-  }
+  const tick = () => {};
   return {root, show, tick};
 });
