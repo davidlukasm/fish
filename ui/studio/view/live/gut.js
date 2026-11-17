@@ -26,7 +26,7 @@ import {
 } from '../../model/document.js';
 import {kindLimit} from '../../model/organs.js';
 import {label} from '../kit.js';
-import {addPicture, chip, clamp, drag, el, fishIcon, hatchOf, liveKind, path, picture, txt} from './kit.js';
+import {addPicture, chip, clamp, drag, el, fishIcon, GRIP, hatchOf, liveKind, path, picture, roundGrip, squareGrip, txt} from './kit.js';
 import {between, cubic, IRRITANT, lastCourses, LEVEL_SPAN, LEVELS, NERVE, paceMatters, SENSE_BOX, stimulusOf, USED, usedFor} from './sense.js';
 
 const word = (key, values) => t('studio.live.gut.' + key, values);
@@ -178,7 +178,7 @@ const SENSES = Object.freeze({
 // worth BITE resting needs if all of it were used, and the picture gives each bite BITE_STEPS
 // steps before the next is swallowed.
 const BITE = 16.5, BITE_STEPS = 10;
-const REWARD = Object.freeze({L : 62, R : 246, top : 34, row : 19, star : 274, height : 168});
+const REWARD = Object.freeze({L : 62, R : 246, top : 34, row : 19, star : 274, height : 180});
 const STAR = 'M0 -7 L1.7 -1.7 L7 0 L1.7 1.7 L0 7 L-1.7 1.7 L-7 0 L-1.7 -1.7 Z';
 // The life picture: across, the fish's maturity; up, how fast the muscle makes the gut.
 const LIFE = Object.freeze({L : 44, R : 226, top : 20, base : 92, icons : 110, height : 124, zones : 72, beside : 16, whole : .015, least : .08});
@@ -392,20 +392,20 @@ liveKind('gut', (studio) => {
       const y = film.stomach.levelY(k.gate), on = i === full.chosen;
       const line = el('path', {d : `M${KEY_X + 7 - right} ${y} H${st.x + st.rx * .8}`, class : 'aid-live-keyline k' + i % 3 + (on ? ' on' : '')}, film.keys);
       play.glow.push({owner : 'fish', line, gate : k.gate, sense : 'full'});
-      drag(svg, el('rect', {x : KEY_X - 7, y : y - 4 + down, width : 14, height : 8, rx : 2, class : keyGrip(i, on)}, live), p => {
+      drag(svg, squareGrip(live, KEY_X, y + down, {class : keyGrip(i, on)}), p => {
         full.chosen = i;
         draft(setGate(k, (st.y + st.ry - (p.y - down)) / (2 * st.ry)));
       }, 'fishkey' + i, 'grip', settle);
     });
     if (keys.length) {
-      txt(live, KEY_X - 7, film.stomach.levelY(Math.max(...keys.map(k => k.gate))) + down - 8, word('sated'));
+      txt(live, KEY_X - GRIP / 2, film.stomach.levelY(Math.max(...keys.map(k => k.gate))) + down - GRIP / 2 - 4, word('sated'));
       const chipY = st.y + 1.12 * st.ry + down + 11, chipX = st.x + right;
-      chip(live, chipX - 9, chipY, '−', () => fewer('full', keys[full.chosen]), keys.length > 1, 6);
-      chip(live, chipX + 9, chipY, '+', () => more('full', clamp(Math.min(...keys.map(k => k.gate)) - .2, .1, .9)), keys.length < 3, 6);
+      chip(live, chipX - GRIP / 2 - 1, chipY, '−', () => fewer('full', keys[full.chosen]), keys.length > 1, GRIP / 2);
+      chip(live, chipX + GRIP / 2 + 1, chipY, '+', () => more('full', clamp(Math.min(...keys.map(k => k.gate)) - .2, .1, .9)), keys.length < 3, GRIP / 2);
     }
     // The gut's end: dragged sideways for a longer or shorter gut.
     const [ex, ey] = film.way.end;
-    drag(svg, el('rect', {x : ex + right - 5, y : ey + down - 4, width : 10, height : 12, rx : 3}, live),
+    drag(svg, squareGrip(live, ex + right, ey + down + 2),
          p => draft(setGutLength(studio.state.document, clamp((p.x - right - GUT.right[0]) / (GUT.right[1] - GUT.right[0])))),
          'gutend', 'grip', settle);
     // The muscle, under the fish on the yield's own scale of stays: the wedge lies from the gut
@@ -417,7 +417,7 @@ liveKind('gut', (studio) => {
     el('path', {d : `M${wx1} ${wy} L${wide} ${wy - 5.5} v11 Z`, class : 'aid-live-muscle'}, live);
     txt(live, wide - 9, wy + 4, word('muscle'), {'text-anchor' : 'end'});
     if (m.muscle && state.capabilities.diet.gut.speed)
-      drag(svg, el('rect', {x : wx0 - 5, y : wy - 7, width : 10, height : 14, rx : 3}, live), muscleTo, 'wall', 'grip', settle);
+      drag(svg, squareGrip(live, wx0, wy), muscleTo, 'wall', 'grip', settle);
   }
   function buildYield(fixed) {
     const {L, R, top, base} = Y, yOf = v => base - (base - top) * v;
@@ -473,10 +473,10 @@ liveKind('gut', (studio) => {
     el('path', {d : `M${x1} ${top - 6} V${Y.base} M${x1} ${Y.base + 19} V${row}`, class : 'aid-live-rest'}, live);
     el('path', {d : `M${x0} ${row} H${x1}`, class : 'aid-live-musclebar'}, live);
     if (m.muscle && state.capabilities.diet.gut.speed)
-      drag(svg, el('rect', {x : x0 - 5, y : row - 7, width : 10, height : 14, rx : 3}, live), muscleTo, 'fastest', 'grip', settle);
+      drag(svg, squareGrip(live, x0, row), muscleTo, 'fastest', 'grip', settle);
     // The round grip on the dashed line: the gut's length, as the stay it has at rest.
     const size = state.capabilities.diet.gut.size, time = state.capabilities.gutTime;
-    drag(svg, el('circle', {cx : x1, cy : top - 6, r : 7}, live),
+    drag(svg, roundGrip(live, x1, top - GRIP / 2),
          p => draft(setGutLength(studio.state.document, shareFor(size, stayOfX(p.x) / time))), 'rest', 'grip', settle);
   }
   // What each food gives this gut: every bar's full length is the best that food can give in any
@@ -511,7 +511,7 @@ liveKind('gut', (studio) => {
       el('path', {d : `M${way[0]} C${way[1]} ${way[2]} ${way[3]}`, class : 'aid-live-nerve-fibre k' + i % 3}, tilted);
       el('path', {d : `M${cx} ${cy} q-7 5 -13 5 l-4 -3 m4 3 l-3 4 M${cx} ${cy} q-2 8 -7 14 l-4 1 m4 -1 l0 5 M${cx} ${cy} q4 6 4 13 l-3 3 m3 -3 l3 3`, class : 'aid-live-nerve-ends k' + i % 3}, tilted);
       cells.push({due : 0, way, pulses : Array.from({length : NERVE.pulses}, () => ({t : 1, e : el('circle', {r : 0, class : 'aid-live-pulse'}, tilted)}))});
-      el('circle', {cx, cy, r : 6, class : 'aid-live-soma k' + i % 3 + (on ? ' on' : '')}, tilted).addEventListener('pointerdown', () => {
+      el('circle', {cx, cy, r : 9, class : 'aid-live-soma k' + i % 3 + (on ? ' on' : '')}, tilted).addEventListener('pointerdown', () => {
         tried[id].chosen = i;
         show(studio.state);
       });
@@ -533,7 +533,7 @@ liveKind('gut', (studio) => {
   // food irritates these cells in this gut, with the keys' thresholds across.
   function drawSense(id) {
     const o = SENSES[id], own = tried[id], inp = own.input, keys = keysOf(id), {L, R, LX, I0, I1, row} = SENSE_BOX;
-    const {svg, live} = picture(pictures[id], I1 + 22 + (o.row ? row + 50 : 0));
+    const {svg, live} = picture(pictures[id], I1 + GRIP + 12 + (o.row ? row + 50 : 0));
     delete play.nerves[id];
     delete play.lines[id];
     play.glow = play.glow.filter(g => g.owner !== id);
@@ -561,8 +561,8 @@ liveKind('gut', (studio) => {
     const newGate = () => clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95);
     nerves(live, id, keys);
     // The same pair twice: at the cells and at the keys (under their holder).
-    chip(live, R - 22, I0 - 54, '−', () => fewer(id, keys[own.chosen]), keys.length > 1, 6);
-    chip(live, R - 6, I0 - 54, '+', () => more(id, newGate()), keys.length < 3, 6);
+    chip(live, R - 1.5 * GRIP - 3, I0 - 54, '−', () => fewer(id, keys[own.chosen]), keys.length > 1, GRIP / 2);
+    chip(live, R - GRIP / 2 - 1, I0 - 54, '+', () => more(id, newGate()), keys.length < 3, GRIP / 2);
     txt(live, L, I0 - 9, word(id + 'Course'));
     // What holds the thresholds, filling with the input. The stomach is smaller than the diagram
     // is high, so that it stands clear of the pair under it.
@@ -616,34 +616,34 @@ liveKind('gut', (studio) => {
         // The grip where the report has faded to half (sense.js, fadedAt).
         const fx = X(Math.min(fades[i], STEPS));
         if (paceMatters(runs[i], STEPS))
-          drag(svg, el('rect', {x : fx - 4, y : I1 - 13, width : 8, height : 10, rx : 2, class : keyGrip(i, true)}, live), p => tire(k, i, p), id + 'used', 'grip', settle);
+          drag(svg, squareGrip(live, fx, I1 - GRIP / 2 - 1, {class : keyGrip(i, true)}), p => tire(k, i, p), id + 'used', 'grip', settle);
       });
     // The grips, above everything they could be hidden by: every key and its spread, the input's
     // two knobs (when it is fully there and how strong, and when it stops).
     keys.forEach((k, i) => {
       const on = i === own.chosen, gates = gatesOf(k, runs[i]);
-      drag(svg, el('rect', {x : LX - 9, y : IY(k.gate) - 4, width : 18, height : 8, rx : 2, class : keyGrip(i, on)}, live), p => {
+      drag(svg, squareGrip(live, on ? LX : LX - GRIP - 1, IY(k.gate), {class : keyGrip(i, on)}), p => {
         own.chosen = i;
         draft(setGate(k, vOf(p.y)));
       }, id + 'key' + i, 'grip', settle);
       const sx = R - 8 - 13 * i, top = IY(Math.max(...gates)), bottom = IY(Math.min(...gates));
       el('path', {d : `M${sx} ${top} V${Math.max(bottom, top + 4)}`, class : 'aid-live-spread'}, live);
-      const spreadGrip = el('circle', {cx : sx, cy : top, r : 4.5}, live);
+      const spreadGrip = squareGrip(live, sx, top);
       el('title', {}, spreadGrip).textContent = word('spread');
       drag(svg, spreadGrip, p => {
         own.chosen = i;
         draft(setSpread(k, clamp(2 * (vOf(p.y) - k.gate), 0, .8)));
       }, id + 'spread' + i, 'grip', settle);
     });
-    const knob = (at, name, move) => drag(svg, el('circle', {cx : X(at), cy : IY(inp.height), r : 5.5, class : 'aid-live-sense-knob'}, live), p => {
+    const knob = (at, name, move) => drag(svg, roundGrip(live, X(at), IY(inp.height), {class : 'aid-live-sense-knob'}), p => {
       move(stOf(p.x));
       inp.height = vOf(p.y);
       show(studio.state);
     }, id + name, 'knob');
     knob(inp.rise, 'rise', st => { inp.rise = clamp(st, 1, inp.stop - 1); });
     knob(inp.stop, 'stop', st => { inp.stop = clamp(st, inp.rise + 1, STEPS - 10); });
-    chip(live, LX - 9, I1 + 10, '−', () => fewer(id, keys[own.chosen]), keys.length > 1, 6);
-    chip(live, LX + 9, I1 + 10, '+', () => more(id, newGate()), keys.length < 3, 6);
+    chip(live, LX - GRIP / 2 - 1, I1 + GRIP / 2 + 6, '−', () => fewer(id, keys[own.chosen]), keys.length > 1, GRIP / 2);
+    chip(live, LX + GRIP / 2 + 1, I1 + GRIP / 2 + 6, '+', () => more(id, newGate()), keys.length < 3, GRIP / 2);
     // How strongly each food irritates these cells in this gut: only the foods that can at all.
     if (o.row) {
       const B0 = I1 + 46, B1 = B0 + row, {rowL, rowR, rowGap} = SENSE_BOX;
@@ -782,26 +782,26 @@ liveKind('gut', (studio) => {
       };
     });
     el('path', {d : `M${L} ${top} V${base} H${R}`, class : 'aid-live-axis'}, live);
-    txt(live, L, base + 28, word('little'));
-    txt(live, (L + R) / 2, base + 28, word('perBite'), {'text-anchor' : 'middle'});
-    txt(live, R, base + 28, word('much'), {'text-anchor' : 'end'});
+    txt(live, L, base + GRIP + 16, word('little'));
+    txt(live, (L + R) / 2, base + GRIP + 16, word('perBite'), {'text-anchor' : 'middle'});
+    txt(live, R, base + GRIP + 16, word('much'), {'text-anchor' : 'end'});
     keys.forEach((k, i) => {
       const on = i === own.chosen, x = X(k.gate), far = Math.max(X(Math.max(...gatesOf(k, runs[i]))), x + 4);
       el('path', {d : `M${x} ${top - 6} V${base}`, class : 'aid-live-keyline k' + i % 3 + (on ? ' on' : '')}, live);
-      drag(svg, el('rect', {x : x - 4, y : top - 20, width : 8, height : 16, rx : 2, class : keyGrip(i, on)}, live), p => {
+      drag(svg, squareGrip(live, x, top - GRIP / 2 - 1, {class : keyGrip(i, on)}), p => {
         own.chosen = i;
         draft(setGate(k, vOf(p.x)));
       }, 'feedkey' + i, 'grip', settle);
-      el('path', {d : `M${x} ${base + 8} H${far}`, class : 'aid-live-spread'}, live);
-      const spreadGrip = el('circle', {cx : far, cy : base + 8, r : 4.5}, live);
+      el('path', {d : `M${x} ${base + GRIP / 2 + 2} H${far}`, class : 'aid-live-spread'}, live);
+      const spreadGrip = squareGrip(live, far, base + GRIP / 2 + 2);
       el('title', {}, spreadGrip).textContent = word('spread');
       drag(svg, spreadGrip, p => {
         own.chosen = i;
         draft(setSpread(k, clamp(2 * (vOf(p.x) - k.gate), 0, .8)));
       }, 'feedspread' + i, 'grip', settle);
     });
-    chip(live, star - 8, base + 10, '−', () => fewer('feed', keys[own.chosen]), keys.length > 1, 6);
-    chip(live, star + 8, base + 10, '+', () => more('feed', clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95)), keys.length < 3, 6);
+    chip(live, star - GRIP / 2 - 1, base + GRIP / 2 + 2, '−', () => fewer('feed', keys[own.chosen]), keys.length > 1, GRIP / 2);
+    chip(live, star + GRIP / 2 + 1, base + GRIP / 2 + 2, '+', () => more('feed', clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95)), keys.length < 3, GRIP / 2);
   }
   // Life cycle: across, the fish's maturity from the egg to the grown fish; up, how fast the
   // muscle makes the gut, from rest at the bottom to the fastest it can be. The ground's bands
@@ -848,7 +848,7 @@ liveKind('gut', (studio) => {
     const high = yOf(m.pace), low = yOf(1);
     el('path', {d : works ? `M${L} ${low} H${X(from)} V${high} H${X(until)} V${low} H${R}` : `M${L} ${low} H${R}`, class : 'aid-live-course'}, live);
     const set = change => setLifePhase(studio.state.document, cell.id, change, caps.sensitivitySpan, caps.steepnessSpan);
-    const grip = (x, name, move) => drag(svg, el('rect', {x : x - 5, y : (high + low) / 2 - 7, width : 10, height : 14, rx : 3}, live), p => draft(move(rOf(p.x))), name, 'grip', settle);
+    const grip = (x, name, move) => drag(svg, squareGrip(live, x, (high + low) / 2), p => draft(move(rOf(p.x))), name, 'grip', settle);
     grip(from > 0 ? X(from) : L - LIFE.beside, 'gutfrom', to => set({start : to < LIFE.whole ? null : Math.min(to, until - LIFE.least)}));
     grip(until < 1 ? X(until) : R + LIFE.beside + 44, 'gutuntil', to => set({end : to > 1 - LIFE.whole ? null : Math.max(to, from + LIFE.least)}));
   }
