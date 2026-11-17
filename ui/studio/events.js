@@ -32,7 +32,6 @@ import {
   setSubstance,
   switchReceptor,
   teachOrgan,
-  unbindReceptor,
   updateCenter,
   updateGrowth,
   updateWire,
@@ -620,16 +619,6 @@ export const FISH_CLICKS = Object.freeze([
       const value = e.dataset.teacherValue;
       keep(studio, teachOrgan(studio.state.document, e.dataset.regionTeacher,
                               value === 'off' ? null : Number(value)));
-    }
-  ],
-  [
-    '[data-learn-substance]',
-    (studio, e) => {
-      const id = e.dataset.centerId, effect = Number(e.dataset.learnEffect);
-      const value = e.dataset.learnSubstance, doc = studio.state.document;
-      studio.changeDocument(value === 'off' ? unbindReceptor(doc, id, effect)
-                                            : bindReceptor(doc, id, effect, Number(value)),
-                            {kind : 'center', id});
     }
   ],
   [ '[data-copy-cell]', (studio, e) => keep(studio,
