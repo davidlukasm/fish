@@ -80,7 +80,7 @@ Davids aktuelle Rückmeldung zu allen Panels steht erklärt und mit Bildern in `
 - **Jeder Griff hat sichtbar Wirkung, sofort beim Ziehen.** Skalen passen sich während des Ziehens an, in beide Richtungen und nicht erst beim Loslassen. Nichts verschwindet, auch nicht für ein paar Frames.
 - **Ein Griff gehört zu genau einer Einstellung.** Ein Griff, der nur wirkt, wenn ein anderer nicht auf 0 steht, ist falsch. Griffe nur für die Anzeige eines anderen Bildes gibt es nicht.
 - **Flüssig:** Beim Ziehen wird nur das betroffene Bild neu gezeichnet. Kein Klick darf abstürzen.
-- **Nichts Fitzeliges:** Ränder und Übergänge brauchen genug Fläche, kleine Ziele werden größer, Griffe liegen weit genug auseinander.
+- **Nichts Fitzeliges:** Ränder und Übergänge brauchen genug Fläche, kleine Ziele werden größer, Griffe liegen weit genug auseinander. **David 17.11. ausdrücklich:** Keine winzigen Klickziele und kein Einstellen über etwa vier Pixel. Griffe müssen sichtbar groß und getrennt sein; auch der tatsächlich nutzbare Ziehweg muss eine fein steuerbare Einstellung erlauben. Eine vergrößerte unsichtbare Trefferfläche allein genügt nicht. Das gilt im gesamten Atelier, geprüft bei 320 px Panelbreite und normaler Größe.
 
 ## 4. Wörter
 
@@ -107,6 +107,7 @@ Davids aktuelle Rückmeldung zu allen Panels steht erklärt und mit Bildern in `
 - **Kleinster Fall:** Wer „jede Kombination ist möglich“ schreibt, rechnet den kleinsten Fall vor: eine Zelle, ein Knoten.
 - **Kosten nur als Anteil am Ruhebedarf** (erwachsener Fisch 0,0333 je Schritt). Ohne diese Zahl steht kein Preis in einer Kopfzeile oder Abwägung. Unter etwa 1 % ist es keine Abwägung (Drüse: Abgabe und Binden 0,02 %).
 - **Was David schon gesagt hat, wird als seins genannt,** nicht als neu angeboten.
+- **Vor jeder Gegenprüfung Davids Kriterien erneut lesen (17.11.).** Die konkrete Rückmeldung zum Panel und diese Leitlinie sind der Maßstab. Geprüft werden sichtbare Wirkung, Verständlichkeit ohne Erklärabsätze, Bedienbarkeit aller relevanten Griffe und flüssige Interaktion. Im Kanal die jeweilige Nutzerkritik, ausgeführte Handlung, beobachtetes Ergebnis und verbleibende Lücke nennen.
 - **Nichts geht an David, das nicht jeder Beteiligte samt Fundstelle selbst geprüft hat.** Wer weitergibt, prüft mit.
 - **Echte Größe:** Geprüft wird im Browser bei 320 px Panelbreite und 1:1. Das Panel ist hochkant, also wird untereinander gebaut und die volle Breite genutzt, nicht rechtsbündig.
 - **Regionen nur aus echten Engine-Verläufen** (`tests/compiler.cc::region_trace`), nie aus einer JS-Nachahmung der Nervendynamik.
