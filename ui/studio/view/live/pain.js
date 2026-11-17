@@ -16,7 +16,7 @@
 // sectors; that a hungry fish does not heal.
 import {SKIN_RESPONSE} from '../../../schema.js';
 import {t} from '../../../strings.js';
-import {findOrgan} from '../../model/document.js';
+import {findOrgan, groupReport} from '../../model/document.js';
 import {
   addPicture,
   clamp,
@@ -32,7 +32,6 @@ import {
 } from './kit.js';
 import {
   bandOf,
-  between,
   BOUNDED,
   closingWound,
   keysOf,
@@ -44,7 +43,7 @@ import {
 } from './sense.js';
 
 const word = (key, values) => t('studio.live.pain.' + key, values);
-const ROUND_MS = 9000, BITE_STEP = 12;
+const BITE_STEP = 12;
 // The strip: steps from L to R, as many as the wound the fish panel's probe makes takes to close
 // and `after` of that beyond, in whole hundreds; the skin's line; below it the wound, `deep` high
 // for the deepest wound the probe can make; above it the report, `loud` high when all cells send.
@@ -76,7 +75,6 @@ liveKind('pain', (studio, organId) => {
     const probe = studio.state.senseProbe;
     return probe?.kind === 'wound' && probe.organ === organId ? probe : null;
   };
-  let step = 0, bubble = null, span = spanOf(SKIN_RESPONSE.bite_wound);
   const coursesOf = lastCourses('pain');
   const organ = () => findOrgan(studio.state.document, organId);
   // The engine answers the course of the cells while a grip is dragged (sense.js, lastCourses).
@@ -215,21 +213,16 @@ liveKind('pain', (studio, organId) => {
     for (let st = SPAN > 400 ? 200 : 100; st <= SPAN; st += SPAN > 400 ? 200 : 100)
       txt(live, X(st), S.height - 4, String(st), {'text-anchor' : 'end', class : 'aid-live-small'});
     txt(live, S.L, S.height - 4, word('steps'), {class : 'aid-live-small'});
-    // The report now, as the fish panel shows it: a bubble that moves along the steps.
-    const place = reportBubble(live, S.bubble);
-    bubble = at => place(X(at), top - S.loud - S.bubble - 4, between(c.sent, at));
-    span = SPAN;
+    // The report as the fish panel shows it, the engine's own number, at the bite it belongs to.
+    const said = groupReport(studio.state.document, studio.state.anatomy, 'senseProbe', cell.id);
+    if (Number.isFinite(said))
+      reportBubble(live, S.bubble)(X(BITE_STEP), top - S.loud - S.bubble - 4, said);
   }
   function show() {
     const cell = organ()?.centers[0];
     if (!cell)
       return;
     draw(cell);
-    tick(0);
   }
-  function tick(dt) {
-    step = (step + dt * span / ROUND_MS) % span;
-    bubble?.(step);
-  }
-  return {root, show, tick};
+  return {root, show};
 });

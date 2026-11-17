@@ -215,6 +215,5 @@ liveKind('lateral', (studio, organId) => {
     shown = keys;
     draw(cell);
   }
-  const tick = () => {};
-  return {root, show, tick};
+  return {root, show};
 });
