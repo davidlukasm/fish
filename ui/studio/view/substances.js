@@ -650,9 +650,11 @@ function hormoneDetails(state, focus) {
   if (effect === BIRTH)
     return html + choose + effectCurve(state, focus.growth, BIRTH, focus.id + ':' + BIRTH) +
            cellDevelopment(state, focus);
-  return html + choose + cellDevelopment(state, focus) +
-         '<div class="aid-receptor-editor" title="' + label('inspector.cellEffects') + '">' +
-         receptorEditor(state, focus, effects, effect) + '</div>';
+  // What the substances do first, the tool's subject; the cell's life cycle (David's block)
+  // unchanged under it.
+  return html + choose + '<div class="aid-receptor-editor" title="' +
+         label('inspector.cellEffects') + '">' + receptorEditor(state, focus, effects, effect) +
+         '</div>' + cellDevelopment(state, focus);
 }
 
 export function hormoneInspector(state, currentAnatomy) {
